@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        .toast-conatiner {
+            width: 200px;
+            height: 50px;
+            background: #f0ad4e;
+            color: white;
+            padding: 10px;
+            margin: 20px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: sans-serif;
+            position: absolute;
+            right: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
+
+        function Toast({ index, name, close, lifeTime }) {
+            const [timeState, setTimeState] = useState(1);
+            useEffect(function () {
+                const interval = setInterval(() => {
+                    setTimeState((prev) => {
+                        if (prev > 8) {
+                            clearInterval(interval);
+                        }
+                        return prev + 1;
+                    })
+                }, 1000);
+                return () => clearInterval(interval);
+            }, [])
+            return (<div className="toast-conatiner" style={{ top: `${(index * 80)}px`, position: "absolute" }}>
+                <span>{name} {index}</span>
+                <span>{timeState}</span>
+                <button onClick={close}>X</button>
+            </div>);
+        }
+        function ShowToast() {
+            const [allToasts, setallToasts] = useState([]);
+            const addToast = function () {
+                setallToasts([...allToasts, { id: Date.now().toString(), name: 'this is my Toast' }]);
+            }
+            const removeToasts = function (id) {
+                setallToasts(allToasts.filter(toast => toast.id !== id));
+            }
+            return <>
+                <button onClick={addToast}>Add Toast</button>
+                {allToasts.map((toast, index) => <Toast key={index}
+                    index={index}
+                    name={toast.name}
+                    close={() => removeToasts(toast.id)}
+                />)}
+            </>;
+        }
+        // Render the component
+        root.render(<ShowToast />);
+    </script>
+
+</body>
+
+</html>

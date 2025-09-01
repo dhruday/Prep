@@ -1,0 +1,85 @@
+<!-- Implement a Star Rating Component where users can rate a product (1–5 stars). The UI should allow:
+
+Hover to preview stars.
+
+Click to submit a rating.
+
+Display the average rating and total number of ratings.
+
+Optional: allow updating the rating.
+ -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        .star-container {
+            display: flex;
+            margin: 10px
+        }
+
+        .filled {
+            color: yellow;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
+        const { useState } = React;
+        function StarContainer({ noOfStars = 5, onChange }) {
+            const [Rating, setRating] = useState(0);
+            const [hovered, sethovered] = useState(0);
+            const updateRating = (index) => {
+                setRating(index)
+                onChange(index)
+            }
+            return <>
+                <div className="star-container">
+                    {Array.from({ length: noOfStars }).map((_, i) => {
+                        const starValue = i + 1;
+                        return (
+                            <span
+                                key={i}
+                                className={`star ${Rating >= starValue || hovered >= starValue ? 'filled' : ''}`}
+                                onMouseEnter={() => sethovered(starValue)}
+                                onMouseLeave={() => sethovered(0)}
+                                onClick={() => updateRating(starValue)}
+                            >
+                                ★
+                            </span>
+                        );
+                    })}
+                </div>
+                <button onClick={() => onChange()}>Submit</button>
+            </>
+        }
+        function App(params) {
+            const [allRatings, setAllRatings] = useState([]);
+            const onChange = (value) => {
+                setAllRatings([...allRatings, value]
+                )
+            }
+            return <div>
+                <StarContainer onChange={onChange} />
+                <span>Avg Rating: {allRatings.length > 0
+                    ? (allRatings.reduce((sum, val) => sum + val, 0) / allRatings.length).toFixed(2)
+                    : "0"}</span>
+            </div>
+
+        }
+        root.render(<App />);
+    </script>
+</body>
+
+</html>

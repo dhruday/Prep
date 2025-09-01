@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+    </style>
+</head>
+
+<body>
+
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useEffect, useState, useRef } = React;
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
+        function StopWatch() {
+            const timerStates = {
+                IDLE: 'idle',
+                ON_GOING: 'running'
+            }
+            const [count, setCount] = useState(0);
+            const [state, setState] = useState(timerStates.IDLE)
+            let interval = useRef();
+            const formatter = (count) => {
+                return `${String(parseInt(count / 60)).padStart(2, '0')}:${String((count % 60)).padStart(2, '0')}`
+            }
+            const onReset = function () {
+                setCount(0);
+                setState(timerStates.IDLE)
+            }
+            let intervalId = null;
+            useEffect(() => {
+                if (state === timerStates.ON_GOING) {
+                    interval.current = setInterval(() => {
+                        setCount((count) => count + 1);
+                    }, 1000);
+                } else {
+                    clearInterval(interval.current);
+
+                }
+                return () => {
+                    clearInterval(interval.current);
+                }
+            }, [state])
+
+            return <>
+                <div className="container">
+                    <button onClick={() => setState(timerStates.ON_GOING)}>Start</button>
+                    <button onClick={() => setState(timerStates.IDLE)}>Stop</button>
+                    <button onClick={onReset}>Reset</button>
+                </div>
+                <span>{formatter(count)}</span></>
+        }
+        root.render(<StopWatch />)
+    </script>
+</body>
+
+</html>
