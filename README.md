@@ -203,7 +203,7 @@ w3schools: https://www.w3schools.com/howto/
 11. Make snake ladder board
 12. Make calendar of any Month like Date Picker
 13. Implement throttle function
-14.Implement custom Higher Order Functions like Map, Reduce, Filter, Sort (Amazon Phone Interview)
+14. Implement custom Higher Order Functions like Map, Reduce, Filter, Sort (Amazon Phone Interview)
 15. Create an analog clock
 16. Make a todo list
 17. Create functionality to change all text on page to different translations
