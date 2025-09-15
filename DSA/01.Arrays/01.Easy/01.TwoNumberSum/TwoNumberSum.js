@@ -44,7 +44,16 @@ Solution Approaches:
 */
 
 function twoNumberSum(array, targetSum) {
-    // Write your code here
+    const complementMap = new Map();
+    for (let index = 0; index < array.length; index++) {
+        const element = array[index];
+        const complement = targetSum - element;
+        if (complementMap.has(complement)) {
+            return [complementMap.get(complement), element];
+        }
+        complementMap.set(element, element);
+    }
+    return [];
 }
 
 // Test Cases

@@ -42,7 +42,22 @@ Solution Approaches:
 */
 
 function isValidSubsequence(array, sequence) {
-    // Write your code here
+    if (array.length < sequence.length) {
+        return false;
+    }
+    let seqIndex = 0;
+    let arrIndex = 0;
+    while (arrIndex < array.length) {
+        if (array[arrIndex] === sequence[seqIndex]) {
+            seqIndex++;
+        }
+        arrIndex++;
+    }
+    if (seqIndex === sequence.length) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 // Test Cases
