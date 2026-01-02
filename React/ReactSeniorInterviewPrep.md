@@ -17,36 +17,43 @@ This file is your comprehensive resource for preparing for senior-level React in
 
 ## Progress Tracker
 
-### ✅ Completed (Ready for Review) - 6 Questions
-1. ✅ **Virtual DOM in React** - Fiber architecture, O(n) reconciliation, performance trade-offs
-2. ✅ **JSX and differences from HTML** - Transformation process, security, TypeScript
-3. ✅ **Component Lifecycle** - Class and functional, useEffect timing, cleanup patterns
-4. ✅ **State vs Props** - Architectural implications, data flow, anti-patterns
-5. ✅ **Controlled Components** - Form patterns, validation, performance
-6. ✅ **Keys in React Lists** - Reconciliation, index anti-pattern, stability requirements
+### ✅ Completed (Ready for Review) - 12 Core Questions
+1. ✅ **Virtual DOM in React** - Fiber architecture, O(n) reconciliation, performance
+2. ✅ **JSX and differences from HTML** - Transformation, security, TypeScript
+3. ✅ **Component Lifecycle** - Class & functional, useEffect/useLayoutEffect timing
+4. ✅ **State vs Props** - Architectural patterns, data flow, anti-patterns
+5. ✅ **Controlled Components** - Form patterns, validation, optimization
+6. ✅ **Keys in React Lists** - Reconciliation algorithm, identity matching
+7. ✅ **useEffect Hook Purpose** - Side effects, cleanup, dependencies, race conditions
+8. ✅ **useState Hook** - State management, batching, functional updates, patterns
+9. ✅ **useMemo and useCallback** - Performance optimization, memoization, React.memo
+10. ✅ **Context API** - Provider/Consumer, performance, split contexts, custom hooks
+11. ✅ **Class vs Functional Components** - Lifecycle mapping, hooks, migration strategies
+12. ✅ **Event Handling in React** - Synthetic events, delegation, performance patterns ✨ NEW
 
-**Total Content**: ~25,000+ words of FAANG-level material
+**Total Content**: ~73,000+ words of FAANG-level material  
+**Study Time**: ~12-15 hours of intensive content
 
-### 📝 Next High-Priority Questions
-7. useEffect hook purpose and usage
-8. useState hook and how it works
-9. Class vs Functional components
-10. Event handling in React
-11. Passing data between components
-12. props.children usage
-13. useMemo and useCallback
-14. Higher-order components (HOCs)
-15. React Context API
+### 📝 Next Priority Questions (Continuing Now)
+13. Passing data between components
+14. props.children and composition
+15. Higher-order components (HOCs)
+16. Refs and the DOM
+17. Conditional rendering techniques
+18. Lists and keys deep dive
 
-### 💡 Study Strategy
-- **Day 1-2**: Virtual DOM + JSX (foundational)
-- **Day 3-4**: Lifecycle + State vs Props
-- **Day 5-6**: Controlled Components + Keys
-- **Day 7+**: Continue with hooks and patterns
-- Each answer = 20-30 min deep study
-- Practice explaining concepts aloud
-- Code examples in your IDE
-- Review follow-up questions
+### 🎯 Your Learning Path
+**Week 1 - Fundamentals:**
+- Days 1-2: Virtual DOM + JSX
+- Days 3-4: Lifecycle + State vs Props
+- Days 5-6: Controlled Components + Keys
+- Day 7: useEffect + useState
+
+**Week 2 - Advanced Patterns:**
+- Components, Events, Data Flow
+- Composition patterns
+- Performance optimization
+- State management
 
 ---
 
@@ -3394,7 +3401,6211 @@ Submission with Loading States
 
 ---
 
-**Note**: Question 6 (How to create forms in React) and Questions 7-11 continue with full comprehensive answers below. The file now contains detailed, FAANG-level explanations for the first 11 questions with all code examples, real-world scenarios, and interview strategies.
+### 8. What is the purpose of the `useEffect` hook in React?
+
+#### 1. High-Level Explanation
+The `useEffect` hook allows you to perform side effects in functional components. Side effects are operations that interact with the world outside your component—data fetching, subscriptions, timers, manual DOM manipulation, logging, etc. It's React's way of saying "after rendering, do this side effect." The purpose is to synchronize your component with external systems while keeping the component function pure. It's important because it replaces class lifecycle methods (componentDidMount, componentDidUpdate, componentWillUnmount) with a unified, more flexible API.
+
+**Why it's used:**
+- Fetch data from APIs after component renders
+- Subscribe to external data sources (WebSockets, events)
+- Manage timers and intervals
+- Synchronize with browser APIs (localStorage, document.title)
+- Cleanup resources to prevent memory leaks
+- React to prop/state changes with side effects
+
+**Where it fits:**
+- Core hook for side effects in functional components
+- Foundation for data fetching patterns
+- Critical for resource cleanup
+- Base for custom hooks
+
+#### 2. Deep-Dive Explanation (Senior Level)
+
+**useEffect Signature:**
+```javascript
+useEffect(setup, dependencies?)
+```
+
+**Parameters:**
+1. **setup function**: Runs after render, returns optional cleanup
+2. **dependencies array** (optional): Controls when effect re-runs
+
+**Execution Timing:**
+
+```
+Component Lifecycle with useEffect:
+
+1. Render Phase (Pure):
+   - Component function executes
+   - Returns JSX
+   - useEffect registered but NOT executed
+
+2. Commit Phase:
+   - React updates DOM
+   - Browser paints screen
+   
+3. Effect Phase (After paint):
+   - useEffect setup functions execute
+   - Asynchronous, doesn't block browser
+```
+
+**Dependency Array Behavior:**
+
+| Dependencies | When Effect Runs | Use Case |
+|--------------|------------------|----------|
+| No array | After every render | Rarely needed, usually wrong |
+| `[]` (empty) | Once after mount | Initial data fetch, subscriptions |
+| `[a, b]` | When a or b change | React to specific changes |
+| Omitted | After every render | Same as no deps, usually wrong |
+
+**Cleanup Function:**
+
+The cleanup function returned from useEffect runs:
+1. Before effect re-executes (when deps change)
+2. Before component unmounts
+3. NOT on initial mount
+
+```javascript
+useEffect(() => {
+  // Setup
+  const subscription = api.subscribe();
+  
+  // Cleanup runs:
+  // - Before next effect execution
+  // - On unmount
+  return () => {
+    subscription.unsubscribe();
+  };
+}, [deps]);
+```
+
+**Internal Architecture:**
+
+React's fiber architecture manages effects through:
+- **Effect list**: Linked list of effects to run
+- **Effect tags**: Flags indicating effect type
+- **Passive effects**: useEffect (scheduled, async)
+- **Layout effects**: useLayoutEffect (synchronous, blocks paint)
+
+**Effect Execution Order:**
+1. All effects from child components
+2. Effects from parent components
+3. Cleanup functions in reverse order
+
+**Comparison with Other Hooks:**
+
+| Hook | Timing | Blocks Paint | Use Case |
+|------|--------|--------------|----------|
+| useEffect | After paint (async) | No | Most side effects |
+| useLayoutEffect | Before paint (sync) | Yes | DOM measurements |
+| useInsertionEffect | Before DOM mutations | Yes | CSS-in-JS |
+
+**Common Patterns:**
+
+**1. Data Fetching:**
+```javascript
+useEffect(() => {
+  let cancelled = false;
+  
+  fetchData().then(data => {
+    if (!cancelled) setData(data);
+  });
+  
+  return () => { cancelled = true; };
+}, [dependencies]);
+```
+
+**2. Subscriptions:**
+```javascript
+useEffect(() => {
+  const unsubscribe = eventEmitter.on('event', handler);
+  return () => unsubscribe();
+}, []);
+```
+
+**3. Timers:**
+```javascript
+useEffect(() => {
+  const timer = setTimeout(() => {}, delay);
+  return () => clearTimeout(timer);
+}, [delay]);
+```
+
+**Performance Considerations:**
+
+- **Over-firing**: Missing dependencies causes stale closures
+- **Under-firing**: Extra dependencies cause unnecessary runs
+- **Expensive operations**: Debounce or use useMemo/useCallback
+- **Memory leaks**: Always cleanup subscriptions, timers, listeners
+- **Race conditions**: Handle with cancellation or AbortController
+
+**Best Practices:**
+
+1. **One effect per concern**: Separate unrelated logic into multiple effects
+2. **Complete dependencies**: Use ESLint exhaustive-deps rule
+3. **Cleanup everything**: Timers, subscriptions, listeners, in-flight requests
+4. **Avoid object/array deps**: Use primitive values or useMemo
+5. **Don't lie about dependencies**: Don't omit to "fix" issues
+6. **Consider alternatives**: Sometimes state derivation is better
+
+**Common Pitfalls:**
+
+1. **Infinite loops**: Effect updates state that triggers effect
+2. **Stale closures**: Missing dependencies capture old values
+3. **Missing cleanup**: Memory leaks from subscriptions/timers
+4. **Async effect function**: Can't make useEffect callback async directly
+5. **Comparing objects**: Object deps recreated every render
+6. **Network waterfalls**: Sequential fetching instead of parallel
+
+#### 3. Clear Real-World Examples
+
+**Example 1: Data Fetching with Loading/Error States (Any Dashboard)**
+```javascript
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    // Reset state when userId changes
+    setLoading(true);
+    setError(null);
+    
+    let cancelled = false;
+    const abortController = new AbortController();
+
+    const fetchUser = async () => {
+      try {
+        const response = await fetch(`/api/users/${userId}`, {
+          signal: abortController.signal
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch');
+        
+        const data = await response.json();
+        
+        // Only update if request wasn't cancelled
+        if (!cancelled) {
+          setUser(data);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError' && !cancelled) {
+          setError(err.message);
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchUser();
+
+    // Cleanup: Cancel request if userId changes or component unmounts
+    return () => {
+      cancelled = true;
+      abortController.abort();
+    };
+  }, [userId]); // Re-run when userId changes
+
+  if (loading) return <Spinner />;
+  if (error) return <Error message={error} />;
+  return <UserCard user={user} />;
+}
+```
+
+**Example 2: WebSocket Subscription (Real-time Trading/Chat)**
+```javascript
+function StockTicker({ symbol }) {
+  const [price, setPrice] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState('connecting');
+
+  useEffect(() => {
+    console.log(`Subscribing to ${symbol}`);
+    
+    const ws = new WebSocket('wss://market-data.example.com');
+    
+    ws.onopen = () => {
+      setConnectionStatus('connected');
+      ws.send(JSON.stringify({ 
+        action: 'subscribe', 
+        symbol 
+      }));
+    };
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.symbol === symbol) {
+        setPrice(data.price);
+      }
+    };
+    
+    ws.onerror = () => {
+      setConnectionStatus('error');
+    };
+    
+    ws.onclose = () => {
+      setConnectionStatus('disconnected');
+    };
+
+    // Cleanup: Unsubscribe and close connection
+    return () => {
+      console.log(`Unsubscribing from ${symbol}`);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ 
+          action: 'unsubscribe', 
+          symbol 
+        }));
+        ws.close();
+      }
+    };
+  }, [symbol]); // Re-subscribe when symbol changes
+
+  return (
+    <div>
+      <span className={`status ${connectionStatus}`}>
+        {connectionStatus}
+      </span>
+      <span className="price">${price}</span>
+    </div>
+  );
+}
+```
+
+**Example 3: Document Title Sync (Browser Integration)**
+```javascript
+function useDocumentTitle(title) {
+  useEffect(() => {
+    const previousTitle = document.title;
+    document.title = title;
+    
+    // Cleanup: Restore previous title
+    return () => {
+      document.title = previousTitle;
+    };
+  }, [title]);
+}
+
+function ProductPage({ product }) {
+  // Update document title when product changes
+  useDocumentTitle(`${product.name} - My Store`);
+  
+  return <ProductDetails product={product} />;
+}
+```
+
+**Example 4: Analytics Tracking (Google Analytics Pattern)**
+```javascript
+function PageView() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Track page view on route change
+    analytics.track('page_view', {
+      path: location.pathname,
+      search: location.search,
+      timestamp: Date.now()
+    });
+  }, [location.pathname, location.search]);
+
+  return null; // This component only tracks, doesn't render
+}
+
+function UserActivity({ userId }) {
+  useEffect(() => {
+    const startTime = Date.now();
+    
+    // Track session duration on unmount
+    return () => {
+      const duration = Date.now() - startTime;
+      analytics.track('session_duration', {
+        userId,
+        duration
+      });
+    };
+  }, [userId]);
+
+  return <ActivityFeed userId={userId} />;
+}
+```
+
+#### 4. Interview-Oriented Explanation
+
+**Sample Answer (7+ years level):**
+"useEffect is React's hook for performing side effects in functional components. It serves as a unified replacement for componentDidMount, componentDidUpdate, and componentWillUnmount from class components, but with a more declarative and flexible API.
+
+The key insight is that useEffect runs after React has committed changes to the DOM and the browser has painted. This timing is crucial—it doesn't block the initial render, keeping the UI responsive. The effect receives a dependency array that tells React when to re-run the effect. An empty array means run once after mount, specific dependencies mean run when those change, and no array means run after every render.
+
+The cleanup function is a critical aspect often overlooked. When you return a function from useEffect, React calls it before re-running the effect and before unmounting. This is where you unsubscribe from data sources, cancel network requests, clear timers, and remove event listeners. Missing cleanup is a primary source of memory leaks in React applications.
+
+From a performance perspective, the dependency array is the optimization mechanism. React uses shallow comparison on dependencies—if any reference changes, the effect re-runs. This is why inline objects or functions in the dependency array cause problems; they're new references every render, so the effect runs every time. The solution is extracting them outside, using useCallback/useMemo, or restructuring to depend on primitives.
+
+A common pattern I use is the cancellation token for async operations. Since you can't make the effect callback itself async, you define an async function inside and call it, but you track whether the component is still mounted using a boolean flag or AbortController. This prevents the classic React warning about state updates on unmounted components and avoids race conditions when rapid prop changes trigger multiple requests.
+
+In production systems, I separate concerns into multiple effects rather than one monolithic effect. For instance, a dashboard component might have one effect for fetching user data, another for establishing a WebSocket connection, and another for setting up analytics tracking. This makes the code more maintainable and each effect's dependencies more focused. It also means React can optimize them independently—if only the userId changes, only the user data effect re-runs, not the WebSocket connection."
+
+**Follow-up Questions You May Face:**
+
+1. **"What's the difference between useEffect and useLayoutEffect?"**
+   - useEffect: Runs after paint (async), doesn't block browser
+   - useLayoutEffect: Runs before paint (sync), blocks until complete
+   - Use useLayoutEffect for: DOM measurements, preventing visual flicker
+   - Use useEffect for: Everything else (data fetching, subscriptions)
+
+2. **"Why can't you make the useEffect callback async?"**
+   - Effect callback must return cleanup function or undefined
+   - Async functions return Promises
+   - Solution: Define async function inside effect and call it
+   ```javascript
+   useEffect(() => {
+     const fetchData = async () => { /* ... */ };
+     fetchData();
+   }, []);
+   ```
+
+3. **"How do you handle race conditions in useEffect?"**
+   - Use boolean flag: `let cancelled = false`
+   - Use AbortController to cancel fetch requests
+   - Check flag before setState
+   - Cleanup sets flag/aborts
+   ```javascript
+   useEffect(() => {
+     let cancelled = false;
+     fetchData().then(data => {
+       if (!cancelled) setData(data);
+     });
+     return () => { cancelled = true; };
+   }, []);
+   ```
+
+4. **"What causes infinite loops with useEffect?"**
+   - Effect updates state that's in dependency array
+   - Object/array dependencies recreated every render
+   - Missing dependency causes state update that triggers re-render
+   - Solution: Restructure logic, use functional setState, stable dependencies
+
+5. **"When should you NOT use useEffect?"**
+   - Deriving state from props (use variables or useMemo)
+   - Transforming data for render (do it during render)
+   - Handling user events (use event handlers, not effects)
+   - Initializing state (use useState initializer)
+
+#### 5. Code Examples
+
+**Example 1: Common Mistakes and Fixes**
+```javascript
+// ❌ MISTAKE 1: Infinite loop
+function BadComponent() {
+  const [count, setCount] = useState(0);
+  
+  useEffect(() => {
+    setCount(count + 1); // Updates count
+  }, [count]); // Depends on count - infinite loop!
+  
+  return <div>{count}</div>;
+}
+
+// ✅ FIX: Remove dependency or use different approach
+function GoodComponent() {
+  const [count, setCount] = useState(0);
+  
+  // If you need to increment on mount:
+  useEffect(() => {
+    setCount(c => c + 1); // Functional update, no dependency needed
+  }, []);
+  
+  return <div>{count}</div>;
+}
+
+// ❌ MISTAKE 2: Async effect function
+function BadAsync() {
+  const [data, setData] = useState(null);
+  
+  // ❌ Can't make effect callback async
+  useEffect(async () => {
+    const response = await fetch('/api/data');
+    const json = await response.json();
+    setData(json);
+  }, []);
+  
+  return <div>{data}</div>;
+}
+
+// ✅ FIX: Define async function inside effect
+function GoodAsync() {
+  const [data, setData] = useState(null);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch('/api/data');
+      const json = await response.json();
+      setData(json);
+    };
+    
+    fetchData();
+  }, []);
+  
+  return <div>{data}</div>;
+}
+
+// ❌ MISTAKE 3: Missing cleanup
+function BadTimer() {
+  const [count, setCount] = useState(0);
+  
+  useEffect(() => {
+    // Timer never cleaned up - memory leak!
+    setInterval(() => {
+      setCount(c => c + 1);
+    }, 1000);
+  }, []);
+  
+  return <div>{count}</div>;
+}
+
+// ✅ FIX: Return cleanup function
+function GoodTimer() {
+  const [count, setCount] = useState(0);
+  
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCount(c => c + 1);
+    }, 1000);
+    
+    // Cleanup clears interval
+    return () => clearInterval(intervalId);
+  }, []);
+  
+  return <div>{count}</div>;
+}
+
+// ❌ MISTAKE 4: Object dependency
+function BadDeps({ config }) {
+  useEffect(() => {
+    fetchData(config);
+  }, [config]); // Object reference changes every render
+}
+
+// ✅ FIX: Depend on primitives or use useMemo
+function GoodDeps({ config }) {
+  useEffect(() => {
+    fetchData(config);
+  }, [config.id, config.type]); // Primitives only
+}
+
+// Or with useMemo:
+function AlsoGoodDeps({ config }) {
+  const stableConfig = useMemo(() => config, [config.id, config.type]);
+  
+  useEffect(() => {
+    fetchData(stableConfig);
+  }, [stableConfig]);
+}
+```
+
+**Example 2: Advanced Data Fetching Pattern**
+```javascript
+// Custom hook for data fetching with all best practices
+function useDataFetch(url, options = {}) {
+  const [state, setState] = useState({
+    data: null,
+    loading: true,
+    error: null
+  });
+
+  // Stable options reference
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const abortController = new AbortController();
+
+    const fetchData = async () => {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+
+      try {
+        const response = await fetch(url, {
+          ...optionsRef.current,
+          signal: abortController.signal
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setState({ data, loading: false, error: null });
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError' && !cancelled) {
+          setState({ data: null, loading: false, error: error.message });
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+      abortController.abort();
+    };
+  }, [url]); // Only re-fetch when URL changes
+
+  return state;
+}
+
+// Usage
+function UserProfile({ userId }) {
+  const { data: user, loading, error } = useDataFetch(
+    `/api/users/${userId}`
+  );
+
+  if (loading) return <Spinner />;
+  if (error) return <Error message={error} />;
+  return <UserCard user={user} />;
+}
+```
+
+**Example 3: Multiple Effects for Separation of Concerns**
+```javascript
+function Dashboard({ userId }) {
+  const [user, setUser] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [theme, setTheme] = useState('light');
+
+  // Effect 1: Fetch user data
+  useEffect(() => {
+    fetchUser(userId).then(setUser);
+  }, [userId]);
+
+  // Effect 2: Subscribe to notifications
+  useEffect(() => {
+    const unsubscribe = notificationService.subscribe(
+      userId,
+      (notification) => {
+        setNotifications(prev => [...prev, notification]);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [userId]);
+
+  // Effect 3: Sync theme with localStorage
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) setTheme(savedTheme);
+  }, []); // Run once on mount
+
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+  }, [theme]); // Run when theme changes
+
+  // Effect 4: Update document title
+  useEffect(() => {
+    document.title = user ? `${user.name}'s Dashboard` : 'Dashboard';
+  }, [user]);
+
+  // Effect 5: Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.key === 't') setTheme(t => t === 'light' ? 'dark' : 'light');
+    };
+
+    document.addEventListener('keypress', handleKeyPress);
+    return () => document.removeEventListener('keypress', handleKeyPress);
+  }, []); // Setup once
+
+  return (
+    <div className={theme}>
+      {user && <UserInfo user={user} />}
+      <NotificationList notifications={notifications} />
+    </div>
+  );
+}
+```
+
+**Why separate effects:**
+- Each effect has its own concern and dependencies
+- Easier to understand, test, and debug
+- React can optimize each independently
+- Clear lifecycle for each resource
+
+**Example 4: Effect Execution Order**
+```javascript
+function Parent() {
+  console.log('Parent render');
+  
+  useEffect(() => {
+    console.log('Parent effect');
+    return () => console.log('Parent cleanup');
+  });
+
+  return <Child />;
+}
+
+function Child() {
+  console.log('Child render');
+  
+  useEffect(() => {
+    console.log('Child effect');
+    return () => console.log('Child cleanup');
+  });
+
+  return <div>Child</div>;
+}
+
+// First render output:
+// Parent render
+// Child render
+// Child effect      ← Child effects first
+// Parent effect     ← Then parent effects
+
+// On unmount:
+// Child cleanup     ← Child cleanup first
+// Parent cleanup    ← Then parent cleanup
+
+// On update:
+// Parent render
+// Child render
+// Child cleanup     ← Old effects cleanup
+// Parent cleanup
+// Child effect      ← New effects run
+// Parent effect
+```
+
+#### 6. Why & How Summary
+
+**Why useEffect Matters:**
+- **Side Effects**: The only proper way to handle side effects in functional components
+- **Lifecycle**: Replaces three class methods with one unified API
+- **Resource Management**: Critical for cleanup to prevent memory leaks
+- **Data Synchronization**: Keeps component in sync with external systems
+- **Performance**: Runs after paint, doesn't block rendering
+- **Composition**: Foundation for custom hooks that encapsulate effects
+- **Debugging**: Clear dependency tracking makes behavior predictable
+
+**How It Works Technically:**
+1. **Registration**: During render, useEffect registers effect with fiber node
+2. **Commit**: After DOM updates, React schedules effects
+3. **Execution**: After browser paint, effects run asynchronously
+4. **Dependency Check**: React shallow-compares dependencies
+5. **Cleanup**: Before re-running or unmounting, cleanup executes
+6. **Re-run**: If dependencies changed, effect executes again
+
+**Execution Flow:**
+```
+Component Function → Render → Commit to DOM → Browser Paint → useEffect runs
+                                                               ↓
+                                               Cleanup (before next run or unmount)
+```
+
+useEffect is the cornerstone of side effect management in modern React. Understanding its timing, dependency array mechanics, cleanup patterns, and common pitfalls is essential for building robust React applications. At a senior level, you should know not just how to use it, but when NOT to use it—many scenarios are better solved with event handlers, derived state, or other patterns. The goal is synchronization with external systems while keeping your component logic clear and maintainable.
+
+---
+
+### 13. Describe the `useState` hook and how it works
+
+#### 1. High-Level Explanation
+`useState` is React's hook for adding state to functional components. It returns a stateful value and a function to update it, enabling components to remember information between renders. When you call the setter function, React schedules a re-render with the new value. It's used because functional components are just functions that return JSX—they don't persist data between calls. useState provides that persistence. It's important because it's the foundation of interactive React applications, enabling components to respond to user input, API responses, and other dynamic data.
+
+**Why it's used:**
+- Add local state to functional components
+- Trigger re-renders when state changes
+- Maintain data between renders
+- Enable interactive, dynamic UIs
+- Simple, declarative state management
+- Foundation for more complex state patterns
+
+**Where it fits:**
+- Core hook for component state
+- Building block for forms, toggles, counters, etc.
+- Base for custom stateful hooks
+- Alternative to class component state
+
+#### 2. Deep-Dive Explanation (Senior Level)
+
+**useState Signature:**
+```javascript
+const [state, setState] = useState(initialState);
+```
+
+**Parameters:**
+- `initialState`: Initial value (can be value or function)
+
+**Returns:**
+- `state`: Current state value
+- `setState`: Function to update state
+
+**Internal Architecture:**
+
+React stores state in the component's fiber node:
+```
+Fiber Node
+  ├── memoizedState: Current state value
+  ├── queue: Update queue for state changes
+  ├── baseState: State from last commit
+  └── baseQueue: Updates not yet processed
+```
+
+**How State Updates Work:**
+
+1. **Call setState**: Enqueues update
+2. **Schedule Re-render**: React marks component for update
+3. **Reconciliation**: React processes update queue
+4. **Calculate New State**: Apply updates to previous state
+5. **Re-render**: Component function runs with new state
+6. **Commit**: DOM updated if needed
+
+**State Update Patterns:**
+
+**Direct Update:**
+```javascript
+setState(newValue);
+```
+
+**Functional Update (when depending on previous state):**
+```javascript
+setState(prevState => prevState + 1);
+```
+
+**Key Differences:**
+
+| Pattern | When to Use | Why |
+|---------|-------------|-----|
+| Direct | New value independent of old | Simple, clear |
+| Functional | New value depends on old | Avoids stale closures |
+
+**State Batching:**
+
+React 18+ automatically batches state updates:
+
+```javascript
+// Before React 18: Three re-renders in timeouts/promises
+// React 18+: One re-render (automatic batching everywhere)
+
+function handleClick() {
+  setCount(c => c + 1);  // Batched
+  setFlag(f => !f);      // Batched
+  setItems([...items]);  // Batched
+  // Single re-render after all updates
+}
+
+setTimeout(() => {
+  setCount(c => c + 1);  // Also batched in React 18+
+  setFlag(f => !f);      // Also batched
+  // Single re-render
+}, 1000);
+```
+
+**Lazy Initialization:**
+
+For expensive initial state calculations:
+
+```javascript
+// ❌ BAD: Runs on every render
+const [state, setState] = useState(expensiveCalculation());
+
+// ✅ GOOD: Only runs on initial render
+const [state, setState] = useState(() => expensiveCalculation());
+```
+
+**State Updates Are Asynchronous:**
+
+```javascript
+const [count, setCount] = useState(0);
+
+function handleClick() {
+  setCount(count + 1);
+  console.log(count);  // Still 0! (old value)
+  
+  setCount(count + 1);  // Still uses old count
+  // Result: count only increments by 1, not 2
+}
+
+// Fix: Use functional updates
+function handleClickFixed() {
+  setCount(c => c + 1);  // Uses current value
+  setCount(c => c + 1);  // Uses updated value
+  // Result: count increments by 2
+}
+```
+
+**Comparison with Class Component State:**
+
+| Aspect | useState | this.state |
+|--------|----------|------------|
+| **Merging** | Replaces state | Merges objects |
+| **Multiple states** | Multiple useState calls | Single state object |
+| **Updates** | setState(newValue) | setState({key: value}) |
+| **Functional updates** | setState(prev => ...) | setState(prev => ...) |
+| **Initialization** | useState(initial) | constructor |
+
+**Performance Considerations:**
+
+- **Expensive initialization**: Use lazy initializer function
+- **Large objects**: Consider splitting into multiple states
+- **Derived state**: Don't store—compute during render
+- **Unnecessary updates**: Use same reference to avoid re-render
+- **Object updates**: Spread operator creates new reference
+
+**Best Practices:**
+
+1. **Keep state minimal**: Only store what you need
+2. **Derive when possible**: Calculate values from existing state during render
+3. **Use functional updates**: When new state depends on old
+4. **Split unrelated state**: Multiple useState calls for independent data
+5. **Group related state**: Single useState for tightly coupled data
+6. **Initialize correctly**: Use lazy initialization for expensive calculations
+7. **Don't duplicate props in state**: Leads to stale data
+
+**Common Pitfalls:**
+
+1. **Stale closures**: Forgetting functional updates
+2. **Props in state**: Copying props to state (anti-pattern)
+3. **Synchronous expectations**: Expecting immediate state updates
+4. **Missing dependencies**: Using state in useEffect without dependency
+5. **Object mutations**: Mutating state object directly
+6. **Over-updating**: Unnecessary state causing re-renders
+
+#### 3. Clear Real-World Examples
+
+**Example 1: Counter (Classic useState)**
+```javascript
+function Counter() {
+  const [count, setCount] = useState(0);
+  
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+      <button onClick={() => setCount(c => c - 1)}>Decrement</button>
+      <button onClick={() => setCount(0)}>Reset</button>
+    </div>
+  );
+}
+```
+
+**Example 2: Form State (E-commerce Checkout)**
+```javascript
+function CheckoutForm() {
+  // Grouped related state
+  const [formData, setFormData] = useState({
+    email: '',
+    address: '',
+    city: '',
+    zipCode: ''
+  });
+  
+  // Separate independent state
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const handleChange = (field) => (e) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: e.target.value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    
+    try {
+      await processOrder(formData);
+    } catch (error) {
+      setErrors({ submit: error.message });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        value={formData.email}
+        onChange={handleChange('email')}
+        disabled={isProcessing}
+      />
+      {/* Other fields... */}
+      <button disabled={isProcessing}>
+        {isProcessing ? 'Processing...' : 'Place Order'}
+      </button>
+    </form>
+  );
+}
+```
+
+**Example 3: Toggle/Modal (UI State)**
+```javascript
+function ProductCard({ product }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+
+  return (
+    <div className="product-card">
+      <h3>{product.name}</h3>
+      <p>${product.price}</p>
+      
+      <button onClick={() => setIsExpanded(!isExpanded)}>
+        {isExpanded ? 'Hide' : 'Show'} Details
+      </button>
+      
+      {isExpanded && (
+        <div className="details">
+          {product.description}
+        </div>
+      )}
+      
+      <div>
+        <button onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
+        <span>{quantity}</span>
+        <button onClick={() => setQuantity(q => q + 1)}>+</button>
+      </div>
+      
+      <button onClick={() => setIsInWishlist(!isInWishlist)}>
+        {isInWishlist ? '❤️' : '🤍'} Wishlist
+      </button>
+    </div>
+  );
+}
+```
+
+**Example 4: Lazy Initialization (Expensive Computation)**
+```javascript
+function DataTable({ rawData }) {
+  // ❌ BAD: Runs on every render
+  const [processedData, setProcessedData] = useState(
+    rawData.map(item => expensiveTransform(item))
+  );
+  
+  // ✅ GOOD: Only runs on initial render
+  const [processedData, setProcessedData] = useState(() => {
+    console.log('Processing data...');
+    return rawData.map(item => expensiveTransform(item));
+  });
+
+  return <Table data={processedData} />;
+}
+```
+
+#### 4. Interview-Oriented Explanation
+
+**Sample Answer (7+ years level):**
+"useState is React's fundamental hook for adding stateful behavior to functional components. It's elegantly simple—you call it with an initial value, and it returns a pair: the current state value and a function to update it. When you call the setter, React schedules a re-render, and on the next render, useState returns the updated value.
+
+The key architectural insight is that useState leverages JavaScript closures. Each render creates a snapshot of the component with state values frozen at that render's time. This is why state updates are asynchronous—calling setState doesn't immediately mutate the current variable; it schedules an update for the next render.
+
+This leads to the stale closure problem. If you call setState with count + 1 twice in the same event handler, both calls see the same count value, so you only increment by one. The solution is functional updates: setState(prev => prev + 1). This tells React to apply the update based on the most current state, not the closed-over value.
+
+From a performance perspective, React 18 brought automatic batching everywhere. Previously, multiple setState calls in promises or timeouts each triggered a re-render. Now, React batches them just like it does in event handlers. This significantly reduces re-renders in applications with async state updates.
+
+For expensive initialization, I use the lazy initializer pattern—passing a function to useState instead of a value. This ensures the expensive calculation only runs once during the initial render, not on every render. This is crucial when initializing state from localStorage, parsing large datasets, or performing complex computations.
+
+A common anti-pattern I see is storing props in state. This creates a source-of-truth problem: when props change, the state doesn't update, leading to stale data. The solution is either using props directly, deriving values during render, or using useEffect to sync props to state only when necessary, with very clear intent about why that pattern is needed.
+
+In production applications, state architecture matters. I group related state into objects when values change together, but keep independent concerns in separate useState calls. This granular approach means updating quantity doesn't re-render components that only depend on isInWishlist. It's about finding the right balance between too much splitting (complexity) and too much grouping (unnecessary re-renders)."
+
+**Follow-up Questions You May Face:**
+
+1. **"Why use functional updates?"**
+   - Avoids stale closure issues
+   - When multiple updates depend on previous state
+   - When update logic used in different closures
+   - Safer in concurrent rendering scenarios
+   ```javascript
+   setCount(count + 1);           // Stale value
+   setCount(prev => prev + 1);    // Always current
+   ```
+
+2. **"How does useState differ from this.setState?"**
+   - useState replaces state, setState merges objects
+   - Multiple useState calls vs single state object
+   - No automatic callback (use useEffect instead)
+   - Simpler API, no this binding
+
+3. **"When should you split state vs group it?"**
+   - Split: Independent values that change separately
+   - Group: Values that always change together
+   - Split: Different update frequencies
+   - Group: Tightly coupled data (address fields)
+
+4. **"What's the initialization function pattern?"**
+   ```javascript
+   // Without function: Runs every render
+   useState(expensiveCalc())
+   
+   // With function: Runs once
+   useState(() => expensiveCalc())
+   ```
+   - Use for localStorage reads, parsing, calculations
+   - Function only called on initial render
+
+5. **"How do you update objects/arrays in state?"**
+   - Never mutate directly
+   - Create new reference with spread operator
+   - React compares by reference for changes
+   ```javascript
+   // ❌ Mutation
+   state.push(item);
+   setState(state);
+   
+   // ✅ New reference
+   setState(prev => [...prev, item]);
+   ```
+
+#### 5. Code Examples
+
+**Example 1: Common Mistakes and Fixes**
+```javascript
+// ❌ MISTAKE 1: Stale closure
+function Counter() {
+  const [count, setCount] = useState(0);
+  
+  function increment() {
+    setCount(count + 1);
+    setCount(count + 1);
+    setCount(count + 1);
+    // Result: count only increases by 1!
+    // All three calls use the same count value
+  }
+  
+  return <button onClick={increment}>{count}</button>;
+}
+
+// ✅ FIX: Functional updates
+function CounterFixed() {
+  const [count, setCount] = useState(0);
+  
+  function increment() {
+    setCount(c => c + 1);
+    setCount(c => c + 1);
+    setCount(c => c + 1);
+    // Result: count increases by 3!
+    // Each update uses the latest value
+  }
+  
+  return <button onClick={increment}>{count}</button>;
+}
+
+// ❌ MISTAKE 2: Props in state anti-pattern
+function BadUserProfile({ userId }) {
+  const [currentUserId, setCurrentUserId] = useState(userId);
+  // Problem: When userId prop changes, currentUserId state doesn't update!
+  
+  return <div>User: {currentUserId}</div>;
+}
+
+// ✅ FIX: Use props directly or sync with useEffect
+function GoodUserProfile({ userId }) {
+  // Just use the prop directly
+  return <div>User: {userId}</div>;
+}
+
+// Or if you need derived state:
+function DerivedUserProfile({ userId }) {
+  const [data, setData] = useState(null);
+  
+  useEffect(() => {
+    fetchUserData(userId).then(setData);
+  }, [userId]); // Re-fetch when userId changes
+  
+  return <div>{data?.name}</div>;
+}
+
+// ❌ MISTAKE 3: Mutating state
+function BadTodoList() {
+  const [todos, setTodos] = useState([]);
+  
+  function addTodo(text) {
+    todos.push({ id: Date.now(), text });  // ❌ Mutation!
+    setTodos(todos);  // React won't detect change (same reference)
+  }
+  
+  return <button onClick={() => addTodo('New')}>Add</button>;
+}
+
+// ✅ FIX: Create new reference
+function GoodTodoList() {
+  const [todos, setTodos] = useState([]);
+  
+  function addTodo(text) {
+    setTodos(prev => [...prev, { id: Date.now(), text }]);
+  }
+  
+  return <button onClick={() => addTodo('New')}>Add</button>;
+}
+
+// ❌ MISTAKE 4: Expensive initialization
+function BadComponent() {
+  // This runs on EVERY render!
+  const [data, setData] = useState(
+    JSON.parse(localStorage.getItem('data')) || []
+  );
+  
+  return <div>{data.length} items</div>;
+}
+
+// ✅ FIX: Lazy initialization
+function GoodComponent() {
+  // This runs ONCE on initial render
+  const [data, setData] = useState(() => {
+    const saved = localStorage.getItem('data');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  return <div>{data.length} items</div>;
+}
+```
+
+**Example 2: State Update Patterns**
+```javascript
+function StateUpdatePatterns() {
+  const [count, setCount] = useState(0);
+  const [user, setUser] = useState({ name: '', age: 0 });
+  const [items, setItems] = useState([]);
+
+  // Pattern 1: Simple update
+  const incrementSimple = () => {
+    setCount(count + 1);
+  };
+
+  // Pattern 2: Functional update (recommended when depending on prev)
+  const incrementFunctional = () => {
+    setCount(prev => prev + 1);
+  };
+
+  // Pattern 3: Update object (replace, not merge)
+  const updateUser = () => {
+    setUser({
+      ...user,
+      name: 'John'  // Must spread ...user to keep other properties
+    });
+  };
+
+  // Pattern 4: Update nested object
+  const updateNestedProperty = () => {
+    setUser(prev => ({
+      ...prev,
+      address: {
+        ...prev.address,
+        city: 'New York'
+      }
+    }));
+  };
+
+  // Pattern 5: Update array - add item
+  const addItem = (item) => {
+    setItems(prev => [...prev, item]);
+  };
+
+  // Pattern 6: Update array - remove item
+  const removeItem = (id) => {
+    setItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  // Pattern 7: Update array - modify item
+  const updateItem = (id, changes) => {
+    setItems(prev => prev.map(item =>
+      item.id === id ? { ...item, ...changes } : item
+    ));
+  };
+
+  // Pattern 8: Conditional update (avoid unnecessary re-renders)
+  const conditionalUpdate = (newValue) => {
+    if (newValue !== count) {  // Only update if value actually changed
+      setCount(newValue);
+    }
+  };
+
+  // Pattern 9: Multiple related updates (batched automatically)
+  const multipleUpdates = () => {
+    setCount(c => c + 1);    // These are batched together
+    setUser(u => ({ ...u, age: u.age + 1 }));
+    setItems(items => [...items, 'new']);
+    // Only one re-render!
+  };
+
+  return <div>State patterns example</div>;
+}
+```
+
+**Example 3: State Structure Strategies**
+```javascript
+// Strategy 1: Multiple primitive states (independent concerns)
+function ComponentWithMultipleStates() {
+  const [name, setName] = useState('');
+  const [age, setAge] = useState(0);
+  const [email, setEmail] = useState('');
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  
+  // Good when: Values change independently
+  // Each update only re-renders what depends on that specific state
+}
+
+// Strategy 2: Single object state (related data)
+function ComponentWithObjectState() {
+  const [user, setUser] = useState({
+    name: '',
+    age: 0,
+    email: '',
+    address: {
+      street: '',
+      city: ''
+    }
+  });
+  
+  // Good when: Data changes together, belongs conceptually together
+  // Update one field:
+  const updateEmail = (email) => {
+    setUser(prev => ({ ...prev, email }));
+  };
+}
+
+// Strategy 3: Hybrid approach (best of both worlds)
+function ComponentHybrid() {
+  // Core user data that changes together
+  const [user, setUser] = useState({
+    name: '',
+    email: ''
+  });
+  
+  // UI state (independent)
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Error state (independent)
+  const [errors, setErrors] = useState({});
+  
+  // Good: Related data grouped, unrelated data separate
+}
+
+// Strategy 4: Array state management
+function TodoApp() {
+  const [todos, setTodos] = useState([]);
+
+  const addTodo = (text) => {
+    const newTodo = {
+      id: crypto.randomUUID(),
+      text,
+      completed: false
+    };
+    setTodos(prev => [...prev, newTodo]);
+  };
+
+  const toggleTodo = (id) => {
+    setTodos(prev => prev.map(todo =>
+      todo.id === id
+        ? { ...todo, completed: !todo.completed }
+        : todo
+    ));
+  };
+
+  const deleteTodo = (id) => {
+    setTodos(prev => prev.filter(todo => todo.id !== id));
+  };
+
+  const clearCompleted = () => {
+    setTodos(prev => prev.filter(todo => !todo.completed));
+  };
+
+  return (
+    <div>
+      {todos.map(todo => (
+        <div key={todo.id}>
+          <input
+            type="checkbox"
+            checked={todo.completed}
+            onChange={() => toggleTodo(todo.id)}
+          />
+          <span>{todo.text}</span>
+          <button onClick={() => deleteTodo(todo.id)}>Delete</button>
+        </div>
+      ))}
+      <button onClick={clearCompleted}>Clear Completed</button>
+    </div>
+  );
+}
+```
+
+**Example 4: Custom Hooks with useState**
+```javascript
+// Custom hook: useToggle
+function useToggle(initialValue = false) {
+  const [value, setValue] = useState(initialValue);
+  
+  const toggle = useCallback(() => setValue(v => !v), []);
+  const setTrue = useCallback(() => setValue(true), []);
+  const setFalse = useCallback(() => setValue(false), []);
+  
+  return [value, toggle, setTrue, setFalse];
+}
+
+// Usage
+function Modal() {
+  const [isOpen, toggle, open, close] = useToggle(false);
+  
+  return (
+    <>
+      <button onClick={open}>Open Modal</button>
+      {isOpen && (
+        <div className="modal">
+          <button onClick={close}>Close</button>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Custom hook: useLocalStorage
+function useLocalStorage(key, initialValue) {
+  const [storedValue, setStoredValue] = useState(() => {
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.error(error);
+      return initialValue;
+    }
+  });
+
+  const setValue = (value) => {
+    try {
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      setStoredValue(valueToStore);
+      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return [storedValue, setValue];
+}
+
+// Usage
+function Settings() {
+  const [theme, setTheme] = useLocalStorage('theme', 'light');
+  const [fontSize, setFontSize] = useLocalStorage('fontSize', 16);
+  
+  return (
+    <div>
+      <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}>
+        Toggle Theme: {theme}
+      </button>
+      <button onClick={() => setFontSize(f => f + 1)}>
+        Increase Font: {fontSize}px
+      </button>
+    </div>
+  );
+}
+
+// Custom hook: useArray
+function useArray(initialArray = []) {
+  const [array, setArray] = useState(initialArray);
+
+  const push = useCallback((element) => {
+    setArray(arr => [...arr, element]);
+  }, []);
+
+  const remove = useCallback((index) => {
+    setArray(arr => arr.filter((_, i) => i !== index));
+  }, []);
+
+  const filter = useCallback((callback) => {
+    setArray(arr => arr.filter(callback));
+  }, []);
+
+  const update = useCallback((index, newElement) => {
+    setArray(arr => arr.map((element, i) => i === index ? newElement : element));
+  }, []);
+
+  const clear = useCallback(() => {
+    setArray([]);
+  }, []);
+
+  return { array, set: setArray, push, remove, filter, update, clear };
+}
+
+// Usage
+function ListManager() {
+  const { array: items, push, remove, clear } = useArray(['Apple', 'Banana']);
+  
+  return (
+    <div>
+      {items.map((item, index) => (
+        <div key={index}>
+          {item}
+          <button onClick={() => remove(index)}>Remove</button>
+        </div>
+      ))}
+      <button onClick={() => push('New Item')}>Add Item</button>
+      <button onClick={clear}>Clear All</button>
+    </div>
+  );
+}
+```
+
+#### 6. Why & How Summary
+
+**Why useState Matters:**
+- **State Management**: Core primitive for managing component state
+- **Interactivity**: Enables components to respond to user actions
+- **Simplicity**: Much simpler than class component state
+- **Composition**: Foundation for custom hooks and state patterns
+- **Performance**: Batched updates reduce re-renders
+- **Predictability**: Declarative state updates are easier to reason about
+- **Foundation**: Building block for complex state management
+
+**How It Works Technically:**
+1. **First Render**: useState creates state slot in fiber node
+2. **Initial Value**: Stores initial value or calls initializer function
+3. **Returns**: [currentValue, updaterFunction]
+4. **Update Call**: setState enqueues update in fiber's update queue
+5. **Schedule**: React schedules re-render
+6. **Next Render**: useState returns new value from update queue
+7. **Batching**: Multiple setState calls batched into single re-render
+
+**State Flow:**
+```
+Component Call → useState() → [state, setState]
+                                    ↓
+User Action → setState(newValue) → Enqueue Update
+                                    ↓
+                            Schedule Re-render
+                                    ↓
+                       Process Update Queue
+                                    ↓
+                  Component Re-runs → New State Value
+```
+
+useState is deceptively simple but foundational to React. Understanding the closure-based state model, asynchronous updates, batching behavior, and when to use functional updates is essential. At a senior level, you should know not just the API, but when to split vs group state, how to structure state for optimal re-renders, and how to build reusable stateful logic with custom hooks. The goal is writing components that are both performant and maintainable.
+
+---
+
+### 9. What is useCallback and useMemo in React?
+
+#### 1. High-Level Explanation
+`useCallback` and `useMemo` are React hooks for performance optimization through memoization. `useMemo` memoizes the **result** of an expensive computation, while `useCallback` memoizes the **function itself**. They're used to prevent unnecessary recalculations and re-creations on every render. Both take a dependency array—the memoized value/function is recalculated only when dependencies change. They're important for optimizing expensive operations, preventing unnecessary child re-renders, and stabilizing references for dependency arrays in other hooks.
+
+**Why they're used:**
+- Optimize expensive computations (useMemo)
+- Prevent unnecessary child re-renders (both)
+- Stabilize function references (useCallback)
+- Fix dependency array issues in useEffect
+- Improve performance in large lists or complex UIs
+- Reduce reconciliation overhead
+
+**Where they fit:**
+- Performance optimization layer
+- Component optimization strategy
+- Dependency management for hooks
+- Preventing prop reference changes
+
+#### 2. Deep-Dive Explanation (Senior Level)
+
+**Signatures:**
+
+```javascript
+const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);
+const memoizedCallback = useCallback(() => { doSomething(a, b); }, [a, b]);
+```
+
+**Key Difference:**
+
+```javascript
+// useMemo returns the RESULT of the function
+const value = useMemo(() => expensiveCalc(), [dep]);
+
+// useCallback returns the FUNCTION itself
+const callback = useCallback(() => doSomething(), [dep]);
+
+// Equivalent:
+const callback = useMemo(() => () => doSomething(), [dep]);
+```
+
+**When to Use:**
+
+**useMemo:**
+- Expensive calculations (filtering, sorting large arrays)
+- Complex object creation that would create new references
+- Derived data from state/props
+- Preventing re-renders of child components receiving the value
+
+**useCallback:**
+- Callbacks passed to optimized child components (React.memo)
+- Functions used in dependency arrays of useEffect/useMemo
+- Event handlers passed to many children
+- Functions used in expensive hooks (useEffect with complex deps)
+
+**When NOT to Use:**
+
+❌ **Don't use for:**
+- Simple calculations (overhead > benefit)
+- Every function (premature optimization)
+- All props (only when proven necessary)
+- Trivial computations
+
+**Performance Trade-offs:**
+
+Both hooks have costs:
+- Memory: Store previous values and dependencies
+- Comparison: Shallow compare dependency arrays
+- Overhead: Hook infrastructure
+
+Only use when:
+- Measurable performance problem exists
+- Child component uses React.memo
+- Calculation is genuinely expensive
+- Creating stable references for dependencies
+
+**Internal Architecture:**
+
+```
+Fiber Node
+  ├── memoizedState: Linked list of hooks
+  │    ├── Hook 1: useMemo
+  │    │    ├── memoizedState: Cached result
+  │    │    └── baseQueue: Dependencies
+  │    └── Hook 2: useCallback
+  │         ├── memoizedState: Cached function
+  │         └── baseQueue: Dependencies
+```
+
+On each render:
+1. React compares current deps with previous deps (shallow comparison)
+2. If deps unchanged: Return cached value/function
+3. If deps changed: Execute function, cache result, return new value
+
+**Comparison Table:**
+
+| Aspect | useMemo | useCallback | No Optimization |
+|--------|---------|-------------|-----------------|
+| **Returns** | Computed value | Function reference | New value/function |
+| **Use case** | Expensive calculations | Callback stability | Most cases |
+| **Memory** | Caches result | Caches function | None |
+| **When to use** | Expensive computations | Optimized children | Default approach |
+
+**React.memo Integration:**
+
+```javascript
+// Child only re-renders if props actually change
+const Child = React.memo(({ onClick, data }) => {
+  return <div onClick={onClick}>{data}</div>;
+});
+
+function Parent() {
+  const [count, setCount] = useState(0);
+  const [other, setOther] = useState(0);
+  
+  // ❌ Without useCallback: New function every render
+  // Child re-renders even when data hasn't changed
+  const handleClick = () => setCount(c => c + 1);
+  
+  // ✅ With useCallback: Stable reference
+  // Child only re-renders when dependencies change
+  const handleClickMemo = useCallback(
+    () => setCount(c => c + 1),
+    [] // No dependencies = never changes
+  );
+  
+  return <Child onClick={handleClickMemo} data={count} />;
+}
+```
+
+**Best Practices:**
+
+1. **Profile first**: Use React DevTools Profiler before optimizing
+2. **Optimize strategically**: Focus on measured bottlenecks
+3. **Complete dependencies**: Include all values used inside
+4. **Don't overuse**: Default to simple code, optimize when needed
+5. **Pair with React.memo**: useCallback most useful with memoized children
+6. **Consider alternatives**: Sometimes restructuring is better than memoization
+
+**Common Pitfalls:**
+
+1. **Over-optimization**: Using everywhere (premature optimization)
+2. **Missing dependencies**: Stale closures from incomplete deps
+3. **Object dependencies**: Objects in deps array defeat memoization
+4. **Misunderstanding purpose**: Using for "caching" instead of reference stability
+5. **Wrong hook**: Using useMemo when useCallback is clearer (or vice versa)
+
+#### 3. Clear Real-World Examples
+
+**Example 1: Expensive Filtering/Sorting (E-commerce Product List)**
+
+```javascript
+function ProductList({ products, searchTerm, sortBy }) {
+  // ✅ useMemo: Expensive filtering and sorting
+  const filteredAndSorted = useMemo(() => {
+    console.log('Filtering and sorting...');
+    
+    // Filter products by search term
+    let result = products.filter(product =>
+      product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    // Sort products
+    result.sort((a, b) => {
+      if (sortBy === 'price') return a.price - b.price;
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      return 0;
+    });
+    
+    return result;
+  }, [products, searchTerm, sortBy]);
+  
+  // Without useMemo: This runs on EVERY render (even unrelated state changes)
+  // With useMemo: Only runs when products, searchTerm, or sortBy change
+  
+  return (
+    <div>
+      {filteredAndSorted.map(product => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  );
+}
+```
+
+**Example 2: Optimizing Child Re-renders (Large Table)**
+
+```javascript
+// Child component with React.memo
+const TableRow = React.memo(({ row, onEdit, onDelete }) => {
+  console.log('Rendering row:', row.id);
+  
+  return (
+    <tr>
+      <td>{row.name}</td>
+      <td>{row.value}</td>
+      <td>
+        <button onClick={() => onEdit(row.id)}>Edit</button>
+        <button onClick={() => onDelete(row.id)}>Delete</button>
+      </td>
+    </tr>
+  );
+});
+
+function DataTable({ rows }) {
+  const [selectedId, setSelectedId] = useState(null);
+  
+  // ❌ Without useCallback: New functions every render
+  // All rows re-render even when nothing changed
+  const handleEditBad = (id) => {
+    setSelectedId(id);
+  };
+  
+  // ✅ With useCallback: Stable function references
+  // Only changed rows re-render
+  const handleEdit = useCallback((id) => {
+    setSelectedId(id);
+  }, []); // No dependencies = never changes
+  
+  const handleDelete = useCallback((id) => {
+    // Delete logic
+  }, []);
+  
+  return (
+    <table>
+      <tbody>
+        {rows.map(row => (
+          <TableRow
+            key={row.id}
+            row={row}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// Result: Clicking a button only re-renders that specific row,
+// not all 1000+ rows
+```
+
+**Example 3: Complex Derived Data (Analytics Dashboard)**
+
+```javascript
+function AnalyticsDashboard({ transactions, dateRange }) {
+  // ✅ useMemo: Complex aggregations
+  const statistics = useMemo(() => {
+    console.log('Calculating statistics...');
+    
+    const filtered = transactions.filter(t =>
+      t.date >= dateRange.start && t.date <= dateRange.end
+    );
+    
+    return {
+      total: filtered.reduce((sum, t) => sum + t.amount, 0),
+      average: filtered.length > 0
+        ? filtered.reduce((sum, t) => sum + t.amount, 0) / filtered.length
+        : 0,
+      count: filtered.length,
+      byCategory: filtered.reduce((acc, t) => {
+        acc[t.category] = (acc[t.category] || 0) + t.amount;
+        return acc;
+      }, {}),
+      topTransactions: filtered
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 10)
+    };
+  }, [transactions, dateRange]);
+  
+  // Expensive calculations only run when transactions or dateRange change
+  // Not on every render (e.g., when hovering charts, opening dropdowns, etc.)
+  
+  return (
+    <div>
+      <h2>Total: ${statistics.total}</h2>
+      <h3>Average: ${statistics.average.toFixed(2)}</h3>
+      <CategoryChart data={statistics.byCategory} />
+      <TopTransactionsList transactions={statistics.topTransactions} />
+    </div>
+  );
+}
+```
+
+**Example 4: Stable Dependencies for useEffect**
+
+```javascript
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  
+  // ✅ useCallback: Stable function for useEffect dependency
+  const fetchUser = useCallback(async () => {
+    const response = await fetch(`/api/users/${userId}`);
+    const data = await response.json();
+    setUser(data);
+  }, [userId]); // Only recreate when userId changes
+  
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]); // fetchUser is stable, effect only runs when userId changes
+  
+  // ❌ Without useCallback:
+  // const fetchUser = async () => { ... } // New function every render
+  // useEffect(() => { fetchUser(); }, [fetchUser]); // Infinite loop!
+  
+  return user ? <UserCard user={user} /> : <Spinner />;
+}
+```
+
+#### 4. Interview-Oriented Explanation
+
+**Sample Answer (7+ years level):**
+"useCallback and useMemo are React's memoization hooks for performance optimization. They're both about preventing unnecessary work on re-renders by caching results between renders. The key distinction is what they cache: useMemo caches the result of a computation, while useCallback caches the function itself.
+
+The fundamental problem they solve is React's re-render behavior. Every time a component re-renders, all function declarations and calculations inside execute again. Usually this is fine—it's fast and keeps code simple. But in specific scenarios, this becomes a bottleneck: expensive calculations that filter or sort thousands of items, or callback props passed to hundreds of child components wrapped in React.memo.
+
+useMemo is for expensive computations. If you're filtering, sorting, or aggregating large datasets, or performing complex calculations, wrapping them in useMemo means they only recompute when their dependencies change, not on every render. The classic example is a product list with filtering and sorting—without useMemo, typing in an unrelated search box could trigger sorting calculations, even though the sort criteria didn't change.
+
+useCallback is primarily about reference stability for performance optimization with React.memo. When you pass a callback to a child component wrapped in React.memo, if that callback is recreated every render (default behavior), React.memo's prop comparison fails, and the child re-renders unnecessarily. useCallback solves this by returning the same function reference between renders unless dependencies change.
+
+A critical point often missed is that these hooks aren't free. They have overhead—memory to store cached values and CPU to compare dependencies. This is why premature optimization is dangerous. I always profile first using React DevTools Profiler to identify actual bottlenecks. Often, the performance issue is better solved by component restructuring, virtualization for long lists, or moving expensive computations outside the component entirely.
+
+In production systems, I've seen both under-use and over-use. Under-use: A large table component re-rendering all 500 rows on every parent update because callbacks weren't memoized. Over-use: Every function in a codebase wrapped in useCallback 'just in case,' adding overhead with no benefit. The right approach is measuring, targeting real bottlenecks, and keeping most code simple until proven slow."
+
+**Follow-up Questions You May Face:**
+
+1. **"When should you use useMemo vs useCallback?"**
+   - useMemo: Caching computed values (results)
+   - useCallback: Caching functions (callbacks)
+   - useCallback(() => fn, deps) === useMemo(() => () => fn, deps)
+   - Choose based on clarity and intent
+
+2. **"What's the relationship with React.memo?"**
+   - React.memo: Prevents component re-render if props haven't changed
+   - useCallback: Keeps callback prop references stable
+   - Together: Child only re-renders when data actually changes
+   - Without useCallback: React.memo ineffective (new function = changed prop)
+
+3. **"Can useMemo/useCallback cause bugs?"**
+   - Missing dependencies: Stale closures, outdated values
+   - Object/array dependencies: Recreated every render, defeats memoization
+   - Over-reliance: Makes code harder to understand
+   - ESLint exhaustive-deps rule helps prevent dependency bugs
+
+4. **"How do you know when optimization is needed?"**
+   - Use React DevTools Profiler
+   - Measure: Component render times, re-render frequency
+   - User perception: Visible lag, slow interactions
+   - Don't optimize without measurement
+   - "Premature optimization is the root of all evil"
+
+5. **"What are alternatives to useMemo/useCallback?"**
+   - Component restructuring: Lift slow parts to separate components
+   - Virtualization: React Window/Virtuoso for long lists
+   - Code splitting: Lazy load expensive components
+   - Web Workers: Move heavy computations off main thread
+   - Better state structure: Prevent unnecessary re-renders
+
+#### 5. Code Examples
+
+**Example 1: With vs Without Optimization**
+
+```javascript
+// Component WITHOUT optimization
+function ProductListSlow({ products, category }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // ❌ Recalculated on EVERY render (even typing in search box)
+  const filtered = products.filter(p => p.category === category);
+  
+  // ❌ New function every render
+  const handleClick = (id) => {
+    console.log('Clicked', id);
+  };
+  
+  return (
+    <div>
+      <input
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      {/* Every keystroke re-renders all items */}
+      {filtered.map(product => (
+        <ProductItem
+          key={product.id}
+          product={product}
+          onClick={handleClick}  // New function = re-render
+        />
+      ))}
+    </div>
+  );
+}
+
+// Component WITH optimization
+function ProductListOptimized({ products, category }) {
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // ✅ Only recalculated when products or category change
+  const filtered = useMemo(() => {
+    console.log('Filtering products...');
+    return products.filter(p => p.category === category);
+  }, [products, category]);
+  
+  // ✅ Stable function reference
+  const handleClick = useCallback((id) => {
+    console.log('Clicked', id);
+  }, []); // No dependencies = never changes
+  
+  return (
+    <div>
+      <input
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      {/* Typing doesn't recalculate filter or re-render items */}
+      {filtered.map(product => (
+        <ProductItem
+          key={product.id}
+          product={product}
+          onClick={handleClick}  // Same reference = no re-render
+        />
+      ))}
+    </div>
+  );
+}
+
+// Child component with React.memo
+const ProductItem = React.memo(({ product, onClick }) => {
+  console.log('Rendering ProductItem', product.id);
+  return (
+    <div onClick={() => onClick(product.id)}>
+      {product.name}
+    </div>
+  );
+});
+```
+
+**Example 2: Complex useMemo Scenarios**
+
+```javascript
+function DataAnalytics({ data, filters, groupBy }) {
+  // Scenario 1: Multi-step computation
+  const processedData = useMemo(() => {
+    console.log('Processing data...');
+    
+    // Step 1: Filter
+    let result = data.filter(item => {
+      return Object.entries(filters).every(([key, value]) =>
+        item[key] === value
+      );
+    });
+    
+    // Step 2: Group
+    const grouped = result.reduce((acc, item) => {
+      const key = item[groupBy];
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
+      return acc;
+    }, {});
+    
+    // Step 3: Calculate aggregates
+    return Object.entries(grouped).map(([key, items]) => ({
+      group: key,
+      count: items.length,
+      sum: items.reduce((s, i) => s + i.value, 0),
+      average: items.reduce((s, i) => s + i.value, 0) / items.length
+    }));
+  }, [data, filters, groupBy]);
+  
+  // Scenario 2: Conditional memoization
+  const expensiveCalculation = useMemo(() => {
+    // Only run expensive calc if data is large
+    if (data.length < 100) {
+      return data; // Small dataset, don't bother
+    }
+    
+    console.log('Running expensive calculation...');
+    return data.map(item => ({
+      ...item,
+      computed: complexAlgorithm(item)
+    }));
+  }, [data]);
+  
+  // Scenario 3: Object creation for stable reference
+  const config = useMemo(() => ({
+    theme: 'dark',
+    locale: 'en-US',
+    timezone: 'UTC'
+  }), []); // Empty deps = create once
+  
+  // Without useMemo, config is new object every render
+  // Causes re-renders of children receiving config prop
+  
+  return <Chart data={processedData} config={config} />;
+}
+```
+
+**Example 3: useCallback Patterns**
+
+```javascript
+function FormManager() {
+  const [formData, setFormData] = useState({});
+  const [errors, setErrors] = useState({});
+  
+  // Pattern 1: Callback with no dependencies
+  const resetForm = useCallback(() => {
+    setFormData({});
+    setErrors({});
+  }, []); // Never changes
+  
+  // Pattern 2: Callback with dependencies
+  const validateField = useCallback((fieldName) => {
+    const value = formData[fieldName];
+    
+    if (!value) {
+      setErrors(prev => ({ ...prev, [fieldName]: 'Required' }));
+      return false;
+    }
+    
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[fieldName];
+      return newErrors;
+    });
+    return true;
+  }, [formData]); // Recreate when formData changes
+  
+  // Pattern 3: Callback factory
+  const createFieldChangeHandler = useCallback((fieldName) => {
+    return (event) => {
+      setFormData(prev => ({
+        ...prev,
+        [fieldName]: event.target.value
+      }));
+    };
+  }, []); // Factory function never changes
+  
+  // Pattern 4: Callback with setState callback pattern
+  const addItem = useCallback((item) => {
+    setFormData(prev => ({
+      ...prev,
+      items: [...(prev.items || []), item]
+    }));
+  }, []); // No dependencies needed with functional update
+  
+  return (
+    <Form
+      onReset={resetForm}
+      onValidate={validateField}
+      onFieldChange={createFieldChangeHandler}
+      onAddItem={addItem}
+    />
+  );
+}
+```
+
+**Example 4: Common Mistakes**
+
+```javascript
+function MistakesExample() {
+  const [count, setCount] = useState(0);
+  const [items, setItems] = useState([]);
+  
+  // ❌ MISTAKE 1: Object in dependency array
+  const filters = { min: 0, max: 100 }; // New object every render
+  const filtered = useMemo(() => {
+    return items.filter(i => i.value >= filters.min && i.value <= filters.max);
+  }, [items, filters]); // filters always different = always recalculates!
+  
+  // ✅ FIX: Depend on primitives
+  const filteredFixed = useMemo(() => {
+    const min = 0, max = 100;
+    return items.filter(i => i.value >= min && i.value <= max);
+  }, [items]);
+  
+  // ❌ MISTAKE 2: Missing dependencies
+  const incrementByCount = useCallback(() => {
+    setCount(count + 1); // Uses count but not in dependencies
+  }, []); // Stale closure! Always uses initial count value
+  
+  // ✅ FIX 1: Include dependency
+  const incrementFixed1 = useCallback(() => {
+    setCount(count + 1);
+  }, [count]); // Recreates when count changes
+  
+  // ✅ FIX 2: Functional update (preferred)
+  const incrementFixed2 = useCallback(() => {
+    setCount(c => c + 1); // No dependency needed
+  }, []);
+  
+  // ❌ MISTAKE 3: Premature optimization
+  const trivialCalc = useMemo(() => {
+    return count * 2; // Too simple to benefit from memoization
+  }, [count]); // Overhead > benefit
+  
+  // ✅ FIX: Just calculate it
+  const trivialCalcFixed = count * 2; // Simple and clear
+  
+  // ❌ MISTAKE 4: Memoizing everything
+  const callback1 = useCallback(() => {}, []);
+  const callback2 = useCallback(() => {}, []);
+  const callback3 = useCallback(() => {}, []);
+  // ... 20 more callbacks
+  // Makes code hard to read, little benefit
+  
+  // ✅ FIX: Only memoize what causes problems
+  // Start simple, optimize when profiling shows need
+}
+```
+
+**Example 5: Real Performance Comparison**
+
+```javascript
+// Measuring the impact
+function PerformanceComparison() {
+  const [data, setData] = useState(generateLargeDataset(10000));
+  const [filterValue, setFilterValue] = useState('');
+  const [unrelatedState, setUnrelatedState] = useState(0);
+  
+  // WITHOUT useMemo
+  console.time('filter-without-memo');
+  const filteredSlow = data.filter(item =>
+    item.name.toLowerCase().includes(filterValue.toLowerCase())
+  );
+  console.timeEnd('filter-without-memo');
+  // Runs on EVERY render (even unrelatedState changes)
+  
+  // WITH useMemo
+  const filteredFast = useMemo(() => {
+    console.time('filter-with-memo');
+    const result = data.filter(item =>
+      item.name.toLowerCase().includes(filterValue.toLowerCase())
+    );
+    console.timeEnd('filter-with-memo');
+    return result;
+  }, [data, filterValue]);
+  // Only runs when data or filterValue changes
+  
+  return (
+    <div>
+      <input
+        value={filterValue}
+        onChange={(e) => setFilterValue(e.target.value)}
+      />
+      <button onClick={() => setUnrelatedState(s => s + 1)}>
+        Update Unrelated State: {unrelatedState}
+      </button>
+      {/* Clicking button: filteredSlow recalculates, filteredFast doesn't */}
+      <div>Results: {filteredFast.length}</div>
+    </div>
+  );
+}
+```
+
+#### 6. Why & How Summary
+
+**Why useCallback and useMemo Matter:**
+- **Performance**: Prevent unnecessary recalculations and re-renders
+- **Reference Stability**: Keep function/object references consistent
+- **Child Optimization**: Enable React.memo to work effectively
+- **Dependency Management**: Solve useEffect infinite loop issues
+- **Large Scale**: Critical in apps with complex UIs or large datasets
+- **User Experience**: Eliminate lag in interactive components
+- **Scalability**: Keep apps performant as they grow
+
+**How They Work Technically:**
+
+**useMemo:**
+1. First render: Execute function, cache result and dependencies
+2. Subsequent renders: Shallow compare dependencies
+3. If unchanged: Return cached result
+4. If changed: Re-execute function, cache new result
+
+**useCallback:**
+1. First render: Cache function and dependencies
+2. Subsequent renders: Shallow compare dependencies
+3. If unchanged: Return cached function reference
+4. If changed: Cache new function reference
+
+**Decision Tree:**
+```
+Need to optimize? 
+  → Profile first with React DevTools
+    → Is there a real performance issue?
+      → Expensive calculation?
+        → useMemo for result
+      → Callback to memoized child?
+        → useCallback for function
+      → Neither?
+        → Consider restructuring
+    → No performance issue?
+      → Keep code simple, don't optimize
+```
+
+useCallback and useMemo are powerful tools for performance optimization, but they're not default solutions. The key insight is understanding when the optimization overhead is worth the benefit. In senior-level development, this means profiling first, measuring impact, and only applying memoization where it provides measurable value. Over-optimization makes code harder to maintain without performance benefits. Under-optimization leaves performance issues unaddressed. The skill is knowing the difference through measurement and experience.
+
+---
+
+### 10. What is Context API in React? How do you use it?
+
+#### 1. High-Level Explanation
+The Context API is React's built-in solution for sharing data across the component tree without passing props through every level (prop drilling). It provides a way to create global or scoped state that any component can access directly. Context consists of a **Provider** (supplies the data) and **Consumers** (access the data). It's ideal for theme data, user authentication, language preferences, or any data needed by many components at different nesting levels.
+
+**Why it's used:**
+- Eliminate prop drilling through multiple levels
+- Share global state (theme, auth, locale)
+- Provide dependency injection for components
+- Simplify component APIs
+- Create reusable component systems
+- Manage cross-cutting concerns
+
+**Where it fits:**
+- Application-level state (theme, auth)
+- Feature-level shared state
+- Component composition patterns
+- Alternative to Redux for simpler cases
+
+#### 2. Deep-Dive Explanation (Senior Level)
+
+**Core API:**
+
+```javascript
+// 1. Create Context
+const MyContext = React.createContext(defaultValue);
+
+// 2. Provide value
+<MyContext.Provider value={someValue}>
+  <ComponentTree />
+</MyContext.Provider>
+
+// 3. Consume value
+const value = useContext(MyContext); // Hook API
+// OR
+<MyContext.Consumer>
+  {value => <div>{value}</div>}
+</MyContext.Consumer>
+```
+
+**Key Characteristics:**
+
+1. **Default Value**: Used when no Provider exists above
+2. **Provider**: Supplies value to descendants
+3. **Consumer**: Accesses value (via useContext or Consumer component)
+4. **Re-render Behavior**: All consumers re-render when Provider value changes
+5. **Value Comparison**: Uses Object.is() for change detection
+
+**Internal Architecture:**
+
+```
+Context Object
+  ├── Provider Component
+  │    ├── value prop
+  │    └── Fiber tracking for consumers
+  ├── Consumer Component
+  │    └── Subscribes to nearest Provider
+  └── defaultValue (fallback)
+
+When value changes:
+  1. Provider notifies React reconciler
+  2. All subscribed consumers marked for update
+  3. Re-render propagates from consumers downward
+  4. Skips intermediate components (optimization)
+```
+
+**Performance Considerations:**
+
+**Problem**: Context re-renders all consumers when value changes
+
+```javascript
+// ❌ BAD: Object created every render = all consumers re-render
+function App() {
+  const [user, setUser] = useState(null);
+  return (
+    <UserContext.Provider value={{ user, setUser }}>
+      <ComponentTree />
+    </UserContext.Provider>
+  );
+  // New object every render, even if user didn't change!
+}
+
+// ✅ GOOD: Memoize value object
+function App() {
+  const [user, setUser] = useState(null);
+  const value = useMemo(() => ({ user, setUser }), [user]);
+  return (
+    <UserContext.Provider value={value}>
+      <ComponentTree />
+    </UserContext.Provider>
+  );
+}
+```
+
+**Context vs Props vs State Management:**
+
+| Aspect | Context API | Props | Redux/Zustand |
+|--------|-------------|-------|---------------|
+| **Use case** | Shared data, 2-3 levels deep+ | Direct parent-child | Complex global state |
+| **Performance** | Re-renders all consumers | Granular control | Selector-based optimization |
+| **Boilerplate** | Minimal | None | Moderate-High |
+| **Dev Tools** | Limited | Excellent | Excellent |
+| **Learning curve** | Low | None | Moderate-High |
+| **Best for** | Theme, auth, simple global state | Most cases | Large apps, complex state |
+
+**Best Practices:**
+
+1. **Split contexts by concern**: Don't put everything in one context
+2. **Memoize Provider values**: Prevent unnecessary re-renders
+3. **Co-locate state**: Keep state as local as possible
+4. **Use custom hooks**: Encapsulate context logic
+5. **Provide defaults**: Make contexts work without Providers
+6. **Compose contexts**: Use multiple contexts together
+
+**Common Patterns:**
+
+**1. Custom Hook Pattern:**
+```javascript
+// Encapsulate context usage
+function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+}
+```
+
+**2. Split Context Pattern:**
+```javascript
+// Separate data and actions for optimization
+const StateContext = createContext();
+const DispatchContext = createContext();
+
+// Components using only dispatch don't re-render on state changes
+```
+
+**3. Context with Reducer:**
+```javascript
+// Complex state logic
+function MyProvider({ children }) {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  return (
+    <StateContext.Provider value={state}>
+      <DispatchContext.Provider value={dispatch}>
+        {children}
+      </DispatchContext.Provider>
+    </StateContext.Provider>
+  );
+}
+```
+
+**When NOT to Use Context:**
+
+❌ **Don't use for:**
+- Props that only go 1-2 levels deep (use props)
+- Frequently changing data (performance issues)
+- Complex derived state (consider state management library)
+- Everything (over-abstraction)
+
+✅ **DO use for:**
+- Theme/styling configuration
+- User authentication state
+- Locale/language preferences
+- Feature flags
+- Dependency injection
+
+**Pitfalls:**
+
+1. **Over-rendering**: All consumers re-render on value change
+2. **Value stability**: New objects cause unnecessary renders
+3. **Difficult to debug**: Less explicit than props
+4. **No time-travel debugging**: Unlike Redux
+5. **Testing complexity**: Need to wrap components in Providers
+
+#### 3. Clear Real-World Examples
+
+**Example 1: Theme Context (Classic Use Case)**
+
+```javascript
+// 1. Create theme context
+const ThemeContext = createContext({
+  theme: 'light',
+  toggleTheme: () => {}
+});
+
+// 2. Create provider component
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState('light');
+  
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  }, []);
+  
+  // ✅ Memoize to prevent unnecessary re-renders
+  const value = useMemo(
+    () => ({ theme, toggleTheme }),
+    [theme, toggleTheme]
+  );
+  
+  return (
+    <ThemeContext.Provider value={value}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+// 3. Custom hook for consuming
+function useTheme() {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within ThemeProvider');
+  }
+  return context;
+}
+
+// 4. Usage in components
+function Header() {
+  const { theme, toggleTheme } = useTheme();
+  
+  return (
+    <header style={{ background: theme === 'light' ? '#fff' : '#333' }}>
+      <button onClick={toggleTheme}>
+        Switch to {theme === 'light' ? 'dark' : 'light'} mode
+      </button>
+    </header>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <Header />
+      <Main />
+      <Footer />
+    </ThemeProvider>
+  );
+}
+```
+
+**Example 2: Authentication Context (Production Pattern)**
+
+```javascript
+// Complete auth system with Context
+const AuthContext = createContext(undefined);
+
+function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Initialize auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange((user) => {
+      setUser(user);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+  
+  // Auth actions
+  const login = useCallback(async (email, password) => {
+    setLoading(true);
+    try {
+      const user = await authService.login(email, password);
+      setUser(user);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  const logout = useCallback(async () => {
+    await authService.logout();
+    setUser(null);
+  }, []);
+  
+  const register = useCallback(async (email, password, name) => {
+    setLoading(true);
+    try {
+      const user = await authService.register(email, password, name);
+      setUser(user);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Memoize value
+  const value = useMemo(
+    () => ({ user, loading, login, logout, register }),
+    [user, loading, login, logout, register]
+  );
+  
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+// Custom hook with error checking
+function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+}
+
+// Protected route component
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+  
+  if (loading) return <Spinner />;
+  if (!user) return <Navigate to="/login" />;
+  
+  return children;
+}
+
+// Usage in components
+function Dashboard() {
+  const { user, logout } = useAuth();
+  
+  return (
+    <div>
+      <h1>Welcome, {user.name}!</h1>
+      <button onClick={logout}>Logout</button>
+    </div>
+  );
+}
+
+function LoginPage() {
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const result = await login(email, password);
+    if (!result.success) {
+      alert(result.error);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input value={email} onChange={(e) => setEmail(e.target.value)} />
+      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+      <button type="submit">Login</button>
+    </form>
+  );
+}
+```
+
+**Example 3: Split Context for Performance (Advanced)**
+
+```javascript
+// Problem: Components only needing dispatch still re-render on state changes
+// Solution: Split state and dispatch into separate contexts
+
+const TodoStateContext = createContext(undefined);
+const TodoDispatchContext = createContext(undefined);
+
+function TodoProvider({ children }) {
+  const [todos, dispatch] = useReducer(todoReducer, []);
+  
+  // State and dispatch never change reference
+  // Only todos array changes
+  return (
+    <TodoStateContext.Provider value={todos}>
+      <TodoDispatchContext.Provider value={dispatch}>
+        {children}
+      </TodoDispatchContext.Provider>
+    </TodoStateContext.Provider>
+  );
+}
+
+// Separate hooks for state and dispatch
+function useTodoState() {
+  const context = useContext(TodoStateContext);
+  if (context === undefined) {
+    throw new Error('useTodoState must be used within TodoProvider');
+  }
+  return context;
+}
+
+function useTodoDispatch() {
+  const context = useContext(TodoDispatchContext);
+  if (context === undefined) {
+    throw new Error('useTodoDispatch must be used within TodoProvider');
+  }
+  return context;
+}
+
+// Combined hook for convenience
+function useTodos() {
+  return [useTodoState(), useTodoDispatch()];
+}
+
+// Component only reading todos: re-renders when todos change
+function TodoList() {
+  const todos = useTodoState();
+  console.log('TodoList render');
+  
+  return (
+    <ul>
+      {todos.map(todo => (
+        <TodoItem key={todo.id} todo={todo} />
+      ))}
+    </ul>
+  );
+}
+
+// Component only dispatching: NEVER re-renders from todo changes!
+function AddTodoForm() {
+  const dispatch = useTodoDispatch(); // Only dispatch, not state
+  const [text, setText] = useState('');
+  
+  console.log('AddTodoForm render'); // Only renders on text change
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    dispatch({ type: 'ADD_TODO', text });
+    setText('');
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input value={text} onChange={(e) => setText(e.target.value)} />
+      <button type="submit">Add Todo</button>
+    </form>
+  );
+  // This component doesn't re-render when todos change!
+  // Major performance win for large lists
+}
+```
+
+**Example 4: Multiple Contexts Composition**
+
+```javascript
+// Real-world app with multiple contexts
+function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <LanguageProvider>
+          <NotificationProvider>
+            <Router>
+              <AppRoutes />
+            </Router>
+          </NotificationProvider>
+        </LanguageProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+// Component using multiple contexts
+function UserProfile() {
+  const { theme } = useTheme();
+  const { user } = useAuth();
+  const { t } = useLanguage();
+  const { showNotification } = useNotification();
+  
+  const handleSave = async () => {
+    try {
+      await saveProfile(user);
+      showNotification(t('profile.saved'), 'success');
+    } catch (error) {
+      showNotification(t('profile.error'), 'error');
+    }
+  };
+  
+  return (
+    <div className={`profile ${theme}`}>
+      <h1>{t('profile.title')}</h1>
+      <p>{user.name}</p>
+      <button onClick={handleSave}>{t('profile.save')}</button>
+    </div>
+  );
+}
+```
+
+#### 4. Interview-Oriented Explanation
+
+**Sample Answer (7+ years level):**
+"The Context API is React's solution to the prop drilling problem—when you need to pass data through multiple component levels that don't actually use the data. It provides a way to share values across the component tree without explicitly passing props at every level.
+
+The core concept is simple: you create a context with createContext, provide a value through a Provider component, and consume that value anywhere in the subtree using useContext hook or the Consumer component. The classic example is theme data—instead of passing theme='dark' through 10 component levels, you put a ThemeProvider at the top and any component can access the theme directly.
+
+However, Context is often misunderstood. It's not a full state management solution like Redux. The key limitation is performance: when the Provider's value changes, all consumers re-render, regardless of whether they use the changed part of the value. This is fine for infrequently changing data like theme or auth state, but problematic for frequently updating data.
+
+The critical implementation detail that trips up many developers is value stability. If you pass an object literal or create an object inline to the Provider's value prop, it's a new object every render, causing all consumers to re-render even when the actual data hasn't changed. The solution is useMemo to create a stable reference that only changes when the underlying data changes.
+
+For production applications, I follow specific patterns. First, split contexts by concern—don't put everything in one global context. Second, create custom hooks that encapsulate context usage and provide better error messages. Third, for complex state, consider splitting state and dispatch into separate contexts to optimize re-renders. Fourth, always memoize Provider values.
+
+A pattern I've used effectively in large applications is combining Context with useReducer for feature-level state. This gives you Redux-like patterns without the boilerplate, with state co-located near where it's used. For example, a complex form wizard might have its own FormContext managing step state, validation, and submission, rather than lifting everything to Redux.
+
+The key decision is when to use Context vs props vs a state management library. Props are better for 1-2 levels of passing data. Context is great for 2-5 levels or cross-cutting concerns like theme and auth. For complex global state with lots of interconnected updates and derived data, a library like Redux or Zustand often makes more sense. Context is powerful but shouldn't be the default choice for all shared state."
+
+**Follow-up Questions You May Face:**
+
+1. **"When should you use Context vs Redux/Zustand?"**
+   - Context: Simple shared state, theme, auth, infrequent changes
+   - Redux: Complex state, frequent updates, time-travel debugging, middleware
+   - Zustand: Middle ground, less boilerplate than Redux
+   - Decision factors: App size, state complexity, team familiarity
+
+2. **"How do you optimize Context performance?"**
+   - Memoize Provider values with useMemo
+   - Split contexts by update frequency
+   - Separate state and dispatch contexts
+   - Use selector pattern (though not built-in)
+   - Keep Context as high as needed, not at root
+   - Consider React.memo for expensive consumers
+
+3. **"Can you have multiple Providers for the same Context?"**
+   - Yes! Consumers use the nearest Provider ancestor
+   - Useful for nested scopes (e.g., theme overrides)
+   - Each Provider can have different values
+   - Pattern: Feature-level providers within app-level provider
+
+4. **"What's the difference between Context and Props?"**
+   - Props: Explicit, clear data flow, any depth
+   - Context: Implicit, avoids drilling, skips intermediate components
+   - Props are preferred for simple cases
+   - Context for cross-cutting concerns
+
+5. **"How do you test components using Context?"**
+   - Wrap component in Provider during test
+   - Create test-specific Provider with mock values
+   - Use custom render function that includes Providers
+   - Test hook in isolation using @testing-library/react-hooks
+   - Mock context values for different test scenarios
+
+#### 5. Code Examples
+
+**Example 1: Context with useReducer (Production Pattern)**
+
+```javascript
+// Reducer for complex state logic
+function settingsReducer(state, action) {
+  switch (action.type) {
+    case 'SET_THEME':
+      return { ...state, theme: action.payload };
+    case 'SET_LANGUAGE':
+      return { ...state, language: action.payload };
+    case 'SET_NOTIFICATIONS':
+      return { ...state, notifications: action.payload };
+    case 'RESET':
+      return initialState;
+    default:
+      throw new Error(`Unknown action: ${action.type}`);
+  }
+}
+
+const initialState = {
+  theme: 'light',
+  language: 'en',
+  notifications: true
+};
+
+// Create separate contexts for state and dispatch
+const SettingsStateContext = createContext(undefined);
+const SettingsDispatchContext = createContext(undefined);
+
+function SettingsProvider({ children }) {
+  const [state, dispatch] = useReducer(settingsReducer, initialState);
+  
+  return (
+    <SettingsStateContext.Provider value={state}>
+      <SettingsDispatchContext.Provider value={dispatch}>
+        {children}
+      </SettingsDispatchContext.Provider>
+    </SettingsStateContext.Provider>
+  );
+}
+
+// Custom hooks
+function useSettingsState() {
+  const context = useContext(SettingsStateContext);
+  if (context === undefined) {
+    throw new Error('useSettingsState must be used within SettingsProvider');
+  }
+  return context;
+}
+
+function useSettingsDispatch() {
+  const context = useContext(SettingsDispatchContext);
+  if (context === undefined) {
+    throw new Error('useSettingsDispatch must be used within SettingsProvider');
+  }
+  return context;
+}
+
+// Higher-level custom hooks for specific actions
+function useTheme() {
+  const { theme } = useSettingsState();
+  const dispatch = useSettingsDispatch();
+  
+  const setTheme = useCallback((theme) => {
+    dispatch({ type: 'SET_THEME', payload: theme });
+  }, [dispatch]);
+  
+  return { theme, setTheme };
+}
+
+// Usage
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  // Only re-renders when theme changes, not language or notifications
+  
+  return (
+    <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+      Current: {theme}
+    </button>
+  );
+}
+```
+
+**Example 2: Context with Lazy Initialization**
+
+```javascript
+// Expensive initialization from localStorage
+function AppProvider({ children }) {
+  const [state, setState] = useState(() => {
+    // Only runs once on mount
+    const saved = localStorage.getItem('appState');
+    return saved ? JSON.parse(saved) : defaultState;
+  });
+  
+  // Sync to localStorage on changes
+  useEffect(() => {
+    localStorage.setItem('appState', JSON.stringify(state));
+  }, [state]);
+  
+  const value = useMemo(() => ({ state, setState }), [state]);
+  
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+    </AppContext.Provider>
+  );
+}
+```
+
+**Example 3: Context with Async Actions**
+
+```javascript
+const DataContext = createContext(undefined);
+
+function DataProvider({ children }) {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/data');
+      const result = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  const addItem = useCallback(async (item) => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/data', {
+        method: 'POST',
+        body: JSON.stringify(item)
+      });
+      const newItem = await response.json();
+      setData(prev => [...prev, newItem]);
+      return { success: true };
+    } catch (err) {
+      setError(err.message);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  const value = useMemo(
+    () => ({ data, loading, error, fetchData, addItem }),
+    [data, loading, error, fetchData, addItem]
+  );
+  
+  return (
+    <DataContext.Provider value={value}>
+      {children}
+    </DataContext.Provider>
+  );
+}
+
+function useData() {
+  const context = useContext(DataContext);
+  if (!context) {
+    throw new Error('useData must be used within DataProvider');
+  }
+  return context;
+}
+
+// Usage
+function DataList() {
+  const { data, loading, error, fetchData } = useData();
+  
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+  
+  if (loading) return <Spinner />;
+  if (error) return <Error message={error} />;
+  
+  return (
+    <ul>
+      {data.map(item => <li key={item.id}>{item.name}</li>)}
+    </ul>
+  );
+}
+```
+
+**Example 4: Testing Components with Context**
+
+```javascript
+// test-utils.js - Custom render with providers
+import { render } from '@testing-library/react';
+
+function AllProviders({ children }) {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+export function renderWithProviders(ui, options) {
+  return render(ui, { wrapper: AllProviders, ...options });
+}
+
+// component.test.js
+import { renderWithProviders } from './test-utils';
+
+test('renders user name', () => {
+  const { getByText } = renderWithProviders(<UserProfile />);
+  expect(getByText(/welcome/i)).toBeInTheDocument();
+});
+
+// Testing with custom context values
+test('shows dark theme', () => {
+  function TestWrapper({ children }) {
+    return (
+      <ThemeContext.Provider value={{ theme: 'dark', toggleTheme: jest.fn() }}>
+        {children}
+      </ThemeContext.Provider>
+    );
+  }
+  
+  const { container } = render(<Header />, { wrapper: TestWrapper });
+  expect(container.firstChild).toHaveClass('dark');
+});
+```
+
+**Example 5: Context Selector Pattern (Manual Implementation)**
+
+```javascript
+// Implementing selector pattern for fine-grained updates
+// (Note: use-context-selector library does this better)
+
+function createSelectableContext(initialValue) {
+  const Context = createContext(initialValue);
+  
+  function Provider({ value, children }) {
+    const listeners = useRef(new Set());
+    
+    const subscribe = useCallback((listener) => {
+      listeners.current.add(listener);
+      return () => listeners.current.delete(listener);
+    }, []);
+    
+    const contextValue = useMemo(
+      () => ({ value, subscribe }),
+      [value, subscribe]
+    );
+    
+    useEffect(() => {
+      listeners.current.forEach(listener => listener(value));
+    }, [value]);
+    
+    return <Context.Provider value={contextValue}>{children}</Context.Provider>;
+  }
+  
+  function useSelector(selector) {
+    const { value, subscribe } = useContext(Context);
+    const [selectedValue, setSelectedValue] = useState(() => selector(value));
+    
+    useEffect(() => {
+      return subscribe((newValue) => {
+        const newSelectedValue = selector(newValue);
+        setSelectedValue(prev => {
+          // Only update if selected value actually changed
+          return Object.is(prev, newSelectedValue) ? prev : newSelectedValue;
+        });
+      });
+    }, [selector, subscribe]);
+    
+    return selectedValue;
+  }
+  
+  return { Provider, useSelector };
+}
+
+// Usage
+const { Provider: StoreProvider, useSelector } = createSelectableContext({
+  user: null,
+  theme: 'light',
+  count: 0
+});
+
+function UserDisplay() {
+  // Only re-renders when user changes, not theme or count
+  const user = useSelector(state => state.user);
+  console.log('UserDisplay render');
+  return <div>{user?.name}</div>;
+}
+
+function ThemeToggle() {
+  // Only re-renders when theme changes
+  const theme = useSelector(state => state.theme);
+  console.log('ThemeToggle render');
+  return <div>Theme: {theme}</div>;
+}
+```
+
+#### 6. Why & How Summary
+
+**Why Context API Matters:**
+- **Eliminates Prop Drilling**: Avoid passing props through many levels
+- **Shared State**: Provide global or scoped state access
+- **Cleaner APIs**: Simplify component interfaces
+- **Built-in Solution**: No external dependencies needed
+- **Composition**: Enable flexible component composition
+- **Dependency Injection**: Provide services to component tree
+- **Cross-cutting Concerns**: Handle theme, auth, i18n consistently
+
+**How It Works Technically:**
+
+**Creation Phase:**
+1. `createContext(defaultValue)` creates context object
+2. Context object contains Provider and Consumer components
+3. Default value used when no Provider exists
+
+**Provider Phase:**
+1. Provider component renders with value prop
+2. React tracks all consumers in subtree
+3. Value stored in Fiber node
+
+**Consumption Phase:**
+1. `useContext(Context)` reads from nearest Provider ancestor
+2. Component subscribes to context changes
+3. Context change triggers re-render of all consumers
+
+**Update Flow:**
+```
+Value changes → Provider notifies React
+  → React marks all consumers for update
+    → Consumers re-render
+      → Intermediate components can skip (optimization)
+```
+
+**Decision Framework:**
+```
+Need to share data?
+  → 1-2 levels deep?
+    → Use props (simple, explicit)
+  → 2-5 levels deep, infrequent changes?
+    → Use Context (eliminate drilling)
+  → Complex state, frequent updates?
+    → Consider Redux/Zustand (better optimization)
+  → Cross-cutting concern (theme, auth)?
+    → Use Context (perfect fit)
+```
+
+The Context API is a fundamental tool for React developers, but it's not a silver bullet. Understanding when to use it versus props or state management libraries is crucial. The key insights are: Context is about providing values across the tree, not managing complex state; performance requires careful attention to value stability; and patterns like split contexts and custom hooks make Context powerful and maintainable in production applications.
+
+---
+
+### 11. Describe the difference between class components and functional components.
+
+#### 1. High-Level Explanation
+Class components and functional components are two ways to create React components. Class components use ES6 classes extending `React.Component`, with lifecycle methods and `this.state` for state management. Functional components are JavaScript functions that return JSX, using hooks (useState, useEffect, etc.) for state and side effects. While both can accomplish the same tasks, functional components with hooks are now the modern standard—they're simpler, more concise, easier to test, and avoid `this` binding issues.
+
+**Key Differences:**
+- Syntax: Class = ES6 class, Function = JavaScript function
+- State: Class = this.state, Function = useState hook
+- Lifecycle: Class = lifecycle methods, Function = useEffect hook
+- this binding: Class = requires binding, Function = no this
+- Code reuse: Class = HOCs/render props, Function = custom hooks
+- Modern approach: Functional components are React's future
+
+#### 2. Deep-Dive Explanation (Senior Level)
+
+**Side-by-Side Comparison:**
+
+```javascript
+// CLASS COMPONENT
+class Counter extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { count: 0 };
+    this.increment = this.increment.bind(this); // Manual binding
+  }
+  
+  componentDidMount() {
+    console.log('Mounted');
+  }
+  
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.count !== this.state.count) {
+      console.log('Count changed');
+    }
+  }
+  
+  componentWillUnmount() {
+    console.log('Unmounting');
+  }
+  
+  increment() {
+    this.setState({ count: this.state.count + 1 });
+  }
+  
+  render() {
+    return (
+      <div>
+        <p>Count: {this.state.count}</p>
+        <button onClick={this.increment}>Increment</button>
+      </div>
+    );
+  }
+}
+
+// FUNCTIONAL COMPONENT (Modern)
+function Counter(props) {
+  const [count, setCount] = useState(0);
+  
+  useEffect(() => {
+    console.log('Mounted');
+    return () => console.log('Unmounting');
+  }, []);
+  
+  useEffect(() => {
+    console.log('Count changed');
+  }, [count]);
+  
+  const increment = () => {
+    setCount(count + 1);
+  };
+  
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={increment}>Increment</button>
+    </div>
+  );
+}
+```
+
+**Detailed Comparison Table:**
+
+| Aspect | Class Components | Functional Components |
+|--------|-----------------|----------------------|
+| **Syntax** | ES6 class extending Component | JavaScript function |
+| **State** | `this.state`, `this.setState()` | `useState` hook |
+| **Lifecycle** | Lifecycle methods (componentDidMount, etc.) | `useEffect` hook |
+| **this binding** | Required for methods | Not needed |
+| **Performance** | Slightly more overhead | Slightly lighter |
+| **Code reuse** | HOCs, render props, mixins | Custom hooks |
+| **Code length** | More verbose | More concise |
+| **Learning curve** | Steeper (this, binding, lifecycle) | Gentler (hooks) |
+| **Testing** | More complex (instances, state) | Simpler (pure functions) |
+| **Optimization** | shouldComponentUpdate, PureComponent | React.memo, useMemo, useCallback |
+| **Error boundaries** | Supported (componentDidCatch) | Not supported (yet) |
+| **Future** | Legacy approach | Modern standard |
+
+**this Binding Problem (Class Components):**
+
+```javascript
+class MyComponent extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { count: 0 };
+  }
+  
+  // ❌ PROBLEM: 'this' is undefined when called as event handler
+  increment() {
+    this.setState({ count: this.state.count + 1 }); // Error: cannot read 'setState' of undefined
+  }
+  
+  // ✅ SOLUTION 1: Bind in constructor
+  constructor(props) {
+    super(props);
+    this.increment = this.increment.bind(this);
+  }
+  
+  // ✅ SOLUTION 2: Arrow function (class field)
+  increment = () => {
+    this.setState({ count: this.state.count + 1 });
+  }
+  
+  // ✅ SOLUTION 3: Arrow function in JSX (creates new function each render)
+  render() {
+    return <button onClick={() => this.increment()}>Click</button>;
+  }
+}
+
+// FUNCTIONAL: No 'this' binding issues at all
+function MyComponent() {
+  const [count, setCount] = useState(0);
+  const increment = () => setCount(count + 1);
+  return <button onClick={increment}>Click</button>;
+}
+```
+
+**Lifecycle Method to Hook Mapping:**
+
+```javascript
+// CLASS: componentDidMount
+componentDidMount() {
+  fetchData();
+}
+
+// FUNCTION: useEffect with empty deps
+useEffect(() => {
+  fetchData();
+}, []); // Empty array = run once on mount
+
+// CLASS: componentDidUpdate
+componentDidUpdate(prevProps) {
+  if (prevProps.userId !== this.props.userId) {
+    fetchData(this.props.userId);
+  }
+}
+
+// FUNCTION: useEffect with deps
+useEffect(() => {
+  fetchData(userId);
+}, [userId]); // Runs when userId changes
+
+// CLASS: componentWillUnmount
+componentWillUnmount() {
+  cleanup();
+}
+
+// FUNCTION: useEffect cleanup
+useEffect(() => {
+  return () => cleanup();
+}, []);
+
+// CLASS: componentDidMount + componentDidUpdate
+componentDidMount() {
+  subscribe();
+}
+componentDidUpdate() {
+  subscribe();
+}
+
+// FUNCTION: useEffect (runs on mount and every update)
+useEffect(() => {
+  subscribe();
+}); // No dependency array = runs every render
+
+// CLASS: shouldComponentUpdate / PureComponent
+shouldComponentUpdate(nextProps, nextState) {
+  return nextProps.value !== this.props.value;
+}
+
+// FUNCTION: React.memo
+const MyComponent = React.memo(({ value }) => {
+  return <div>{value}</div>;
+}, (prevProps, nextProps) => {
+  return prevProps.value === nextProps.value; // true = skip render
+});
+```
+
+**State Management Differences:**
+
+```javascript
+// CLASS: Single state object, manual merging
+class Form extends React.Component {
+  state = {
+    name: '',
+    email: '',
+    age: 0
+  };
+  
+  // setState merges automatically
+  updateName = (name) => {
+    this.setState({ name }); // Only updates name, keeps email and age
+  }
+  
+  // Access with this.state
+  render() {
+    return <div>{this.state.name}</div>;
+  }
+}
+
+// FUNCTION: Multiple state variables, no automatic merging
+function Form() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [age, setAge] = useState(0);
+  
+  // Or single state object (manual merging required)
+  const [form, setForm] = useState({ name: '', email: '', age: 0 });
+  
+  const updateName = (name) => {
+    setForm(prev => ({ ...prev, name })); // Must spread manually
+  }
+  
+  return <div>{name}</div>; // Direct access, no 'this'
+}
+```
+
+**Code Reuse Patterns:**
+
+```javascript
+// CLASS: Higher-Order Component (HOC)
+function withAuth(WrappedComponent) {
+  return class extends React.Component {
+    render() {
+      if (!this.props.isAuthenticated) {
+        return <Redirect to="/login" />;
+      }
+      return <WrappedComponent {...this.props} />;
+    }
+  };
+}
+
+const ProtectedPage = withAuth(Dashboard);
+
+// FUNCTION: Custom Hook (simpler, more composable)
+function useAuth() {
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    const unsubscribe = onAuthChange(setUser);
+    return unsubscribe;
+  }, []);
+  return user;
+}
+
+function Dashboard() {
+  const user = useAuth();
+  if (!user) return <Redirect to="/login" />;
+  return <div>Dashboard for {user.name}</div>;
+}
+```
+
+**When You MUST Use Class Components:**
+
+1. **Error Boundaries** (not yet available in functional components):
+```javascript
+class ErrorBoundary extends React.Component {
+  state = { hasError: false };
+  
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+  
+  componentDidCatch(error, errorInfo) {
+    logErrorToService(error, errorInfo);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return <h1>Something went wrong.</h1>;
+    }
+    return this.props.children;
+  }
+}
+```
+
+2. **Legacy codebases** (until migration)
+3. **Libraries requiring class inheritance** (rare)
+
+**Performance Considerations:**
+
+- **Class components**: Slight overhead from class instantiation
+- **Functional components**: Slightly lighter, but minimal difference
+- **Real performance**: Comes from optimization techniques (memo, useMemo, etc.)
+- **Re-renders**: Both can be optimized equally well
+
+**Migration Strategy:**
+
+```javascript
+// BEFORE: Class component
+class UserProfile extends React.Component {
+  state = { loading: true, user: null };
+  
+  componentDidMount() {
+    this.fetchUser();
+  }
+  
+  componentDidUpdate(prevProps) {
+    if (prevProps.userId !== this.props.userId) {
+      this.fetchUser();
+    }
+  }
+  
+  fetchUser = async () => {
+    this.setState({ loading: true });
+    const user = await api.getUser(this.props.userId);
+    this.setState({ user, loading: false });
+  }
+  
+  render() {
+    const { loading, user } = this.state;
+    if (loading) return <Spinner />;
+    return <div>{user.name}</div>;
+  }
+}
+
+// AFTER: Functional component with hooks
+function UserProfile({ userId }) {
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  
+  useEffect(() => {
+    let cancelled = false;
+    
+    const fetchUser = async () => {
+      setLoading(true);
+      const user = await api.getUser(userId);
+      if (!cancelled) {
+        setUser(user);
+        setLoading(false);
+      }
+    };
+    
+    fetchUser();
+    return () => { cancelled = true; };
+  }, [userId]);
+  
+  if (loading) return <Spinner />;
+  return <div>{user.name}</div>;
+}
+```
+
+#### 3. Clear Real-World Examples
+
+**Example 1: Form Component (Class vs Functional)**
+
+```javascript
+// CLASS VERSION
+class LoginForm extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      email: '',
+      password: '',
+      errors: {},
+      submitting: false
+    };
+  }
+  
+  handleEmailChange = (e) => {
+    this.setState({ email: e.target.value });
+  }
+  
+  handlePasswordChange = (e) => {
+    this.setState({ password: e.target.value });
+  }
+  
+  validate = () => {
+    const errors = {};
+    if (!this.state.email) errors.email = 'Required';
+    if (!this.state.password) errors.password = 'Required';
+    this.setState({ errors });
+    return Object.keys(errors).length === 0;
+  }
+  
+  handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!this.validate()) return;
+    
+    this.setState({ submitting: true });
+    try {
+      await this.props.onLogin(this.state.email, this.state.password);
+    } catch (error) {
+      this.setState({ errors: { form: error.message } });
+    } finally {
+      this.setState({ submitting: false });
+    }
+  }
+  
+  render() {
+    const { email, password, errors, submitting } = this.state;
+    
+    return (
+      <form onSubmit={this.handleSubmit}>
+        <input
+          value={email}
+          onChange={this.handleEmailChange}
+          disabled={submitting}
+        />
+        {errors.email && <span>{errors.email}</span>}
+        
+        <input
+          type="password"
+          value={password}
+          onChange={this.handlePasswordChange}
+          disabled={submitting}
+        />
+        {errors.password && <span>{errors.password}</span>}
+        
+        {errors.form && <div>{errors.form}</div>}
+        
+        <button type="submit" disabled={submitting}>
+          {submitting ? 'Logging in...' : 'Login'}
+        </button>
+      </form>
+    );
+  }
+}
+
+// FUNCTIONAL VERSION (Modern, Cleaner)
+function LoginForm({ onLogin }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  
+  const validate = () => {
+    const newErrors = {};
+    if (!email) newErrors.email = 'Required';
+    if (!password) newErrors.password = 'Required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    
+    setSubmitting(true);
+    try {
+      await onLogin(email, password);
+    } catch (error) {
+      setErrors({ form: error.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        disabled={submitting}
+      />
+      {errors.email && <span>{errors.email}</span>}
+      
+      <input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        disabled={submitting}
+      />
+      {errors.password && <span>{errors.password}</span>}
+      
+      {errors.form && <div>{errors.form}</div>}
+      
+      <button type="submit" disabled={submitting}>
+        {submitting ? 'Logging in...' : 'Login'}
+      </button>
+    </form>
+  );
+}
+
+// Even better: Extract to custom hook
+function useLoginForm(onLogin) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  
+  const validate = () => {
+    const newErrors = {};
+    if (!email) newErrors.email = 'Required';
+    if (!password) newErrors.password = 'Required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    
+    setSubmitting(true);
+    try {
+      await onLogin(email, password);
+    } catch (error) {
+      setErrors({ form: error.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  
+  return {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    errors,
+    submitting,
+    handleSubmit
+  };
+}
+
+// Component becomes ultra-clean
+function LoginForm({ onLogin }) {
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    errors,
+    submitting,
+    handleSubmit
+  } = useLoginForm(onLogin);
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Same JSX as before */}
+    </form>
+  );
+}
+```
+
+**Example 2: Data Fetching Component**
+
+```javascript
+// CLASS VERSION
+class UserList extends React.Component {
+  state = {
+    users: [],
+    loading: true,
+    error: null,
+    page: 1
+  };
+  
+  componentDidMount() {
+    this.fetchUsers();
+  }
+  
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.page !== this.state.page) {
+      this.fetchUsers();
+    }
+  }
+  
+  componentWillUnmount() {
+    // Cancel ongoing requests
+    this.abortController?.abort();
+  }
+  
+  fetchUsers = async () => {
+    this.setState({ loading: true, error: null });
+    this.abortController = new AbortController();
+    
+    try {
+      const response = await fetch(
+        `/api/users?page=${this.state.page}`,
+        { signal: this.abortController.signal }
+      );
+      const users = await response.json();
+      this.setState({ users, loading: false });
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        this.setState({ error: error.message, loading: false });
+      }
+    }
+  }
+  
+  loadMore = () => {
+    this.setState(prev => ({ page: prev.page + 1 }));
+  }
+  
+  render() {
+    const { users, loading, error } = this.state;
+    
+    if (loading && users.length === 0) return <Spinner />;
+    if (error) return <Error message={error} />;
+    
+    return (
+      <div>
+        {users.map(user => <UserCard key={user.id} user={user} />)}
+        <button onClick={this.loadMore} disabled={loading}>
+          {loading ? 'Loading...' : 'Load More'}
+        </button>
+      </div>
+    );
+  }
+}
+
+// FUNCTIONAL VERSION
+function UserList() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  
+  useEffect(() => {
+    const abortController = new AbortController();
+    
+    const fetchUsers = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const response = await fetch(
+          `/api/users?page=${page}`,
+          { signal: abortController.signal }
+        );
+        const data = await response.json();
+        setUsers(data);
+        setLoading(false);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setError(err.message);
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchUsers();
+    
+    return () => abortController.abort();
+  }, [page]);
+  
+  const loadMore = () => setPage(prev => prev + 1);
+  
+  if (loading && users.length === 0) return <Spinner />;
+  if (error) return <Error message={error} />;
+  
+  return (
+    <div>
+      {users.map(user => <UserCard key={user.id} user={user} />)}
+      <button onClick={loadMore} disabled={loading}>
+        {loading ? 'Loading...' : 'Load More'}
+      </button>
+    </div>
+  );
+}
+
+// BEST: Extract to custom hook
+function useUsers(page) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  useEffect(() => {
+    const abortController = new AbortController();
+    
+    const fetchUsers = async () => {
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const response = await fetch(
+          `/api/users?page=${page}`,
+          { signal: abortController.signal }
+        );
+        const data = await response.json();
+        setUsers(data);
+        setLoading(false);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setError(err.message);
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchUsers();
+    
+    return () => abortController.abort();
+  }, [page]);
+  
+  return { users, loading, error };
+}
+
+// Component is now ultra-simple
+function UserList() {
+  const [page, setPage] = useState(1);
+  const { users, loading, error } = useUsers(page);
+  
+  if (loading && users.length === 0) return <Spinner />;
+  if (error) return <Error message={error} />;
+  
+  return (
+    <div>
+      {users.map(user => <UserCard key={user.id} user={user} />)}
+      <button onClick={() => setPage(p => p + 1)} disabled={loading}>
+        {loading ? 'Loading...' : 'Load More'}
+      </button>
+    </div>
+  );
+}
+```
+
+**Example 3: Timer Component (Lifecycle Management)**
+
+```javascript
+// CLASS VERSION
+class Timer extends React.Component {
+  state = { seconds: 0 };
+  timerId = null;
+  
+  componentDidMount() {
+    this.timerId = setInterval(() => {
+      this.setState(prev => ({ seconds: prev.seconds + 1 }));
+    }, 1000);
+  }
+  
+  componentWillUnmount() {
+    clearInterval(this.timerId);
+  }
+  
+  render() {
+    return <div>Time: {this.state.seconds}s</div>;
+  }
+}
+
+// FUNCTIONAL VERSION
+function Timer() {
+  const [seconds, setSeconds] = useState(0);
+  
+  useEffect(() => {
+    const timerId = setInterval(() => {
+      setSeconds(s => s + 1);
+    }, 1000);
+    
+    return () => clearInterval(timerId);
+  }, []);
+  
+  return <div>Time: {seconds}s</div>;
+}
+```
+
+#### 4. Interview-Oriented Explanation
+
+**Sample Answer (7+ years level):**
+"Class components and functional components are the two paradigms for building React components. Class components were the original approach, using ES6 classes with lifecycle methods and this.state for managing state. Functional components were initially stateless, but with the introduction of Hooks in React 16.8, they gained the ability to handle state and side effects, making them feature-complete.
+
+The fundamental technical difference is in how they manage component logic. Class components use lifecycle methods—componentDidMount, componentDidUpdate, componentWillUnmount—which organize code by when it runs, not by what it does. This often leads to related logic being split across multiple lifecycle methods. For example, setting up a subscription in componentDidMount and cleaning it up in componentWillUnmount.
+
+Functional components with hooks solve this by organizing code by concern using useEffect. A single useEffect can handle both setup and cleanup for a specific feature, keeping related logic together. This makes code more maintainable and easier to understand.
+
+A practical issue with class components is the this binding problem. Methods need to be bound to the class instance, either in the constructor, using arrow functions, or in JSX. This is confusing for developers and a common source of bugs. Functional components eliminate this entirely since there's no this context.
+
+For code reuse, class components rely on patterns like Higher-Order Components and render props, which can lead to 'wrapper hell' with deeply nested components. Functional components use custom hooks, which are JavaScript functions that can be composed naturally without nesting components.
+
+In production, I've migrated several large codebases from class to functional components. The benefits were immediate: 20-30% less code, better test isolation, easier refactoring, and improved team velocity. The only exception is error boundaries—they still require class components because there's no hook equivalent yet. For new code, functional components are always the choice unless error boundaries are specifically needed.
+
+The React team has made it clear that functional components with hooks are the future. All new features and optimizations are designed with hooks in mind. While class components will continue to work, they're essentially in maintenance mode."
+
+**Follow-up Questions You May Face:**
+
+1. **"Can you convert any class component to a functional component?"**
+   - Yes, except error boundaries (componentDidCatch, getDerivedStateFromError)
+   - All lifecycle methods have hook equivalents
+   - State management works the same or better with hooks
+   - getSnapshotBeforeUpdate is rare, use refs if needed
+
+2. **"What are the performance differences?"**
+   - Minimal difference in practice
+   - Functional components slightly lighter (no class instantiation)
+   - Both can be optimized equally (React.memo vs PureComponent)
+   - Real performance comes from proper optimization techniques
+   - Hooks enable better code splitting and tree shaking
+
+3. **"How do you migrate a large codebase from class to functional?"**
+   - Incremental migration: new code uses hooks, old code unchanged
+   - Prioritize leaf components first (no children)
+   - Use codemods for mechanical transformations
+   - Test thoroughly after each migration
+   - No need to migrate everything—classes still work
+   - Focus on frequently changed components first
+
+4. **"What's the equivalent of componentDidMount in hooks?"**
+   - `useEffect(() => { /* code */ }, [])` with empty dependency array
+   - Runs once after initial render
+   - Return cleanup function for componentWillUnmount
+   - Can have multiple useEffect hooks for different concerns
+
+5. **"Why do functional components not support error boundaries?"**
+   - Technical limitation: hooks can't catch errors in render
+   - Requires lifecycle methods like componentDidCatch
+   - React team exploring solutions but none yet
+   - Workaround: wrap functional components with class error boundary
+   - Error boundaries are intentionally few (top-level boundaries)
+
+#### 5. Code Examples
+
+**Example 1: Complete Lifecycle Mapping**
+
+```javascript
+// CLASS: All lifecycle methods
+class CompleteExample extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { count: 0, data: null };
+  }
+  
+  // Mount phase
+  componentDidMount() {
+    console.log('Component mounted');
+    this.fetchData();
+  }
+  
+  // Update phase
+  componentDidUpdate(prevProps, prevState, snapshot) {
+    if (prevProps.id !== this.props.id) {
+      this.fetchData();
+    }
+  }
+  
+  // Unmount phase
+  componentWillUnmount() {
+    console.log('Component unmounting');
+    this.cleanup();
+  }
+  
+  // Error handling
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught:', error);
+  }
+  
+  // Performance optimization
+  shouldComponentUpdate(nextProps, nextState) {
+    return nextProps.id !== this.props.id || nextState.count !== this.state.count;
+  }
+  
+  // Rarely used
+  getSnapshotBeforeUpdate(prevProps, prevState) {
+    return null;
+  }
+  
+  fetchData = () => {
+    // Fetch logic
+  }
+  
+  cleanup = () => {
+    // Cleanup logic
+  }
+  
+  render() {
+    return <div>{this.state.count}</div>;
+  }
+}
+
+// FUNCTIONAL: Equivalent with hooks
+function CompleteExample({ id }) {
+  const [count, setCount] = useState(0);
+  const [data, setData] = useState(null);
+  
+  // componentDidMount + componentWillUnmount
+  useEffect(() => {
+    console.log('Component mounted');
+    
+    return () => {
+      console.log('Component unmounting');
+      cleanup();
+    };
+  }, []);
+  
+  // componentDidUpdate (when id changes)
+  useEffect(() => {
+    fetchData();
+  }, [id]);
+  
+  // shouldComponentUpdate equivalent
+  // Use React.memo with custom comparison
+  return <div>{count}</div>;
+}
+
+// Performance optimization with React.memo
+export default React.memo(CompleteExample, (prevProps, nextProps) => {
+  return prevProps.id === nextProps.id; // true = skip render
+});
+
+// Error boundaries must still use class
+class ErrorBoundary extends React.Component {
+  state = { hasError: false };
+  
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+  
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught:', error, errorInfo);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return <h1>Something went wrong.</h1>;
+    }
+    return this.props.children;
+  }
+}
+```
+
+**Example 2: State Management Patterns**
+
+```javascript
+// CLASS: Complex state with multiple values
+class ComplexState extends React.Component {
+  state = {
+    user: { name: '', email: '' },
+    settings: { theme: 'light', notifications: true },
+    loading: false,
+    errors: {}
+  };
+  
+  updateUser = (field, value) => {
+    this.setState(prev => ({
+      user: { ...prev.user, [field]: value }
+    }));
+  }
+  
+  updateSettings = (field, value) => {
+    this.setState(prev => ({
+      settings: { ...prev.settings, [field]: value }
+    }));
+  }
+  
+  render() {
+    return (
+      <div>
+        <input
+          value={this.state.user.name}
+          onChange={(e) => this.updateUser('name', e.target.value)}
+        />
+      </div>
+    );
+  }
+}
+
+// FUNCTIONAL: Option 1 - Multiple state variables
+function ComplexState() {
+  const [user, setUser] = useState({ name: '', email: '' });
+  const [settings, setSettings] = useState({ theme: 'light', notifications: true });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  
+  const updateUser = (field, value) => {
+    setUser(prev => ({ ...prev, [field]: value }));
+  };
+  
+  const updateSettings = (field, value) => {
+    setSettings(prev => ({ ...prev, [field]: value }));
+  };
+  
+  return (
+    <div>
+      <input
+        value={user.name}
+        onChange={(e) => updateUser('name', e.target.value)}
+      />
+    </div>
+  );
+}
+
+// FUNCTIONAL: Option 2 - useReducer for complex state
+function reducer(state, action) {
+  switch (action.type) {
+    case 'UPDATE_USER':
+      return { ...state, user: { ...state.user, ...action.payload } };
+    case 'UPDATE_SETTINGS':
+      return { ...state, settings: { ...state.settings, ...action.payload } };
+    case 'SET_LOADING':
+      return { ...state, loading: action.payload };
+    case 'SET_ERRORS':
+      return { ...state, errors: action.payload };
+    default:
+      return state;
+  }
+}
+
+function ComplexStateWithReducer() {
+  const [state, dispatch] = useReducer(reducer, {
+    user: { name: '', email: '' },
+    settings: { theme: 'light', notifications: true },
+    loading: false,
+    errors: {}
+  });
+  
+  const updateUser = (field, value) => {
+    dispatch({ type: 'UPDATE_USER', payload: { [field]: value } });
+  };
+  
+  return (
+    <div>
+      <input
+        value={state.user.name}
+        onChange={(e) => updateUser('name', e.target.value)}
+      />
+    </div>
+  );
+}
+```
+
+**Example 3: Code Reuse Comparison**
+
+```javascript
+// CLASS: Higher-Order Component pattern
+function withLoading(WrappedComponent) {
+  return class extends React.Component {
+    state = { loading: true };
+    
+    componentDidMount() {
+      this.setState({ loading: false });
+    }
+    
+    render() {
+      if (this.state.loading) {
+        return <Spinner />;
+      }
+      return <WrappedComponent {...this.props} />;
+    }
+  };
+}
+
+const UserListWithLoading = withLoading(UserList);
+const DashboardWithLoading = withLoading(Dashboard);
+
+// FUNCTIONAL: Custom hook pattern (cleaner, more flexible)
+function useLoading(initialState = true) {
+  const [loading, setLoading] = useState(initialState);
+  return { loading, setLoading };
+}
+
+function UserList() {
+  const { loading, setLoading } = useLoading();
+  
+  useEffect(() => {
+    setTimeout(() => setLoading(false), 1000);
+  }, []);
+  
+  if (loading) return <Spinner />;
+  return <div>User List</div>;
+}
+
+function Dashboard() {
+  const { loading, setLoading } = useLoading();
+  
+  useEffect(() => {
+    setTimeout(() => setLoading(false), 1000);
+  }, []);
+  
+  if (loading) return <Spinner />;
+  return <div>Dashboard</div>;
+}
+```
+
+#### 6. Why & How Summary
+
+**Why the Difference Matters:**
+- **Modern Development**: Functional components are React's future
+- **Code Quality**: Less boilerplate, clearer logic organization
+- **Maintainability**: Related code stays together (hooks vs lifecycle)
+- **Testing**: Pure functions easier to test than class instances
+- **Performance**: Slightly lighter, better code splitting
+- **Learning**: Simpler mental model (no this, no binding)
+- **Team Velocity**: Faster development with hooks
+
+**How to Choose:**
+
+**Use Functional Components (Default):**
+- All new code
+- Components with state
+- Components with side effects
+- Any component except error boundaries
+- Modern React development
+
+**Use Class Components (Only When):**
+- Error boundaries (no hook alternative)
+- Legacy codebases (gradual migration)
+- Third-party library requirements (rare)
+
+**Migration Strategy:**
+```
+1. New code → Always functional components
+2. Bug fixes → Keep existing pattern (don't mix migration with fixes)
+3. Feature changes → Good time to migrate
+4. Leaf components → Migrate first (no children to worry about)
+5. Complex components → Use useReducer for state, custom hooks for logic
+6. Testing → Ensure tests pass after migration
+```
+
+The shift from class to functional components represents React's evolution toward simpler, more composable code. Hooks solve real problems with classes: logic reuse, complex state management, and the confusion around lifecycle methods. While both approaches work, functional components with hooks are simpler to write, easier to understand, and better supported by the React ecosystem. For senior developers, understanding both is important for maintaining legacy code, but all new development should use functional components and hooks.
+
+---
+
+### 12. How would you handle events in React?
+
+#### 1. High-Level Explanation
+Event handling in React uses **synthetic events**—React's cross-browser wrapper around native browser events. You attach event handlers directly to JSX elements using camelCase naming (onClick, onChange, onSubmit) instead of lowercase HTML attributes. Event handlers receive a SyntheticEvent object that provides a consistent API across all browsers. Key differences from vanilla JavaScript: events are handled through delegation, preventDefault() must be called explicitly (can't return false), and handlers are typically defined as class methods or functions within components.
+
+**Key Concepts:**
+- Synthetic events: Cross-browser consistent event objects
+- CamelCase naming: onClick, onChange, onKeyDown
+- Event delegation: React attaches listeners at root
+- Event handlers: Functions passed to JSX attributes
+- Preventing default: Use event.preventDefault()
+- Event bubbling/capturing: Standard DOM behavior
+
+#### 2. Deep-Dive Explanation (Senior Level)
+
+**Synthetic Events Architecture:**
+
+React doesn't attach event handlers directly to DOM nodes. Instead, it uses **event delegation**:
+
+```
+Browser Event
+  ↓
+Root DOM Container (#root)
+  ↓
+React's Event System (SyntheticEvent wrapper)
+  ↓
+Component Event Handler
+
+React 17+: Events attached to root container (createRoot)
+React 16: Events attached to document
+```
+
+**Benefits:**
+1. **Cross-browser consistency**: Same API everywhere
+2. **Performance**: Single listener at root, not thousands on individual elements
+3. **Memory efficiency**: Fewer event listeners
+4. **Event pooling** (React 16): Reuse event objects (removed in React 17)
+
+**Event Handler Patterns:**
+
+```javascript
+function MyComponent() {
+  // Pattern 1: Inline arrow function (simple cases)
+  <button onClick={() => console.log('Clicked')}>Click</button>
+  
+  // Pattern 2: Function reference (no arguments)
+  const handleClick = () => console.log('Clicked');
+  <button onClick={handleClick}>Click</button>
+  
+  // Pattern 3: Function with arguments (use arrow function)
+  const handleClick = (id) => console.log('Clicked', id);
+  <button onClick={() => handleClick(123)}>Click</button>
+  
+  // Pattern 4: Curry pattern (for performance)
+  const handleClick = (id) => (event) => {
+    console.log('Clicked', id, event);
+  };
+  <button onClick={handleClick(123)}>Click</button>
+}
+```
+
+**Event Object Properties:**
+
+```javascript
+function handleEvent(event) {
+  // SyntheticEvent properties
+  event.type           // 'click', 'submit', 'change', etc.
+  event.target         // Element that triggered the event
+  event.currentTarget  // Element with the event handler
+  event.preventDefault() // Prevent default browser behavior
+  event.stopPropagation() // Stop event bubbling
+  event.nativeEvent    // Access original browser event
+  
+  // Event-specific properties
+  event.key            // Keyboard events: 'Enter', 'Escape'
+  event.keyCode        // Deprecated, use event.key
+  event.clientX/Y      // Mouse position relative to viewport
+  event.pageX/Y        // Mouse position relative to document
+  event.button         // Which mouse button was pressed
+  event.shiftKey       // Was Shift key pressed?
+  event.ctrlKey        // Was Ctrl/Cmd key pressed?
+}
+```
+
+**Event Pooling (Legacy - React 16):**
+
+```javascript
+// React 16: Event objects were pooled and reused
+function handleClick(event) {
+  console.log(event.type); // 'click'
+  
+  setTimeout(() => {
+    console.log(event.type); // null (event was pooled)
+  }, 100);
+  
+  // Solution: Persist event
+  event.persist();
+  setTimeout(() => {
+    console.log(event.type); // 'click' (event persisted)
+  }, 100);
+}
+
+// React 17+: Event pooling removed, events no longer reused
+function handleClick(event) {
+  setTimeout(() => {
+    console.log(event.type); // 'click' (works fine)
+  }, 100);
+}
+```
+
+**Event Bubbling and Capturing:**
+
+```javascript
+function Parent() {
+  const handleParentClick = () => console.log('Parent clicked');
+  
+  return (
+    <div onClick={handleParentClick}>
+      <Child />
+    </div>
+  );
+}
+
+function Child() {
+  const handleChildClick = (e) => {
+    console.log('Child clicked');
+    // e.stopPropagation(); // Prevents parent handler from firing
+  };
+  
+  return <button onClick={handleChildClick}>Click Me</button>;
+}
+// Clicking button: "Child clicked" then "Parent clicked" (bubbling)
+
+// Capture phase (rarely used)
+<div onClickCapture={handleCapture}>
+  <button onClick={handleBubble}>Click</button>
+</div>
+// Clicking button: handleCapture fires first, then handleBubble
+```
+
+**Common Event Types:**
+
+```javascript
+// Mouse Events
+onClick, onDoubleClick, onMouseDown, onMouseUp, onMouseEnter, 
+onMouseLeave, onMouseMove, onMouseOver, onMouseOut
+
+// Keyboard Events
+onKeyDown, onKeyUp, onKeyPress (deprecated)
+
+// Form Events
+onChange, onSubmit, onFocus, onBlur, onInput
+
+// Clipboard Events
+onCopy, onCut, onPaste
+
+// Touch Events (mobile)
+onTouchStart, onTouchEnd, onTouchMove, onTouchCancel
+
+// Drag Events
+onDrag, onDragStart, onDragEnd, onDragEnter, onDragLeave, 
+onDragOver, onDrop
+
+// Focus Events
+onFocus, onBlur
+
+// Media Events
+onPlay, onPause, onEnded, onLoadedData
+
+// Scroll Events
+onScroll
+
+// Wheel Events
+onWheel
+```
+
+**Performance Considerations:**
+
+```javascript
+// ❌ BAD: Creates new function every render
+function MyComponent() {
+  return (
+    <div>
+      {items.map(item => (
+        <button onClick={() => handleClick(item.id)}>
+          {item.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ✅ GOOD: Stable function reference with useCallback
+function MyComponent() {
+  const handleClick = useCallback((id) => {
+    console.log('Clicked', id);
+  }, []);
+  
+  return (
+    <div>
+      {items.map(item => (
+        <button onClick={() => handleClick(item.id)}>
+          {item.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ✅ BETTER: Curry pattern + React.memo
+const ItemButton = React.memo(({ item, onClick }) => {
+  return <button onClick={onClick}>{item.name}</button>;
+});
+
+function MyComponent() {
+  const handleClick = useCallback((id) => (event) => {
+    console.log('Clicked', id, event);
+  }, []);
+  
+  return (
+    <div>
+      {items.map(item => (
+        <ItemButton
+          key={item.id}
+          item={item}
+          onClick={handleClick(item.id)}
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+**Preventing Default Behavior:**
+
+```javascript
+// Must call preventDefault() explicitly
+function handleSubmit(event) {
+  event.preventDefault(); // Prevent form submission
+  // Handle form data
+}
+
+// Cannot return false like in vanilla JS/jQuery
+function handleClick(event) {
+  return false; // ❌ DOESN'T WORK in React
+}
+
+// Links
+function handleLinkClick(event) {
+  event.preventDefault(); // Prevent navigation
+  // Custom navigation logic
+}
+```
+
+#### 3. Clear Real-World Examples
+
+**Example 1: Form Handling (Complete Pattern)**
+
+```javascript
+function ContactForm() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: ''
+  });
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  
+  // Handle input changes
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error for this field
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+  
+  // Handle form submission
+  const handleSubmit = async (event) => {
+    event.preventDefault(); // Critical: prevent page reload
+    
+    // Validation
+    const newErrors = {};
+    if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.message) newErrors.message = 'Message is required';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    
+    // Submit
+    setSubmitting(true);
+    try {
+      await api.submitContact(formData);
+      alert('Form submitted successfully!');
+      setFormData({ name: '', email: '', message: '' });
+    } catch (error) {
+      setErrors({ form: error.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  
+  // Handle keyboard shortcuts
+  const handleKeyDown = (event) => {
+    // Submit with Ctrl+Enter
+    if (event.ctrlKey && event.key === 'Enter') {
+      handleSubmit(event);
+    }
+    
+    // Clear form with Escape
+    if (event.key === 'Escape') {
+      setFormData({ name: '', email: '', message: '' });
+      setErrors({});
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown}>
+      <div>
+        <input
+          type="text"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          placeholder="Your Name"
+          disabled={submitting}
+        />
+        {errors.name && <span className="error">{errors.name}</span>}
+      </div>
+      
+      <div>
+        <input
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          placeholder="Your Email"
+          disabled={submitting}
+        />
+        {errors.email && <span className="error">{errors.email}</span>}
+      </div>
+      
+      <div>
+        <textarea
+          name="message"
+          value={formData.message}
+          onChange={handleChange}
+          placeholder="Your Message"
+          disabled={submitting}
+        />
+        {errors.message && <span className="error">{errors.message}</span>}
+      </div>
+      
+      {errors.form && <div className="error">{errors.form}</div>}
+      
+      <button type="submit" disabled={submitting}>
+        {submitting ? 'Sending...' : 'Send Message'}
+      </button>
+      
+      <p className="hint">Press Ctrl+Enter to submit</p>
+    </form>
+  );
+}
+```
+
+**Example 2: Keyboard Navigation (Dropdown Menu)**
+
+```javascript
+function DropdownMenu({ items }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const menuRef = useRef(null);
+  
+  // Handle button click
+  const handleButtonClick = () => {
+    setIsOpen(!isOpen);
+    setSelectedIndex(-1);
+  };
+  
+  // Handle item click
+  const handleItemClick = (item) => {
+    console.log('Selected:', item);
+    setIsOpen(false);
+  };
+  
+  // Keyboard navigation
+  const handleKeyDown = (event) => {
+    if (!isOpen) {
+      // Open menu with Enter or Space
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        setIsOpen(true);
+      }
+      return;
+    }
+    
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        setSelectedIndex(prev => 
+          prev < items.length - 1 ? prev + 1 : prev
+        );
+        break;
+        
+      case 'ArrowUp':
+        event.preventDefault();
+        setSelectedIndex(prev => prev > 0 ? prev - 1 : prev);
+        break;
+        
+      case 'Enter':
+        event.preventDefault();
+        if (selectedIndex >= 0) {
+          handleItemClick(items[selectedIndex]);
+        }
+        break;
+        
+      case 'Escape':
+        event.preventDefault();
+        setIsOpen(false);
+        setSelectedIndex(-1);
+        break;
+        
+      case 'Home':
+        event.preventDefault();
+        setSelectedIndex(0);
+        break;
+        
+      case 'End':
+        event.preventDefault();
+        setSelectedIndex(items.length - 1);
+        break;
+    }
+  };
+  
+  // Close on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  
+  return (
+    <div ref={menuRef} className="dropdown">
+      <button
+        onClick={handleButtonClick}
+        onKeyDown={handleKeyDown}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+      >
+        Select Option
+      </button>
+      
+      {isOpen && (
+        <ul role="menu">
+          {items.map((item, index) => (
+            <li
+              key={item.id}
+              role="menuitem"
+              className={index === selectedIndex ? 'selected' : ''}
+              onClick={() => handleItemClick(item)}
+              onMouseEnter={() => setSelectedIndex(index)}
+            >
+              {item.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+```
+
+**Example 3: Drag and Drop**
+
+```javascript
+function DragDropList() {
+  const [items, setItems] = useState([
+    { id: 1, text: 'Item 1' },
+    { id: 2, text: 'Item 2' },
+    { id: 3, text: 'Item 3' }
+  ]);
+  const [draggedItem, setDraggedItem] = useState(null);
+  
+  const handleDragStart = (event, item) => {
+    setDraggedItem(item);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/html', event.currentTarget);
+  };
+  
+  const handleDragOver = (event) => {
+    event.preventDefault(); // Required to allow drop
+    event.dataTransfer.dropEffect = 'move';
+  };
+  
+  const handleDrop = (event, targetItem) => {
+    event.preventDefault();
+    
+    if (draggedItem.id === targetItem.id) return;
+    
+    const draggedIndex = items.findIndex(i => i.id === draggedItem.id);
+    const targetIndex = items.findIndex(i => i.id === targetItem.id);
+    
+    const newItems = [...items];
+    newItems.splice(draggedIndex, 1);
+    newItems.splice(targetIndex, 0, draggedItem);
+    
+    setItems(newItems);
+    setDraggedItem(null);
+  };
+  
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+  };
+  
+  return (
+    <ul>
+      {items.map(item => (
+        <li
+          key={item.id}
+          draggable
+          onDragStart={(e) => handleDragStart(e, item)}
+          onDragOver={handleDragOver}
+          onDrop={(e) => handleDrop(e, item)}
+          onDragEnd={handleDragEnd}
+          className={draggedItem?.id === item.id ? 'dragging' : ''}
+        >
+          {item.text}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**Example 4: Mouse Events (Image Zoom/Pan)**
+
+```javascript
+function ImageViewer({ src }) {
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  
+  const handleWheel = (event) => {
+    event.preventDefault();
+    
+    // Zoom in/out with mouse wheel
+    const delta = event.deltaY > 0 ? 0.9 : 1.1;
+    setScale(prev => Math.min(Math.max(prev * delta, 0.5), 5));
+  };
+  
+  const handleMouseDown = (event) => {
+    setIsDragging(true);
+    setDragStart({
+      x: event.clientX - position.x,
+      y: event.clientY - position.y
+    });
+  };
+  
+  const handleMouseMove = (event) => {
+    if (!isDragging) return;
+    
+    setPosition({
+      x: event.clientX - dragStart.x,
+      y: event.clientY - dragStart.y
+    });
+  };
+  
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+  
+  const handleDoubleClick = () => {
+    // Reset zoom and position
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  };
+  
+  return (
+    <div
+      className="image-viewer"
+      onWheel={handleWheel}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onDoubleClick={handleDoubleClick}
+      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+    >
+      <img
+        src={src}
+        alt="Zoomable"
+        style={{
+          transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
+          transition: isDragging ? 'none' : 'transform 0.2s'
+        }}
+        draggable={false}
+      />
+    </div>
+  );
+}
+```
+
+**Example 5: Event Delegation Pattern**
+
+```javascript
+// Efficient event handling for large lists
+function TaskList({ tasks }) {
+  // Single event handler for all buttons
+  const handleClick = (event) => {
+    // Event delegation: check which button was clicked
+    const button = event.target.closest('button');
+    if (!button) return;
+    
+    const taskId = button.dataset.taskId;
+    const action = button.dataset.action;
+    
+    switch (action) {
+      case 'complete':
+        handleComplete(taskId);
+        break;
+      case 'delete':
+        handleDelete(taskId);
+        break;
+      case 'edit':
+        handleEdit(taskId);
+        break;
+    }
+  };
+  
+  const handleComplete = (taskId) => {
+    console.log('Complete task:', taskId);
+  };
+  
+  const handleDelete = (taskId) => {
+    console.log('Delete task:', taskId);
+  };
+  
+  const handleEdit = (taskId) => {
+    console.log('Edit task:', taskId);
+  };
+  
+  return (
+    <ul onClick={handleClick}>
+      {tasks.map(task => (
+        <li key={task.id}>
+          {task.title}
+          <button data-task-id={task.id} data-action="complete">
+            Complete
+          </button>
+          <button data-task-id={task.id} data-action="edit">
+            Edit
+          </button>
+          <button data-task-id={task.id} data-action="delete">
+            Delete
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+#### 4. Interview-Oriented Explanation
+
+**Sample Answer (7+ years level):**
+"Event handling in React differs from vanilla JavaScript in a few important ways. React uses a synthetic event system—a cross-browser wrapper around native browser events that provides a consistent API regardless of the browser. This eliminates the need to worry about browser inconsistencies.
+
+The key architectural detail is event delegation. React doesn't attach event listeners to individual DOM nodes. Instead, in React 17+, it attaches a single listener at the root container created by createRoot. When an event occurs, React's event system determines which component handlers should be called. This is much more memory-efficient than attaching thousands of individual listeners, especially in large applications with many interactive elements.
+
+For event handler syntax, we use camelCase naming like onClick or onChange, and we pass function references rather than strings. A common pattern is defining handlers as functions within the component body. For handlers that need arguments, we can use arrow functions inline, though for performance-critical lists, I prefer the curry pattern with useCallback to avoid creating new functions on every render.
+
+One important difference from vanilla JavaScript is that you can't return false to prevent default behavior—you must explicitly call event.preventDefault(). This is more explicit and prevents confusion about what's actually happening. Similarly, event.stopPropagation() controls event bubbling.
+
+A detail that changed in React 17 is event pooling. In React 16, synthetic event objects were pooled and reused for performance, which meant you couldn't access event properties asynchronously without calling event.persist(). This was confusing and led to bugs. React 17 removed event pooling, so synthetic events now work like regular objects and can be accessed at any time.
+
+For performance in large lists, I avoid creating new function instances on every render. Instead of inline arrow functions, I use useCallback for stable references or implement event delegation—attaching a single handler to a parent element and using event.target to determine which item was clicked. This pattern comes from the DOM but is less commonly used in React since component-level handlers are more idiomatic.
+
+In production applications, I've built complex interactions like keyboard-navigable dropdowns, drag-and-drop interfaces, and image zoom/pan features. The key is understanding the event lifecycle, properly handling cleanup, managing focus for accessibility, and optimizing event handler performance in lists with many items."
+
+**Follow-up Questions You May Face:**
+
+1. **"What are synthetic events and why does React use them?"**
+   - Cross-browser wrapper around native events
+   - Consistent API across all browsers
+   - Event pooling for performance (removed in React 17)
+   - Works with React's event delegation system
+   - Allows React to control event behavior
+
+2. **"How do you prevent event bubbling in React?"**
+   - Use `event.stopPropagation()` to stop bubbling
+   - Prevents parent handlers from firing
+   - Example: Modal close button shouldn't close when clicking inside modal
+   - Can also use capture phase with `onClickCapture`
+   - Consider if stopping propagation is necessary (often not)
+
+3. **"What's the difference between event.target and event.currentTarget?"**
+   - `event.target`: Element that triggered the event (innermost)
+   - `event.currentTarget`: Element with the event handler attached
+   - Example: Click button inside div with onClick
+     - target = button, currentTarget = div
+   - Important for event delegation patterns
+
+4. **"How do you handle performance with event handlers in large lists?"**
+   - Use useCallback to memoize handlers
+   - Curry pattern: `handleClick(id)` returns `(event) => ...`
+   - Event delegation: Single handler on parent
+   - React.memo to prevent unnecessary re-renders
+   - Avoid inline arrow functions in render
+
+5. **"Can you access native browser events in React?"**
+   - Yes, via `event.nativeEvent` property
+   - Synthetic event wraps native event
+   - Use native event for browser-specific features
+   - Generally synthetic event is sufficient
+   - Example: Touch events might need native access
+
+#### 5. Code Examples
+
+**Example 1: All Common Event Patterns**
+
+```javascript
+function EventPatterns() {
+  const [clicks, setClicks] = useState(0);
+  const [value, setValue] = useState('');
+  const inputRef = useRef(null);
+  
+  // Pattern 1: Simple click handler
+  const handleClick = () => {
+    setClicks(c => c + 1);
+  };
+  
+  // Pattern 2: Handler with event object
+  const handleChange = (event) => {
+    setValue(event.target.value);
+  };
+  
+  // Pattern 3: Handler with custom arguments
+  const handleItemClick = (id, name) => {
+    console.log('Clicked item:', id, name);
+  };
+  
+  // Pattern 4: Curry pattern for performance
+  const handleItemClickCurry = useCallback((id, name) => (event) => {
+    console.log('Clicked item:', id, name, event.type);
+  }, []);
+  
+  // Pattern 5: Multiple events on same element
+  const handleInputFocus = () => console.log('Input focused');
+  const handleInputBlur = () => console.log('Input blurred');
+  
+  // Pattern 6: Keyboard events
+  const handleKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      console.log('Enter pressed');
+    }
+  };
+  
+  // Pattern 7: Mouse events
+  const handleMouseEnter = () => console.log('Mouse entered');
+  const handleMouseLeave = () => console.log('Mouse left');
+  
+  // Pattern 8: Form submission
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    console.log('Form submitted with:', value);
+  };
+  
+  // Pattern 9: Conditional event handling
+  const handleConditionalClick = (event) => {
+    if (clicks > 5) {
+      event.preventDefault();
+      alert('Too many clicks!');
+      return;
+    }
+    handleClick();
+  };
+  
+  // Pattern 10: Accessing native event
+  const handleNativeEvent = (event) => {
+    console.log('Synthetic event:', event.type);
+    console.log('Native event:', event.nativeEvent);
+  };
+  
+  return (
+    <div>
+      {/* Simple click */}
+      <button onClick={handleClick}>
+        Clicks: {clicks}
+      </button>
+      
+      {/* Input change */}
+      <input
+        value={value}
+        onChange={handleChange}
+        onFocus={handleInputFocus}
+        onBlur={handleInputBlur}
+        onKeyPress={handleKeyPress}
+        ref={inputRef}
+      />
+      
+      {/* Click with arguments - inline arrow function */}
+      <button onClick={() => handleItemClick(1, 'Item 1')}>
+        Item 1
+      </button>
+      
+      {/* Click with arguments - curry pattern */}
+      <button onClick={handleItemClickCurry(2, 'Item 2')}>
+        Item 2
+      </button>
+      
+      {/* Mouse events */}
+      <div
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        style={{ padding: '20px', background: '#f0f0f0' }}
+      >
+        Hover over me
+      </div>
+      
+      {/* Form submission */}
+      <form onSubmit={handleSubmit}>
+        <input value={value} onChange={handleChange} />
+        <button type="submit">Submit</button>
+      </form>
+      
+      {/* Conditional handling */}
+      <button onClick={handleConditionalClick}>
+        Conditional Click
+      </button>
+      
+      {/* Native event access */}
+      <button onClick={handleNativeEvent}>
+        Native Event
+      </button>
+    </div>
+  );
+}
+```
+
+**Example 2: Custom useEventListener Hook**
+
+```javascript
+// Reusable hook for adding event listeners
+function useEventListener(eventName, handler, element = window) {
+  const savedHandler = useRef();
+  
+  // Update ref when handler changes
+  useEffect(() => {
+    savedHandler.current = handler;
+  }, [handler]);
+  
+  useEffect(() => {
+    const isSupported = element && element.addEventListener;
+    if (!isSupported) return;
+    
+    // Create event listener that calls handler from ref
+    const eventListener = (event) => savedHandler.current(event);
+    
+    element.addEventListener(eventName, eventListener);
+    
+    return () => {
+      element.removeEventListener(eventName, eventListener);
+    };
+  }, [eventName, element]);
+}
+
+// Usage examples
+function ComponentWithEventListeners() {
+  const [key, setKey] = useState('');
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  // Listen to keyboard events
+  useEventListener('keydown', (event) => {
+    setKey(event.key);
+  });
+  
+  // Listen to mouse movement
+  useEventListener('mousemove', (event) => {
+    setMousePos({ x: event.clientX, y: event.clientY });
+  });
+  
+  // Listen to online/offline
+  useEventListener('online', () => setIsOnline(true));
+  useEventListener('offline', () => setIsOnline(false));
+  
+  // Listen to window resize
+  useEventListener('resize', () => {
+    console.log('Window resized:', window.innerWidth, window.innerHeight);
+  });
+  
+  return (
+    <div>
+      <p>Last key pressed: {key}</p>
+      <p>Mouse position: {mousePos.x}, {mousePos.y}</p>
+      <p>Status: {isOnline ? 'Online' : 'Offline'}</p>
+    </div>
+  );
+}
+```
+
+**Example 3: Debounced Event Handler**
+
+```javascript
+// Custom hook for debounced event handlers
+function useDebouncedCallback(callback, delay) {
+  const timeoutRef = useRef(null);
+  
+  return useCallback((...args) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      callback(...args);
+    }, delay);
+  }, [callback, delay]);
+}
+
+// Usage: Search input with debounced API call
+function SearchComponent() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  // Debounced search function
+  const debouncedSearch = useDebouncedCallback(async (searchQuery) => {
+    if (!searchQuery) {
+      setResults([]);
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/search?q=${searchQuery}`);
+      const data = await response.json();
+      setResults(data);
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, 500); // 500ms delay
+  
+  const handleChange = (event) => {
+    const value = event.target.value;
+    setQuery(value);
+    debouncedSearch(value);
+  };
+  
+  return (
+    <div>
+      <input
+        type="text"
+        value={query}
+        onChange={handleChange}
+        placeholder="Search..."
+      />
+      {loading && <p>Searching...</p>}
+      <ul>
+        {results.map(result => (
+          <li key={result.id}>{result.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+#### 6. Why & How Summary
+
+**Why Event Handling Matters:**
+- **Interactivity**: Foundation of user interactions
+- **User Experience**: Responsive, intuitive interfaces
+- **Accessibility**: Keyboard navigation, screen readers
+- **Performance**: Efficient event delegation
+- **Cross-browser**: Consistent behavior everywhere
+- **Developer Experience**: Simple, predictable API
+
+**How React Events Work:**
+
+**Event Registration:**
+```
+1. Write event handler in component
+2. Attach to JSX element with camelCase prop
+3. React registers handler internally
+4. Single listener attached at root (React 17+)
+```
+
+**Event Triggering:**
+```
+1. User interaction (click, type, etc.)
+2. Browser native event fires
+3. React's root listener catches event
+4. Event wrapped in SyntheticEvent
+5. React determines which component handlers to call
+6. Handlers execute with synthetic event
+7. Event bubbles up (unless stopped)
+```
+
+**Key Patterns:**
+- **Simple handlers**: Direct function reference
+- **Handlers with args**: Inline arrow or curry pattern
+- **Performance**: useCallback + React.memo for lists
+- **Delegation**: Single handler on parent element
+- **Custom hooks**: Reusable event logic
+
+React's event system is elegant in its simplicity while being powerful enough for complex interactions. The synthetic event wrapper provides consistency, the delegation model ensures performance, and the component-based approach keeps event logic co-located with UI. Understanding these fundamentals—from basic onClick handlers to complex keyboard navigation and drag-and-drop—is essential for building production-quality React applications.
+
+---
+
+### 13. How do you pass data between components in React?
+
+#### 1. High-Level Explanation
+React offers multiple patterns for passing data between components depending on their relationship. **Parent to child**: Pass data via props. **Child to parent**: Pass callback functions as props that children invoke with data. **Sibling components**: Lift state to their common parent. **Distant components**: Use Context API, state management libraries (Redux, Zustand), or URL parameters. Each pattern has trade-offs in terms of complexity, maintainability, and performance.
+
+**Key Patterns:**
+- Props (parent → child): Direct, simple, preferred
+- Callbacks (child → parent): Functions passed as props
+- Lifting state (siblings): Shared state in common ancestor
+- Context API: Cross-cutting concerns, avoid prop drilling
+- State management: Complex global state
+- URL parameters: Shareable, persistent state
+
+#### 2. Deep-Dive Explanation (Senior Level)
+
+**1. Parent to Child (Props) - The Foundation**
+
+```javascript
+// Most common and preferred pattern
+function Parent() {
+  const userData = { name: 'John', age: 30 };
+  return <Child user={userData} onUpdate={handleUpdate} />;
+}
+
+function Child({ user, onUpdate }) {
+  return <div>{user.name}</div>;
+}
+```
+
+**Characteristics:**
+- Unidirectional data flow (top-down)
+- Explicit and easy to trace
+- No side effects
+- React re-renders child when props change
+- Can pass any JavaScript value (primitives, objects, functions)
+
+**2. Child to Parent (Callback Props)**
+
+```javascript
+function Parent() {
+  const [data, setData] = useState('');
+  
+  // Parent provides callback to child
+  const handleDataFromChild = (childData) => {
+    setData(childData);
+  };
+  
+  return <Child onDataChange={handleDataFromChild} />;
+}
+
+function Child({ onDataChange }) {
+  const handleClick = () => {
+    // Child calls parent's callback with data
+    onDataChange('Data from child');
+  };
+  
+  return <button onClick={handleClick}>Send Data</button>;
+}
+```
+
+**Pattern Variations:**
+```javascript
+// 1. Event-style callbacks
+<Child onClick={handleClick} onChange={handleChange} />
+
+// 2. Data callbacks
+<Child onSubmit={(formData) => handleSubmit(formData)} />
+
+// 3. Multiple callbacks
+<Child 
+  onSuccess={(data) => handleSuccess(data)}
+  onError={(error) => handleError(error)}
+/>
+
+// 4. Callback with multiple arguments
+<Child onUpdate={(id, field, value) => handleUpdate(id, field, value)} />
+```
+
+**3. Sibling Communication (Lifting State)**
+
+```javascript
+// State lives in common parent, both siblings access it
+function Parent() {
+  const [sharedData, setSharedData] = useState('');
+  
+  return (
+    <>
+      <ChildA data={sharedData} onUpdate={setSharedData} />
+      <ChildB data={sharedData} />
+    </>
+  );
+}
+
+function ChildA({ data, onUpdate }) {
+  return (
+    <input 
+      value={data} 
+      onChange={(e) => onUpdate(e.target.value)} 
+    />
+  );
+}
+
+function ChildB({ data }) {
+  return <div>Data from sibling: {data}</div>;
+}
+```
+
+**Trade-offs:**
+- ✅ Simple, explicit, easy to debug
+- ✅ Clear data flow
+- ❌ Can lead to prop drilling
+- ❌ Parent rerenders both siblings when data changes
+
+**4. Context API (Cross-tree Communication)**
+
+```javascript
+const DataContext = createContext();
+
+function GrandParent() {
+  const [data, setData] = useState('');
+  
+  return (
+    <DataContext.Provider value={{ data, setData }}>
+      <Parent />
+    </DataContext.Provider>
+  );
+}
+
+function Parent() {
+  return <Child />; // No props needed!
+}
+
+function Child() {
+  const { data, setData } = useContext(DataContext);
+  return <input value={data} onChange={(e) => setData(e.target.value)} />;
+}
+```
+
+**When to use:**
+- Data needed by many components at different nesting levels
+- Cross-cutting concerns (theme, auth, locale)
+- Avoiding prop drilling through 3+ levels
+- Not for frequently changing values (performance)
+
+**5. State Management Libraries (Redux, Zustand, Jotai)**
+
+```javascript
+// Redux-style
+import { useSelector, useDispatch } from 'react-redux';
+
+function ComponentA() {
+  const dispatch = useDispatch();
+  return (
+    <button onClick={() => dispatch({ type: 'UPDATE', payload: 'data' })}>
+      Update
+    </button>
+  );
+}
+
+function ComponentB() {
+  const data = useSelector(state => state.data);
+  return <div>{data}</div>;
+}
+
+// Zustand-style (simpler)
+import create from 'zustand';
+
+const useStore = create((set) => ({
+  data: '',
+  setData: (newData) => set({ data: newData })
+}));
+
+function ComponentA() {
+  const setData = useStore(state => state.setData);
+  return <button onClick={() => setData('new data')}>Update</button>;
+}
+
+function ComponentB() {
+  const data = useStore(state => state.data);
+  return <div>{data}</div>;
+}
+```
+
+**When to use:**
+- Complex global state
+- Many components need same data
+- State has complex update logic
+- Need middleware (logging, persistence)
+- Time-travel debugging needed
+
+**6. URL Parameters / Query Strings**
+
+```javascript
+import { useSearchParams, useNavigate } from 'react-router-dom';
+
+function ComponentA() {
+  const navigate = useNavigate();
+  
+  const sendDataViaURL = () => {
+    navigate('/path?data=value&id=123');
+  };
+  
+  return <button onClick={sendDataViaURL}>Navigate with data</button>;
+}
+
+function ComponentB() {
+  const [searchParams] = useSearchParams();
+  const data = searchParams.get('data'); // 'value'
+  const id = searchParams.get('id');     // '123'
+  
+  return <div>Data from URL: {data}</div>;
+}
+```
+
+**When to use:**
+- Shareable URLs
+- Bookmarkable state
+- Browser back/forward navigation
+- Deep linking into app
+- Filter/search parameters
+
+**7. Render Props Pattern**
+
+```javascript
+function DataProvider({ render }) {
+  const [data, setData] = useState('');
+  
+  return render({ data, setData });
+}
+
+function App() {
+  return (
+    <DataProvider
+      render={({ data, setData }) => (
+        <div>
+          <ComponentA setData={setData} />
+          <ComponentB data={data} />
+        </div>
+      )}
+    />
+  );
+}
+```
+
+**8. Custom Hooks (Modern Approach)**
+
+```javascript
+// Encapsulate shared logic in a hook
+function useSharedData() {
+  const [data, setData] = useState('');
+  
+  const updateData = useCallback((newData) => {
+    setData(newData);
+  }, []);
+  
+  return { data, updateData };
+}
+
+// Multiple components use the same hook (separate instances)
+function ComponentA() {
+  const { data, updateData } = useSharedData();
+  return <input value={data} onChange={(e) => updateData(e.target.value)} />;
+}
+
+// To share instance, use Context + Hook
+const DataContext = createContext();
+
+function DataProvider({ children }) {
+  const sharedData = useSharedData();
+  return (
+    <DataContext.Provider value={sharedData}>
+      {children}
+    </DataContext.Provider>
+  );
+}
+
+function useSharedDataContext() {
+  return useContext(DataContext);
+}
+```
+
+**Decision Framework:**
+
+```
+Component Relationship?
+├─ Parent → Child
+│  └─ Use Props (default)
+│
+├─ Child → Parent
+│  └─ Callback props
+│
+├─ Siblings
+│  ├─ Close (same parent)
+│  │  └─ Lift state to parent
+│  └─ Distant
+│     └─ Context or state management
+│
+├─ Any → Any (distant)
+│  ├─ Simple, infrequent updates
+│  │  └─ Context API
+│  ├─ Complex, frequent updates
+│  │  └─ State management library
+│  └─ Shareable/bookmarkable
+│     └─ URL parameters
+```
+
+**Performance Considerations:**
+
+```javascript
+// ❌ BAD: Prop drilling with new objects every render
+function Parent() {
+  const config = { theme: 'dark' }; // New object every render
+  return <Level1 config={config} />;
+}
+
+function Level1({ config }) {
+  return <Level2 config={config} />; // Unnecessary re-render
+}
+
+// ✅ GOOD: Memoize or use Context
+function Parent() {
+  const config = useMemo(() => ({ theme: 'dark' }), []);
+  return <Level1 config={config} />;
+}
+
+// OR better: Context for cross-cutting concerns
+const ConfigContext = createContext({ theme: 'dark' });
+
+function Parent() {
+  return (
+    <ConfigContext.Provider value={{ theme: 'dark' }}>
+      <Level1 />
+    </ConfigContext.Provider>
+  );
+}
+```
+
+#### 3. Clear Real-World Examples
+
+**Example 1: E-commerce Cart (Multiple Patterns)**
+
+```javascript
+// 1. Context for global cart state
+const CartContext = createContext();
+
+function CartProvider({ children }) {
+  const [items, setItems] = useState([]);
+  
+  const addItem = useCallback((item) => {
+    setItems(prev => [...prev, item]);
+  }, []);
+  
+  const removeItem = useCallback((id) => {
+    setItems(prev => prev.filter(item => item.id !== id));
+  }, []);
+  
+  const value = useMemo(
+    () => ({ items, addItem, removeItem }),
+    [items, addItem, removeItem]
+  );
+  
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+}
+
+function useCart() {
+  return useContext(CartContext);
+}
+
+// 2. Props for component-specific data
+function ProductCard({ product }) {
+  const { addItem } = useCart();
+  
+  // Product data from props, cart actions from context
+  return (
+    <div>
+      <h3>{product.name}</h3>
+      <p>${product.price}</p>
+      <button onClick={() => addItem(product)}>Add to Cart</button>
+    </div>
+  );
+}
+
+// 3. Callback for user interactions
+function CartItem({ item, onRemove }) {
+  return (
+    <div>
+      <span>{item.name}</span>
+      <button onClick={() => onRemove(item.id)}>Remove</button>
+    </div>
+  );
+}
+
+function CartList() {
+  const { items, removeItem } = useCart();
+  
+  return (
+    <div>
+      {items.map(item => (
+        <CartItem
+          key={item.id}
+          item={item}
+          onRemove={removeItem} // Callback passed to child
+        />
+      ))}
+    </div>
+  );
+}
+
+// App structure
+function App() {
+  return (
+    <CartProvider>
+      <Header /> {/* Can access cart count via useCart() */}
+      <ProductList /> {/* Can add items via useCart() */}
+      <Cart /> {/* Can display/modify cart via useCart() */}
+    </CartProvider>
+  );
+}
+```
+
+**Example 2: Multi-Step Form (Lifting State)**
+
+```javascript
+// Complex form with multiple steps sharing state
+function MultiStepForm() {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    // Step 1
+    personalInfo: { name: '', email: '', phone: '' },
+    // Step 2
+    address: { street: '', city: '', zip: '' },
+    // Step 3
+    preferences: { newsletter: false, notifications: true }
+  });
+  
+  // Update function passed to all steps
+  const updateFormData = (section, data) => {
+    setFormData(prev => ({
+      ...prev,
+      [section]: { ...prev[section], ...data }
+    }));
+  };
+  
+  const nextStep = () => setCurrentStep(prev => prev + 1);
+  const prevStep = () => setCurrentStep(prev => prev - 1);
+  
+  const handleSubmit = async () => {
+    try {
+      await api.submitForm(formData);
+      alert('Form submitted!');
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+  
+  return (
+    <div>
+      {currentStep === 1 && (
+        <PersonalInfoStep
+          data={formData.personalInfo}
+          onUpdate={(data) => updateFormData('personalInfo', data)}
+          onNext={nextStep}
+        />
+      )}
+      
+      {currentStep === 2 && (
+        <AddressStep
+          data={formData.address}
+          onUpdate={(data) => updateFormData('address', data)}
+          onNext={nextStep}
+          onBack={prevStep}
+        />
+      )}
+      
+      {currentStep === 3 && (
+        <PreferencesStep
+          data={formData.preferences}
+          onUpdate={(data) => updateFormData('preferences', data)}
+          onSubmit={handleSubmit}
+          onBack={prevStep}
+        />
+      )}
+      
+      {/* Progress indicator */}
+      <ProgressBar current={currentStep} total={3} />
+    </div>
+  );
+}
+
+function PersonalInfoStep({ data, onUpdate, onNext }) {
+  const handleChange = (field, value) => {
+    onUpdate({ [field]: value });
+  };
+  
+  return (
+    <div>
+      <input
+        value={data.name}
+        onChange={(e) => handleChange('name', e.target.value)}
+        placeholder="Name"
+      />
+      <input
+        value={data.email}
+        onChange={(e) => handleChange('email', e.target.value)}
+        placeholder="Email"
+      />
+      <button onClick={onNext}>Next</button>
+    </div>
+  );
+}
+```
+
+**Example 3: Dashboard with Filters (Props + Callbacks)**
+
+```javascript
+function Dashboard() {
+  const [filters, setFilters] = useState({
+    dateRange: 'last7days',
+    category: 'all',
+    status: 'active'
+  });
+  
+  const [data, setData] = useState([]);
+  
+  // Fetch data when filters change
+  useEffect(() => {
+    fetchData(filters).then(setData);
+  }, [filters]);
+  
+  // Update individual filter
+  const updateFilter = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+  
+  // Reset all filters
+  const resetFilters = () => {
+    setFilters({ dateRange: 'last7days', category: 'all', status: 'active' });
+  };
+  
+  return (
+    <div>
+      {/* Filters component receives current state and callbacks */}
+      <FilterPanel
+        filters={filters}
+        onFilterChange={updateFilter}
+        onReset={resetFilters}
+      />
+      
+      {/* Data table receives filtered data */}
+      <DataTable data={data} />
+      
+      {/* Summary receives data for calculations */}
+      <Summary data={data} />
+    </div>
+  );
+}
+
+function FilterPanel({ filters, onFilterChange, onReset }) {
+  return (
+    <div>
+      <select
+        value={filters.dateRange}
+        onChange={(e) => onFilterChange('dateRange', e.target.value)}
+      >
+        <option value="last7days">Last 7 Days</option>
+        <option value="last30days">Last 30 Days</option>
+        <option value="last90days">Last 90 Days</option>
+      </select>
+      
+      <select
+        value={filters.category}
+        onChange={(e) => onFilterChange('category', e.target.value)}
+      >
+        <option value="all">All Categories</option>
+        <option value="sales">Sales</option>
+        <option value="marketing">Marketing</option>
+      </select>
+      
+      <button onClick={onReset}>Reset Filters</button>
+    </div>
+  );
+}
+```
+
+**Example 4: Real-time Chat (State Management)**
+
+```javascript
+// Using Zustand for global chat state
+import create from 'zustand';
+
+const useChatStore = create((set, get) => ({
+  messages: [],
+  users: [],
+  currentRoom: null,
+  
+  addMessage: (message) =>
+    set((state) => ({ messages: [...state.messages, message] })),
+  
+  setUsers: (users) => set({ users }),
+  
+  setCurrentRoom: (roomId) => set({ currentRoom: roomId }),
+  
+  sendMessage: async (text) => {
+    const { currentRoom } = get();
+    const message = {
+      id: Date.now(),
+      text,
+      roomId: currentRoom,
+      timestamp: new Date().toISOString()
+    };
+    
+    await api.sendMessage(message);
+    set((state) => ({ messages: [...state.messages, message] }));
+  }
+}));
+
+// Any component can access/modify chat state
+function MessageList() {
+  const messages = useChatStore((state) => state.messages);
+  const currentRoom = useChatStore((state) => state.currentRoom);
+  
+  const roomMessages = messages.filter(m => m.roomId === currentRoom);
+  
+  return (
+    <div>
+      {roomMessages.map(msg => (
+        <MessageBubble key={msg.id} message={msg} />
+      ))}
+    </div>
+  );
+}
+
+function MessageInput() {
+  const [text, setText] = useState('');
+  const sendMessage = useChatStore((state) => state.sendMessage);
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    
+    await sendMessage(text);
+    setText('');
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <input value={text} onChange={(e) => setText(e.target.value)} />
+      <button type="submit">Send</button>
+    </form>
+  );
+}
+
+function UserList() {
+  const users = useChatStore((state) => state.users);
+  
+  return (
+    <div>
+      {users.map(user => (
+        <UserItem key={user.id} user={user} />
+      ))}
+    </div>
+  );
+}
+```
+
+#### 4. Interview-Oriented Explanation
+
+**Sample Answer (7+ years level):**
+"React provides several patterns for passing data between components, and choosing the right one depends on the component relationship and data flow requirements.
+
+The fundamental pattern is props for parent-to-child communication. This is React's bread and butter—pass data down as props, and the child re-renders when props change. It's explicit, easy to trace, and the preferred approach for most scenarios. For child-to-parent communication, we pass callback functions as props. The child invokes the callback with data, and the parent's state update triggers a re-render.
+
+For sibling components, we lift state to their common ancestor. Both siblings receive the shared state as props and callbacks to update it. This works well for closely related components, but as the ancestor gets further away, it leads to prop drilling—passing props through multiple intermediate components that don't use them.
+
+This is where Context API becomes useful. For cross-cutting concerns like theme, authentication, or locale, Context provides data to any component in the tree without prop drilling. However, Context has a performance limitation: all consumers re-render when the Provider's value changes, even if they only use a small part of it. The solution is splitting contexts by concern or using separate state and dispatch contexts.
+
+For complex global state with many interconnected updates, state management libraries like Redux or Zustand are better suited. They provide selector-based subscriptions, so components only re-render when their specific slice of state changes. Redux brings middleware, dev tools, and time-travel debugging, while Zustand offers a simpler API with less boilerplate. The choice depends on complexity and team familiarity.
+
+URL parameters are another often-overlooked pattern for sharing state. They're perfect for filters, search queries, and pagination because the state becomes shareable, bookmarkable, and works with browser navigation. I use this extensively in admin dashboards where users need to share specific views.
+
+In modern React, custom hooks have largely replaced patterns like render props and HOCs for code reuse. A hook can encapsulate stateful logic and be used in multiple components, either as separate instances or combined with Context for shared instances.
+
+The key is matching the pattern to the requirement. Most data passing should use props. Context for cross-cutting concerns. State management libraries when Redux's complexity is justified. URL parameters for shareable state. And custom hooks for reusable logic. Over-engineering with Context or Redux when props would suffice adds unnecessary complexity."
+
+**Follow-up Questions You May Face:**
+
+1. **"When should you use Context vs Redux?"**
+   - Context: Simple global state, infrequent updates, <5 consumers
+   - Redux: Complex state, frequent updates, many consumers, middleware needed
+   - Consider: Update frequency, number of consumers, need for dev tools
+   - Zustand: Middle ground with less boilerplate than Redux
+
+2. **"What is prop drilling and how do you avoid it?"**
+   - Prop drilling: Passing props through many levels to reach deep component
+   - Avoid: Context API for cross-cutting data
+   - Alternative: Composition (props.children) to avoid intermediate components
+   - State management: For complex cases
+   - Don't avoid if only 2-3 levels (prop drilling isn't always bad)
+
+3. **"How do you optimize Context performance?"**
+   - Memoize Provider value with useMemo
+   - Split contexts by update frequency
+   - Separate state and dispatch contexts
+   - Move frequently updating state out of Context
+   - Use selector libraries (use-context-selector)
+
+4. **"What's the difference between lifting state and using Context?"**
+   - Lifting state: State in common ancestor, props passed down
+   - Context: State in provider, any descendant can access
+   - Lifting better for: Close components, explicit data flow
+   - Context better for: Many levels, cross-cutting concerns
+   - Both cause ancestor re-renders on state change
+
+5. **"How would you share data between unrelated routes?"**
+   - State management library (persists across routes)
+   - URL parameters (shareable, bookmarkable)
+   - localStorage/sessionStorage (persists across sessions)
+   - Context above router (shared state for all routes)
+   - Route state (React Router location state)
+
+#### 5. Code Examples
+
+**Example 1: All Patterns in One App**
+
+```javascript
+// 1. Global state: Redux/Zustand
+const useGlobalStore = create((set) => ({
+  user: null,
+  setUser: (user) => set({ user })
+}));
+
+// 2. Feature state: Context
+const ThemeContext = createContext();
+
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState('light');
+  const value = useMemo(() => ({ theme, setTheme }), [theme]);
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+// 3. Local state: Props
+function App() {
+  return (
+    <GlobalStoreProvider>
+      <ThemeProvider>
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/profile" element={<Profile />} />
+            </Routes>
+          </Layout>
+        </Router>
+      </ThemeProvider>
+    </GlobalStoreProvider>
+  );
+}
+
+function Dashboard() {
+  // Global state from store
+  const user = useGlobalStore((state) => state.user);
+  
+  // Feature state from context
+  const { theme } = useContext(ThemeContext);
+  
+  // Local state for this component
+  const [dashboardData, setDashboardData] = useState([]);
+  
+  return (
+    <div className={theme}>
+      <h1>Welcome, {user.name}</h1>
+      <DataTable data={dashboardData} onUpdate={setDashboardData} />
+    </div>
+  );
+}
+
+function DataTable({ data, onUpdate }) {
+  // Props for component-specific data
+  return (
+    <table>
+      {data.map(row => (
+        <TableRow key={row.id} row={row} onEdit={(id, changes) => {
+          // Callback to parent
+          const newData = data.map(r =>
+            r.id === id ? { ...r, ...changes } : r
+          );
+          onUpdate(newData);
+        }} />
+      ))}
+    </table>
+  );
+}
+```
+
+**Example 2: Complex Parent-Child Communication**
+
+```javascript
+function ParentComponent() {
+  const [status, setStatus] = useState('idle');
+  const [result, setResult] = useState(null);
+  
+  // Multiple callbacks for different child actions
+  const handleStart = useCallback(() => {
+    setStatus('processing');
+  }, []);
+  
+  const handleComplete = useCallback((data) => {
+    setStatus('complete');
+    setResult(data);
+  }, []);
+  
+  const handleError = useCallback((error) => {
+    setStatus('error');
+    setResult({ error: error.message });
+  }, []);
+  
+  const handleReset = useCallback(() => {
+    setStatus('idle');
+    setResult(null);
+  }, []);
+  
+  return (
+    <div>
+      <StatusDisplay status={status} result={result} />
+      <ChildComponent
+        onStart={handleStart}
+        onComplete={handleComplete}
+        onError={handleError}
+        onReset={handleReset}
+      />
+    </div>
+  );
+}
+
+function ChildComponent({ onStart, onComplete, onError, onReset }) {
+  const processData = async () => {
+    onStart();
+    
+    try {
+      const result = await api.processData();
+      onComplete(result);
+    } catch (error) {
+      onError(error);
+    }
+  };
+  
+  return (
+    <div>
+      <button onClick={processData}>Process</button>
+      <button onClick={onReset}>Reset</button>
+    </div>
+  );
+}
+```
+
+**Example 3: Composition to Avoid Prop Drilling**
+
+```javascript
+// ❌ BAD: Prop drilling
+function App() {
+  const user = useUser();
+  return <Layout user={user} />;
+}
+
+function Layout({ user }) {
+  return (
+    <div>
+      <Header user={user} />
+      <Sidebar user={user} />
+      <Content user={user} />
+    </div>
+  );
+}
+
+function Header({ user }) {
+  return <UserMenu user={user} />; // Still drilling...
+}
+
+// ✅ GOOD: Composition with children
+function App() {
+  const user = useUser();
+  
+  return (
+    <Layout
+      header={<Header><UserMenu user={user} /></Header>}
+      sidebar={<Sidebar />}
+      content={<Content />}
+    />
+  );
+}
+
+function Layout({ header, sidebar, content }) {
+  return (
+    <div>
+      {header}
+      {sidebar}
+      {content}
+    </div>
+  );
+}
+
+// Even better: Context for user data
+const UserContext = createContext();
+
+function App() {
+  const user = useUser();
+  
+  return (
+    <UserContext.Provider value={user}>
+      <Layout>
+        <Header />
+        <Sidebar />
+        <Content />
+      </Layout>
+    </UserContext.Provider>
+  );
+}
+
+function UserMenu() {
+  const user = useContext(UserContext); // Direct access, no drilling
+  return <div>{user.name}</div>;
+}
+```
+
+#### 6. Why & How Summary
+
+**Why Data Passing Patterns Matter:**
+- **Architecture**: Foundation of React apps
+- **Maintainability**: Clear data flow = easier debugging
+- **Performance**: Right pattern prevents unnecessary re-renders
+- **Scalability**: Patterns scale from small to large apps
+- **Team Collaboration**: Consistent patterns = predictable code
+- **Flexibility**: Multiple options for different scenarios
+
+**Pattern Selection Guide:**
+
+```
+Data Flow Needs Assessment:
+├─ Same component only?
+│  └─ Local state (useState/useReducer)
+│
+├─ Parent → Child?
+│  └─ Props (default choice)
+│
+├─ Child → Parent?
+│  └─ Callback props
+│
+├─ Sibling components?
+│  ├─ Close siblings (same parent)?
+│  │  └─ Lift state to parent
+│  └─ Distant siblings?
+│     └─ Context or state management
+│
+├─ Cross-cutting concern (theme, auth)?
+│  └─ Context API
+│
+├─ Complex global state (e-commerce, dashboard)?
+│  └─ State management library (Redux/Zustand)
+│
+└─ Shareable/bookmarkable state?
+   └─ URL parameters
+```
+
+**Performance Impact:**
+
+| Pattern | Re-render Behavior | Best For |
+|---------|-------------------|----------|
+| **Props** | Only receiving component | Most cases |
+| **Lifted State** | Parent + all children | Close siblings |
+| **Context** | All consumers | Infrequent updates |
+| **Redux/Zustand** | Only subscribers to changed slice | Complex state |
+| **URL Parameters** | Component reading params | Shareable state |
+
+React's data passing patterns form a hierarchy from simple to complex. Start with props for most cases, lift state for siblings, use Context for cross-cutting concerns, and reach for state management libraries only when the complexity justifies it. Understanding when and why to use each pattern—and their performance implications—is crucial for building scalable, maintainable React applications.
 
 ---
 
