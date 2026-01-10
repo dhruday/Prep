@@ -204,6 +204,7 @@ For each major topic, include:
 * Pseudocode where useful
 * Mini exercises
 * Thought experiments
+* i dont have preior knowledge on phyton have on core javescript developer
 
 ⚠️ Code should be readable and beginner-friendly.
 
@@ -218,6 +219,8 @@ At the end of each major section include:
 ### 🧩 Practice Problems
 
 ### 🚀 Mini Project Idea
+
+### should disccus  javascript
 
 ---
 
