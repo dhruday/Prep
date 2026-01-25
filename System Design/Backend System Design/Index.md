@@ -265,3 +265,113 @@
 166. Communicating Trade-offs
 167. Closing the Interview Strongly
 
+# 🧱 PART 2️⃣1️⃣ — Object-Oriented Design & SOLID (CRITICAL)
+
+These are **non-negotiable** for Java + Spring interviews.
+
+**Add this entire section 👇**
+
+### PART 21️⃣ — OOP & SOLID Design Principles
+
+168. Object-Oriented Design Basics (Encapsulation, Abstraction, Polymorphism, Inheritance)
+169. SOLID Principles (Overview)
+170. Single Responsibility Principle (SRP)
+171. Open–Closed Principle (OCP)
+172. Liskov Substitution Principle (LSP)
+173. Interface Segregation Principle (ISP)
+174. Dependency Inversion Principle (DIP)
+175. Composition over Inheritance
+176. Tight Coupling vs Loose Coupling
+177. Dependency Injection (Constructor vs Field vs Setter)
+178. Inversion of Control (IoC)
+
+🎯 **FAANG expectation**:
+
+> “Explain SRP violation in this class and refactor it.”
+
+---
+
+# 🧠 PART 2️⃣2️⃣ — Design Patterns (VERY IMPORTANT)
+
+These appear **directly** in:
+
+* LLD rounds
+* Java backend discussions
+* Spring Boot internals
+
+### PART 22️⃣ — Design Patterns (Backend-Focused)
+
+#### Creational Patterns
+
+179. Singleton (and why it’s dangerous)
+180. Factory Pattern
+181. Abstract Factory
+182. Builder Pattern
+
+#### Structural Patterns
+
+183. Adapter Pattern
+184. Decorator Pattern
+185. Proxy Pattern
+186. Facade Pattern
+
+#### Behavioral Patterns
+
+187. Strategy Pattern
+188. Observer Pattern
+189. Command Pattern
+190. Chain of Responsibility
+191. Template Method
+
+#### Pattern Selection
+
+192. When NOT to use design patterns
+193. Anti-Patterns (God Object, Spaghetti Code)
+
+🎯 **FAANG question example**:
+
+> “How would you refactor this `if-else` chain using Strategy?”
+
+---
+
+# 🧼 PART 2️⃣3️⃣ — Clean Code, KISS, DRY (Interview Gold)
+
+These are **hidden evaluation signals**.
+
+### PART 23️⃣ — Clean Code & Engineering Principles
+
+194. KISS (Keep It Simple, Stupid)
+195. DRY (Don’t Repeat Yourself)
+196. YAGNI (You Aren’t Gonna Need It)
+197. Clean Code Principles (Naming, Methods, Classes)
+198. Code Smells
+199. Refactoring Techniques
+200. Writing Testable Code
+201. Defensive Programming
+202. Fail Fast vs Fail Safe
+
+🎯 Interviewers watch **how you think**, not just what you design.
+
+---
+
+# ☕ PART 2️⃣4️⃣ — Java + Spring Boot Internals (Backend-Specific)
+
+Since your backend is **Java + Spring**, this is a MUST.
+
+### PART 24️⃣ — Java & Spring Design Internals
+
+203. JVM Basics (Heap, Stack, GC overview)
+204. Java Memory Leaks in Backend Systems
+205. Thread Safety & Concurrency Basics
+206. Thread Pools & Executors
+207. Spring Boot Request Lifecycle
+208. Filters vs Interceptors vs AOP
+209. @Transactional Internals
+210. Connection Pooling (HikariCP)
+211. ORM Pitfalls (N+1, Lazy Loading)
+212. Designing Idempotent APIs in Spring
+213. Exception Handling Strategy (ControllerAdvice)
+
+🎯 FAANG backend interviews LOVE:
+
+> “How does Spring manage transactions internally?”
