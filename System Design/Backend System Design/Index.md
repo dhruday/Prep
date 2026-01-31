@@ -265,11 +265,6 @@
 166. Communicating Trade-offs
 167. Closing the Interview Strongly
 
-# 🧱 PART 2️⃣1️⃣ — Object-Oriented Design & SOLID (CRITICAL)
-
-These are **non-negotiable** for Java + Spring interviews.
-
-**Add this entire section 👇**
 
 ### PART 21️⃣ — OOP & SOLID Design Principles
 
