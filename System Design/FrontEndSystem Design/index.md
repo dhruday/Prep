@@ -14,21 +14,30 @@
 
 ## PART 2️⃣ — Browser & Web Platform Internals (Must-Know)
 
+### 🏗️ Module 1: Browser Architecture Foundations
 9. How the Browser Works (High Level)
 10. Critical Rendering Path (CRP)
 11. HTML Parsing, CSSOM, Render Tree
+
+### ⚙️ Module 2: JavaScript Execution & Threading
 12. JavaScript Execution Model
 13. Event Loop (Microtasks vs Macrotasks)
+22. Main Thread vs Worker Threads
+23. Web Workers, Service Workers, Worklets (When & Why)
+
+### 🎨 Module 3: Rendering & Performance
 14. Reflows vs Repaints
 15. GPU vs CPU Rendering
+21. Browser Resource Prioritization
+
+### 💾 Module 4: Memory & Storage
 16. Memory Management in Browser
 17. Browser Storage Options Overview
+
+### 🌐 Module 5: Network & Communication
 18. Network Stack Basics (DNS, TCP, TLS, HTTP Lifecycle)
 19. HTTP/1.1 vs HTTP/2 vs HTTP/3 (Frontend Impact)
 20. Connection Reuse, Keep-Alive & Head-of-Line Blocking
-21. Browser Resource Prioritization
-22. Main Thread vs Worker Threads
-23. Web Workers, Service Workers, Worklets (When & Why)
 
 ---
 
