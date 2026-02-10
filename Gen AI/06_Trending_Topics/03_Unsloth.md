@@ -1,5 +1,24 @@
 # 📘 Unsloth - Fast & Memory-Efficient Fine-Tuning
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why Unsloth Exists)](#purpose-why-unsloth-exists)
+- [📚 What Unsloth Actually Is](#what-unsloth-actually-is)
+- [🔧 How Unsloth Works (Intuition)](#how-unsloth-works-intuition)
+- [🧮 How Unsloth Works (Technical Details)](#how-unsloth-works-technical-details)
+- [🎨 Visual Explanation](#visual-explanation)
+- [💡 Simple Example](#simple-example)
+- [🌍 Real-World Applications](#real-world-applications)
+- [❌ Common Misconceptions](#common-misconceptions)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Build a Personal Coding Assistant](#mini-project-build-a-personal-coding-assistant)
+
+---
+
 ## 🎯 Purpose (Why Unsloth Exists)
 
 Imagine you want to fine-tune a large language model. The **traditional approach (2023)**:

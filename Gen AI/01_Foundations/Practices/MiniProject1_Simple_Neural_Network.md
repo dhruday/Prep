@@ -1,5 +1,24 @@
 # 🚀 Mini Project 1: Simple Neural Network from Scratch
 
+
+## 📑 Table of Contents
+
+- [🎯 Project Goal](#project-goal)
+- [📚 Prerequisites](#prerequisites)
+- [🧠 Conceptual Understanding (JavaScript Analogy)](#conceptual-understanding-javascript-analogy)
+- [🛠️ Project Setup](#project-setup)
+- [🏗️ Part 1: Build Neural Network from Scratch (NumPy)](#part-1-build-neural-network-from-scratch-numpy)
+- [🔥 Part 2: Build with TensorFlow/Keras](#part-2-build-with-tensorflowkeras)
+- [🎨 Part 3: Advanced Experiments](#part-3-advanced-experiments)
+- [📊 Expected Results](#expected-results)
+- [🎯 Key Learnings](#key-learnings)
+- [🚀 Next Steps](#next-steps)
+- [📝 Challenge Questions](#challenge-questions)
+- [✅ Success Checklist](#success-checklist)
+- [🎓 Congratulations!](#congratulations)
+
+---
+
 ## 🎯 Project Goal
 
 Build a **neural network from scratch** to classify handwritten digits (0-9) using the MNIST dataset.

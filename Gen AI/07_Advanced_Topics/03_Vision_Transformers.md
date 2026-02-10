@@ -1,5 +1,24 @@
 # 📘 Vision Transformers (ViT) - Transformers Conquer Computer Vision
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why Vision Transformers Exist)](#purpose-why-vision-transformers-exist)
+- [📚 What Vision Transformers Actually Are](#what-vision-transformers-actually-are)
+- [🔧 How Vision Transformers Work (Intuition)](#how-vision-transformers-work-intuition)
+- [🧮 How Vision Transformers Work (Technical)](#how-vision-transformers-work-technical)
+- [🎨 Visual Explanation](#visual-explanation)
+- [💡 Simple Examples](#simple-examples)
+- [🌍 Real-World Applications](#real-world-applications)
+- [❌ Common Misconceptions](#common-misconceptions)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Build ViT-Based Image Classifier](#mini-project-build-vit-based-image-classifier)
+
+---
+
 ## 🎯 Purpose (Why Vision Transformers Exist)
 
 Imagine the **computer vision landscape before 2020**:

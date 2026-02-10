@@ -1,5 +1,27 @@
 # 📘 Section 1: Foundations of Artificial Intelligence
 
+
+## 📑 Table of Contents
+
+- [Chapter 4: Gradient Descent & Optimization](#chapter-4-gradient-descent-optimization)
+- [🎯 Introduction: The Heart of Learning](#introduction-the-heart-of-learning)
+- [📘 Part 1: The Optimization Problem](#part-1-the-optimization-problem)
+- [📘 Part 2: Gradient Descent (The Foundation)](#part-2-gradient-descent-the-foundation)
+- [📘 Part 3: Problems with Vanilla Gradient Descent](#part-3-problems-with-vanilla-gradient-descent)
+- [📘 Part 4: Momentum-Based Methods](#part-4-momentum-based-methods)
+- [📘 Part 5: Adaptive Learning Rate Methods](#part-5-adaptive-learning-rate-methods)
+- [📘 Part 6: Learning Rate Schedules](#part-6-learning-rate-schedules)
+- [📘 Part 7: Practical Training Tips](#part-7-practical-training-tips)
+- [📘 Part 8: Complete Training Example with Modern Optimizer](#part-8-complete-training-example-with-modern-optimizer)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project Idea](#mini-project-idea)
+- [🎯 Key Takeaways](#key-takeaways)
+- [📊 Optimizer Decision Tree](#optimizer-decision-tree)
+- [📚 What's Next?](#whats-next)
+
+---
+
 ## Chapter 4: Gradient Descent & Optimization
 
 ---

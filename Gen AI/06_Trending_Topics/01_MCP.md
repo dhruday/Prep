@@ -1,5 +1,24 @@
 # 📘 Model Context Protocol (MCP)
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why MCP Exists)](#purpose-why-mcp-exists)
+- [📚 What MCP Actually Is](#what-mcp-actually-is)
+- [🔧 How MCP Works (Intuition)](#how-mcp-works-intuition)
+- [🧮 How MCP Works (Technical Details)](#how-mcp-works-technical-details)
+- [🎨 Visual Explanation](#visual-explanation)
+- [💡 Simple Example](#simple-example)
+- [🌍 Real-World Applications](#real-world-applications)
+- [❌ Common Misconceptions](#common-misconceptions)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Personal Knowledge Base with MCP](#mini-project-personal-knowledge-base-with-mcp)
+
+---
+
 ## 🎯 Purpose (Why MCP Exists)
 
 Imagine you're building a ChatGPT-like app. Your LLM needs to:

@@ -1,5 +1,24 @@
 # 📘 Ollama - Run LLMs Locally
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why Ollama Exists)](#purpose-why-ollama-exists)
+- [📚 What Ollama Actually Is](#what-ollama-actually-is)
+- [🔧 How Ollama Works (Intuition)](#how-ollama-works-intuition)
+- [🧮 How Ollama Works (Technical Details)](#how-ollama-works-technical-details)
+- [🎨 Visual Explanation](#visual-explanation)
+- [💡 Simple Example](#simple-example)
+- [🌍 Real-World Applications](#real-world-applications)
+- [❌ Common Misconceptions](#common-misconceptions)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Personal Knowledge Assistant](#mini-project-personal-knowledge-assistant)
+
+---
+
 ## 🎯 Purpose (Why Ollama Exists)
 
 Imagine you're building an AI app. The **traditional approach (2023)**:

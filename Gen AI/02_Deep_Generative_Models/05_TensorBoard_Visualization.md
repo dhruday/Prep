@@ -1,5 +1,18 @@
 # 📘 TensorBoard Visualization
 
+
+## 📑 Table of Contents
+
+- [**Purpose (Why this exists):**](#purpose-why-this-exists)
+- [**What it is:**](#what-it-is)
+- [**How it works (Intuition):**](#how-it-works-intuition)
+- [**How it works (Implementation):**](#how-it-works-implementation)
+- [**Real-World Applications:**](#real-world-applications)
+- [**Best Practices:**](#best-practices)
+- [**Key Takeaways:**](#key-takeaways)
+
+---
+
 ---
 
 ## **Purpose (Why this exists):**

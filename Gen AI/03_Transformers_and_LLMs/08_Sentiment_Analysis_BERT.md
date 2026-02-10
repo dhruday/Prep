@@ -1,5 +1,20 @@
 # 🎯 Mini Project: Sentiment Analysis using BERT
 
+
+## 📑 Table of Contents
+
+- [**Project Overview:**](#project-overview)
+- [**Part 1: Setup and Data Preparation**](#part-1-setup-and-data-preparation)
+- [**Part 2: Build and Fine-Tune BERT**](#part-2-build-and-fine-tune-bert)
+- [**Part 3: Evaluation and Analysis**](#part-3-evaluation-and-analysis)
+- [**Part 4: Attention Visualization**](#part-4-attention-visualization)
+- [**Part 5: Inference API**](#part-5-inference-api)
+- [**Part 6: Production Deployment**](#part-6-production-deployment)
+- [**Part 7: Final Analysis**](#part-7-final-analysis)
+- [**🎉 Project Complete!**](#project-complete)
+
+---
+
 ---
 
 ## **Project Overview:**

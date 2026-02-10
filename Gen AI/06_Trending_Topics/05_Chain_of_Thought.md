@@ -1,5 +1,24 @@
 # 📘 Chain of Thought (CoT) - Teaching AI to Think Step-by-Step
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why Chain of Thought Exists)](#purpose-why-chain-of-thought-exists)
+- [📚 What Chain of Thought Actually Is](#what-chain-of-thought-actually-is)
+- [🔧 How Chain of Thought Works (Intuition)](#how-chain-of-thought-works-intuition)
+- [🧮 How Chain of Thought Works (Technical Details)](#how-chain-of-thought-works-technical-details)
+- [🎨 Visual Explanation](#visual-explanation)
+- [💡 Simple Example](#simple-example)
+- [🌍 Real-World Applications](#real-world-applications)
+- [❌ Common Misconceptions](#common-misconceptions)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project: CoT Math Tutor](#mini-project-cot-math-tutor)
+
+---
+
 ## 🎯 Purpose (Why Chain of Thought Exists)
 
 Imagine asking an AI a math problem. The **traditional approach (pre-2022)**:

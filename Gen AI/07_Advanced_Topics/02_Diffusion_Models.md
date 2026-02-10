@@ -1,5 +1,24 @@
 # 📘 Diffusion Models - The Magic Behind AI Image Generation
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why Diffusion Models Exist)](#purpose-why-diffusion-models-exist)
+- [📚 What Diffusion Models Actually Are](#what-diffusion-models-actually-are)
+- [🔧 How Diffusion Models Work (Intuition)](#how-diffusion-models-work-intuition)
+- [🧮 How Diffusion Models Work (Technical)](#how-diffusion-models-work-technical)
+- [🎨 Visual Explanation](#visual-explanation)
+- [💡 Simple Examples](#simple-examples)
+- [🌍 Real-World Applications](#real-world-applications)
+- [❌ Common Misconceptions](#common-misconceptions)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Build Your Own Stable Diffusion](#mini-project-build-your-own-stable-diffusion)
+
+---
+
 ## 🎯 Purpose (Why Diffusion Models Exist)
 
 Imagine you want to generate images with AI. The **traditional approaches** had major problems:

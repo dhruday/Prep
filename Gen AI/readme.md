@@ -8,6 +8,24 @@ This is the kind of prompt senior engineers, researchers, and course creators us
 
 # ✅ **MASTER PROMPT: Ultimate Generative AI Notes Builder**
 
+
+## 📑 Table of Contents
+
+- [🎯 ROLE & GOAL](#role-goal)
+- [👤 ABOUT THE LEARNER](#about-the-learner)
+- [🧠 TEACHING PHILOSOPHY (VERY IMPORTANT)](#teaching-philosophy-very-important)
+- [📚 CONTENT SOURCES (SYNTHESIZE ALL)](#content-sources-synthesize-all)
+- [🧱 STRUCTURE (VERY IMPORTANT)](#structure-very-important)
+- [📘 FORMAT FOR EACH TOPIC](#format-for-each-topic)
+- [🧪 PRACTICAL ELEMENTS](#practical-elements)
+- [🧠 LEARNING SUPPORT](#learning-support)
+- [📈 DIFFICULTY PROGRESSION](#difficulty-progression)
+- [🧭 TONE & STYLE](#tone-style)
+- [🧩 FINAL OBJECTIVE](#final-objective)
+- [🚦IMPORTANT INSTRUCTIONS](#important-instructions)
+
+---
+
 Copy–paste everything below as-is 👇
 
 ---

@@ -1,5 +1,24 @@
 # 📘 Knowledge Distillation - Compressing AI Intelligence
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why Knowledge Distillation Exists)](#purpose-why-knowledge-distillation-exists)
+- [📚 What Knowledge Distillation Actually Is](#what-knowledge-distillation-actually-is)
+- [🔧 How Knowledge Distillation Works (Intuition)](#how-knowledge-distillation-works-intuition)
+- [🧮 How Knowledge Distillation Works (Technical)](#how-knowledge-distillation-works-technical)
+- [🎨 Visual Explanation](#visual-explanation)
+- [💡 Simple Examples](#simple-examples)
+- [🌍 Real-World Applications](#real-world-applications)
+- [❌ Common Misconceptions](#common-misconceptions)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Build Efficient AI Service](#mini-project-build-efficient-ai-service)
+
+---
+
 ## 🎯 Purpose (Why Knowledge Distillation Exists)
 
 Imagine you've trained a **massive AI model** that performs incredibly well, but:

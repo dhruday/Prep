@@ -1,5 +1,24 @@
 # 🚀 Mini Project 2: Autoencoder on MNIST
 
+
+## 📑 Table of Contents
+
+- [🎯 Project Goal](#project-goal)
+- [📚 Prerequisites](#prerequisites)
+- [🧠 Conceptual Understanding (JavaScript Analogy)](#conceptual-understanding-javascript-analogy)
+- [🛠️ Part 1: Basic Autoencoder](#part-1-basic-autoencoder)
+- [🎨 Part 2: Convolutional Autoencoder](#part-2-convolutional-autoencoder)
+- [🧪 Part 3: Denoising Autoencoder](#part-3-denoising-autoencoder)
+- [🎯 Part 4: Applications](#part-4-applications)
+- [📊 Expected Results](#expected-results)
+- [🎯 Key Learnings](#key-learnings)
+- [🚀 Challenges](#challenges)
+- [📝 Challenge Questions](#challenge-questions)
+- [✅ Success Checklist](#success-checklist)
+- [🎓 Congratulations!](#congratulations)
+
+---
+
 ## 🎯 Project Goal
 
 Build an **Autoencoder** to learn compressed representations of handwritten digits and reconstruct them.

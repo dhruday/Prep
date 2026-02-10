@@ -1,5 +1,27 @@
 # 📘 Section 1: Foundations of Artificial Intelligence
 
+
+## 📑 Table of Contents
+
+- [Chapter 3: Neural Networks Basics](#chapter-3-neural-networks-basics)
+- [🎯 Introduction: The Brain-Inspired Revolution](#introduction-the-brain-inspired-revolution)
+- [📘 Part 1: The Biological Inspiration (Brief Context)](#part-1-the-biological-inspiration-brief-context)
+- [📘 Part 2: The Artificial Neuron (Perceptron)](#part-2-the-artificial-neuron-perceptron)
+- [📘 Part 3: Activation Functions](#part-3-activation-functions)
+- [📘 Part 4: From Single Neuron to Network](#part-4-from-single-neuron-to-network)
+- [📘 Part 5: How Neural Networks Learn](#part-5-how-neural-networks-learn)
+- [📘 Part 6: Training a Neural Network (Complete Process)](#part-6-training-a-neural-network-complete-process)
+- [📘 Part 7: Key Concepts in Training](#part-7-key-concepts-in-training)
+- [📘 Part 8: Practical Tips and Best Practices](#part-8-practical-tips-and-best-practices)
+- [📘 Part 9: Real-World Example with PyTorch](#part-9-real-world-example-with-pytorch)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project Idea](#mini-project-idea)
+- [🎯 Key Takeaways](#key-takeaways)
+- [📚 What's Next?](#whats-next)
+
+---
+
 ## Chapter 3: Neural Networks Basics
 
 ---

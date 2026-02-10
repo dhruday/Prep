@@ -1,5 +1,21 @@
 # 📘 Section 1: Foundations of Artificial Intelligence
 
+
+## 📑 Table of Contents
+
+- [Chapter 2: Mathematical Foundations for AI](#chapter-2-mathematical-foundations-for-ai)
+- [🎯 Why Math Matters for AI](#why-math-matters-for-ai)
+- [📘 Part 1: Probability & Statistics](#part-1-probability-statistics)
+- [📘 Part 2: Linear Algebra](#part-2-linear-algebra)
+- [📘 Part 3: Calculus (The Learning Part)](#part-3-calculus-the-learning-part)
+- [🧮 Putting It All Together: How Neural Networks Learn](#putting-it-all-together-how-neural-networks-learn)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Gradient Descent Visualization](#mini-project-gradient-descent-visualization)
+- [🎓 What's Next?](#whats-next)
+
+---
+
 ## Chapter 2: Mathematical Foundations for AI
 
 ---

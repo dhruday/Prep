@@ -1,5 +1,23 @@
 # 📘 Multimodal Models - When Vision Meets Language
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why Multimodal Models Exist)](#purpose-why-multimodal-models-exist)
+- [📚 What Multimodal Models Actually Are](#what-multimodal-models-actually-are)
+- [🔧 How Multimodal Models Work (Intuition)](#how-multimodal-models-work-intuition)
+- [🧮 How Multimodal Models Work (Technical)](#how-multimodal-models-work-technical)
+- [💡 Simple Examples](#simple-examples)
+- [🌍 Real-World Applications](#real-world-applications)
+- [❌ Common Misconceptions](#common-misconceptions)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Multimodal Image Search Engine](#mini-project-multimodal-image-search-engine)
+
+---
+
 ## 🎯 Purpose (Why Multimodal Models Exist)
 
 Imagine the **traditional AI landscape** where models were siloed:

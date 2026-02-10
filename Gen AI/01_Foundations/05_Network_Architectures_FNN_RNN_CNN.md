@@ -1,5 +1,22 @@
 # 📘 Section 1: Foundations of Artificial Intelligence
 
+
+## 📑 Table of Contents
+
+- [Chapter 5: Neural Network Architectures (Feedforward, RNN, CNN)](#chapter-5-neural-network-architectures-feedforward-rnn-cnn)
+- [🎯 Introduction: Different Problems Need Different Architectures](#introduction-different-problems-need-different-architectures)
+- [📘 Part 1: Feedforward Neural Networks (FNN)](#part-1-feedforward-neural-networks-fnn)
+- [📘 Part 2: Convolutional Neural Networks (CNN)](#part-2-convolutional-neural-networks-cnn)
+- [📘 Part 3: Recurrent Neural Networks (RNN)](#part-3-recurrent-neural-networks-rnn)
+- [📘 Part 4: Architecture Comparison](#part-4-architecture-comparison)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project Ideas](#mini-project-ideas)
+- [🎯 Key Takeaways](#key-takeaways)
+- [📚 What's Next?](#whats-next)
+
+---
+
 ## Chapter 5: Neural Network Architectures (Feedforward, RNN, CNN)
 
 ---

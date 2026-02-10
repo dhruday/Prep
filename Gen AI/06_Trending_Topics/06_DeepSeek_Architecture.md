@@ -1,5 +1,24 @@
 # 📘 DeepSeek Architecture - China's Answer to GPT
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why DeepSeek Exists)](#purpose-why-deepseek-exists)
+- [📚 What DeepSeek Actually Is](#what-deepseek-actually-is)
+- [🔧 How DeepSeek Works (Intuition)](#how-deepseek-works-intuition)
+- [🧮 How DeepSeek Works (Technical Details)](#how-deepseek-works-technical-details)
+- [🎨 Visual Explanation](#visual-explanation)
+- [💡 Simple Example](#simple-example)
+- [🌍 Real-World Applications](#real-world-applications)
+- [❌ Common Misconceptions](#common-misconceptions)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Cost-Optimized AI Service](#mini-project-cost-optimized-ai-service)
+
+---
+
 ## 🎯 Purpose (Why DeepSeek Exists)
 
 Imagine the AI landscape in 2023-2024. The **traditional narrative**:

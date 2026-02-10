@@ -1,5 +1,19 @@
 # 📘 Multimodal AI Applications - Beyond Text
 
+
+## 📑 Table of Contents
+
+- [**Purpose (Why this exists):**](#purpose-why-this-exists)
+- [**What it is:**](#what-it-is)
+- [**How it works (Intuition):**](#how-it-works-intuition)
+- [**How it works (Math – simplified):**](#how-it-works-math-simplified)
+- [**Visual Explanation (described):**](#visual-explanation-described)
+- [**Complete Implementation:**](#complete-implementation)
+- [**Real-World Applications:**](#real-world-applications)
+- [**Key Takeaways:**](#key-takeaways)
+
+---
+
 ---
 
 ## **Purpose (Why this exists):**

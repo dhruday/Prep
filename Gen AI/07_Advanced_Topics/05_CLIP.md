@@ -1,5 +1,23 @@
 # 📘 CLIP - Contrastive Language-Image Pretraining
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why CLIP Exists)](#purpose-why-clip-exists)
+- [📚 What CLIP Actually Is](#what-clip-actually-is)
+- [🔧 How CLIP Works (Intuition)](#how-clip-works-intuition)
+- [🧮 How CLIP Works (Technical)](#how-clip-works-technical)
+- [🌍 Real-World Applications](#real-world-applications)
+- [⚠️ Common Misconceptions](#common-misconceptions)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [📝 Review Questions](#review-questions)
+- [💪 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Build a Visual Shopping Assistant](#mini-project-build-a-visual-shopping-assistant)
+- [🎓 Congratulations!](#congratulations)
+
+---
+
 ## 🎯 Purpose (Why CLIP Exists)
 
 Imagine the **traditional computer vision** approach:

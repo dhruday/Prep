@@ -1,5 +1,24 @@
 # 📘 Streamlit - Rapid AI Application Frontend Development
 
+
+## 📑 Table of Contents
+
+- [**Purpose (Why this exists):**](#purpose-why-this-exists)
+- [**What it is:**](#what-it-is)
+- [**How it works (Intuition):**](#how-it-works-intuition)
+- [**How it works (Math – simplified):**](#how-it-works-math-simplified)
+- [**Visual Explanation (described):**](#visual-explanation-described)
+- [**Simple Example:**](#simple-example)
+- [**Real-World Applications:**](#real-world-applications)
+- [**Common Misconceptions:**](#common-misconceptions)
+- [**Best Practices:**](#best-practices)
+- [**Key Takeaways:**](#key-takeaways)
+- [✅ **Review Questions:**](#review-questions)
+- [🧩 **Practice Problems:**](#practice-problems)
+- [🚀 **Mini Project:**](#mini-project)
+
+---
+
 ---
 
 ## **Purpose (Why this exists):**

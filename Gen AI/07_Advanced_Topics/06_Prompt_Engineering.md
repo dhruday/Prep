@@ -1,5 +1,23 @@
 # 📘 Prompt Engineering - Optimizing LLM Performance
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why Prompt Engineering Matters)](#purpose-why-prompt-engineering-matters)
+- [📚 What Prompt Engineering Actually Is](#what-prompt-engineering-actually-is)
+- [🔧 Prompt Engineering Techniques](#prompt-engineering-techniques)
+- [🚀 Advanced Prompt Engineering Techniques](#advanced-prompt-engineering-techniques)
+- [🌍 Real-World Applications](#real-world-applications)
+- [⚠️ Common Mistakes](#common-mistakes)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [📝 Review Questions](#review-questions)
+- [💪 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Build an AI Writing Assistant](#mini-project-build-an-ai-writing-assistant)
+- [🎓 Congratulations! You've Completed Week 7!](#congratulations-youve-completed-week-7)
+
+---
+
 ## 🎯 Purpose (Why Prompt Engineering Matters)
 
 Imagine asking two people the same question:

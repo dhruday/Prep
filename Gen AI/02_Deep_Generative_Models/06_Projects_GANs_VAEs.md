@@ -1,5 +1,16 @@
 # 📘 Projects with GANs & VAEs
 
+
+## 📑 Table of Contents
+
+- [**Purpose (Why build projects):**](#purpose-why-build-projects)
+- [**Project 1: MNIST GAN - Generate Handwritten Digits**](#project-1-mnist-gan-generate-handwritten-digits)
+- [**Project 2: MNIST VAE - Learn Latent Representations**](#project-2-mnist-vae-learn-latent-representations)
+- [**Project 3: Conditional GAN - Generate Specific Digits**](#project-3-conditional-gan-generate-specific-digits)
+- [**Key Takeaways:**](#key-takeaways)
+
+---
+
 ---
 
 ## **Purpose (Why build projects):**

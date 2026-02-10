@@ -1,5 +1,19 @@
 # 📘 Section 1: Foundations of Artificial Intelligence
 
+
+## 📑 Table of Contents
+
+- [Chapter 1: What is Intelligence & AI?](#chapter-1-what-is-intelligence-ai)
+- [📘 What is Intelligence?](#what-is-intelligence)
+- [📘 What is Artificial Intelligence?](#what-is-artificial-intelligence)
+- [🎯 The AI Landscape: Where Does Generative AI Fit?](#the-ai-landscape-where-does-generative-ai-fit)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project Idea](#mini-project-idea)
+- [🎓 What's Next?](#whats-next)
+
+---
+
 ## Chapter 1: What is Intelligence & AI?
 
 ---

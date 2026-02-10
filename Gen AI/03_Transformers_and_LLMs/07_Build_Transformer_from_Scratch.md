@@ -1,5 +1,22 @@
 # 🛠️ Project: Build Transformer from Scratch
 
+
+## 📑 Table of Contents
+
+- [**Project Overview:**](#project-overview)
+- [**Part 1: Architecture Components**](#part-1-architecture-components)
+- [**Part 2: Encoder and Decoder Layers**](#part-2-encoder-and-decoder-layers)
+- [**Part 3: Complete Transformer Model**](#part-3-complete-transformer-model)
+- [**Part 4: Training Pipeline**](#part-4-training-pipeline)
+- [**Part 5: Inference with Beam Search**](#part-5-inference-with-beam-search)
+- [**Part 6: Visualization and Analysis**](#part-6-visualization-and-analysis)
+- [**Part 7: Evaluation Metrics**](#part-7-evaluation-metrics)
+- [**Part 8: Complete Example**](#part-8-complete-example)
+- [**Extensions and Improvements:**](#extensions-and-improvements)
+- [**🎉 Project Complete!**](#project-complete)
+
+---
+
 ---
 
 ## **Project Overview:**

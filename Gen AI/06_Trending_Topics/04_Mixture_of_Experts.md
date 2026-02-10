@@ -1,5 +1,24 @@
 # 📘 Mixture of Experts (MoE)
 
+
+## 📑 Table of Contents
+
+- [🎯 Purpose (Why MoE Exists)](#purpose-why-moe-exists)
+- [📚 What Mixture of Experts Actually Is](#what-mixture-of-experts-actually-is)
+- [🔧 How MoE Works (Intuition)](#how-moe-works-intuition)
+- [🧮 How MoE Works (Technical Details)](#how-moe-works-technical-details)
+- [🎨 Visual Explanation](#visual-explanation)
+- [💡 Simple Example](#simple-example)
+- [🌍 Real-World Applications](#real-world-applications)
+- [❌ Common Misconceptions](#common-misconceptions)
+- [✅ Best Practices](#best-practices)
+- [🎯 Key Takeaways](#key-takeaways)
+- [✅ Review Questions](#review-questions)
+- [🧩 Practice Problems](#practice-problems)
+- [🚀 Mini Project: Train Your Own MoE Model](#mini-project-train-your-own-moe-model)
+
+---
+
 ## 🎯 Purpose (Why MoE Exists)
 
 Imagine you're building a universal AI assistant. The **traditional approach**:

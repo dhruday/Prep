@@ -1,5 +1,20 @@
 # 📘 Mini Project: Q&A Application
 
+
+## 📑 Table of Contents
+
+- [🎯 **Project Overview:**](#project-overview)
+- [**Phase 1: Core Backend (MVP)**](#phase-1-core-backend-mvp)
+- [**Phase 2: API Layer**](#phase-2-api-layer)
+- [**Phase 3: Frontend**](#phase-3-frontend)
+- [**Phase 4: Advanced Features**](#phase-4-advanced-features)
+- [**Phase 5: Deployment**](#phase-5-deployment)
+- [**Testing:**](#testing)
+- [**Performance Optimization:**](#performance-optimization)
+- [**🎉 Project Complete!**](#project-complete)
+
+---
+
 ## 🎯 **Project Overview:**
 
 ### **What We're Building:**
