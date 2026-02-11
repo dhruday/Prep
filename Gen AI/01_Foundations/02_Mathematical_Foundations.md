@@ -2060,6 +2060,276 @@ for i in range(20):
 # Show how x moves toward the minimum
 ```
 
+This is 🔥 content already. If you add solid hands-on tasks to your README, it’ll look like a serious AI foundation repo.
+
+Below are **10 practical hands-on tasks** aligned with your Probability, Linear Algebra, and Calculus sections.
+
+You can paste this directly into your README under:
+
+```md
+## 🧪 Additional Hands-On Tasks
+```
+
+---
+
+# 🧪 Additional Hands-On Tasks (Foundations of AI)
+
+---
+
+## 1️⃣ Simulate the Law of Large Numbers (Probability Intuition)
+
+**Goal:** Understand how probability stabilizes over many trials.
+
+**Task:**
+
+* Simulate 10,000 coin flips using NumPy.
+* Track running probability of Heads.
+* Plot how it converges to 0.5.
+
+**What You'll Learn:**
+
+* Random variables
+* Empirical probability
+* Convergence behavior
+
+**Bonus:**
+
+* Try biased coin (p = 0.7)
+
+---
+
+## 2️⃣ Visualize Probability Distributions
+
+**Goal:** Build intuition for distributions.
+
+**Task:**
+
+* Generate:
+
+  * Uniform distribution
+  * Normal distribution
+  * Bernoulli distribution
+* Plot histograms for each.
+
+**Explore:**
+
+* What happens when variance increases?
+* What happens when mean shifts?
+
+---
+
+## 3️⃣ Implement Naive Bayes from Scratch (No sklearn)
+
+**Goal:** Apply Bayes’ Theorem practically.
+
+**Task:**
+
+* Create small dataset:
+
+  ```
+  Weather: Sunny, Rainy
+  Activity: Play, Stay
+  ```
+* Compute:
+
+  * Prior probabilities
+  * Likelihoods
+  * Posterior using Bayes
+* Classify a new example.
+
+**Outcome:**
+You deeply understand spam filters.
+
+---
+
+## 4️⃣ Cosine Similarity Recommender
+
+**Goal:** Understand dot products as similarity.
+
+**Task:**
+
+* Create 5 fake users with movie rating vectors.
+* Compute:
+
+  * Dot product similarity
+  * Cosine similarity
+* Recommend movie based on most similar user.
+
+**Concepts Covered:**
+
+* Vector normalization
+* Dot product meaning
+* Real-world embeddings intuition
+
+---
+
+## 5️⃣ Matrix Transformation Visualization
+
+**Goal:** Understand matrices as transformations.
+
+**Task:**
+
+* Create 2D points (like a square).
+* Apply matrix transformations:
+
+  * Scaling matrix
+  * Rotation matrix
+  * Shear matrix
+* Plot before and after.
+
+**You’ll See:**
+
+* Matrices change space
+* Neural layers = transformations
+
+---
+
+## 6️⃣ Build a Neural Layer Using Only NumPy
+
+**Goal:** Remove framework magic.
+
+**Task:**
+
+* Implement:
+
+  ```python
+  def linear_layer(x, W, b):
+      return np.dot(x, W) + b
+  ```
+* Add ReLU.
+* Stack 2 layers manually.
+
+**Bonus:**
+
+* Compare output to PyTorch version.
+
+---
+
+## 7️⃣ Visualize Gradient of a 2D Function
+
+**Goal:** Understand gradient as direction.
+
+Use:
+
+[
+f(x,y) = x^2 + y^2
+]
+
+**Task:**
+
+* Compute gradient manually.
+* Plot contour map.
+* Draw gradient arrows using quiver.
+
+**Insight:**
+Gradient always points outward from origin.
+
+---
+
+## 8️⃣ Implement Gradient Descent (Multi-variable)
+
+Minimize:
+
+[
+f(x,y) = (x-2)^2 + (y+3)^2
+]
+
+**Task:**
+
+* Start from random (x, y)
+* Update both using partial derivatives
+* Plot path over contour map.
+
+**Experiment:**
+
+* Large learning rate → diverges
+* Small learning rate → slow convergence
+
+---
+
+## 9️⃣ Effect of Learning Rate Experiment
+
+**Goal:** Develop optimizer intuition.
+
+**Task:**
+
+* Train gradient descent with:
+
+  * 0.001
+  * 0.01
+  * 0.1
+  * 1.0
+* Plot loss vs iteration.
+
+**Observe:**
+
+* Too small → slow
+* Too big → oscillation
+* Just right → smooth convergence
+
+This is CRITICAL intuition for deep learning.
+
+---
+
+## 🔟 Build Logistic Regression from Scratch
+
+**Goal:** Combine Probability + Linear Algebra + Calculus
+
+Implement binary classification:
+
+[
+\hat{y} = \sigma(Wx + b)
+]
+
+Where:
+
+[
+\sigma(z) = \frac{1}{1+e^{-z}}
+]
+
+**Task:**
+
+* Implement:
+
+  * Sigmoid
+  * Binary cross entropy loss
+  * Gradient computation
+  * Gradient descent
+* Train on simple dataset (e.g., AND/OR logic gate)
+
+**Outcome:**
+You build a real ML model without sklearn.
+
+---
+
+# 🏆 Optional Advanced Challenges
+
+If you want your README to look elite:
+
+* Implement softmax manually
+* Implement cross-entropy manually
+* Build a tiny neural network without PyTorch
+* Visualize decision boundary in 2D
+* Compare MSE vs Cross-Entropy behavior
+
+---
+
+# 📂 Suggested README Structure Addition
+
+```md
+## 🧪 Hands-On Practice Roadmap
+
+| Level | Task | Concepts |
+|-------|------|----------|
+| 🟢 Beginner | Coin Flip Simulation | Probability |
+| 🟢 Beginner | Distribution Visualization | Statistics |
+| 🟡 Intermediate | Naive Bayes from Scratch | Bayes |
+| 🟡 Intermediate | Cosine Similarity | Linear Algebra |
+| 🟡 Intermediate | Matrix Transformations | Linear Algebra |
+| 🟠 Advanced | Gradient Descent 2D | Calculus |
+| 🔴 Advanced | Logistic Regression from Scratch | All Concepts |
+```
+
 **Questions to explore:**
 - What happens with different learning rates (0.01, 0.1, 0.5)?
 - What if you start at x=10 instead of x=0?
