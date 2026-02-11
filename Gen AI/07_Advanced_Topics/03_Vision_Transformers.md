@@ -1,6 +1,7 @@
 # 📘 Vision Transformers (ViT) - Transformers Conquer Computer Vision
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 Purpose (Why Vision Transformers Exist)](#purpose-why-vision-transformers-exist)

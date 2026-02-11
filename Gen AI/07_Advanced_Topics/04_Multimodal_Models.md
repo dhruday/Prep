@@ -1,6 +1,7 @@
 # 📘 Multimodal Models - When Vision Meets Language
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 Purpose (Why Multimodal Models Exist)](#purpose-why-multimodal-models-exist)

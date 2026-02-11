@@ -1,6 +1,7 @@
 # 🚀 Mini Project 1: Simple Neural Network from Scratch
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 Project Goal](#project-goal)

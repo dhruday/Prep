@@ -1,6 +1,7 @@
 # 📘 Section 1: Foundations of Artificial Intelligence
 
 
+
 ## 📑 Table of Contents
 
 - [Chapter 2: Mathematical Foundations for AI](#chapter-2-mathematical-foundations-for-ai)

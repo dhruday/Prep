@@ -1,6 +1,7 @@
 # 📘 Mini Project: Q&A Application
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 **Project Overview:**](#project-overview)

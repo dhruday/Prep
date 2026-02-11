@@ -1,6 +1,7 @@
 # 📘 Ollama - Run LLMs Locally
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 Purpose (Why Ollama Exists)](#purpose-why-ollama-exists)

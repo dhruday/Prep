@@ -1,6 +1,7 @@
 # 📘 Major Project: Build a ChatGPT-like App - Production RAG System
 
 
+
 ## 📑 Table of Contents
 
 - [**Purpose (Why this exists):**](#purpose-why-this-exists)

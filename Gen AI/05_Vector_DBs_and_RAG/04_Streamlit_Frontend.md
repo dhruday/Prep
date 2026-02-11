@@ -1,6 +1,7 @@
 # 📘 Streamlit - Rapid AI Application Frontend Development
 
 
+
 ## 📑 Table of Contents
 
 - [**Purpose (Why this exists):**](#purpose-why-this-exists)

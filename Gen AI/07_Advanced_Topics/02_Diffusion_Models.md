@@ -1,6 +1,7 @@
 # 📘 Diffusion Models - The Magic Behind AI Image Generation
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 Purpose (Why Diffusion Models Exist)](#purpose-why-diffusion-models-exist)

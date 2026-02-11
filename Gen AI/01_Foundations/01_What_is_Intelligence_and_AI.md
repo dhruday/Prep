@@ -1,6 +1,7 @@
 # 📘 Section 1: Foundations of Artificial Intelligence
 
 
+
 ## 📑 Table of Contents
 
 - [Chapter 1: What is Intelligence & AI?](#chapter-1-what-is-intelligence-ai)

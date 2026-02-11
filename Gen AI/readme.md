@@ -9,6 +9,7 @@ This is the kind of prompt senior engineers, researchers, and course creators us
 # ✅ **MASTER PROMPT: Ultimate Generative AI Notes Builder**
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 ROLE & GOAL](#role-goal)

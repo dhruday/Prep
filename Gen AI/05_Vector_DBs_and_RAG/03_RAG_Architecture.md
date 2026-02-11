@@ -1,6 +1,7 @@
 # 📘 RAG (Retrieval-Augmented Generation) - The Future of AI Applications
 
 
+
 ## 📑 Table of Contents
 
 - [**Purpose (Why this exists):**](#purpose-why-this-exists)

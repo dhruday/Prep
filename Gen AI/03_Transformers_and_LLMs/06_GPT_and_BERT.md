@@ -1,6 +1,7 @@
 # 📘 GPT & BERT - The Two Pillars of Modern NLP
 
 
+
 ## 📑 Table of Contents
 
 - [**Purpose (Why this exists):**](#purpose-why-this-exists)

@@ -1,6 +1,7 @@
 # 📘 Discriminative vs Generative Models
 
 
+
 ## 📑 Table of Contents
 
 - [**Purpose (Why this exists):**](#purpose-why-this-exists)

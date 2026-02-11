@@ -1,6 +1,7 @@
 # 📘 Vector Databases - The Foundation of Modern AI Search
 
 
+
 ## 📑 Table of Contents
 
 - [**Purpose (Why this exists):**](#purpose-why-this-exists)

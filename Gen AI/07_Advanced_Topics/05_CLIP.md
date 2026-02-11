@@ -1,6 +1,7 @@
 # 📘 CLIP - Contrastive Language-Image Pretraining
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 Purpose (Why CLIP Exists)](#purpose-why-clip-exists)

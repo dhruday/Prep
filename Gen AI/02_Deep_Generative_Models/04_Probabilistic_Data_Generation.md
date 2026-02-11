@@ -1,6 +1,7 @@
 # 📘 Probabilistic Data Generation
 
 
+
 ## 📑 Table of Contents
 
 - [**Purpose (Why this exists):**](#purpose-why-this-exists)

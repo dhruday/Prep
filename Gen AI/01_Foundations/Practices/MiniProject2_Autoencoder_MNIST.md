@@ -1,6 +1,7 @@
 # 🚀 Mini Project 2: Autoencoder on MNIST
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 Project Goal](#project-goal)

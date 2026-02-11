@@ -1,6 +1,7 @@
 # 📘 Self-Attention & Positional Encoding
 
 
+
 ## 📑 Table of Contents
 
 - [**Purpose (Why this exists):**](#purpose-why-this-exists)

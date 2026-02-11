@@ -1,6 +1,7 @@
 # 📘 ChromaDB - The AI-Native Open-Source Vector Database
 
 
+
 ## 📑 Table of Contents
 
 - [**Purpose (Why this exists):**](#purpose-why-this-exists)

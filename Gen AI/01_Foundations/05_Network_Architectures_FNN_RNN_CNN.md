@@ -1,6 +1,7 @@
 # 📘 Section 1: Foundations of Artificial Intelligence
 
 
+
 ## 📑 Table of Contents
 
 - [Chapter 5: Neural Network Architectures (Feedforward, RNN, CNN)](#chapter-5-neural-network-architectures-feedforward-rnn-cnn)

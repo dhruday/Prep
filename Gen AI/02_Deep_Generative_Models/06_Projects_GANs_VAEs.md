@@ -1,6 +1,7 @@
 # 📘 Projects with GANs & VAEs
 
 
+
 ## 📑 Table of Contents
 
 - [**Purpose (Why build projects):**](#purpose-why-build-projects)

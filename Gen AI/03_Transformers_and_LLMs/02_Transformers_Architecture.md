@@ -1,6 +1,7 @@
 # 📘 Transformers Architecture
 
 
+
 ## 📑 Table of Contents
 
 - [**Purpose (Why this exists):**](#purpose-why-this-exists)

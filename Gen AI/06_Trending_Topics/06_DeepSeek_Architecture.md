@@ -1,6 +1,7 @@
 # 📘 DeepSeek Architecture - China's Answer to GPT
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 Purpose (Why DeepSeek Exists)](#purpose-why-deepseek-exists)

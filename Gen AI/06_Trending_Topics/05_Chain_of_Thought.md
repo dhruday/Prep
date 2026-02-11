@@ -1,6 +1,7 @@
 # 📘 Chain of Thought (CoT) - Teaching AI to Think Step-by-Step
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 Purpose (Why Chain of Thought Exists)](#purpose-why-chain-of-thought-exists)

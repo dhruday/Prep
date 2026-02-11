@@ -1,6 +1,7 @@
 # 📘 Model Context Protocol (MCP)
 
 
+
 ## 📑 Table of Contents
 
 - [🎯 Purpose (Why MCP Exists)](#purpose-why-mcp-exists)

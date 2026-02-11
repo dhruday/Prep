@@ -1,6 +1,7 @@
 # 📘 Section 1: Foundations of Artificial Intelligence
 
 
+
 ## 📑 Table of Contents
 
 - [Chapter 4: Gradient Descent & Optimization](#chapter-4-gradient-descent-optimization)

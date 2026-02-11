@@ -1,6 +1,7 @@
 # 📘 Section 1: Foundations of Artificial Intelligence
 
 
+
 ## 📑 Table of Contents
 
 - [Chapter 3: Neural Networks Basics](#chapter-3-neural-networks-basics)
