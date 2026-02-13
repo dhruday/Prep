@@ -306,7 +306,51 @@
 135. Token Refresh
 136. Preventing Data Leaks
 
+
+## 🔐 PART 1️⃣3️⃣ — Authorization & Access Control
+
+### 🧠 Module 13.1 — Foundations
+
+137. Authentication vs Authorization
+138. Permission Modeling
+139. Backend vs Frontend Enforcement
+
 ---
+
+### 🗂️ Module 13.2 — Access Control Models
+
+140. Role-Based Access Control (RBAC)
+141. Attribute-Based Access Control (ABAC)
+142. Policy-Based Authorization
+
+---
+
+### 🛡️ Module 13.3 — Frontend Authorization Design
+
+143. Frontend Authorization Guards
+144. Feature-Level Access Control
+145. Data-Level Security
+
+---
+
+### 🏢 Module 13.4 — Enterprise & Multi-Tenant Design
+
+146. Multi-Tenant Authorization
+147. Privilege Escalation Prevention
+
+---
+
+### ⚡ Module 13.5 — Scale & Performance
+
+148. Authorization Caching
+149. Authorization at Scale
+
+---
+
+### 📋 Module 13.6 — Governance & Monitoring
+
+150. Auditing & Logging
+
 
 ## PART 1️⃣3️⃣ — Observability
 

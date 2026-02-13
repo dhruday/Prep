@@ -1,1624 +1,620 @@
-# HTML Parsing, CSSOM, Render Tree
+# 11. HTML Parsing, CSSOM, Render Tree
 
 ## 1. High-Level Explanation (Frontend Interview Level)
 
-**HTML Parsing** is the process of converting HTML text into a DOM tree. **CSSOM (CSS Object Model)** is the tree representation of CSS styles. The **Render Tree** combines DOM and CSSOM to determine what actually gets painted on screen.
+**HTML Parsing, CSSOM, and Render Tree** construction are the core stages where browsers transform raw markup and styles into a structured tree of renderable objects—understanding these mechanisms is critical for optimizing perceived performance and avoiding unnecessary reflows.
 
-### The Big Picture
+- **What**: HTML bytes → DOM tree, CSS bytes → CSSOM tree, DOM + CSSOM → Render tree
+- **Why**: Render tree determines what gets painted—optimizing tree construction = faster rendering
+- **When**: Initial load, dynamic content injection, style recalculation
+- **Role**: Foundation of rendering pipeline—every optimization traces back to these structures
 
-```
-HTML TEXT                    CSS TEXT
-    ↓                           ↓
-PARSING                     PARSING
-    ↓                           ↓
-DOM TREE                    CSSOM TREE
-    ↓                           ↓
-    └───────── COMBINE ─────────┘
-                ↓
-           RENDER TREE
-                ↓
-     (Only visible elements)
-                ↓
-            LAYOUT
-                ↓
-            PAINT
-                ↓
-           COMPOSITE
-```
-
-### Why This Matters in Interviews
-
-**Junior Engineer:**
-```
-"Browser parses HTML to create DOM, then renders it"
-```
-→ Missing crucial details
-
-**Senior/Staff Engineer:**
-```
-"The browser builds three separate trees before rendering:
-
-1. **DOM Tree:** Complete HTML structure (includes all elements)
-2. **CSSOM Tree:** Cascaded CSS rules (computed styles)
-3. **Render Tree:** DOM + CSSOM, only visible elements
-
-Key insights:
-- HTML parsing is **incremental** (progressive rendering)
-- CSS parsing **blocks rendering** (prevents FOUC)
-- JavaScript can **block HTML parsing** (document.write)
-- Render Tree excludes `display:none` elements
-- Understanding this helps optimize Critical Rendering Path
-
-Example optimization: At [Company], we reduced FCP by 40% by identifying that 
-a large CSS file was blocking rendering. We split it into critical (inline) 
-and non-critical (async) CSS."
-```
-→ Shows deep understanding with practical application
+**Key Principle**: "DOM is content structure, CSSOM is presentation rules, Render Tree is visual output."
 
 ---
 
 ## 2. Deep-Dive Explanation (Senior / Staff Level)
 
-### HTML Parsing: Bytes to DOM
+### HTML Parsing → DOM Construction
 
-#### The Complete Parsing Pipeline
-
+**Tokenization Process**:
 ```
-STEP 1: BYTES (Network)
-──────────────────────────
-Raw bytes from server:
-3C 21 44 4F 43 54 59 50 45 20 68 74 6D 6C 3E ...
+HTML Bytes (Network):
+3C 68 31 3E 48 65 6C 6C 6F 3C 2F 68 31 3E
+↓ (Character Encoding: UTF-8)
+Characters:
+<h1>Hello</h1>
+↓ (Tokenization)
+Tokens:
+[StartTag: h1] [Characters: Hello] [EndTag: h1]
+↓ (Tree Construction)
+DOM Nodes:
+HTMLHeadingElement
+  └── TextNode("Hello")
+```
 
-STEP 2: CHARACTER ENCODING (decode)
-──────────────────────────
-Based on Content-Type: text/html; charset=UTF-8
-<!DOCTYPE html><html><head><title>Page</title>...
+**Incremental Parsing**:
+```javascript
+// Browser receives HTML in chunks (streaming)
 
-STEP 3: TOKENIZATION (lexical analysis)
-──────────────────────────
-Break into tokens:
+Chunk 1 (0-500ms):
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Page</title>
 
-Token 1: DOCTYPE (html)
-Token 2: StartTag (html)
-Token 3: StartTag (head)
-Token 4: StartTag (title)
-Token 5: Characters ("Page")
-Token 6: EndTag (title)
-Token 7: EndTag (head)
-Token 8: StartTag (body)
-Token 9: StartTag (h1, attributes: {class: "title"})
-Token 10: Characters ("Hello World")
-Token 11: EndTag (h1)
-Token 12: EndTag (body)
-Token 13: EndTag (html)
+// Parser creates: Document, html, head, title nodes immediately
+// Doesn't wait for full HTML before starting
 
-STEP 4: TREE CONSTRUCTION (build DOM)
-──────────────────────────
-Use stack-based algorithm:
+Chunk 2 (500-1000ms):
+</head>
+<body>
+  <h1>Hello</h1>
 
-Initial: [document]
+// Parser adds: body, h1 nodes
+// Already has partial DOM tree (progressive rendering possible)
 
-Token: StartTag(html)
-Stack: [document, html]
+Chunk 3 (1000-1500ms):
+  <p>World</p>
+</body>
+</html>
 
-Token: StartTag(head)
-Stack: [document, html, head]
+// Parser completes: p node, closes body, html
+// Fires DOMContentLoaded event
+```
 
-Token: StartTag(title)
-Stack: [document, html, head, title]
+**Speculative Parsing** (Performance Optimization):
+```html
+<html>
+<head>
+  <script src="slow.js"></script>  <!-- Blocks parsing for 2s -->
+  <link rel="stylesheet" href="fast.css">
+  <img src="image.jpg">
+</head>
+```
 
-Token: Characters("Page")
-Action: Append text node to title
-Stack: [document, html, head, title]
+**Timeline**:
+```
+0ms:    Parse <script>, start download slow.js
+        → Main parser BLOCKED
+        → Speculative parser CONTINUES in background
+5ms:    Speculative parser finds <link>, starts download fast.css
+10ms:   Speculative parser finds <img>, starts download image.jpg
+2000ms: slow.js downloads, main parser UNBLOCKS
+2005ms: fast.css already downloaded (thanks to speculative parser)
+2010ms: image.jpg already downloaded
 
-Token: EndTag(title)
-Action: Pop title from stack
-Stack: [document, html, head]
+Benefit: Saved 2s by parallelizing downloads while parser blocked
+```
 
-Token: EndTag(head)
-Action: Pop head from stack
-Stack: [document, html]
+**Parser-Blocking vs Render-Blocking**:
+```html
+<!-- Parser-Blocking (stops HTML parsing) -->
+<script src="app.js"></script>
 
-Token: StartTag(body)
-Stack: [document, html, body]
+<!-- Render-Blocking (stops rendering, NOT parsing) -->
+<link rel="stylesheet" href="style.css">
 
-... (continue)
-
-FINAL DOM TREE:
-Document
-└─ html
-   ├─ head
-   │  └─ title
-   │     └─ #text: "Page"
-   └─ body
-      └─ h1 (class="title")
-         └─ #text: "Hello World"
+<!-- Neither (parallel download, delayed execution) -->
+<script async src="analytics.js"></script>
+<script defer src="non-critical.js"></script>
 ```
 
 ---
 
-### Incremental Parsing (Progressive Rendering)
+### CSS Parsing → CSSOM Construction
 
-**Key Feature:** Browser doesn't wait for entire HTML before parsing
-
-```
-TRADITIONAL (BLOCKING):
-────────────────────────
-0ms:    Start downloading HTML
-500ms:  Complete HTML download (50 KB)
-500ms:  Start parsing
-550ms:  Complete parsing, build DOM
-550ms:  Start rendering
-600ms:  First Paint
-
-User sees nothing for 600ms ❌
-
-
-INCREMENTAL (STREAMING):
-────────────────────────
-0ms:    Start downloading HTML
-10ms:   Receive chunk 1 (8 KB)
-        Parse chunk 1 → Build partial DOM
-        Render what we have
-50ms:   First Paint (header visible) ✅
-
-100ms:  Receive chunk 2 (8 KB)
-        Parse chunk 2 → Extend DOM
-        Update rendering
-
-... (continues as chunks arrive)
-
-500ms:  Complete HTML
-550ms:  Complete rendering
-
-User sees content at 50ms (12× faster initial paint!) ✅
-```
-
----
-
-### HTML Parser Quirks and Error Recovery
-
-#### Self-Closing Tags
-
-```html
-<!-- ❌ HTML5: <img> cannot be self-closed with /> -->
-<img src="photo.jpg" />
-
-<!-- ✅ HTML5: Correct syntax -->
-<img src="photo.jpg">
-
-<!-- But parser is forgiving: Both work -->
-```
-
-#### Automatic Tag Closure
-
-```html
-<!-- Input: Missing closing tags -->
-<p>Paragraph 1
-<p>Paragraph 2
-<div>
-  <span>Text
-
-<!-- Parser auto-closes: -->
-<p>Paragraph 1</p>
-<p>Paragraph 2</p>
-<div>
-  <span>Text</span>
-</div>
-```
-
-#### Invalid Nesting
-
-```html
-<!-- ❌ Invalid: <p> cannot contain <div> -->
-<p>
-  <div>Block inside paragraph</div>
-</p>
-
-<!-- Parser corrects to: -->
-<p></p>
-<div>Block inside paragraph</div>
-<p></p>
-
-(Implicitly closes <p> before <div>, reopens after)
-```
-
----
-
-### CSS Parsing: Text to CSSOM
-
-#### CSSOM Construction
-
-```
-CSS INPUT:
-──────────
+**CSS Bytes → CSSOM**:
+```css
+/* style.css */
 body {
-  font-family: Arial;
   font-size: 16px;
   color: #333;
 }
 
 h1 {
   font-size: 32px;
-  color: #000;
+  color: blue;
 }
 
-.title {
-  font-weight: bold;
+p {
+  font-size: 16px; /* inherited from body */
+  margin: 10px;
 }
-
-STEP 1: TOKENIZATION
-──────────
-body { font-family: Arial; font-size: 16px; color: #333; }
-
-Tokens:
-[Selector: body]
-[Property: font-family, Value: Arial]
-[Property: font-size, Value: 16px]
-[Property: color, Value: #333]
-
-STEP 2: BUILD CSSOM
-──────────
-body
-├─ font-family: Arial ✅
-├─ font-size: 16px ✅
-└─ color: #333 ✅
-
-h1 (inherits from body)
-├─ font-family: Arial (inherited)
-├─ font-size: 32px ✅ (overrides)
-└─ color: #000 ✅ (overrides)
-
-h1.title (inherits from body and h1)
-├─ font-family: Arial (inherited from body)
-├─ font-size: 32px (inherited from h1)
-├─ color: #000 (inherited from h1)
-└─ font-weight: bold ✅ (class rule)
 ```
 
----
-
-#### CSS Specificity and Cascading
-
-**Specificity Calculation:**
-
+**CSSOM Tree Structure**:
 ```
-SPECIFICITY FORMULA: (a, b, c, d)
-a = inline styles (style="...")
-b = IDs (#id)
-c = classes (.class), attributes ([type]), pseudo-classes (:hover)
-d = elements (div), pseudo-elements (::before)
-
-EXAMPLES:
-─────────
-style="color: red"           → (1, 0, 0, 0) = 1000
-#header                      → (0, 1, 0, 0) = 100
-.nav .item                   → (0, 0, 2, 0) = 20
-div p                        → (0, 0, 0, 2) = 2
-*                            → (0, 0, 0, 0) = 0
-
-HIGHER SPECIFICITY WINS:
-────────────────────────
-<div id="main" class="content" style="color: red">
-  Text
-</div>
-
-/* Rule 1 */ * { color: black; }             /* Specificity: 0 */
-/* Rule 2 */ div { color: blue; }            /* Specificity: 1 */
-/* Rule 3 */ .content { color: green; }      /* Specificity: 10 */
-/* Rule 4 */ #main { color: yellow; }        /* Specificity: 100 */
-/* Rule 5 */ style="color: red"              /* Specificity: 1000 */
-
-Final color: RED (inline style wins)
+Document Styles
+├── body
+│   ├── font-size: 16px
+│   └── color: #333333
+├── h1
+│   ├── font-size: 32px
+│   ├── color: blue
+│   └── (inherits font-family, etc. from body)
+└── p
+    ├── font-size: 16px (inherited)
+    ├── color: #333333 (inherited)
+    └── margin: 10px
 ```
 
----
+**Cascade, Specificity, Inheritance**:
+```css
+/* Cascade: Order matters */
+p { color: red; }
+p { color: blue; } /* blue wins (last rule) */
 
-#### CSS Parser is Render-Blocking
+/* Specificity: More specific wins */
+p { color: red; }           /* Specificity: 0,0,1 */
+.intro { color: blue; }     /* Specificity: 0,1,0 - WINS */
+#main p { color: green; }   /* Specificity: 1,0,1 - WINS over .intro */
 
-**Why CSS Blocks Rendering:**
-
+/* Inheritance: Some properties inherited from parent */
+body { font-family: Arial; }  /* Inherited by all descendants */
+body { border: 1px solid; }   /* NOT inherited (border not inheritable) */
 ```
-PROBLEM: Flash of Unstyled Content (FOUC)
-──────────────────────────────────────────
 
-If browser renders before CSS loads:
+**Computed Styles** (Final Result):
+```html
+<style>
+  body { font-size: 16px; }
+  div { font-size: 1.5em; }  /* 1.5 × parent = 24px */
+  p { font-size: inherit; }  /* 24px from parent div */
+</style>
 
-0ms:   Render with no styles (ugly, broken layout)
-       ┌─────────────────────────────┐
-       │ UNSTYLED CONTENT            │
-       │ Times New Roman, 16px       │
-       │ No colors, no layout        │
-       └─────────────────────────────┘
+<body>
+  <div>
+    <p>Text</p>
+  </div>
+</body>
+```
 
-200ms: CSS loads, apply styles, re-render
-       ┌─────────────────────────────┐
-       │ STYLED CONTENT              │
-       │ Custom font, colors, grid   │
-       └─────────────────────────────┘
+**Computed Styles**:
+```
+body: font-size = 16px (base)
+div:  font-size = 24px (1.5 × 16px)
+p:    font-size = 24px (inherits from div)
+```
 
-User Experience: Jarring flash/flicker ❌
+**CSSOM Construction is Render-Blocking**:
+```
+Why?
+1. Can't render partial styles (flash of unstyled content)
+2. Need complete CSSOM to calculate computed styles
+3. Browser waits for ALL <link rel="stylesheet"> to download + parse
 
-
-SOLUTION: Block Rendering Until CSS Ready
-──────────────────────────────────────────
-
-0ms:   Start downloading CSS
-       (Nothing rendered, blank screen)
-
-200ms: CSS loaded, CSSOM built
-       Render with complete styles
-       ┌─────────────────────────────┐
-       │ STYLED CONTENT              │
-       │ Perfect styling on first    │
-       │ paint                       │
-       └─────────────────────────────┘
-
-User Experience: Slower, but no flash ✅
-
-Trade-off: Delayed FCP vs FOUC
-Modern approach: Inline critical CSS, async rest
+Exception: <link media="print"> (not render-blocking for screen)
 ```
 
 ---
 
 ### Render Tree Construction
 
-#### DOM + CSSOM = Render Tree
-
-**Key Differences:**
-
+**DOM + CSSOM = Render Tree**:
 ```
-DOM TREE (Everything):
-──────────────────────
+DOM Tree:
 html
-├─ head
-│  ├─ title ("Page")
-│  └─ style (CSS rules)
-├─ body
-│  ├─ div (id="header")
-│  │  └─ h1 ("Title")
-│  ├─ div (class="content")
-│  │  └─ p ("Paragraph")
-│  └─ div (class="hidden", style="display:none")
-│     └─ p ("Hidden text")
+├── head
+│   └── title ("Page Title")
+└── body
+    ├── h1 ("Hello")
+    │   └── span ("World")
+    ├── p ("Text", style="display:none")
+    └── div
+        └── img (src="photo.jpg")
 
+CSSOM Tree:
+body { font-size: 16px; }
+h1 { color: blue; }
+span { font-weight: bold; }
+p { display: none; }
+img { width: 300px; }
 
-CSSOM TREE (Styles):
-──────────────────────
-html { display: block; }
-head { display: none; }
-body { font-size: 16px; color: #333; }
-div { display: block; margin: 10px; }
-h1 { font-size: 32px; }
-p { line-height: 1.5; }
-.hidden { display: none; }
+Render Tree (only visible + rendered elements):
+RenderBody { font-size: 16px }
+├── RenderHeading (h1) { color: blue }
+│   └── RenderInline (span) { font-weight: bold, color: blue (inherited) }
+└── RenderBlock (div)
+    └── RenderImage (img) { width: 300px }
 
-
-RENDER TREE (Visible + Styled):
-──────────────────────
-RenderObject: body
-├─ font-size: 16px
-├─ color: #333
-│
-├─ RenderObject: div#header
-│  ├─ margin: 10px
-│  │
-│  └─ RenderObject: h1
-│     ├─ font-size: 32px
-│     └─ color: #333 (inherited)
-│
-└─ RenderObject: div.content
-   ├─ margin: 10px
-   │
-   └─ RenderObject: p
-      ├─ line-height: 1.5
-      └─ color: #333 (inherited)
-
-Note: 
-- <head> excluded (display: none)
-- div.hidden excluded (display: none)
-- <style> excluded (not visual content)
+Excluded:
+- <head>, <title> (not rendered)
+- <p> (display: none)
+- <script> (not visual)
 ```
 
-**Render Tree Rules:**
+**Render Objects**:
+```
+Each DOM node (if rendered) → Render Object
 
+Render Object contains:
+- Type: Block, Inline, Image, etc.
+- Geometry: position, width, height (calculated in Layout)
+- Visual: color, background, border (used in Paint)
+- Children: nested render objects
+```
+
+**display: none vs visibility: hidden**:
+```html
+<div style="display: none;">Not in Render Tree</div>
+<div style="visibility: hidden;">In Render Tree (takes space)</div>
+```
+
+```
+display: none:
+- Excluded from Render Tree
+- No layout, no paint
+- Doesn't take space
+
+visibility: hidden:
+- Included in Render Tree
+- Layout calculated (takes space)
+- Not painted (invisible, but reserves area)
+```
+
+**Pseudo-Elements in Render Tree**:
+```css
+p::before {
+  content: "→ ";
+  color: red;
+}
+```
+
+```
+Render Tree:
+RenderBlock (p)
+├── RenderInline (::before, content: "→ ") { color: red }
+└── RenderText ("Actual paragraph text")
+```
+
+Pseudo-elements (`::before`, `::after`) are render objects, not DOM nodes.
+
+---
+
+### Style Recalculation
+
+**When Styles Recalculated**:
 ```javascript
-// Element included in Render Tree if:
-1. display !== 'none'
-2. Not <head>, <script>, <style>, <title>, etc.
-3. Not inside display:none parent
+// 1. CSS class change
+element.classList.add('highlight');
+// → Recalculate styles for element + descendants (if needed)
 
-// Element excluded from Render Tree if:
-1. display: none
-2. visibility: hidden → INCLUDED (takes space, just invisible)
-3. opacity: 0 → INCLUDED (takes space, just transparent)
+// 2. Inline style change
+element.style.color = 'red';
+// → Recalculate styles for element only
+
+// 3. New stylesheet added
+const link = document.createElement('link');
+link.rel = 'stylesheet';
+link.href = 'new.css';
+document.head.appendChild(link);
+// → Recalculate styles for ENTIRE page
+
+// 4. :hover, :focus state changes
+// → Recalculate styles for affected elements
+```
+
+**Style Invalidation** (Optimization):
+```css
+/* ❌ BAD: Invalidates entire subtree */
+.container * { color: red; }  /* Universal selector */
+
+/* ✅ GOOD: Invalidates specific elements */
+.container .item { color: red; }  /* Class selector */
+```
+
+**Descendant selectors** trigger style recalculation for all descendants:
+```css
+/* ❌ EXPENSIVE: Checks all descendants */
+div span { color: blue; }
+
+/* ✅ CHEAP: Direct child only */
+div > span { color: blue; }
+```
+
+**Computed Style Cache**:
+```javascript
+// ❌ BAD: Forces style recalculation on each access
+for (let i = 0; i < 100; i++) {
+  const color = element.computedStyleMap().get('color'); // 100 recalculations!
+}
+
+// ✅ GOOD: Cache computed style
+const color = element.computedStyleMap().get('color'); // 1 recalculation
+for (let i = 0; i < 100; i++) {
+  useColor(color);
+}
 ```
 
 ---
 
-#### Render Tree Construction Algorithm
+### Layout Triggers (Render Tree → Layout)
 
+**Properties That Trigger Layout** (Reflow):
+```javascript
+// Geometry changes (expensive)
+element.style.width = '500px';    // Layout
+element.style.height = '300px';   // Layout
+element.style.margin = '20px';    // Layout
+element.style.padding = '10px';   // Layout
+element.style.border = '1px';     // Layout
+element.style.fontSize = '18px';  // Layout (affects text dimensions)
+
+// Visual-only changes (cheap, paint only)
+element.style.color = 'red';       // Paint only
+element.style.background = 'blue'; // Paint only
+
+// Composite-only changes (cheapest, GPU)
+element.style.transform = 'translateX(100px)'; // Composite only
+element.style.opacity = 0.5;                   // Composite only
 ```
-ALGORITHM:
-──────────
 
-For each DOM node:
-  1. Check if node should be rendered
-     - Skip if display:none
-     - Skip if <head>, <script>, etc.
-  
-  2. Create RenderObject
-  
-  3. Compute styles from CSSOM
-     - Specificity resolution
-     - Inheritance
-     - Cascade
-  
-  4. Attach to parent RenderObject
-  
-  5. Recurse for children
-
-EXAMPLE CODE (Pseudo):
-──────────
-
-function buildRenderTree(domNode, cssom) {
-  // Base case: Skip non-visual elements
-  if (domNode.tagName === 'HEAD' || 
-      domNode.tagName === 'SCRIPT' ||
-      computedStyle(domNode, cssom).display === 'none') {
-    return null;
-  }
-  
-  // Create RenderObject
-  const renderObj = new RenderObject(domNode);
-  
-  // Compute styles
-  renderObj.styles = computeStyles(domNode, cssom);
-  
-  // Process children
-  for (const child of domNode.children) {
-    const childRenderObj = buildRenderTree(child, cssom);
-    if (childRenderObj) {
-      renderObj.appendChild(childRenderObj);
-    }
-  }
-  
-  return renderObj;
+**Forced Synchronous Layout** (Performance Killer):
+```javascript
+// ❌ BAD: Read-write-read-write pattern
+for (let i = 0; i < 100; i++) {
+  const width = element.offsetWidth;  // READ: Forces layout
+  element.style.width = (width + 10) + 'px'; // WRITE: Invalidates layout
+  // Next iteration reads again → Forces ANOTHER layout
+  // Total: 100 layouts!
 }
 
-function computeStyles(domNode, cssom) {
-  const styles = {};
-  
-  // 1. Inherit from parent
-  if (domNode.parentNode) {
-    styles = {...parentStyles};
-  }
-  
-  // 2. Apply matching CSS rules (by specificity)
-  const rules = cssom.findMatchingRules(domNode);
-  rules.sort((a, b) => b.specificity - a.specificity);
-  
-  rules.forEach(rule => {
-    Object.assign(styles, rule.styles);
-  });
-  
-  // 3. Apply inline styles (highest priority)
-  if (domNode.style) {
-    Object.assign(styles, domNode.style);
-  }
-  
-  return styles;
+// ✅ GOOD: Batch reads, then batch writes
+const widths = [];
+for (let i = 0; i < 100; i++) {
+  widths.push(element.offsetWidth);  // READ: All reads together
 }
+for (let i = 0; i < 100; i++) {
+  element.style.width = (widths[i] + 10) + 'px'; // WRITE: All writes together
+}
+// Total: 2 layouts (1 for reads, 1 for writes)
 ```
+
+---
+
+### What NOT to Do
+
+- ❌ **Synchronous scripts in `<head>`** (blocks parsing)
+- ❌ **Large CSS files** (delays CSSOM, blocks rendering)
+- ❌ **Deep CSS selectors** (expensive style matching)
+- ❌ **Universal selector `*`** (recalculates all elements)
+- ❌ **Forced synchronous layout** (read-write-read pattern)
+- ❌ **Inline styles in loops** (multiple style recalculations)
 
 ---
 
 ## 3. Clear Real-World Examples
 
-### Example 1: Incremental HTML Parsing
+### Example 1: React – Virtual DOM vs Real DOM
 
-**Scenario:** Large news article (50 KB HTML)
+**Why Virtual DOM**:
+```javascript
+// ❌ Direct DOM manipulation (multiple render tree updates)
+function updateList(items) {
+  items.forEach(item => {
+    const li = document.createElement('li');
+    li.textContent = item.name;
+    list.appendChild(li);
+    // Each append → Render tree update + layout
+  });
+}
 
-```html
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Breaking News</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <!-- Chunk 1: Above-the-fold content (8 KB) -->
-  <header>
-    <h1>Breaking: Major Event Happens</h1>
-    <p class="byline">By Reporter Name | March 15, 2024</p>
-  </header>
-  
-  <article>
-    <p>First paragraph of article that appears above the fold...</p>
-    <p>Second paragraph...</p>
-    
-    <!-- Chunk 2: More content (8 KB) -->
-    <p>Third paragraph (below fold)...</p>
-    <img src="photo1.jpg" alt="Event photo">
-    <p>Fourth paragraph...</p>
-    
-    <!-- Chunk 3-6: Rest of article (34 KB) -->
-    <p>... many more paragraphs ...</p>
-  </article>
-</body>
-</html>
+// ✅ Virtual DOM (batch updates)
+function UpdateList({ items }) {
+  return (
+    <ul>
+      {items.map(item => <li key={item.id}>{item.name}</li>)}
+    </ul>
+  );
+  // React batches changes → single render tree update
+}
 ```
 
-**Parsing Timeline:**
-
-```
-NETWORK (Slow 3G: 400 Kbps):
-────────────────────────────
-
-0ms:    Request sent
-100ms:  Receive chunk 1 (8 KB) - header + first paragraphs
-        Parser: Start building DOM immediately
-        Render: Can't render yet (CSS not loaded)
-
-150ms:  styles.css loaded (blocking)
-        CSSOM built
-        Render: Draw header + first paragraphs ✅
-        First Paint: 150ms
-
-300ms:  Receive chunk 2 (8 KB) - more content
-        Parser: Extend DOM
-        Render: Update display (scroll reveals new content)
-
-900ms:  Receive remaining chunks (34 KB)
-        Parser: Complete DOM
-        Render: Full article available
-
-Total Time: 900ms
-But user sees header at 150ms (6× faster perception) ✅
-```
-
-**Without Incremental Parsing:**
-
-```
-0ms:    Request sent
-900ms:  Receive complete HTML (50 KB)
-900ms:  Parse all at once
-950ms:  First Paint
-
-User waits 950ms to see anything ❌
-```
+**Result**: 10 items = 1 layout instead of 10.
 
 ---
 
-### Example 2: CSSOM and Style Inheritance
+### Example 2: Gmail – CSS Containment
 
-**HTML:**
+**Problem**: Rendering 100 emails triggered layout for entire page.
 
-```html
-<body>
-  <article>
-    <h1 class="title">Article Title</h1>
-    <p>First paragraph.</p>
-    <p class="highlight">Second paragraph (highlighted).</p>
-  </article>
-</body>
+**Solution**: CSS `contain` property:
+```css
+.email-item {
+  contain: layout style;
+  /* Layout changes inside email don't affect siblings */
+}
 ```
 
-**CSS:**
+```
+Without contain:
+Email 50 height changes → Recalculate layout for emails 51-100
+
+With contain:
+Email 50 height changes → Only email 50 recalculated
+```
+
+**Result**: 70% faster email list rendering.
+
+---
+
+### Example 3: Twitter – Class vs Inline Styles
+
+**Problem**: Toggling styles on 1000 tweets caused janky scrolling.
+
+**Before** (inline styles):
+```javascript
+tweets.forEach(tweet => {
+  if (tweet.isLiked) {
+    tweet.element.style.color = 'red';      // Style recalc
+    tweet.element.style.fontWeight = 'bold'; // Style recalc
+  }
+});
+// 1000 style recalculations
+```
+
+**After** (CSS classes):
+```javascript
+tweets.forEach(tweet => {
+  if (tweet.isLiked) {
+    tweet.element.classList.add('liked'); // Single class toggle
+  }
+});
+// 1 stylesheet, browser optimizes internally
+```
 
 ```css
-body {
-  font-family: Arial, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  color: #333;
-}
-
-article {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-h1 {
-  font-size: 32px;
-  font-weight: bold;
-  margin-bottom: 16px;
-}
-
-.title {
-  color: #000;
-}
-
-p {
-  margin-bottom: 12px;
-}
-
-.highlight {
-  background-color: yellow;
+.liked {
+  color: red;
   font-weight: bold;
 }
 ```
 
-**CSSOM Construction:**
-
-```
-body
-├─ font-family: Arial, sans-serif ✅
-├─ font-size: 16px ✅
-├─ line-height: 1.5 ✅
-└─ color: #333 ✅
-
-article (inherits from body)
-├─ font-family: Arial (inherited)
-├─ font-size: 16px (inherited)
-├─ line-height: 1.5 (inherited)
-├─ color: #333 (inherited)
-├─ max-width: 800px ✅
-├─ margin: 0 auto ✅
-└─ padding: 20px ✅
-
-h1 (inherits from body + article)
-├─ font-family: Arial (inherited from body)
-├─ font-size: 32px ✅ (overrides body's 16px)
-├─ line-height: 1.5 (inherited from body)
-├─ color: #333 (inherited from body)
-├─ font-weight: bold ✅
-└─ margin-bottom: 16px ✅
-
-h1.title (inherits from body + article + h1 + .title)
-├─ font-family: Arial (inherited)
-├─ font-size: 32px (from h1)
-├─ line-height: 1.5 (inherited)
-├─ color: #000 ✅ (overrides inherited #333)
-├─ font-weight: bold (from h1)
-└─ margin-bottom: 16px (from h1)
-
-p (inherits from body + article)
-├─ font-family: Arial (inherited)
-├─ font-size: 16px (inherited)
-├─ line-height: 1.5 (inherited)
-├─ color: #333 (inherited)
-└─ margin-bottom: 12px ✅
-
-p.highlight (inherits from body + article + p + .highlight)
-├─ font-family: Arial (inherited)
-├─ font-size: 16px (inherited)
-├─ line-height: 1.5 (inherited)
-├─ color: #333 (inherited)
-├─ margin-bottom: 12px (from p)
-├─ background-color: yellow ✅
-└─ font-weight: bold ✅
-```
-
-**Final Computed Styles (what browser uses):**
-
-```javascript
-// h1.title
-{
-  fontFamily: 'Arial, sans-serif',
-  fontSize: '32px',
-  lineHeight: 1.5,
-  color: '#000',        // from .title class
-  fontWeight: 'bold',
-  marginBottom: '16px',
-  maxWidth: '800px',    // inherited from article
-  // ... dozens more properties with computed values
-}
-
-// p.highlight
-{
-  fontFamily: 'Arial, sans-serif',
-  fontSize: '16px',
-  lineHeight: 1.5,
-  color: '#333',
-  marginBottom: '12px',
-  backgroundColor: 'yellow',  // from .highlight class
-  fontWeight: 'bold',         // from .highlight class
-  maxWidth: '800px',    // inherited from article
-  // ... dozens more properties
-}
-```
-
----
-
-### Example 3: Render Tree Construction
-
-**HTML + CSS:**
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    .visible { display: block; color: blue; }
-    .hidden { display: none; }
-    .invisible { visibility: hidden; }
-  </style>
-</head>
-<body>
-  <div class="visible">
-    <p>Visible paragraph</p>
-  </div>
-  
-  <div class="hidden">
-    <p>Hidden paragraph (display:none)</p>
-  </div>
-  
-  <div class="invisible">
-    <p>Invisible paragraph (visibility:hidden)</p>
-  </div>
-  
-  <script>
-    console.log('This is in DOM but not Render Tree');
-  </script>
-</body>
-</html>
-```
-
-**DOM Tree (Complete Structure):**
-
-```
-Document
-└─ html
-   ├─ head
-   │  └─ style (CSS rules)
-   └─ body
-      ├─ div.visible
-      │  └─ p ("Visible paragraph")
-      ├─ div.hidden
-      │  └─ p ("Hidden paragraph")
-      ├─ div.invisible
-      │  └─ p ("Invisible paragraph")
-      └─ script (JavaScript)
-
-Total nodes: 11
-```
-
-**Render Tree (Only Visible Elements):**
-
-```
-RenderBody
-├─ RenderBlock: div.visible
-│  ├─ color: blue
-│  │
-│  └─ RenderBlock: p
-│     └─ Text: "Visible paragraph"
-│
-└─ RenderBlock: div.invisible
-   ├─ visibility: hidden (INCLUDED!)
-   │
-   └─ RenderBlock: p
-      ├─ visibility: hidden (inherited)
-      └─ Text: "Invisible paragraph"
-
-Total render objects: 5
-
-Excluded:
-❌ head (display: none by default)
-❌ style (not visual)
-❌ div.hidden (display: none)
-❌ p inside div.hidden (parent is display: none)
-❌ script (not visual)
-```
-
-**Why div.invisible is included:**
-
-```javascript
-// visibility: hidden vs display: none
-
-display: none
-├─ Removed from Render Tree ❌
-├─ Takes no space in layout
-├─ Children also removed
-└─ Use case: Toggle visibility, don't affect layout
-
-visibility: hidden
-├─ Included in Render Tree ✅
-├─ Takes space in layout (invisible box)
-├─ Children inherit (but can be overridden)
-└─ Use case: Hide visually but maintain layout
-
-// Example:
-<div style="visibility: hidden;">
-  <p>Invisible</p>
-  <p style="visibility: visible;">Visible!</p> <!-- Override -->
-</div>
-
-Result: First <p> hidden, second <p> visible
-        Both affect layout
-```
-
----
-
-### Example 4: CSS Specificity Battle
-
-```html
-<div id="main" class="container box" style="color: red;">
-  Text content
-</div>
-```
-
-```css
-/* Rule 1: Universal selector */
-* {
-  color: black !important; /* Specificity: 0, but !important */
-}
-
-/* Rule 2: Element */
-div {
-  color: purple; /* Specificity: 1 */
-}
-
-/* Rule 3: Class */
-.container {
-  color: green; /* Specificity: 10 */
-}
-
-/* Rule 4: Multiple classes */
-.container.box {
-  color: orange; /* Specificity: 20 */
-}
-
-/* Rule 5: ID */
-#main {
-  color: blue; /* Specificity: 100 */
-}
-
-/* Rule 6: ID + Class */
-#main.container {
-  color: yellow; /* Specificity: 110 */
-}
-
-/* Rule 7: Inline style */
-/* style="color: red" - Specificity: 1000 */
-```
-
-**Specificity Calculation:**
-
-```
-Rule 1: * { color: black !important; }
-Specificity: (0, 0, 0, 0) = 0
-BUT: !important flag overrides everything (except other !important)
-
-Rule 2: div
-Specificity: (0, 0, 0, 1) = 1
-
-Rule 3: .container
-Specificity: (0, 0, 1, 0) = 10
-
-Rule 4: .container.box
-Specificity: (0, 0, 2, 0) = 20
-
-Rule 5: #main
-Specificity: (0, 1, 0, 0) = 100
-
-Rule 6: #main.container
-Specificity: (0, 1, 1, 0) = 110
-
-Rule 7: style="color: red"
-Specificity: (1, 0, 0, 0) = 1000
-
-WINNER: Rule 1 (black !important)
-         !important overrides even inline styles
-
-If Rule 1 didn't have !important:
-WINNER: Rule 7 (red - inline style)
-```
+**Result**: 5x faster style updates (200ms → 40ms for 1000 tweets).
 
 ---
 
 ## 4. Interview-Oriented Explanation
 
-### Sample Interview Answer (7+ Years Experience)
+### Sample Answer (7+ Years Level)
 
-**Question:** "Explain how the browser parses HTML and CSS to create the Render Tree."
+> **Question**: "Explain how the browser builds the DOM, CSSOM, and Render Tree."
 
-**Your Answer:**
+**Answer**:
 
-> "The browser builds three separate tree structures before rendering:
->
-> **1. DOM Tree (from HTML)**
->
-> HTML parsing is **incremental and streaming**:
-> ```
-> Bytes → Characters → Tokens → Nodes → DOM Tree
-> ```
->
-> Key characteristics:
-> - **Progressive:** Browser parses chunks as they arrive, doesn't wait for complete HTML
-> - **Forgiving:** Auto-closes missing tags, recovers from errors
-> - **Blocking:** `<script>` tags pause parser (can modify DOM)
->
-> Example timeline:
-> ```
-> 0ms:   Receive first 8 KB chunk (header)
-> 10ms:  Parse header → Build partial DOM
-> 50ms:  Render header (user sees content early) ✅
-> 200ms: Receive rest of HTML, complete DOM
-> ```
->
-> **2. CSSOM Tree (from CSS)**
->
-> CSS parsing is **render-blocking** (prevents FOUC):
-> ```
-> CSS Text → Tokens → CSSOM Tree (with cascading applied)
-> ```
->
-> Key characteristics:
-> - **Cascading:** Inheritance + specificity resolution
-> - **Blocking:** Browser won't render until CSSOM ready
-> - **Computed:** Final styles include inherited and defaultproperties
->
-> Example:
-> ```css
-> body { font-size: 16px; color: #333; }
-> h1 { font-size: 32px; } /* inherits color: #333 */
-> ```
->
-> **3. Render Tree (DOM + CSSOM)**
->
-> Combines DOM and CSSOM, **excludes non-visual elements**:
-> ```
-> DOM + CSSOM → Render Tree (only visible elements)
-> ```
->
-> Key exclusions:
-> - `<head>`, `<script>`, `<style>` (not visual)
-> - `display: none` elements (don't occupy space)
-> - Included: `visibility: hidden` (occupies space, just invisible)
->
-> **Construction algorithm:**
-> ```
-> For each DOM node:
->   1. Skip if display:none or non-visual tag
->   2. Create RenderObject
->   3. Compute styles (specificity + inheritance)
->   4. Attach to parent
->   5. Recurse for children
-> ```
->
-> **Real-World Optimization:**
->
-> At [Company], our e-commerce product page had 800ms FCP. Profiling showed:
-> - 200ms: Large CSS file blocking rendering
-> - 150ms: Synchronous `<script>` blocking HTML parsing
->
-> **Solution:**
-> ```html
-> <!-- Inline critical CSS (5 KB above-fold styles) -->
-> <style>/* critical styles */</style>
->
-> <!-- Async non-critical CSS -->
-> <link rel="preload" href="full.css" as="style" onload="this.rel='stylesheet'">
->
-> <!-- Defer scripts -->
-> <script src="app.js" defer></script>
-> ```
->
-> **Results:**
-> - FCP: 800ms → 250ms (69% improvement) ✅
-> - CSSOM ready faster (only critical CSS blocks)
-> - DOM parsing unblocked (defer scripts)
-> - Conversion rate: +12% ✅
->
-> **Key Takeaway:**
-> Understanding the three-tree model (DOM, CSSOM, Render Tree) and their construction algorithms enables targeted Critical Rendering Path optimizations that directly impact business metrics."
+"Browser transforms HTML/CSS into renderable structures through **3 key stages**:
 
----
+**1. HTML Parsing → DOM Construction**
 
-### Common Interview Mistakes
-
-#### Mistake 1: Confusing DOM and Render Tree
-
+**Tokenization**:
 ```
-❌ Bad Answer:
-"DOM and Render Tree are the same thing"
+HTML Bytes → Characters → Tokens → Nodes → DOM Tree
 
-→ Fundamental misunderstanding
+Example:
+<h1>Hello</h1>
+↓
+[StartTag: h1] [Characters: Hello] [EndTag: h1]
+↓
+HTMLHeadingElement
+  └── TextNode("Hello")
+```
+
+**Incremental Parsing**: Streams from network, doesn't wait for complete HTML.
+
+**Speculative Parsing**: While main parser blocked by `<script>`, speculative parser continues to discover `<link>`, `<img>` for parallel download.
+
+**Parser-Blocking**: Synchronous `<script>` pauses HTML parsing.
+
+**2. CSS Parsing → CSSOM Construction**
+
+**CSS Bytes → CSSOM Tree**:
+```css
+body { font-size: 16px; }
+h1 { color: blue; }
 ```
 
 ```
-✅ Good Answer:
-"DOM and Render Tree are different:
-
-**DOM Tree:**
-- Complete HTML structure
-- Includes ALL elements (even display:none)
-- Accessible via JavaScript (document.querySelector)
-- Used by scripts to manipulate page
-
-**Render Tree:**
-- Only VISIBLE elements
-- Excludes display:none, <head>, <script>, etc.
-- Includes visibility:hidden (takes space)
-- Used by layout/paint engines
-
-**Example:**
-```html
-<div style="display:none">Hidden</div> <!-- In DOM, NOT in Render Tree -->
-<div style="visibility:hidden">Invisible</div> <!-- In BOTH -->
+CSSOM Tree:
+body { font-size: 16px }
+└── h1 { font-size: 16px (inherited), color: blue }
 ```
 
-**Why it matters:**
-- Changing display:none ↔ block: Rebuild Render Tree + Layout
-- Changing visibility: No Render Tree change, just repaint
-- Performance: display changes more expensive
-"
+**Cascade + Specificity + Inheritance**:
+- Cascade: Last rule wins (same specificity)
+- Specificity: ID > Class > Tag
+- Inheritance: `font-*`, `color` inherited; `margin`, `border` NOT inherited
+
+**Render-Blocking**: Browser waits for ALL `<link rel="stylesheet">` before rendering (prevents FOUC).
+
+**Computed Styles**: Final values after cascade, specificity, inheritance.
+
+**3. Render Tree = DOM + CSSOM**
+
+**Construction**:
+```
+DOM:            CSSOM:           Render Tree:
+html            body: fs=16px    RenderBody { fs=16px }
+├── head        h1: color=blue   ├── RenderHeading { color=blue }
+└── body        p: display=none  └── (p excluded)
+    ├── h1
+    └── p
 ```
 
----
+**Excluded from Render Tree**:
+- `<head>`, `<script>`, `<style>` (not visual)
+- `display: none` elements
+- **Included**: `visibility: hidden` (takes space, just invisible)
 
-#### Mistake 2: Not Understanding CSS Blocking
+**Render Objects**: Each rendered DOM node → Render Object with geometry + visual properties.
 
-```
-❌ Bad Answer:
-Interviewer: "Why does CSS block rendering?"
+**Performance Considerations**:
 
-Candidate: "To load faster?"
-
-→ Wrong reasoning
-```
-
-```
-✅ Good Answer:
-"CSS blocks rendering to prevent FOUC (Flash of Unstyled Content):
-
-**Without blocking:**
-```
-0ms:   Render page (no styles) → Ugly, broken layout
-100ms: CSS loads → Re-render → Flash/flicker ❌
-```
-
-**With blocking:**
-```
-0ms:   Wait for CSS (blank screen)
-100ms: CSS ready → Render with perfect styles ✅
-```
-
-**Trade-off:**
-- Slower FCP (delayed initial paint)
-- Better UX (no visual flash)
-
-**Optimization:**
-```html
-<!-- Inline critical CSS (immediate) -->
-<style>/* 5 KB above-fold styles */</style>
-
-<!-- Async rest (non-blocking) -->
-<link rel="preload" href="full.css" as="style" onload="this.rel='stylesheet'">
-```
-
-Result: Fast FCP + No FOUC ✅
-"
-```
-
----
-
-#### Mistake 3: Not Understanding Incremental Parsing
-
-```
-❌ Bad Answer:
-"Browser waits for entire HTML, then parses it all at once"
-
-→ Misses key optimization
-```
-
-```
-✅ Good Answer:
-"HTML parsing is **incremental** (streaming):
-
-**How it works:**
-```
-Network: ░░░░░░░░░░░░░░░░░░░░ (50 KB over 500ms)
-Parsing:  ████░░░██░░██░░░███ (parse chunks as they arrive)
-Render:      ▲     ▲    ▲     (progressive rendering)
-           50ms  100ms 200ms
-```
-
-**Benefits:**
-- User sees content earlier (50ms vs 500ms for first paint)
-- Better perceived performance
-- Lower Time to Interactive
-
-**Example:**
-```html
-<body>
-  <!-- Chunk 1 (8 KB, arrives at 50ms) -->
-  <header>User sees this at 60ms ✅</header>
-  
-  <!-- Chunk 2 (8 KB, arrives at 100ms) -->
-  <article>User sees this at 110ms ✅</article>
-  
-  <!-- Chunk 3-6 (34 KB, arrives at 500ms) -->
-  ... rest of page ...
-</body>
-```
-
-**Why it matters:**
-- Place critical content first in HTML (above-fold)
-- Avoid large synchronous scripts early (block parsing)
-- Optimize server TTFB (faster first chunk)
-"
-```
-
----
-
-## 5. Code Examples
-
-### Complete Example: DOM Parser Simulation
-
+**1. Style Recalculation Triggers**:
 ```javascript
-/**
- * Simplified HTML Parser (educational)
- * Shows how browser builds DOM from HTML tokens
- */
-
-class Token {
-  constructor(type, tagName = null, attributes = {}, data = null) {
-    this.type = type; // 'StartTag', 'EndTag', 'Text'
-    this.tagName = tagName;
-    this.attributes = attributes;
-    this.data = data;
-  }
-}
-
-class DOMNode {
-  constructor(tagName, attributes = {}) {
-    this.tagName = tagName;
-    this.attributes = attributes;
-    this.children = [];
-    this.parent = null;
-  }
-  
-  appendChild(child) {
-    this.children.push(child);
-    child.parent = this;
-  }
-  
-  toString(indent = 0) {
-    const spaces = '  '.repeat(indent);
-    let result = `${spaces}<${this.tagName}`;
-    
-    // Attributes
-    for (const [key, value] of Object.entries(this.attributes)) {
-      result += ` ${key}="${value}"`;
-    }
-    result += '>\n';
-    
-    // Children
-    for (const child of this.children) {
-      result += child.toString(indent + 1);
-    }
-    
-    result += `${spaces}</${this.tagName}>\n`;
-    return result;
-  }
-}
-
-class TextNode {
-  constructor(data) {
-    this.data = data;
-    this.parent = null;
-  }
-  
-  toString(indent = 0) {
-    const spaces = '  '.repeat(indent);
-    return `${spaces}#text: "${this.data}"\n`;
-  }
-}
-
-class HTMLParser {
-  constructor() {
-    this.root = null;
-    this.stack = [];
-  }
-  
-  /**
-   * Parse HTML tokens into DOM tree
-   */
-  parse(tokens) {
-    for (const token of tokens) {
-      switch (token.type) {
-        case 'StartTag':
-          this.handleStartTag(token);
-          break;
-        
-        case 'EndTag':
-          this.handleEndTag(token);
-          break;
-        
-        case 'Text':
-          this.handleText(token);
-          break;
-      }
-    }
-    
-    return this.root;
-  }
-  
-  handleStartTag(token) {
-    const node = new DOMNode(token.tagName, token.attributes);
-    
-    if (this.stack.length === 0) {
-      // Root element
-      this.root = node;
-    } else {
-      // Append to current parent
-      const parent = this.stack[this.stack.length - 1];
-      parent.appendChild(node);
-    }
-    
-    // Self-closing tags don't push to stack
-    if (!this.isSelfClosing(token.tagName)) {
-      this.stack.push(node);
-    }
-  }
-  
-  handleEndTag(token) {
-    // Pop from stack
-    if (this.stack.length > 0) {
-      const currentNode = this.stack[this.stack.length - 1];
-      
-      if (currentNode.tagName === token.tagName) {
-        this.stack.pop();
-      } else {
-        console.warn(`Mismatched tags: Expected </${currentNode.tagName}>, got </${token.tagName}>`);
-      }
-    }
-  }
-  
-  handleText(token) {
-    if (this.stack.length > 0) {
-      const parent = this.stack[this.stack.length - 1];
-      const textNode = new TextNode(token.data.trim());
-      
-      if (textNode.data) { // Only add non-empty text
-        parent.appendChild(textNode);
-      }
-    }
-  }
-  
-  isSelfClosing(tagName) {
-    const selfClosingTags = ['img', 'br', 'hr', 'input', 'meta', 'link'];
-    return selfClosingTags.includes(tagName.toLowerCase());
-  }
-}
-
-// Usage Example
-const tokens = [
-  new Token('StartTag', 'html'),
-  new Token('StartTag', 'head'),
-  new Token('StartTag', 'title'),
-  new Token('Text', null, {}, 'Page Title'),
-  new Token('EndTag', 'title'),
-  new Token('EndTag', 'head'),
-  new Token('StartTag', 'body'),
-  new Token('StartTag', 'h1', { class: 'title' }),
-  new Token('Text', null, {}, 'Hello World'),
-  new Token('EndTag', 'h1'),
-  new Token('StartTag', 'p'),
-  new Token('Text', null, {}, 'This is a paragraph.'),
-  new Token('EndTag', 'p'),
-  new Token('StartTag', 'img', { src: 'photo.jpg', alt: 'Photo' }),
-  new Token('EndTag', 'body'),
-  new Token('EndTag', 'html'),
-];
-
-const parser = new HTMLParser();
-const dom = parser.parse(tokens);
-
-console.log('DOM Tree:');
-console.log(dom.toString());
-
-/* Output:
-DOM Tree:
-<html>
-  <head>
-    <title>
-      #text: "Page Title"
-    </title>
-  </head>
-  <body>
-    <h1 class="title">
-      #text: "Hello World"
-    </h1>
-    <p>
-      #text: "This is a paragraph."
-    </p>
-    <img src="photo.jpg" alt="Photo">
-  </body>
-</html>
-*/
+element.classList.add('highlight'); // Recalc element + descendants
+element.style.color = 'red';        // Recalc element only
 ```
 
----
+**2. Expensive Selectors**:
+```css
+/* ❌ BAD: Recalculates all descendants */
+.container * { color: red; }
 
-### Example: Render Tree Builder
+/* ✅ GOOD: Specific selector */
+.container .item { color: red; }
+```
 
+**3. Forced Synchronous Layout**:
 ```javascript
-/**
- * Simplified Render Tree Builder
- * Shows how browser combines DOM + CSSOM
- */
-
-class RenderObject {
-  constructor(domNode, styles) {
-    this.domNode = domNode;
-    this.styles = styles;
-    this.children = [];
-  }
-  
-  appendChild(child) {
-    this.children.push(child);
-  }
-  
-  toString(indent = 0) {
-    const spaces = '  '.repeat(indent);
-    let result = `${spaces}RenderObject: ${this.domNode.tagName}`;
-    
-    // Show key styles
-    const keyStyles = ['display', 'position', 'width', 'height', 'color', 'font-size'];
-    const styleStr = keyStyles
-      .filter(prop => this.styles[prop])
-      .map(prop => `${prop}: ${this.styles[prop]}`)
-      .join('; ');
-    
-    if (styleStr) {
-      result += ` { ${styleStr} }`;
-    }
-    
-    result += '\n';
-    
-    for (const child of this.children) {
-      result += child.toString(indent + 1);
-    }
-    
-    return result;
-  }
+// ❌ BAD: Read-write-read (100 layouts)
+for (let i = 0; i < 100; i++) {
+  const w = element.offsetWidth;  // READ: Forces layout
+  element.style.width = (w + 10) + 'px'; // WRITE: Invalidates layout
 }
 
-class RenderTreeBuilder {
-  constructor(dom, cssom) {
-    this.dom = dom;
-    this.cssom = cssom;
-  }
-  
-  build() {
-    return this.buildRenderTree(this.dom);
-  }
-  
-  buildRenderTree(domNode) {
-    // Skip non-visual elements
-    if (this.shouldSkip(domNode)) {
-      return null;
-    }
-    
-    // Compute styles
-    const styles = this.computeStyles(domNode);
-    
-    // Skip if display:none
-    if (styles.display === 'none') {
-      return null;
-    }
-    
-    // Create RenderObject
-    const renderObj = new RenderObject(domNode, styles);
-    
-    // Process children
-    if (domNode.children) {
-      for (const child of domNode.children) {
-        const childRenderObj = this.buildRenderTree(child);
-        if (childRenderObj) {
-          renderObj.appendChild(childRenderObj);
-        }
-      }
-    }
-    
-    return renderObj;
-  }
-  
-  shouldSkip(domNode) {
-    // Skip text nodes, scripts, styles
-    if (domNode instanceof TextNode) return false;
-    
-    const nonVisualTags = ['head', 'script', 'style', 'meta', 'link'];
-    return nonVisualTags.includes(domNode.tagName.toLowerCase());
-  }
-  
-  computeStyles(domNode) {
-    // Simplified style computation
-    // Real browser does: inheritance + cascading + specificity
-    
-    let styles = { ...this.cssom.defaults };
-    
-    // Apply element rules
-    const elementRules = this.cssom.rules.filter(r => 
-      r.selector === domNode.tagName.toLowerCase()
-    );
-    elementRules.forEach(rule => {
-      Object.assign(styles, rule.styles);
-    });
-    
-    // Apply class rules
-    if (domNode.attributes.class) {
-      const classes = domNode.attributes.class.split(' ');
-      classes.forEach(className => {
-        const classRules = this.cssom.rules.filter(r => 
-          r.selector === `.${className}`
-        );
-        classRules.forEach(rule => {
-          Object.assign(styles, rule.styles);
-        });
-      });
-    }
-    
-    // Apply ID rules
-    if (domNode.attributes.id) {
-      const idRules = this.cssom.rules.filter(r => 
-        r.selector === `#${domNode.attributes.id}`
-      );
-      idRules.forEach(rule => {
-        Object.assign(styles, rule.styles);
-      });
-    }
-    
-    // Apply inline styles
-    if (domNode.attributes.style) {
-      // Parse inline styles (simplified)
-      const inlineStyles = this.parseInlineStyles(domNode.attributes.style);
-      Object.assign(styles, inlineStyles);
-    }
-    
-    return styles;
-  }
-  
-  parseInlineStyles(styleString) {
-    const styles = {};
-    const declarations = styleString.split(';');
-    
-    declarations.forEach(decl => {
-      const [prop, value] = decl.split(':').map(s => s.trim());
-      if (prop && value) {
-        styles[prop] = value;
-      }
-    });
-    
-    return styles;
-  }
-}
-
-// Usage Example
-const cssom = {
-  defaults: {
-    display: 'block',
-    color: '#000',
-    'font-size': '16px',
-  },
-  rules: [
-    { selector: 'body', styles: { 'font-size': '16px', color: '#333' } },
-    { selector: 'h1', styles: { 'font-size': '32px', 'font-weight': 'bold' } },
-    { selector: '.title', styles: { color: '#000' } },
-    { selector: '.hidden', styles: { display: 'none' } },
-  ],
-};
-
-const builder = new RenderTreeBuilder(dom, cssom);
-const renderTree = builder.build();
-
-console.log('Render Tree:');
-console.log(renderTree.toString());
-
-/* Output:
-Render Tree:
-RenderObject: html { display: block; color: #333; font-size: 16px }
-  RenderObject: body { display: block; color: #333; font-size: 16px }
-    RenderObject: h1 { display: block; color: #000; font-size: 32px; font-weight: bold }
-    RenderObject: p { display: block; color: #333; font-size: 16px }
-    RenderObject: img { display: block }
-*/
+// ✅ GOOD: Batch reads, then writes (2 layouts)
+const widths = elements.map(el => el.offsetWidth);
+elements.forEach((el, i) => el.style.width = (widths[i] + 10) + 'px');
 ```
+
+**Real-World Examples**:
+
+**React Virtual DOM**: Batches DOM changes → Single render tree update instead of multiple.
+
+**Gmail CSS Contain**: `contain: layout style` on email items → Layout changes don't affect siblings (70% faster).
+
+**Twitter Class vs Inline**: CSS classes instead of inline styles → 5x faster (200ms → 40ms for 1000 tweets).
+
+**Trade-offs**:
+
+- **Inline Critical CSS**: Faster FCP (no network), but not cacheable
+- **CSS-in-JS**: Dynamic styles, but runtime overhead (style recalculations)
+- **CSS Containment**: Isolated layouts, but breaks some CSS features (flexbox parent-child communication)
+
+**Follow-up I Expect**:
+
+Q: 'What's the difference between parser-blocking and render-blocking?'
+A: Parser-blocking (sync `<script>`) stops HTML parsing. Render-blocking (`<link rel="stylesheet">`) stops rendering, NOT parsing. Speculative parser still discovers resources during parser block.
+
+Q: 'How would you optimize style recalculation?'
+A: Use CSS classes instead of inline styles, avoid universal/descendant selectors, use `contain` property for isolation, batch DOM reads/writes to avoid forced sync layout."
 
 ---
 
 ## 6. Why & How Summary
 
-### Why Understanding DOM/CSSOM/Render Tree Matters
+### Why It Matters
 
-**Performance:**
-- Optimize Critical Rendering Path (inline CSS, defer JS)
-- Avoid unnecessary Render Tree rebuilds
-- Minimize style recalculations
+**Performance**: DOM/CSSOM construction directly impacts FCP (First Contentful Paint)  
+**Rendering Efficiency**: Render Tree determines what gets laid out and painted  
+**Style Recalculation**: Expensive selectors and forced sync layout cause janky UI
 
-**Debugging:**
-- Understand why changes cause reflows
-- Debug CSS specificity issues
-- Profile rendering performance
+### How It Works
 
-**Architecture:**
-- Design efficient component updates
-- Choose between display:none vs visibility:hidden
-- Optimize initial page load
+**HTML → DOM**: Bytes → Characters → Tokens → Nodes → DOM Tree (incremental, parser-blocking by sync scripts)  
+**CSS → CSSOM**: Bytes → Tokens → CSSOM Tree (render-blocking, cascade + specificity + inheritance)  
+**DOM + CSSOM → Render Tree**: Only visible elements, computed styles, render objects with geometry/visual props  
+**Optimizations**: Avoid deep selectors, batch DOM reads/writes, use CSS classes over inline styles, CSS containment
 
-**Business Impact:**
-- Faster FCP = Higher engagement (+15%)
-- Smooth rendering = Lower bounce rate (-20%)
-- Optimized CRP = Better Core Web Vitals
-
----
-
-### How to Optimize
-
-**1. Optimize HTML Parsing**
-```html
-<!-- ❌ Blocks parsing -->
-<script src="app.js"></script>
-
-<!-- ✅ Doesn't block -->
-<script src="app.js" defer></script>
-```
-
-**2. Optimize CSS Loading**
-```html
-<!-- Inline critical CSS -->
-<style>/* 5 KB critical styles */</style>
-
-<!-- Async non-critical -->
-<link rel="preload" href="full.css" as="style" onload="this.rel='stylesheet'">
-```
-
-**3. Minimize Render Tree Changes**
-```javascript
-// ❌ Multiple Render Tree rebuilds
-element.style.display = 'none'; // Rebuild Render Tree
-element.style.display = 'block'; // Rebuild again
-
-// ✅ Single change
-element.classList.toggle('hidden'); // One rebuild
-```
-
-**4. Use Appropriate Hiding Techniques**
-```css
-/* Remove from Render Tree (no layout cost) */
-.hidden { display: none; }
-
-/* Keep in Render Tree (layout cost, but faster toggle) */
-.invisible { visibility: hidden; }
-
-/* Keep in Render Tree (GPU accelerated) */
-.transparent { opacity: 0; }
-```
-
----
-
-### Quick Reference
-
-**Three Trees:**
-1. **DOM:** Complete HTML structure (all elements)
-2. **CSSOM:** Computed CSS styles (cascaded + inherited)
-3. **Render Tree:** DOM + CSSOM (only visible elements)
-
-**Parsing Timeline:**
-```
-HTML Parsing: Incremental (streaming)
-CSS Parsing: Blocks rendering (prevents FOUC)
-JavaScript: Blocks HTML parsing (can modify DOM)
-Render Tree: Built after DOM + CSSOM ready
-```
-
-**Exclusions from Render Tree:**
-- `<head>`, `<script>`, `<style>`
-- `display: none` elements
-- Elements inside `display: none` parents
-
-**Inclusions in Render Tree:**
-- `visibility: hidden` (takes space)
-- `opacity: 0` (takes space)
-- All visible elements with computed styles
-
----
-
-**Next Topic:** JavaScript Execution Model
-
+**FAANG Expectation**: Explain full parsing pipeline, speculative parsing, parser vs render blocking, CSSOM cascade/specificity, render tree construction, excluded elements (display:none vs visibility:hidden), style recalculation triggers, forced sync layout anti-pattern, real-world optimizations (React batching, CSS contain, class vs inline)
