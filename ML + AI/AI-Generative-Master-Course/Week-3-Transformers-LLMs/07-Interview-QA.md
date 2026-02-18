@@ -1,5 +1,18 @@
 # 📘 Week 3 Interview Questions & Answers - Complete Guide
 
+## 📚 Table of Contents
+
+1. [Overview](#-overview)
+2. [Section 1: RNN and LSTM (10 Questions)](#-section-1-rnn-and-lstm-10-questions)
+3. [Section 2: Attention Mechanism (10 Questions)](#-section-2-attention-mechanism-10-questions)
+4. [Section 3: Transformer Architecture (10 Questions)](#-section-3-transformer-architecture-10-questions)
+5. [Section 4: GPT and BERT (10 Questions)](#-section-4-gpt-and-bert-10-questions)
+6. [Section 5: Implementation & Production (10 Questions)](#-section-5-implementation--production-10-questions)
+7. [Summary: Key Takeaways](#-summary-key-takeaways)
+8. [Week 3 Complete!](#-week-3-complete)
+
+---
+
 ## 🎯 Overview
 
 This comprehensive guide covers **50+ interview questions** from beginner to FAANG level for all Week 3 topics:

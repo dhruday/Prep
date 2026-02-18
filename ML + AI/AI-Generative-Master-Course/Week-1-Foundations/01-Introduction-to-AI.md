@@ -1,5 +1,24 @@
 # 📘 Introduction to AI - The Complete Picture
 
+## 📚 Table of Contents
+
+1. [What You'll Learn](#-what-youll-learn)
+2. [Section 1: What is Artificial Intelligence?](#-section-1-what-is-artificial-intelligence)
+3. [Section 2: The AI Hierarchy](#️-section-2-the-ai-hierarchy)
+4. [Section 3: History of AI](#-section-3-history-of-ai)
+5. [Section 4: Types of AI Problems](#-section-4-types-of-ai-problems)
+6. [Section 5: The Modern AI Landscape](#-section-5-the-modern-ai-landscape)
+7. [Section 6: AI Career Paths](#-section-6-ai-career-paths)
+8. [Section 7: How AI Models Actually Learn](#-section-7-how-ai-models-actually-learn)
+9. [Section 8: Mini Project - Your First AI Intuition](#️-section-8-mini-project---your-first-ai-intuition)
+10. [Section 9: Homework](#-section-9-homework)
+11. [Section 10: Common Mistakes](#️-section-10-common-mistakes)
+12. [Section 11: Interview Questions](#-section-11-interview-questions)
+13. [Chapter Summary](#-chapter-summary)
+14. [Next Up](#-next-up)
+
+---
+
 ## 🎯 What You'll Learn
 
 By the end of this chapter, you will:

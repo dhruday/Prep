@@ -1,5 +1,22 @@
 # 📘 RNN & LSTM - Recurrent Neural Networks
 
+## 📚 Table of Contents
+
+1. [Beginner Friendly Explanation](#-beginner-friendly-explanation)
+2. [Deep Technical Breakdown](#-deep-technical-breakdown)
+3. [Mathematical Formulas](#-mathematical-formulas)
+4. [The Vanishing Gradient Problem](#-the-vanishing-gradient-problem)
+5. [LSTM: Long Short-Term Memory](#-lstm-long-short-term-memory)
+6. [GRU: Gated Recurrent Unit (Bonus)](#-gru-gated-recurrent-unit-bonus)
+7. [Real World Use Cases](#-real-world-use-cases)
+8. [Sample Mini Project: Character-Level Name Generator](#-sample-mini-project-character-level-name-generator)
+9. [Homework](#-homework)
+10. [Common Mistakes](#️-common-mistakes)
+11. [Interview Questions & Answers](#-interview-questions--answers)
+12. [Next Steps](#-next-steps)
+
+---
+
 ## 🎯 Beginner Friendly Explanation
 
 ### The Problem: Sequences Need Memory

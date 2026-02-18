@@ -1,6 +1,20 @@
 # 🎯 Week 2 Interview Questions & Answers
 
-## 📌 Overview
+## � Table of Contents
+
+1. [Overview](#-overview)
+2. [Section 1: Discriminative vs Generative Models](#-section-1-discriminative-vs-generative-models)
+3. [Section 2: GANs - Basics](#-section-2-gans---basics)
+4. [Section 3: GANs - Advanced](#-section-3-gans---advanced)
+5. [Section 4: VAEs](#-section-4-vaes)
+6. [Section 5: TensorBoard & Debugging](#-section-5-tensorboard--debugging)
+7. [Section 6: Practical/System Design](#-section-6-practicalsystem-design)
+8. [Quick Reference Card](#-quick-reference-card)
+9. [Interview Preparation Checklist](#-interview-preparation-checklist)
+
+---
+
+## �📌 Overview
 
 This file contains **70+ interview questions** covering all Week 2 topics:
 

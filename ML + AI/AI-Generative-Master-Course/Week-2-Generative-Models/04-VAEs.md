@@ -1,6 +1,24 @@
 # 🎲 VAEs - Variational Autoencoders
 
-## 📌 Learning Goals
+## � Table of Contents
+
+1. [Learning Goals](#-learning-goals)
+2. [Beginner Friendly Explanation](#-beginner-friendly-explanation)
+3. [Deep Technical Breakdown](#-deep-technical-breakdown)
+4. [The Math Behind VAE](#-the-math-behind-vae)
+5. [The Reparameterization Trick](#-the-reparameterization-trick)
+6. [Complete VAE Loss](#-complete-vae-loss)
+7. [Complete VAE Implementation](#-complete-vae-implementation)
+8. [Advanced VAE Concepts](#-advanced-vae-concepts)
+9. [VAE vs GAN Comparison](#-vae-vs-gan-comparison)
+10. [Homework](#-homework)
+11. [Common Mistakes](#️-common-mistakes)
+12. [Interview Questions & Answers](#-interview-questions--answers)
+13. [Next Steps](#-next-steps)
+
+---
+
+## �📌 Learning Goals
 
 By the end of this file, you will:
 - Understand autoencoders and their limitations

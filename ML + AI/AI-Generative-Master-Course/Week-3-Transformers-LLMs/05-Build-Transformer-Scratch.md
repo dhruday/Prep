@@ -1,5 +1,26 @@
 # 📘 Build Transformer from Scratch - Complete Implementation
 
+## 📚 Table of Contents
+
+1. [Beginner Friendly Explanation](#-beginner-friendly-explanation)
+2. [Complete Implementation](#-complete-implementation)
+3. [Part 1: Embeddings](#-part-1-embeddings)
+4. [Part 2: Attention Mechanism](#-part-2-attention-mechanism)
+5. [Part 3: Feed-Forward Network](#-part-3-feed-forward-network)
+6. [Part 4: Encoder Layer and Stack](#-part-4-encoder-layer-and-stack)
+7. [Part 5: Decoder Layer and Stack](#-part-5-decoder-layer-and-stack)
+8. [Part 6: Full Transformer](#-part-6-full-transformer)
+9. [Part 7: Masks](#-part-7-masks)
+10. [Part 8: Training Loop](#-part-8-training-loop)
+11. [Part 9: Inference (Generation)](#-part-9-inference-generation)
+12. [Part 10: Complete Training Script](#-part-10-complete-training-script)
+13. [Homework](#-homework)
+14. [Common Mistakes](#️-common-mistakes)
+15. [Quick Interview Questions](#-quick-interview-questions)
+16. [Next Steps](#-next-steps)
+
+---
+
 ## 🎯 Beginner Friendly Explanation
 
 ### Why Build from Scratch?

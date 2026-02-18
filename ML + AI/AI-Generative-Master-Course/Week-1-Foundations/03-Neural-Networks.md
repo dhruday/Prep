@@ -1,5 +1,22 @@
 # 🧠 Neural Networks - From Scratch to Understanding
 
+## 📚 Table of Contents
+
+1. [What You'll Learn](#-what-youll-learn)
+2. [Section 1: What is a Neural Network?](#-section-1-what-is-a-neural-network)
+3. [Section 2: The Perceptron](#-section-2-the-perceptron)
+4. [Section 3: Activation Functions](#-section-3-activation-functions)
+5. [Section 4: Forward Propagation](#-section-4-forward-propagation)
+6. [Section 5: Building a Complete Neural Network](#️-section-5-building-a-complete-neural-network)
+7. [Section 6: Understanding What's Happening](#-section-6-understanding-whats-happening)
+8. [Section 7: Homework](#-section-7-homework)
+9. [Common Mistakes](#️-common-mistakes)
+10. [Interview Questions](#-interview-questions)
+11. [Chapter Summary](#-chapter-summary)
+12. [Next Up](#-next-up)
+
+---
+
 ## 🎯 What You'll Learn
 
 This chapter takes you from zero to building neural networks:

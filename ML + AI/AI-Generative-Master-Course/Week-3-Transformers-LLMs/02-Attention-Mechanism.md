@@ -1,5 +1,21 @@
 # 📘 Attention Mechanism - The Breakthrough
 
+## 📚 Table of Contents
+
+1. [Beginner Friendly Explanation](#-beginner-friendly-explanation)
+2. [Deep Technical Breakdown](#-deep-technical-breakdown)
+3. [Mathematical Formulas](#-mathematical-formulas)
+4. [Multi-Head Attention](#-multi-head-attention)
+5. [Types of Attention](#-types-of-attention)
+6. [Real World Use Cases](#-real-world-use-cases)
+7. [Sample Mini Project: Attention Visualizer](#-sample-mini-project-attention-visualizer)
+8. [Homework](#-homework)
+9. [Common Mistakes](#️-common-mistakes)
+10. [Interview Questions & Answers](#-interview-questions--answers)
+11. [Next Steps](#-next-steps)
+
+---
+
 ## 🎯 Beginner Friendly Explanation
 
 ### The Problem with RNN/LSTM: The Bottleneck

@@ -1,5 +1,20 @@
 # 📘 Week 1 Interview Questions & Answers
 
+## 📚 Table of Contents
+
+1. [Overview](#-overview)
+2. [Section 1: Introduction to AI (10 Questions)](#-section-1-introduction-to-ai-10-questions)
+3. [Section 2: Mathematical Foundations (10 Questions)](#-section-2-mathematical-foundations-10-questions)
+4. [Section 3: Neural Networks (15 Questions)](#-section-3-neural-networks-15-questions)
+5. [Section 4: Gradient Descent & Optimization (10 Questions)](#-section-4-gradient-descent--optimization-10-questions)
+6. [Section 5: Network Architectures (15 Questions)](#-section-5-network-architectures-15-questions)
+7. [Quick Reference: Must-Know Formulas](#-quick-reference-must-know-formulas)
+8. [Summary: Key Takeaways by Topic](#-summary-key-takeaways-by-topic)
+9. [Interview Tips](#-interview-tips)
+10. [Week 1 Complete!](#-week-1-complete)
+
+---
+
 ## 🎯 Overview
 
 This comprehensive guide covers **60+ interview questions** from beginner to FAANG level for all Week 1 topics:

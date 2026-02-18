@@ -1,6 +1,25 @@
 # 📊 TensorBoard - Visualization & Debugging
 
-## 📌 Learning Goals
+## � Table of Contents
+
+1. [Learning Goals](#-learning-goals)
+2. [Beginner Friendly Explanation](#-beginner-friendly-explanation)
+3. [TensorBoard Basics](#-tensorboard-basics)
+4. [Setup and Installation](#️-setup-and-installation)
+5. [Logging Scalars](#-logging-scalars)
+6. [Logging Images](#️-logging-images)
+7. [Logging Histograms](#-logging-histograms)
+8. [Logging Computation Graphs](#-logging-computation-graphs)
+9. [Embedding Projector](#-embedding-projector)
+10. [Complete Integration Example](#-complete-integration-example)
+11. [Debugging with TensorBoard](#-debugging-with-tensorboard)
+12. [Homework](#-homework)
+13. [Interview Questions & Answers](#-interview-questions--answers)
+14. [Next Steps](#-next-steps)
+
+---
+
+## �📌 Learning Goals
 
 By the end of this file, you will:
 - Understand why visualization is crucial for ML training

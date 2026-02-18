@@ -1,5 +1,22 @@
 # 📘 Sentiment Analysis Project - End-to-End with BERT
 
+## 📚 Table of Contents
+
+1. [Project Overview](#-project-overview)
+2. [Project Setup](#️-project-setup)
+3. [Part 1: Data Preparation](#-part-1-data-preparation)
+4. [Part 2: Dataset Class](#-part-2-dataset-class)
+5. [Part 3: Model Definition](#-part-3-model-definition)
+6. [Part 4: Training](#-part-4-training)
+7. [Part 5: Inference](#-part-5-inference)
+8. [Part 6: API Deployment (FastAPI)](#-part-6-api-deployment-fastapi)
+9. [Homework](#-homework)
+10. [Common Mistakes](#️-common-mistakes)
+11. [Interview Questions](#-interview-questions)
+12. [Next Steps](#-next-steps)
+
+---
+
 ## 🎯 Project Overview
 
 ### What We're Building

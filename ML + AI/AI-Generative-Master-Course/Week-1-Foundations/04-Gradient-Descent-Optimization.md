@@ -1,5 +1,22 @@
 # 📉 Gradient Descent & Optimization
 
+## 📚 Table of Contents
+
+1. [What You'll Learn](#-what-youll-learn)
+2. [Section 1: Loss Functions](#-section-1-loss-functions)
+3. [Section 2: Gradient Descent](#-section-2-gradient-descent)
+4. [Section 3: Backpropagation In-Depth](#-section-3-backpropagation-in-depth)
+5. [Section 4: Modern Optimizers](#-section-4-modern-optimizers)
+6. [Section 5: Learning Rate Schedules](#️-section-5-learning-rate-schedules)
+7. [Section 6: Practical Training Tips](#️-section-6-practical-training-tips)
+8. [Homework](#-homework)
+9. [Common Mistakes](#️-common-mistakes)
+10. [Interview Questions](#-interview-questions)
+11. [Chapter Summary](#-chapter-summary)
+12. [Next Up](#-next-up)
+
+---
+
 ## 🎯 What You'll Learn
 
 This chapter covers the **learning** part of neural networks:

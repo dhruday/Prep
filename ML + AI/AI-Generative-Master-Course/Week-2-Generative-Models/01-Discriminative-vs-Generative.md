@@ -1,6 +1,26 @@
 # 🔀 Discriminative vs Generative Models
 
-## 📌 Learning Goals
+## � Table of Contents
+
+1. [Learning Goals](#-learning-goals)
+2. [Beginner Friendly Explanation](#-beginner-friendly-explanation)
+3. [Deep Technical Breakdown](#-deep-technical-breakdown)
+4. [Probability Theory Connection](#-probability-theory-connection)
+5. [Visual Comparison](#-visual-comparison)
+6. [Mathematical Formulas](#-mathematical-formulas)
+7. [When to Use Each](#-when-to-use-each)
+8. [Real World Use Cases](#-real-world-use-cases)
+9. [Comparison Table](#-comparison-table)
+10. [Code Example: Both Approaches](#-code-example-both-approaches)
+11. [Homework](#-homework)
+12. [Common Mistakes](#️-common-mistakes)
+13. [Interview Questions & Answers](#-interview-questions--answers)
+14. [Connection to Next Topics](#-connection-to-next-topics)
+15. [Summary](#-summary)
+
+---
+
+## �📌 Learning Goals
 
 By the end of this file, you will:
 - Understand the fundamental difference between discriminative and generative models

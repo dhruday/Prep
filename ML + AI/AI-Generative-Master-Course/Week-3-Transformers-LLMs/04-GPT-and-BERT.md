@@ -1,5 +1,22 @@
 # 📘 GPT and BERT - The Two Paradigms
 
+## 📚 Table of Contents
+
+1. [Beginner Friendly Explanation](#-beginner-friendly-explanation)
+2. [Deep Technical Breakdown](#-deep-technical-breakdown)
+3. [Mathematical Formulas](#-mathematical-formulas)
+4. [BERT vs GPT Comparison](#-bert-vs-gpt-comparison)
+5. [Evolution and Modern Variants](#-evolution-and-modern-variants)
+6. [Real World Use Cases](#-real-world-use-cases)
+7. [Sample Mini Project: BERT Sentiment Classification](#-sample-mini-project-bert-sentiment-classification)
+8. [Bonus: GPT Text Generation](#-bonus-gpt-text-generation)
+9. [Homework](#-homework)
+10. [Common Mistakes](#️-common-mistakes)
+11. [Interview Questions & Answers](#-interview-questions--answers)
+12. [Next Steps](#-next-steps)
+
+---
+
 ## 🎯 Beginner Friendly Explanation
 
 ### The Fork in the Road

@@ -1,5 +1,22 @@
 # 📘 Transformer Architecture - The Revolution
 
+## 📚 Table of Contents
+
+1. [Beginner Friendly Explanation](#-beginner-friendly-explanation)
+2. [Deep Technical Breakdown](#-deep-technical-breakdown)
+3. [Part 1: Input Embeddings + Positional Encoding](#-part-1-input-embeddings--positional-encoding)
+4. [Part 2: Encoder Architecture](#-part-2-encoder-architecture)
+5. [Part 3: Decoder Architecture](#-part-3-decoder-architecture)
+6. [Mathematical Formulas](#-mathematical-formulas)
+7. [Real World Use Cases](#-real-world-use-cases)
+8. [Sample Mini Project: Mini-Transformer Encoder](#-sample-mini-project-mini-transformer-encoder)
+9. [Homework](#-homework)
+10. [Common Mistakes](#️-common-mistakes)
+11. [Interview Questions & Answers](#-interview-questions--answers)
+12. [Next Steps](#-next-steps)
+
+---
+
 ## 🎯 Beginner Friendly Explanation
 
 ### The Breakthrough Moment

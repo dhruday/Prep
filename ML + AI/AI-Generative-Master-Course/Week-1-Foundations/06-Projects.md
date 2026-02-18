@@ -1,5 +1,17 @@
 # 🚀 Week 1 Projects - Hands-On Implementation
 
+## 📚 Table of Contents
+
+1. [Overview](#-overview)
+2. [Project 1: Neural Network from Scratch](#-project-1-neural-network-from-scratch)
+3. [Project 2: MNIST Classifier with PyTorch](#-project-2-mnist-classifier-with-pytorch)
+4. [Project 3: Autoencoder for MNIST](#-project-3-autoencoder-for-mnist)
+5. [Project Extensions](#-project-extensions)
+6. [Week 1 Projects Complete!](#-week-1-projects-complete)
+7. [Next Up](#-next-up)
+
+---
+
 ## 🎯 Overview
 
 This chapter contains complete, working projects that apply everything from Week 1:

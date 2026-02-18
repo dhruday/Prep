@@ -1,6 +1,42 @@
 # 🎮 GANs - Generative Adversarial Networks
 
-## 📌 Learning Goals
+## 📚 Table of Contents
+
+1. [Learning Goals](#-learning-goals)
+2. [Beginner Friendly Explanation](#-beginner-friendly-explanation)
+3. [Deep Technical Breakdown](#-deep-technical-breakdown)
+4. [The Min-Max Game](#-the-min-max-game)
+5. [Mathematical Formulas](#-mathematical-formulas)
+6. [Visual Training Process](#-visual-training-process)
+7. [Complete Implementation](#-complete-implementation)
+8. [Common Problems & Solutions](#️-common-problems--solutions)
+9. [GAN Training Tips (Best Practices)](#-gan-training-tips-best-practices)
+10. [Homework](#-homework)
+11. [Interview Questions & Answers](#-interview-questions--answers)
+12. [Next Steps](#-next-steps)
+
+---
+
+## 📌 Learning Goalsve Adversarial Networks
+
+## � Table of Contents
+
+1. [Learning Goals](#-learning-goals)
+2. [Beginner Friendly Explanation](#-beginner-friendly-explanation)
+3. [Deep Technical Breakdown](#-deep-technical-breakdown)
+4. [The Min-Max Game](#-the-min-max-game)
+5. [Mathematical Formulas](#-mathematical-formulas)
+6. [Visual Training Process](#-visual-training-process)
+7. [Complete Implementation](#-complete-implementation)
+8. [Common Problems & Solutions](#️-common-problems--solutions)
+9. [GAN Training Tips (Best Practices)](#-gan-training-tips-best-practices)
+10. [Homework](#-homework)
+11. [Interview Questions & Answers](#-interview-questions--answers)
+12. [Next Steps](#-next-steps)
+
+---
+
+## �📌 Learning Goals
 
 By the end of this file, you will:
 - Understand the GAN architecture and training process

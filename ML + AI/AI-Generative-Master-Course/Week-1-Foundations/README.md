@@ -32,36 +32,46 @@ After completing Week 1, you will:
 | # | File | Topics Covered |
 |---|------|----------------|
 | 1 | [01-Introduction-to-AI.md](./01-Introduction-to-AI.md) | What is AI, ML, DL, GenAI; history; landscape |
-| 2 | [02-Mathematical-Foundations.md](./02-Mathematical-Foundations.md) | Linear algebra, calculus, probability for AI |
+| 2a | [02a-Linear-Algebra.md](./02a-Linear-Algebra.md) | Vectors, matrices, dot products, matrix multiplication |
+| 2b | [02b-Calculus-for-ML.md](./02b-Calculus-for-ML.md) | Derivatives, gradients, chain rule, backpropagation |
+| 2c | [02c-Probability-Statistics.md](./02c-Probability-Statistics.md) | Probability, Bayes, distributions, softmax, cross-entropy |
 | 3 | [03-Neural-Networks.md](./03-Neural-Networks.md) | Perceptron, activation functions, forward prop |
 | 4 | [04-Gradient-Descent-Optimization.md](./04-Gradient-Descent-Optimization.md) | Loss functions, backprop, optimizers |
 | 5 | [05-Network-Architectures.md](./05-Network-Architectures.md) | FNN, CNN, RNN - architectures explained |
 | 6 | [06-Projects.md](./06-Projects.md) | Simple NN, Autoencoder on MNIST |
 | 7 | [07-Interview-QA.md](./07-Interview-QA.md) | 50+ interview questions with answers |
 
+> **📝 Note:** The math content has been split into three focused modules (2a, 2b, 2c) to make it easier to digest. If you're weak in math, take your time with each module before moving on. The original comprehensive file is also available: [02-Mathematical-Foundations.md](./02-Mathematical-Foundations.md)
+
 ---
 
 ## 🗓️ Suggested Learning Path
 
 ```
-Day 1-2: Introduction + Math Foundations
-         ├── Understand AI landscape
-         ├── Linear algebra essentials
-         └── Calculus for gradients
+Day 1: Introduction + Linear Algebra
+       ├── Understand AI landscape (01)
+       ├── Vectors and dot products (02a)
+       └── Matrix multiplication (02a)
+
+Day 2: Calculus + Probability
+       ├── Derivatives and gradients (02b)
+       ├── Chain rule basics (02b)
+       ├── Probability foundations (02c)
+       └── Softmax and cross-entropy (02c)
 
 Day 3-4: Neural Networks + Optimization
-         ├── Build a perceptron
-         ├── Understand backpropagation
-         └── Implement gradient descent
+         ├── Build a perceptron (03)
+         ├── Understand backpropagation (04)
+         └── Implement gradient descent (04)
 
 Day 5-6: Architectures + Projects
-         ├── CNN for images
-         ├── RNN for sequences
-         └── Build projects
+         ├── CNN for images (05)
+         ├── RNN for sequences (05)
+         └── Build projects (06)
 
 Day 7:   Review + Interview Prep
          ├── Revise key concepts
-         └── Practice interview questions
+         └── Practice interview questions (07)
 ```
 
 ---

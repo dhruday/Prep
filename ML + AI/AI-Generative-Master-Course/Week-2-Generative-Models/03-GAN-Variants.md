@@ -1,6 +1,22 @@
 # 🚀 GAN Variants - DCGAN, WGAN, StyleGAN & More
 
-## 📌 Learning Goals
+## � Table of Contents
+
+1. [Learning Goals](#-learning-goals)
+2. [Evolution of GANs](#-evolution-of-gans)
+3. [DCGAN (Deep Convolutional GAN)](#-dcgan-deep-convolutional-gan)
+4. [WGAN (Wasserstein GAN)](#-wgan-wasserstein-gan)
+5. [Conditional GAN (cGAN)](#-conditional-gan-cgan)
+6. [StyleGAN](#-stylegan)
+7. [Comparison Table](#-comparison-table)
+8. [Choosing the Right GAN](#-choosing-the-right-gan)
+9. [Homework](#-homework)
+10. [Interview Questions & Answers](#-interview-questions--answers)
+11. [Next Steps](#-next-steps)
+
+---
+
+## �📌 Learning Goals
 
 By the end of this file, you will:
 - Understand DCGAN and why convolutions matter for images

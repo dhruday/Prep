@@ -1,5 +1,21 @@
 # 🏗️ Network Architectures - FNN, CNN, RNN
 
+## 📚 Table of Contents
+
+1. [What You'll Learn](#-what-youll-learn)
+2. [Section 1: Feedforward Neural Networks (FNN)](#-section-1-feedforward-neural-networks-fnn)
+3. [Section 2: Convolutional Neural Networks (CNN)](#️-section-2-convolutional-neural-networks-cnn)
+4. [Section 3: Recurrent Neural Networks (RNN)](#-section-3-recurrent-neural-networks-rnn)
+5. [Section 4: Architecture Comparison](#-section-4-architecture-comparison)
+6. [Section 5: Mini Project - MNIST Classification](#️-section-5-mini-project---mnist-classification)
+7. [Homework](#-homework)
+8. [Common Mistakes](#️-common-mistakes)
+9. [Interview Questions](#-interview-questions)
+10. [Chapter Summary](#-chapter-summary)
+11. [Next Up](#-next-up)
+
+---
+
 ## 🎯 What You'll Learn
 
 This chapter covers the three foundational neural network architectures:

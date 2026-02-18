@@ -1,6 +1,19 @@
 # 🚀 Week 2 Projects - GAN Digits & VAE Faces
 
-## 📌 Overview
+## � Table of Contents
+
+1. [Overview](#-overview)
+2. [Project 1: Vanilla GAN for MNIST Digits](#-project-1-vanilla-gan-for-mnist-digits)
+3. [Project 2: DCGAN for MNIST](#-project-2-dcgan-for-mnist)
+4. [Project 3: VAE for MNIST](#-project-3-vae-for-mnist)
+5. [Project 4: VAE for Face Generation](#-project-4-vae-for-face-generation)
+6. [Project 5: Interactive Latent Space Explorer](#-project-5-interactive-latent-space-explorer)
+7. [Project Checklist](#-project-checklist)
+8. [Extension Ideas](#-extension-ideas)
+
+---
+
+## �📌 Overview
 
 This file contains **complete, production-ready projects** for Week 2:
 

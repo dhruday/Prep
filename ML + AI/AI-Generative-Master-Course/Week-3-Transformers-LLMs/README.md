@@ -24,6 +24,7 @@ RNN → LSTM → Attention → Transformers → GPT/BERT → Modern LLMs
 
 | # | File | Topic | Description |
 |---|------|-------|-------------|
+| 0 | `00-NLP-Text-Processing.md` | Text to Numbers | How text becomes numbers (BPE, WordPiece, subwords) |
 | 1 | `01-RNN-LSTM.md` | RNN & LSTM | Sequential processing, vanishing gradients, LSTM gates |
 | 2 | `02-Attention-Mechanism.md` | Attention | Query-Key-Value, scaled dot-product, multi-head attention |
 | 3 | `03-Transformers-Architecture.md` | Transformers | Complete architecture, encoder-decoder, positional encoding |
@@ -31,6 +32,8 @@ RNN → LSTM → Attention → Transformers → GPT/BERT → Modern LLMs
 | 5 | `05-Build-Transformer-Scratch.md` | Implementation | Step-by-step Transformer from scratch in PyTorch |
 | 6 | `06-Sentiment-Analysis-Project.md` | Project | End-to-end sentiment classifier with BERT |
 | 7 | `07-Interview-QA.md` | Interview Prep | 50+ questions from beginner to FAANG level |
+
+> **📝 Start with 00-NLP-Text-Processing.md** - Understanding how text becomes numbers is essential before diving into transformers!
 
 ---
 
