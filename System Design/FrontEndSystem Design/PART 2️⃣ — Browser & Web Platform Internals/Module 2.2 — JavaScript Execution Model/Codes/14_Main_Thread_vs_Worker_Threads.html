@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Main Thread vs Worker Threads</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e2e8f0; padding: 20px; }
+    h1 { text-align: center; color: #60a5fa; margin-bottom: 4px; font-size: 1.5rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.88rem; }
+
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .card { background: #1e2130; border: 1px solid #2d3551; border-radius: 12px; padding: 16px; }
+    .card h2 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+    /* Counter */
+    .counter-box { text-align: center; padding: 16px; }
+    .counter-val { font-size: 3.5rem; font-weight: bold; color: #10b981; transition: color 0.3s; }
+    .counter-val.frozen { color: #ef4444; }
+    .counter-label { font-size: 0.78rem; color: #64748b; margin-top: 4px; }
+
+    /* Progress bar */
+    .progress-wrap { margin: 10px 0; }
+    .progress-label { font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; }
+    .pbar { height: 12px; background: #2d3551; border-radius: 6px; overflow: hidden; }
+    .pbar-fill { height: 100%; border-radius: 6px; width: 0%; transition: width 0.1s linear; }
+    .pbar-main   { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .pbar-worker { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+
+    /* Status */
+    .status-box {
+      margin-top: 10px; padding: 10px 14px; border-radius: 8px;
+      font-size: 0.82rem; min-height: 38px;
+      border: 1px solid #2d3551; transition: all 0.3s;
+    }
+    .status-idle    { border-color: #2d3551; color: #475569; }
+    .status-running { border-color: #f59e0b; background: #1c1600; color: #fbbf24; }
+    .status-frozen  { border-color: #ef4444; background: #1a0000; color: #f87171; }
+    .status-done    { border-color: #10b981; background: #001a0e; color: #86efac; }
+
+    /* Thread diagram */
+    .thread-diagram { padding: 10px; }
+    .thread-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .thread-name { width: 90px; font-size: 0.75rem; color: #94a3b8; text-align: right; flex-shrink: 0; }
+    .thread-track { flex: 1; height: 28px; background: #0f1117; border-radius: 5px; position: relative; overflow: hidden; }
+    .thread-task {
+      height: 100%; border-radius: 5px;
+      position: absolute; top: 0;
+      display: flex; align-items: center; padding-left: 6px;
+      font-size: 0.7rem; white-space: nowrap; overflow: hidden;
+      transition: width 0.2s;
+    }
+    .task-ui     { background: #1e3a5f; border: 1px solid #3b82f6; color: #93c5fd; }
+    .task-js     { background: #7f1d1d; border: 1px solid #ef4444; color: #fca5a5; }
+    .task-worker { background: #312e81; border: 1px solid #7c3aed; color: #c4b5fd; }
+    .task-idle   { background: #1a1a1a; }
+
+    /* Controls */
+    .controls { display: flex; gap: 10px; justify-content: center; margin-bottom: 18px; flex-wrap: wrap; }
+    button { padding: 9px 18px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.84rem; transition: opacity 0.2s; }
+    button:hover { opacity: 0.8; }
+    button:disabled { opacity: 0.35; cursor: default; }
+    .btn-bad    { background: #ef4444; color: #fff; }
+    .btn-good   { background: #8b5cf6; color: #fff; }
+    .btn-both   { background: #f59e0b; color: #000; }
+    .btn-reset  { background: #374151; color: #fff; }
+
+    /* Data transfer visualization */
+    .transfer-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 0.78rem; }
+    .transfer-arrow { color: #f59e0b; font-size: 1.2rem; }
+    .data-badge { padding: 3px 10px; border-radius: 5px; font-size: 0.72rem; background: #162032; border: 1px solid #2d3551; }
+
+    .result-box { background: #0f1117; padding: 10px; border-radius: 7px; margin-top: 10px; font-family: monospace; font-size: 0.78rem; min-height: 44px; }
+
+    .insight { background: #162032; border: 1px solid #1e3a5f; border-radius: 7px; padding: 10px; font-size: 0.76rem; color: #93c5fd; }
+    .insight strong { color: #fff; }
+
+    .timing-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; margin-left: 6px; }
+    .slow { background: #7f1d1d; color: #fca5a5; }
+    .fast { background: #14532d; color: #86efac; }
+  </style>
+</head>
+<body>
+<h1>🧵 Main Thread vs Worker Threads</h1>
+<p class="subtitle">See how blocking the main thread freezes UI — and how Workers fix it</p>
+
+<div class="controls">
+  <button class="btn-bad"   id="btn-block"  onclick="runBlocking()">😱 Run Heavy Task on Main Thread</button>
+  <button class="btn-good"  id="btn-worker" onclick="runWorker()">✅ Run Heavy Task in Web Worker</button>
+  <button class="btn-both"  id="btn-compare" onclick="runCompare()">⚖️ Compare Side by Side</button>
+  <button class="btn-reset" onclick="resetAll()">↩ Reset</button>
+</div>
+
+<div class="cols">
+  <!-- Main Thread side -->
+  <div class="card">
+    <h2 style="color:#ef4444">😱 Main Thread (Blocking)</h2>
+
+    <div class="counter-box">
+      <div class="counter-val" id="counter-main">0</div>
+      <div class="counter-label">UI counter — freezes when main thread blocks ↑</div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">Heavy Computation Progress (main thread)</div>
+      <div class="pbar"><div class="pbar-fill pbar-main" id="progress-main"></div></div>
+    </div>
+
+    <div class="status-box status-idle" id="status-main">Idle — counter ticking freely</div>
+
+    <div class="result-box" id="result-main" style="color:#475569">Result will appear here...</div>
+
+    <div class="insight" style="margin-top:10px">
+      <strong>What happens:</strong> The <code>while</code> loop runs millions of iterations on the main thread.
+      The UI counter <em>freezes</em> for ~2–3 seconds. No clicks, scrolls, or animations work during this time.
+    </div>
+  </div>
+
+  <!-- Worker side -->
+  <div class="card">
+    <h2 style="color:#8b5cf6">✅ Web Worker (Non-Blocking)</h2>
+
+    <div class="counter-box">
+      <div class="counter-val" id="counter-worker">0</div>
+      <div class="counter-label">UI counter — stays smooth while Worker computes ↑</div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">Heavy Computation Progress (Worker thread)</div>
+      <div class="pbar"><div class="pbar-fill pbar-worker" id="progress-worker"></div></div>
+    </div>
+
+    <div class="status-box status-idle" id="status-worker">Idle — counter ticking freely</div>
+
+    <div class="result-box" id="result-worker" style="color:#475569">Result will appear here...</div>
+
+    <div class="insight" style="margin-top:10px">
+      <strong>What happens:</strong> Same heavy computation runs in a separate OS thread.
+      The main thread's event loop is <em>never blocked</em>. Counter keeps ticking. Worker posts result back via <code>postMessage</code>.
+    </div>
+  </div>
+
+  <!-- Thread Diagram -->
+  <div class="card" style="grid-column: 1 / -1">
+    <h2 style="color:#94a3b8">🔬 Thread Timeline Comparison</h2>
+    <div class="thread-diagram" id="thread-diagram">
+      <!-- Main thread row -->
+      <div class="thread-row">
+        <div class="thread-name">Main Thread</div>
+        <div class="thread-track">
+          <div class="thread-task task-ui" style="left:0%;width:15%">UI events</div>
+          <div class="thread-task task-js" id="blocking-bar" style="left:15%;width:0%">⛔ Blocking JS...</div>
+          <div class="thread-task task-ui" id="ui-after" style="left:15%;width:0%">UI events resume</div>
+        </div>
+      </div>
+      <!-- Worker thread row -->
+      <div class="thread-row">
+        <div class="thread-name">Worker Thread</div>
+        <div class="thread-track">
+          <div class="thread-task task-idle" style="left:0%;width:15%"> (idle)</div>
+          <div class="thread-task task-worker" id="worker-bar" style="left:15%;width:0%">⚡ Worker computing in parallel...</div>
+        </div>
+      </div>
+      <!-- Main thread during worker -->
+      <div class="thread-row">
+        <div class="thread-name">Main (with Worker)</div>
+        <div class="thread-track">
+          <div class="thread-task task-ui" id="main-free-bar" style="left:0%;width:15%">UI events</div>
+          <div class="thread-task task-ui" id="main-free-continue" style="left:15%;width:0%;background:#1e3a5f;border-color:#3b82f6;color:#93c5fd">✅ UI remains interactive!</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px">
+      <div class="insight">
+        <strong>postMessage API:</strong> Main ↔ Worker communicate via message passing.
+        Data is <em>structured-cloned</em> (copied by default) or <em>transferred</em> (zero-copy with Transferable ArrayBuffer).
+        <div class="transfer-row">
+          main <div class="transfer-arrow">→</div> <div class="data-badge">postMessage(data)</div> <div class="transfer-arrow">→</div> worker
+        </div>
+        <div class="transfer-row">
+          worker <div class="transfer-arrow">→</div> <div class="data-badge">postMessage(result)</div> <div class="transfer-arrow">→</div> main
+        </div>
+      </div>
+      <div class="insight">
+        <strong>Worker limitations:</strong><br>
+        • No DOM access<br>
+        • No window object<br>
+        • No localStorage (IndexedDB ✔)<br>
+        • Has: fetch, WebSockets, crypto<br>
+        • Great for: parsing, compression, image processing, crypto mining demos, WASM
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let mainCounter = 0;
+  let workerCounter = 0;
+  let mainInterval = null;
+  let workerInterval = null;
+  let compareMode = false;
+  let animRafId = null;
+
+  function startCounters() {
+    stopCounters();
+    mainInterval = setInterval(() => {
+      mainCounter++;
+      document.getElementById('counter-main').innerText = mainCounter;
+    }, 50);
+    workerInterval = setInterval(() => {
+      workerCounter++;
+      document.getElementById('counter-worker').innerText = workerCounter;
+    }, 50);
+  }
+
+  function stopCounters() {
+    clearInterval(mainInterval);
+    clearInterval(workerInterval);
+  }
+
+  function setStatus(id, msg, cls) {
+    const el = document.getElementById(id);
+    el.className = 'status-box ' + cls;
+    el.textContent = msg;
+  }
+
+  function resetAll() {
+    stopCounters();
+    mainCounter = 0; workerCounter = 0;
+    document.getElementById('counter-main').innerText = '0';
+    document.getElementById('counter-main').className = 'counter-val';
+    document.getElementById('counter-worker').innerText = '0';
+    document.getElementById('progress-main').style.width = '0%';
+    document.getElementById('progress-worker').style.width = '0%';
+    document.getElementById('blocking-bar').style.width = '0%';
+    document.getElementById('ui-after').style.width = '0%';
+    document.getElementById('worker-bar').style.width = '0%';
+    document.getElementById('main-free-continue').style.width = '0%';
+    document.getElementById('result-main').style.color = '#475569';
+    document.getElementById('result-main').textContent = 'Result will appear here...';
+    document.getElementById('result-worker').style.color = '#475569';
+    document.getElementById('result-worker').textContent = 'Result will appear here...';
+    setStatus('status-main', 'Idle — counter ticking freely', 'status-idle');
+    setStatus('status-worker', 'Idle — counter ticking freely', 'status-idle');
+    compareMode = false;
+    startCounters();
+  }
+
+  async function runBlocking() {
+    setStatus('status-main', '⛔ BLOCKING: Heavy computation running on main thread...', 'status-running');
+    document.getElementById('counter-main').className = 'counter-val';
+    clearInterval(mainInterval);
+    document.getElementById('blocking-bar').style.width = '70%';
+
+    // Simulate blocking (no yield)
+    const t0 = performance.now();
+    setStatus('status-main', '🧊 Main thread FROZEN — UI unresponsive!', 'status-frozen');
+    document.getElementById('counter-main').className = 'counter-val frozen';
+
+    // True blocking — freezes UI for real
+    setTimeout(() => {
+      const start = Date.now();
+      let sum = 0;
+      while (Date.now() - start < 1800) { sum += Math.random(); }
+      const elapsed = (performance.now() - t0).toFixed(0);
+      document.getElementById('blocking-bar').style.width = '70%';
+      document.getElementById('ui-after').style.left = '85%';
+      document.getElementById('ui-after').style.width = '15%';
+      document.getElementById('counter-main').className = 'counter-val';
+      document.getElementById('result-main').style.color = '#f87171';
+      document.getElementById('result-main').textContent = `✔ Sum computed: ${sum.toFixed(2)} | Blocked UI for ${elapsed}ms 😱`;
+      setStatus('status-main', `✔ Done — but UI was frozen for ${elapsed}ms!`, 'status-done');
+      document.getElementById('progress-main').style.width = '100%';
+      mainInterval = setInterval(() => {
+        mainCounter++;
+        document.getElementById('counter-main').innerText = mainCounter;
+      }, 50);
+    }, 100);
+  }
+
+  function runWorker() {
+    setStatus('status-worker', '⚡ Worker running in separate thread — UI stays responsive!', 'status-running');
+
+    const workerCode = `
+      self.onmessage = function(e) {
+        const start = Date.now();
+        let sum = 0;
+        while (Date.now() - start < 1800) { sum += Math.random(); }
+        self.postMessage({ sum: sum, elapsed: Date.now() - start });
+      };
+    `;
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    const workerUrl = URL.createObjectURL(blob);
+    const worker = new Worker(workerUrl);
+
+    document.getElementById('worker-bar').style.width = '70%';
+    document.getElementById('main-free-continue').style.width = '70%';
+
+    // Animate progress bar while worker runs
+    let progress = 0;
+    const progInterval = setInterval(() => {
+      progress = Math.min(progress + 4, 96);
+      document.getElementById('progress-worker').style.width = progress + '%';
+    }, 80);
+
+    const t0 = performance.now();
+    worker.onmessage = (e) => {
+      clearInterval(progInterval);
+      document.getElementById('progress-worker').style.width = '100%';
+      const elapsed = (performance.now() - t0).toFixed(0);
+      document.getElementById('result-worker').style.color = '#86efac';
+      document.getElementById('result-worker').textContent = `✔ Sum: ${e.data.sum.toFixed(2)} | Worker took ${elapsed}ms — UI was smooth! ✅`;
+      setStatus('status-worker', `✔ Done in ${elapsed}ms. Counter kept ticking — zero UI freeze!`, 'status-done');
+      URL.revokeObjectURL(workerUrl);
+      worker.terminate();
+    };
+    worker.postMessage('start');
+  }
+
+  function runCompare() {
+    resetAll();
+    setTimeout(() => {
+      runBlocking();
+      runWorker();
+    }, 200);
+  }
+
+  // Start counters on load
+  startCounters();
+</script>
+</body>
+</html>

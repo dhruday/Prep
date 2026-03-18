@@ -1,351 +1,142 @@
-# 9. How the Browser Works (High Level)
+# 09. How the Browser Works (High Level)
+
+---
 
 ## 1. High-Level Explanation (Frontend Interview Level)
 
-**How the Browser Works** refers to the multi-process architecture and pipeline that transforms HTML, CSS, and JavaScript from network bytes into rendered pixels users can interact with—understanding this is essential for optimizing frontend performance and debugging production issues.
+A browser is a multi-process application that fetches resources from the network, parses and renders them into a visual page, and responds to user interactions — all in real-time. Understanding its architecture is foundational to every frontend system design decision.
 
-- **What**: Browser = multi-process engine (networking → parsing → rendering → compositing → display)
-- **Why**: Every performance decision traces back to browser internals (reflows, repaints, main thread blocking)
-- **When**: Critical for performance optimization, debugging rendering issues, explaining Core Web Vitals
-- **Role**: Foundation of frontend system design—can't optimize what you don't understand
+**The browser's job, at a high level:**
+1. **Navigate** — Resolve URL, connect to server, download HTML
+2. **Parse** — Turn bytes into a structured DOM tree
+3. **Style** — Apply CSS rules to produce a styled CSSOM
+4. **Layout** — Calculate position and size of every element
+5. **Paint** — Draw pixels for each visible element
+6. **Composite** — Layer GPU-accelerated layers and display on screen
+7. **Interact** — Listen for user events, execute JS, repeat steps as needed
 
-**Key Principle**: "Browser is a multi-process OS within an OS"—isolation prevents one tab from crashing all tabs.
+**Why it matters for system design:**
+Every optimization technique (code splitting, lazy loading, SSR, critical CSS, preloading) targets a specific bottleneck in this pipeline. You cannot design a performant frontend without knowing which step you're optimizing.
 
 ---
 
 ## 2. Deep-Dive Explanation (Senior / Staff Level)
 
-### Multi-Process Architecture (Chromium Model)
+### Multi-Process Architecture (Chrome/Chromium Model)
 
-**1. Process Types**:
+Modern browsers are **multi-process**, not single-process. Chrome uses the following process model:
+
+| Process | Responsibility |
+|---------|---------------|
+| **Browser Process** | UI shell, address bar, tabs, window management |
+| **Renderer Process** | Parses HTML/CSS, runs JS (one per tab/site) |
+| **GPU Process** | Handles GPU commands from all renderer processes |
+| **Network Process** | All network I/O, DNS, TLS, HTTP |
+| **Plugin Process** | Legacy plugins (Flash etc.) — mostly gone |
+| **Utility Processes** | Storage, audio, etc. |
+
+**Site Isolation:** After Spectre/Meltdown, Chrome introduced Site Isolation — each cross-origin site gets its own renderer process, preventing a malicious page from reading another site's memory via timing attacks.
+
+**Why this matters:**
+- A slow JS execution in one tab cannot block the Network process from downloading resources for another tab.
+- A crashed renderer (tab crash) doesn't take down the whole browser.
+- Security boundaries are enforced at the OS process level.
+
+### Inside the Renderer Process
+
+The renderer process contains:
+
 ```
-Browser Process (1)
-├── UI Thread         (Address bar, bookmarks, back/forward)
-├── Network Thread    (HTTP requests, DNS, TLS)
-└── Storage Thread    (IndexedDB, Cache API, cookies)
-
-Renderer Process (Many, one per site isolation)
-├── Main Thread       (JavaScript, layout, paint)
-├── Compositor Thread (Scrolling, animations)
-└── Raster Thread(s)  (Drawing pixels)
-
-GPU Process (1)
-└── GPU Thread        (Hardware-accelerated compositing)
-
-Plugin Process (Per plugin)
-└── Flash, PDF, etc.  (Legacy, mostly deprecated)
-
-Utility Process
-└── Audio, video decoding
+Renderer Process
+├── Main Thread
+│   ├── HTML Parser (tokenizer → tree construction)
+│   ├── CSS Parser
+│   ├── JavaScript Engine (V8)
+│   ├── Layout Engine (LayoutNG in Blink)
+│   ├── Paint Engine
+│   └── Animation Engine
+├── Compositor Thread
+│   └── Handles scroll, animations off main thread
+├── Raster Threads (thread pool)
+│   └── Converts paint instructions → pixels
+└── IO Thread
+    └── Handles IPC with browser/network processes
 ```
 
-**Why Multi-Process**:
-- **Security**: Sandboxing prevents malicious sites from accessing OS
-- **Stability**: Tab crash doesn't crash browser
-- **Performance**: Parallel processing across CPUs
+**The Main Thread is the bottleneck.** It must do HTML parsing, JS execution, style calculation, layout, and paint — all serially. This is why long JS tasks block rendering.
 
-**Site Isolation** (Chromium 67+):
-```
-example.com → Renderer Process 1
-attacker.com → Renderer Process 2
-```
-Prevents Spectre/Meltdown attacks (same-process memory reading).
+### Navigation Flow (Step by Step)
 
-**Memory Cost**: Each renderer ~10-30MB overhead. 100 tabs = 1-3GB just for process isolation.
+```
+User types URL
+    ↓
+Browser Process: UI Thread starts navigation
+    ↓
+Network Process: DNS lookup (may be cached)
+    ↓
+Network Process: TCP handshake (3-way)
+    ↓
+Network Process: TLS handshake (1–2 RTT)
+    ↓
+Network Process: HTTP GET request
+    ↓
+Server: Processes request, sends HTTP response
+    ↓
+Network Process: Receives first bytes, streams to renderer
+    ↓
+Renderer Main Thread: HTML parsing begins
+    ↓
+    ├── Discovers <link rel="stylesheet"> → blocks rendering
+    ├── Discovers <script src="..."> → blocks parsing (unless async/defer)
+    ├── Discovers images → non-blocking, fetched in parallel
+    ↓
+DOM fully parsed → DOMContentLoaded fires
+    ↓
+CSSOM parsed → Render Tree constructed
+    ↓
+Layout → Paint → Composite → Display
+    ↓
+All resources loaded → load event fires
+```
+
+### The Preload Scanner
+
+While the main thread is blocked (e.g., executing JS), the browser runs a lightweight **preload scanner** (a secondary HTML scanner) that looks ahead in the HTML for `<link>`, `<script>`, `<img>` etc. and dispatches fetch requests early. This is why `<script>` tags at the bottom and `<link>` in `<head>` still allow parallel downloads even when the main thread is busy.
+
+**Implication:** Inlining render-critical resources (fonts, above-the-fold CSS) bypasses the preload scanner entirely, which is even faster. But it bloats HTML size for repeat visitors (who could cache external resources).
+
+### Rendering Pipeline Stages Summary
+
+| Stage | Thread | Description | Trigger |
+|-------|--------|-------------|---------|
+| DOM Construction | Main | Parse HTML tokens into DOM tree | HTML bytes received |
+| CSSOM Construction | Main | Parse CSS into CSSOM | CSS bytes received |
+| Style Calculation | Main | Match CSS rules to DOM nodes | DOM or CSS changed |
+| Layout | Main | Calculate position/size geometry | Style changes, DOM mutations |
+| Paint | Main | Record draw commands per layer | Layout changes, color changes |
+| Rasterize | Raster threads | Execute draw commands → pixels | Paint commands |
+| Composite | Compositor | Merge GPU layers and display | Scroll, CSS transform/opacity |
 
 ---
 
-### High-Level Navigation Pipeline
+## 3. Real-World Examples
 
-**User types URL → Pixels on screen**:
+### Facebook (Meta) — Browser Process Isolation
+Meta's complex SPA embeds multiple third-party iframes (ads, tracking pixels). Chrome's site isolation ensures that a compromised ad iframe cannot read your Facebook session from the parent frame's memory.
 
-```
-1. Browser Process (Network Thread)
-   ├── DNS Lookup (domain → IP)
-   ├── TCP Connection (3-way handshake)
-   ├── TLS Negotiation (HTTPS)
-   └── HTTP Request (GET /index.html)
+### Google Docs — Heavy Main Thread Usage
+Google Docs pushes the limits of the main thread: continuous collaborative edits, complex DOM updates, canvas rendering. Google offloads heavy operations to Web Workers (spell check, sync) to keep the main thread free for rendering.
 
-2. Browser Process (Network Thread)
-   ├── Receive Response Headers
-   ├── Check Content-Type (text/html)
-   └── Stream Response Body
+### Netflix — Preload Scanner Optimization
+Netflix carefully structures their HTML to maximize preload scanner efficiency — critical JS and CSS are placed early in `<head>` with proper attributes (`async`, `defer`, `rel="preload"`) so the preload scanner can dispatch all critical fetches immediately.
 
-3. Browser Process → Renderer Process
-   ├── Commit Navigation (allocate renderer)
-   └── Pass HTML bytes to Main Thread
+### Squarespace / Shopify — Multi-Process Benefits
+Page builder tools with slow third-party scripts benefit from multi-process architecture: a heavily scripted widget in one frame won't block the compositor thread, so scroll and CSS animations remain smooth.
 
-4. Renderer Process (Main Thread)
-   ├── HTML Parsing → DOM Tree
-   ├── CSS Parsing → CSSOM Tree
-   ├── Combine → Render Tree
-   ├── Layout (geometry calculation)
-   ├── Paint (draw commands)
-   └── Composite (layers to GPU)
-
-5. GPU Process
-   ├── Rasterization (draw commands → pixels)
-   └── Display (pixels to screen)
-```
-
-**Timeline** (typical mid-tier laptop, 3G):
-```
-DNS Lookup:           0-200ms   (cached = 0ms)
-TCP Handshake:        30-100ms  (RTT dependent)
-TLS Negotiation:      30-100ms  (1-2 RTTs)
-Server Response:      200-500ms (TTFB)
-HTML Parse:           50-200ms  (100KB HTML)
-CSS Parse:            20-100ms  (50KB CSS)
-Layout:               50-150ms  (1000 DOM nodes)
-Paint:                10-50ms
-Composite:            5-20ms
-TOTAL:                ~500-1500ms (without caching)
-```
-
----
-
-### Main Thread Bottleneck
-
-**Everything on Main Thread** (Renderer Process):
-```javascript
-// Main Thread (single-threaded, blocking)
-JavaScript Execution
-├── Fetch API calls (async, but callback on main thread)
-├── DOM Manipulation
-├── Event Handlers (click, scroll, input)
-├── Style Calculation
-├── Layout (reflow)
-├── Paint
-└── Garbage Collection
-
-// Results in Long Task (>50ms blocks interactions)
-function blockingOperation() {
-  const start = Date.now();
-  while (Date.now() - start < 500) {} // Blocks for 500ms
-  // During this time:
-  // - No UI updates
-  // - No event handlers
-  // - Page is frozen
-}
-```
-
-**Main Thread vs Other Threads**:
-```
-Main Thread:       JavaScript, DOM, Layout, Paint
-Compositor Thread: Scrolling, CSS animations (transform, opacity)
-Raster Thread:     Drawing pixels from paint commands
-Worker Thread:     Parallel JavaScript (separate context)
-```
-
-**Critical Insight**: Only **Main Thread** can touch DOM. Workers can't access DOM (security + complexity).
-
----
-
-### Memory Architecture
-
-**Heap Memory** (Renderer Process):
-```
-JavaScript Heap:       User code objects, closures, etc.
-V8 Heap:               ~4MB/tab (32-bit), ~1.4GB/tab (64-bit)
-DOM Heap:              DOM nodes, CSSOM nodes
-Render Tree Heap:      Layout objects, paint records
-
-Typical Tab:           50-200MB (simple page)
-                       200-500MB (SPA with data)
-                       500MB-2GB (memory leak or heavy app)
-```
-
-**Memory Leaks**:
-```javascript
-// ❌ LEAK: Detached DOM nodes referenced in JS
-let detachedNodes = [];
-function addNode() {
-  const node = document.createElement('div');
-  document.body.appendChild(node);
-  detachedNodes.push(node); // Reference kept
-  
-  node.remove(); // Removed from DOM, but JS still holds reference
-  // Memory NOT freed (detached DOM node)
-}
-
-// ✅ FIX: Clear references
-function addNode() {
-  const node = document.createElement('div');
-  document.body.appendChild(node);
-  
-  node.addEventListener('click', () => {
-    node.remove();
-    // No lingering references, GC can collect
-  }, { once: true });
-}
-```
-
-**Chrome DevTools Memory Profiler**:
-- Heap Snapshot: See all objects, find leaks
-- Allocation Timeline: Track allocations over time
-- Detached DOM Trees: Find orphaned nodes
-
----
-
-### Browser Security Boundaries
-
-**Same-Origin Policy**:
-```
-Origin = Protocol + Domain + Port
-
-https://example.com:443/page
-└─┬──┘ └────┬─────┘ └┬┘
-  │         │        └─── Port
-  │         └───────────── Domain
-  └─────────────────────── Protocol
-
-Same Origin:  https://example.com/other
-Cross-Origin: https://api.example.com (different subdomain)
-              http://example.com (different protocol)
-              https://example.com:8080 (different port)
-```
-
-**Process-Level Isolation**:
-- `example.com` frames share process
-- `attacker.com` iframe → separate process (Site Isolation)
-- No shared memory between cross-origin processes
-
-**Why It Matters**:
-```javascript
-// Cross-origin iframe can't access parent DOM
-<iframe src="https://attacker.com"></iframe>
-
-// In attacker.com:
-parent.document.cookie; // ❌ SecurityError: Blocked by CORS
-
-// But can navigate parent (clickjacking risk)
-parent.location = 'https://phishing.com'; // ✅ Allowed (can be blocked with X-Frame-Options)
-```
-
----
-
-### What NOT to Do
-
-- ❌ **Assume single-threaded** (browser has many threads, but Main Thread is single-threaded)
-- ❌ **Block Main Thread** (Long Tasks >50ms = janky UI)
-- ❌ **Ignore memory** (SPAs accumulate memory, refresh reclaims)
-- ❌ **Trust browser speed** (mobile = 4x slower CPU than desktop)
-- ❌ **Over-simplify** ("Just cache everything" = complexity + bugs)
-
----
-
-## 3. Clear Real-World Examples
-
-### Example 1: Gmail – Multi-Process Benefits
-
-**Challenge**: Complex SPA with 100+ open emails, attachments, chat.
-
-**Browser Behavior**:
-```
-Gmail Tab: Renderer Process 1 (300-500MB)
-├── Main Thread: JavaScript (React), event handlers
-├── Compositor Thread: Smooth scrolling in email list
-└── Raster Threads: Drawing email content
-
-Google Docs Tab: Renderer Process 2 (200-400MB)
-├── Isolated from Gmail
-└── Crash doesn't affect Gmail
-
-Google Meet Tab: Renderer Process 3 (400-600MB)
-├── Heavy video processing
-└── Separate process prevents starving other tabs
-```
-
-**Benefit**: One tab crashing doesn't crash others. Site isolation prevents cross-site attacks.
-
----
-
-### Example 2: Twitter – Main Thread Blocking
-
-**Problem**: Infinite scroll loads 100 tweets, blocks UI for 500ms.
-
-**Root Cause**:
-```javascript
-// ❌ BAD: All on Main Thread
-function renderTweets(tweets) {
-  const container = document.getElementById('feed');
-  
-  tweets.forEach(tweet => {
-    const html = generateTweetHTML(tweet); // Expensive (100 tweets × 5ms = 500ms)
-    container.innerHTML += html;           // Reflow on each append
-  });
-  
-  // Main Thread blocked for 500ms
-  // User can't scroll, click, type during this time
-}
-```
-
-**Solution**: Batch rendering + requestIdleCallback:
-```javascript
-// ✅ GOOD: Yield to Main Thread
-function renderTweetsInBatches(tweets) {
-  const batchSize = 10;
-  let index = 0;
-  
-  function renderBatch() {
-    const start = Date.now();
-    
-    while (index < tweets.length && Date.now() - start < 16) {
-      // Render 16ms worth of tweets (1 frame)
-      renderTweet(tweets[index++]);
-    }
-    
-    if (index < tweets.length) {
-      requestIdleCallback(renderBatch); // Yield, continue when idle
-    }
-  }
-  
-  renderBatch();
-}
-```
-
-**Result**: UI remains responsive (60fps), tweets render progressively.
-
----
-
-### Example 3: Airbnb – Memory Leaks
-
-**Problem**: Browse 50 listings, page consumes 2GB RAM.
-
-**Root Cause**:
-```javascript
-// ❌ LEAK: Event listeners not removed
-function ListingCard({ listing }) {
-  useEffect(() => {
-    const handler = () => trackView(listing.id);
-    window.addEventListener('scroll', handler);
-    
-    // Missing cleanup!
-    // return () => window.removeEventListener('scroll', handler);
-  }, [listing]);
-  
-  // Each listing card adds scroll listener
-  // 50 listings = 50 listeners, never removed
-  // Each listener holds closure over listing object
-}
-```
-
-**Solution**: Cleanup event listeners:
-```javascript
-// ✅ FIX: Remove listeners on unmount
-function ListingCard({ listing }) {
-  useEffect(() => {
-    const handler = () => trackView(listing.id);
-    window.addEventListener('scroll', handler);
-    
-    return () => {
-      window.removeEventListener('scroll', handler);
-    };
-  }, [listing]);
-}
-```
-
-**Result**: Memory usage stays constant, no leaks.
+**How design evolves at scale:**
+- Small app: optimize single critical path
+- Medium app: code split, lazy load, service worker for caching
+- Large app: micro-frontend architecture (separate renderer contexts per team), edge SSR, streaming HTML
 
 ---
 
@@ -353,254 +144,99 @@ function ListingCard({ listing }) {
 
 ### Sample Answer (7+ Years Level)
 
-> **Question**: "Explain how a browser works at a high level."
+*"The browser is a multi-process application. The key processes are the browser process (UI shell), the renderer process (one per site, runs HTML/CSS/JS), the GPU process, and the network process. The renderer's main thread is the critical bottleneck — it serially handles HTML parsing, style calculation, layout, and painting, while the compositor thread handles scroll and GPU-composited animations off the main thread.*
 
-**Answer**:
+*When the user navigates, the network process handles DNS, TCP, and TLS, then streams bytes to the renderer. The main thread parses HTML and builds the DOM. When it encounters a render-blocking CSS file, it stops and waits. When it encounters a synchronous `<script>`, it stops parsing, executes the JS (which may modify the DOM), then resumes. This is why JS placement and async/defer matter architecturally.*
 
-"A browser is a **multi-process engine** that transforms network bytes into pixels:
+*The preload scanner runs in parallel to dispatch fetches for declared resources even while the main thread is blocked. So placing `<link rel="preload">` for critical fonts or the hero image in `<head>` helps the scanner find and fetch them early."*
 
-**1. Multi-Process Architecture**
+### Likely Follow-up Questions
 
-Chromium uses **4 main process types**:
+1. **"What is site isolation and why was it introduced?"**
+   → Spectre/Meltdown — process-level memory separation between cross-origin sites.
 
-- **Browser Process**: UI, networking, storage (1 global process)
-- **Renderer Process**: HTML/CSS/JS execution (1 per site for isolation)
-- **GPU Process**: Hardware-accelerated compositing (1 global)
-- **Utility Process**: Audio, video decoding
+2. **"What's the difference between `DOMContentLoaded` and `load`?"**
+   → `DOMContentLoaded` fires when HTML is parsed (DOM ready); `load` fires when all subresources (images, fonts, scripts) finish loading.
 
-**Why Multi-Process**: Security (sandboxing), stability (tab crash doesn't crash browser), performance (parallel processing).
+3. **"How does async vs defer differ for script loading?"**
+   → `async`: downloads in parallel, executes immediately when ready (may out-of-order execute). `defer`: downloads in parallel, executes in order after HTML parsing is done.
 
-**Site Isolation**: Each site gets separate renderer process. Prevents Spectre attacks (cross-site memory reading).
+4. **"What is the compositor thread and why does it matter for performance?"**
+   → Handles scroll, CSS `transform` and `opacity` animations independently of the main thread; allows 60fps even when JS is running.
 
-**Trade-off**: Each renderer ~10-30MB overhead. 100 tabs = 1-3GB just for isolation.
+### Alternative Approaches Comparison
 
-**2. Navigation Pipeline**
-
-```
-User types URL
-↓
-Browser Process (Network Thread)
-├── DNS Lookup (domain → IP)
-├── TCP Handshake (3-way, ~30-100ms RTT)
-├── TLS Negotiation (HTTPS, 1-2 RTTs)
-└── HTTP Request (GET /index.html)
-↓
-Renderer Process (Main Thread)
-├── Parse HTML → DOM Tree
-├── Parse CSS → CSSOM Tree
-├── Combine → Render Tree
-├── Layout (calculate geometry)
-├── Paint (generate draw commands)
-└── Composite (layers to GPU)
-↓
-GPU Process
-├── Rasterize (draw commands → pixels)
-└── Display (pixels to screen)
-```
-
-**Timeline** (typical 3G, mid-tier device):
-- DNS: 0-200ms (cached = 0ms)
-- TCP: 30-100ms
-- TLS: 30-100ms
-- TTFB: 200-500ms
-- Parse/Render: 100-400ms
-- **Total: 500-1500ms** (without caching)
-
-**3. Main Thread Bottleneck**
-
-**Main Thread** (Renderer Process) handles:
-- JavaScript execution
-- DOM manipulation
-- Style calculation
-- Layout (reflow)
-- Paint
-- Event handlers
-
-**Single-threaded**: Only one task at a time.
-
-**Long Task (>50ms)** blocks UI:
-```javascript
-function blockingTask() {
-  const start = Date.now();
-  while (Date.now() - start < 500) {} // Blocks 500ms
-  // During: No scrolling, clicking, typing
-}
-```
-
-**Other Threads**:
-- **Compositor Thread**: Scrolling, CSS animations (transform, opacity) without Main Thread
-- **Raster Threads**: Drawing pixels from paint commands
-- **Worker Threads**: Parallel JavaScript (can't access DOM)
-
-**4. Memory Architecture**
-
-**Typical Tab**:
-- Simple page: 50-200MB
-- SPA with data: 200-500MB
-- Heavy app: 500MB-2GB
-
-**Memory Leaks**:
-```javascript
-// ❌ LEAK: Detached DOM node
-let nodes = [];
-function leak() {
-  const div = document.createElement('div');
-  document.body.appendChild(div);
-  nodes.push(div); // JS reference
-  div.remove();    // DOM removed, but JS holds reference
-  // Memory NOT freed (detached DOM)
-}
-```
-
-**Chrome DevTools**:
-- Heap Snapshot: Find leaks
-- Allocation Timeline: Track allocations
-- Detached DOM Trees: Orphaned nodes
-
-**5. Real-World Examples**
-
-**Gmail**: Complex SPA in separate renderer process (300-500MB). Crash doesn't affect other tabs.
-
-**Twitter**: Infinite scroll blocked Main Thread (500ms). Fixed with `requestIdleCallback` (batch rendering).
-
-**Airbnb**: Memory leak from event listeners. 50 listings = 2GB RAM. Fixed with cleanup in `useEffect`.
-
-**Follow-up Questions I Expect**:
-
-Q: 'How does Site Isolation affect performance?'
-A: Memory overhead (~10-30MB/site), but prevents cross-site attacks (Spectre). Security > memory cost.
-
-Q: 'What's the difference between reflow and repaint?'
-A: Reflow = geometry change (layout recalculation, expensive). Repaint = visual change (color, background, no layout).
-
-Q: 'How would you debug a memory leak in production?'
-A: Chrome DevTools Heap Snapshot, track detached DOM trees, use `WeakMap` for object references, monitor Memory tab over time."
+| Approach | Benefit | Trade-off |
+|----------|---------|-----------|
+| SSR | HTML ready before JS parses, faster FCP | Server cost, TTFB add |
+| Streaming SSR | Bytes flow to browser incrementally | Complexity, partial hydration needed |
+| Pre-rendering (SSG) | No server needed, CDN-cacheable | Stale data, revalidation needed |
 
 ---
 
 ## 5. Code Examples
 
-### Example 1: Main Thread Blocking Detection
+### Observing Render-Blocking Behavior
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- RENDER BLOCKING: browser pauses HTML parsing until this CSS downloads -->
+  <link rel="stylesheet" href="/styles.css">
+  
+  <!-- PRELOADED: preload scanner fetches this early, non-blocking -->
+  <link rel="preload" href="/hero-image.jpg" as="image">
+  
+  <!-- PARSER BLOCKING: avoid this pattern for non-critical scripts -->
+  <!-- <script src="/analytics.js"></script> -->
+  
+  <!-- DEFER: downloads in parallel, executes after parsing -->
+  <script src="/app.js" defer></script>
+  
+  <!-- ASYNC: downloads in parallel, executes whenever ready (order not guaranteed) -->
+  <script src="/analytics.js" async></script>
+</head>
+<body>
+  <img src="/hero-image.jpg" fetchpriority="high" alt="Hero">
+</body>
+</html>
+```
+
+**Why structured this way:**
+- CSS in `<head>` = preload scanner finds it immediately, CSSOM ready before body renders
+- `defer` for app JS = doesn't block HTML parsing, runs in source order after DOM ready
+- `async` for analytics = doesn't block anything, acceptable out-of-order execution
+- `fetchpriority="high"` on LCP image = tells browser to prioritize this above other images
+
+### Measuring Navigation Timing
 
 ```javascript
-// Detect Long Tasks (>50ms)
-const observer = new PerformanceObserver((list) => {
-  for (const entry of list.getEntries()) {
-    if (entry.duration > 50) {
-      console.warn(`Long Task detected: ${entry.duration}ms`, entry);
-      
-      // Track in analytics
-      analytics.track('long_task', {
-        duration: entry.duration,
-        startTime: entry.startTime,
-        name: entry.name
-      });
-    }
-  }
+// Observe actual browser navigation phases using the Navigation Timing API
+const [navEntry] = performance.getEntriesByType('navigation');
+
+console.log({
+  dnsLookup:       navEntry.domainLookupEnd - navEntry.domainLookupStart,
+  tcpHandshake:    navEntry.connectEnd - navEntry.connectStart,
+  ttfb:            navEntry.responseStart - navEntry.requestStart,
+  htmlDownload:    navEntry.responseEnd - navEntry.responseStart,
+  domParsing:      navEntry.domInteractive - navEntry.responseEnd,
+  resourceLoading: navEntry.loadEventStart - navEntry.domContentLoadedEventEnd,
+  total:           navEntry.loadEventEnd - navEntry.startTime,
 });
-
-observer.observe({ entryTypes: ['longtask'] });
 ```
 
-**Why**: Long Tasks (>50ms) cause janky UI. This detects and reports them.
-
----
-
-### Example 2: Memory Leak Prevention
-
-```javascript
-// ❌ BAD: Memory leak with event listeners
-function BadComponent() {
-  useEffect(() => {
-    const handler = () => console.log('scroll');
-    window.addEventListener('scroll', handler);
-    // Missing cleanup!
-  }, []);
-}
-
-// ✅ GOOD: Cleanup event listeners
-function GoodComponent() {
-  useEffect(() => {
-    const handler = () => console.log('scroll');
-    window.addEventListener('scroll', handler);
-    
-    return () => {
-      window.removeEventListener('scroll', handler);
-    };
-  }, []);
-}
-
-// ✅ BETTER: Use AbortController (modern)
-function BetterComponent() {
-  useEffect(() => {
-    const controller = new AbortController();
-    
-    window.addEventListener('scroll', () => {
-      console.log('scroll');
-    }, { signal: controller.signal });
-    
-    return () => {
-      controller.abort(); // Removes all listeners
-    };
-  }, []);
-}
-```
-
-**Why**: Cleanup prevents memory leaks. `AbortController` removes all listeners at once.
-
----
-
-### Example 3: Yield to Main Thread
-
-```javascript
-// ❌ BAD: Blocks Main Thread
-function processItems(items) {
-  items.forEach(item => {
-    processItem(item); // 5ms per item
-  });
-  // 1000 items × 5ms = 5000ms blocked!
-}
-
-// ✅ GOOD: Yield with requestIdleCallback
-async function processItemsInBatches(items) {
-  for (let i = 0; i < items.length; i++) {
-    processItem(items[i]);
-    
-    // Yield every 50ms
-    if (i % 10 === 0) {
-      await new Promise(resolve => {
-        requestIdleCallback(resolve, { timeout: 100 });
-      });
-    }
-  }
-}
-
-// ✅ BETTER: Scheduler API (Chrome 94+)
-async function processItemsWithScheduler(items) {
-  for (const item of items) {
-    await scheduler.yield(); // Yield to browser
-    processItem(item);
-  }
-}
-```
-
-**Why**: Yielding keeps UI responsive. `scheduler.yield()` is modern API for cooperative scheduling.
+**Production use:** This data is sent to your analytics backend (or collected via RUM tools like Datadog, New Relic) to identify where real users experience delays — whether in DNS, TLS, server response, or parsing.
 
 ---
 
 ## 6. Why & How Summary
 
-### Why It Matters
+**Why it matters:**
+- Every performance optimization maps to a specific phase of the browser's workflow
+- Multi-process architecture is why security (XSS, Spectre mitigation) works at the browser level
+- Understanding the main thread bottleneck drives decisions like code splitting, SSR, Web Workers
+- Business impact: a 1-second improvement in LCP increases conversions by 7%+ (Google data)
 
-**Performance**: Understanding browser internals enables optimization (avoid Main Thread blocking, minimize reflows)  
-**Debugging**: Production issues trace to browser behavior (memory leaks, rendering bugs)  
-**Architecture**: Design decisions depend on browser constraints (multi-process, single-threaded Main Thread)
-
-### How It Works
-
-**Multi-Process**: Browser (UI, network) → Renderer (JS, DOM, layout) → GPU (compositing) → Display  
-**Main Thread**: Single-threaded, blocks on Long Tasks (>50ms), handles JS/DOM/Layout/Paint  
-**Memory**: Each tab = 50-500MB, leaks from detached DOM nodes + event listeners  
-**Security**: Site Isolation (separate processes), Same-Origin Policy (cross-origin blocking)
-
-**FAANG Expectation**: Know multi-process architecture, Main Thread bottleneck, memory leak detection, Site Isolation trade-offs, Long Task impact on INP/TTI, when to use Workers vs Main Thread, how to profile with Chrome DevTools
+**How it works:**
+The browser is a multi-process system where the renderer process's main thread serially executes HTML parsing → style → layout → paint, while the compositor thread independently handles scroll and GPU-composited animations. The network process handles all I/O independently. The preload scanner discovers and fetches resources ahead of the main thread's parsing position. Every frontend architecture decision — SSR, CSR, code splitting, lazy loading — is fundamentally about controlling which work happens on which thread, in which process, at which point in this pipeline.

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Long Task Demo</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 80px;
+    }
+
+    button {
+      padding: 12px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #counter {
+      font-size: 32px;
+      margin-top: 30px;
+      color: green;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Main Thread Blocking Demo</h1>
+
+  <p>Click the button and notice the counter freeze for ~500ms</p>
+
+  <button onclick="blockingOperation()">
+    Run Blocking Operation
+  </button>
+
+  <div id="counter">0</div>
+  <div id="status"></div>
+
+  <script>
+    let count = 0;
+
+    // Counter updating every 100ms
+    setInterval(() => {
+      count++;
+      document.getElementById("counter").innerText = count;
+    }, 100);
+
+    // Long blocking task
+    function blockingOperation() {
+      document.getElementById("status").innerText = "Blocking main thread...";
+
+      const start = Date.now();
+
+      while (Date.now() - start < 500) {
+        // Blocks main thread for 500ms
+      }
+
+      document.getElementById("status").innerText = "Finished blocking";
+    }
+  </script>
+
+</body>
+</html>

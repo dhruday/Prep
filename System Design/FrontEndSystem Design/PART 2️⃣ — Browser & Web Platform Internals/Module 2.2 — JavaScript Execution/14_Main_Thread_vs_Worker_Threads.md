@@ -1,529 +1,157 @@
 # 14. Main Thread vs Worker Threads
 
+---
+
 ## 1. High-Level Explanation (Frontend Interview Level)
 
-**Main Thread vs Worker Threads** defines the browser's threading model where the single Main Thread handles UI, JavaScript, and rendering, while Worker threads enable parallel JavaScript execution without blocking the UI—critical for offloading CPU-intensive work.
+The browser's **main thread** is responsible for everything the user sees and interacts with: HTML parsing, CSS styling, JavaScript execution, layout, painting, and handling user input. It is a single thread shared between all of these responsibilities, making it the bottleneck of frontend performance.
 
-- **What**: Main Thread (UI + JS + render) vs Worker Threads (parallel JS, no DOM access)
-- **Why**: Main Thread blocking = frozen UI; Workers = responsive UI during heavy computation
-- **When**: CPU-intensive tasks (image processing, data parsing, cryptography)
-- **Role**: Core performance optimization—offload work from Main Thread
+**Worker threads** allow JavaScript to run computations on separate OS threads in parallel with the main thread, but without access to the DOM. They communicate with the main thread via message passing (`postMessage`).
 
-**Key Principle**: "Keep Main Thread free for UI—offload heavy work to Workers."
+**Why this split exists:**
+The DOM is not thread-safe. If multiple threads could mutate the DOM simultaneously, you'd get race conditions — the same DOM node being read by layout while being mutated by JS. The browser solved this by making the main thread the only thread that can touch the DOM. Workers get compute power without DOM access.
+
+**When to use workers:**
+- CPU-heavy computation that takes >50ms (blocks the main thread)
+- Image processing, video encoding, data parsing
+- Complex calculations: pathfinding, simulations, ML inference
+- Any work where UI responsiveness matters more than latency
 
 ---
 
 ## 2. Deep-Dive Explanation (Senior / Staff Level)
 
-### Main Thread Responsibilities
+### What the Main Thread Does
 
-**Everything on Main Thread** (Renderer Process):
 ```
-Main Thread (Single-Threaded):
-├── JavaScript Execution (V8)
-├── DOM Manipulation
-├── Style Calculation
-├── Layout (Reflow)
-├── Paint
-├── Event Handlers (click, scroll, input)
-├── Timers (setTimeout, setInterval)
-├── Network Callbacks (fetch responses)
-└── Garbage Collection
-
-Result: BLOCKING any of these blocks ALL of them
+Main Thread Timeline (simplified, 1 frame = 16.7ms at 60fps)
+┌─────────────────────────────────────────────────────────────────┐
+│ JS Execution │ Style Calc │ Layout │ Paint │ Composite │ Idle  │
+└─────────────────────────────────────────────────────────────────┘
+│←――――――― 16.7ms frame budget ―――――――――――――――――――――――――――――――――→│
 ```
 
-**Main Thread Bottleneck**:
-```javascript
-// ❌ BLOCKS EVERYTHING for 2 seconds
-function heavyComputation() {
-  const start = Date.now();
-  while (Date.now() - start < 2000) {
-    // Expensive work
-  }
-}
+The main thread must fit ALL JS execution AND style/layout/paint into 16.7ms per frame for 60fps rendering. If JS alone takes 20ms, the frame is dropped — visible as "jank."
 
-button.addEventListener('click', heavyComputation);
+**Long Task Threshold: 50ms**
+A "long task" is any main thread task exceeding 50ms. At 50ms a task could delay:
+- User input response (click, keypress) — increases INP (Interaction to Next Paint)
+- Rendering — drops frames, causes animation jank
+- Other scheduled callbacks
 
-// During 2s:
-// - No scrolling
-// - No clicking other buttons
-// - No text input
-// - No animations
-// - No rendering
-// = FROZEN PAGE
+**Main thread responsibilities cannot be delegated to workers:**
+- DOM access/mutation (`document`, `window`, `element.style`)
+- CSSOM manipulation
+- Canvas 2D API (unless using OffscreenCanvas)
+- Local Storage access (synchronous, main-thread only)
+- `alert()`, `confirm()`, `prompt()`
+
+### Worker Threads
+
+Workers run in separate OS threads. They have:
+- **Their own V8 instance** (separate heap, separate GC)
+- **Their own event loop**
+- **No DOM, no window**
+- **Access to:** `fetch`, `WebSockets`, `IndexedDB`, `Cache API`, `crypto`, `performance`, WASM, most Web APIs
+
+**Communication model:**
+
+```
+Main Thread                    Worker Thread
+──────────────                 ──────────────
+postMessage(data)  ──copy──→  onmessage = (e) => { e.data }
+onmessage = (e)   ←─copy──   postMessage(result)
 ```
 
-**Long Task Impact**:
-```
-Long Task (>50ms):
-├── Delays user input (INP metric suffers)
-├── Blocks rendering (FPS drops)
-├── Queues up events (backlog)
-└── Poor user experience (jank)
-
-Target: Keep tasks <50ms for responsive UI
-```
-
----
-
-### Worker Threads (Parallel Execution)
-
-**Types of Workers**:
-```
-1. Web Workers (Dedicated)
-   ├── Separate thread for JS execution
-   ├── No DOM access
-   ├── Communication via postMessage
-   └── Terminatable
-
-2. Shared Workers
-   ├── Shared across tabs/windows (same origin)
-   ├── Communication via MessagePort
-   └── Rarely used (complex)
-
-3. Service Workers
-   ├── Network proxy (intercept fetch)
-   ├── Offline caching
-   ├── Background sync
-   └── Push notifications
-
-4. Worklets (Specialized)
-   ├── Paint Worklet (CSS Paint API)
-   ├── Animation Worklet (high-perf animations)
-   └── Audio Worklet (audio processing)
-```
-
-**Web Worker Architecture**:
-```
-Main Thread                  Worker Thread
-├── UI                       ├── JavaScript execution
-├── DOM                      ├── No DOM access
-├── JavaScript               ├── No window object
-├── Rendering                ├── Limited APIs
-└── postMessage ←─────────→  └── postMessage
-
-Separate Memory:
-- No shared variables
-- Communication via message passing (structured clone)
-- Copying overhead (serialize/deserialize)
-```
-
----
-
-### Web Worker API
-
-**Creating a Worker**:
-```javascript
-// main.js (Main Thread)
-const worker = new Worker('worker.js');
-
-// Send data to worker
-worker.postMessage({ type: 'process', data: largeArray });
-
-// Receive result from worker
-worker.onmessage = (event) => {
-  const result = event.data;
-  console.log('Worker result:', result);
-};
-
-// Handle errors
-worker.onerror = (error) => {
-  console.error('Worker error:', error);
-};
-
-// Terminate worker (free resources)
-worker.terminate();
-```
+By default, data is **structured cloned** (deep copy) — no shared memory. For large data (video frames, typed arrays), use **Transferable Objects** to transfer ownership in O(1) without copying:
 
 ```javascript
-// worker.js (Worker Thread)
-self.onmessage = (event) => {
-  const { type, data } = event.data;
-  
-  if (type === 'process') {
-    // Heavy computation on worker thread
-    const result = processData(data);
-    
-    // Send result back to Main Thread
-    self.postMessage(result);
-  }
-};
-
-function processData(data) {
-  // CPU-intensive work (doesn't block Main Thread)
-  return data.map(item => expensiveOperation(item));
-}
+// Transfer ArrayBuffer — zero copy, main thread loses ownership
+const buffer = new ArrayBuffer(16 * 1024 * 1024); // 16MB
+worker.postMessage({ buffer }, [buffer]); // transfer, not copy
+// buffer is now neutered — main thread can't use it anymore
 ```
 
-**Transferable Objects** (Zero-Copy):
+### Thread Communication Patterns
+
+**Request-Response (most common):**
+```
+Main → Worker: { id: 1, type: 'PROCESS', payload: data }
+Worker → Main: { id: 1, type: 'RESULT', payload: result }
+```
+Match responses by `id` for concurrent requests.
+
+**Shared Memory via SharedArrayBuffer:**
+For high-frequency data exchange (audio buffers, video frames, game state), `SharedArrayBuffer` enables true shared memory between threads:
 ```javascript
-// ❌ BAD: Copying 100MB array (slow)
-const largeArray = new Uint8Array(100 * 1024 * 1024); // 100MB
-worker.postMessage(largeArray);
-// Copies 100MB from Main Thread to Worker (slow)
+// Both threads can read/write the same memory
+const sharedBuffer = new SharedArrayBuffer(1024);
+const sharedArray = new Int32Array(sharedBuffer);
 
-// ✅ GOOD: Transfer ownership (zero-copy, fast)
-const largeArray = new Uint8Array(100 * 1024 * 1024);
-worker.postMessage(largeArray, [largeArray.buffer]);
-// Transfers ownership (instant, no copy)
-// largeArray is now unusable on Main Thread (neutered)
+// Worker mutates
+Atomics.store(sharedArray, 0, 42); // Thread-safe write
+Atomics.notify(sharedArray, 0, 1); // Wake waiting thread
 
-console.log(largeArray.length); // 0 (transferred)
+// Main thread reads
+Atomics.wait(sharedArray, 0, 0); // Wait for index 0 to be != 0
+console.log(sharedArray[0]); // 42
 ```
 
-**Transferable Types**:
-- `ArrayBuffer`
-- `MessagePort`
-- `ImageBitmap`
-- `OffscreenCanvas`
+**Note:** `SharedArrayBuffer` requires cross-origin isolation (`COOP` + `COEP` headers) due to Spectre mitigation.
 
----
+### Worker Types
 
-### Worker Limitations
+| Type | Scope | Network Access | Lifetime | Use Case |
+|------|-------|----------------|----------|----------|
+| **Dedicated Worker** | One page | Yes (fetch) | Tab open | CPU compute for one page |
+| **Shared Worker** | Multiple tabs/pages | Yes | Until all pages close | Shared state, tab coordination |
+| **Service Worker** | Origin-wide | Yes (intercepts fetch) | Event-driven (can be terminated) | Caching, offline, push |
 
-**What Workers CANNOT Access**:
+### Compositor Thread (Non-JS Worker)
+
+The browser's compositor thread is not a Web Worker (you can't control it), but it's equally important:
+
+- Handles scroll position updates
+- Handles CSS `transform` and `opacity` animations
+- Reads GPU layer bitmaps and composites them
+
+**This is why `transform` and `opacity` are "free" for animation** — they happen entirely on the compositor thread, never involving the main thread or triggering layout. All other CSS properties (that change geometry or color) require main thread involvement.
+
+### OffscreenCanvas — DOM Rendering in Workers
+
+`OffscreenCanvas` allows Canvas 2D and WebGL rendering in a worker thread:
+
 ```javascript
-// ❌ NOT AVAILABLE in Workers
-document.getElementById('div'); // No DOM
-window.location.href;           // No window
-localStorage.setItem('key', 'value'); // No localStorage
-alert('Hello');                 // No UI dialogs
-
-// ✅ AVAILABLE in Workers
-fetch('/api/data');             // Network requests
-setTimeout(() => {}, 1000);     // Timers
-console.log('Log');             // Console
-importScripts('lib.js');        // Load external scripts
-self.postMessage(data);         // Communication
-```
-
-**Workaround for DOM**:
-```javascript
-// Main Thread: Read DOM, send to Worker
-const data = {
-  width: element.offsetWidth,
-  height: element.offsetHeight,
-  text: element.textContent
-};
-worker.postMessage(data);
-
-// Worker: Process data, send result
-self.onmessage = (e) => {
-  const { width, height, text } = e.data;
-  const result = process(width, height, text);
-  self.postMessage(result);
-};
-
-// Main Thread: Update DOM with result
-worker.onmessage = (e) => {
-  element.textContent = e.data.result;
-};
-```
-
----
-
-### Use Cases for Workers
-
-**1. Image Processing**:
-```javascript
-// Main Thread
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-// Send to Worker for processing
-worker.postMessage({ imageData }, [imageData.data.buffer]);
-
-// worker.js
-self.onmessage = (e) => {
-  const { imageData } = e.data;
-  
-  // Apply grayscale filter (CPU-intensive)
-  for (let i = 0; i < imageData.data.length; i += 4) {
-    const avg = (imageData.data[i] + imageData.data[i+1] + imageData.data[i+2]) / 3;
-    imageData.data[i] = imageData.data[i+1] = imageData.data[i+2] = avg;
-  }
-  
-  self.postMessage({ imageData }, [imageData.data.buffer]);
-};
-
-// Main Thread: Render result
-worker.onmessage = (e) => {
-  ctx.putImageData(e.data.imageData, 0, 0);
-};
-```
-
-**2. Data Parsing** (Large JSON/CSV):
-```javascript
-// Main Thread
-fetch('/data/large.json')
-  .then(res => res.text())
-  .then(jsonText => {
-    // Send raw JSON string to Worker
-    worker.postMessage({ type: 'parse', json: jsonText });
-  });
-
-// worker.js
-self.onmessage = (e) => {
-  if (e.data.type === 'parse') {
-    // Parse + transform (CPU-intensive)
-    const data = JSON.parse(e.data.json);
-    const transformed = data.map(item => transform(item));
-    
-    self.postMessage({ type: 'result', data: transformed });
-  }
-};
-```
-
-**3. Cryptography**:
-```javascript
-// Main Thread
-worker.postMessage({ type: 'hash', data: 'password123' });
-
-// worker.js
-importScripts('https://cdn.jsdelivr.net/npm/crypto-js');
-
-self.onmessage = (e) => {
-  if (e.data.type === 'hash') {
-    // CPU-intensive hashing
-    const hash = CryptoJS.SHA256(e.data.data).toString();
-    self.postMessage({ type: 'hash-result', hash });
-  }
-};
-```
-
----
-
-### Worker Pool Pattern
-
-**Reusing Workers** (avoid startup cost):
-```javascript
-class WorkerPool {
-  constructor(workerScript, poolSize = 4) {
-    this.workers = [];
-    this.taskQueue = [];
-    
-    // Create pool of workers
-    for (let i = 0; i < poolSize; i++) {
-      const worker = new Worker(workerScript);
-      worker.idle = true;
-      worker.onmessage = (e) => this.handleResult(worker, e);
-      this.workers.push(worker);
-    }
-  }
-  
-  runTask(data) {
-    return new Promise((resolve) => {
-      const task = { data, resolve };
-      
-      // Find idle worker
-      const worker = this.workers.find(w => w.idle);
-      
-      if (worker) {
-        this.executeTask(worker, task);
-      } else {
-        // Queue task if all workers busy
-        this.taskQueue.push(task);
-      }
-    });
-  }
-  
-  executeTask(worker, task) {
-    worker.idle = false;
-    worker.currentTask = task;
-    worker.postMessage(task.data);
-  }
-  
-  handleResult(worker, event) {
-    // Resolve promise
-    worker.currentTask.resolve(event.data);
-    worker.idle = true;
-    
-    // Process next task in queue
-    if (this.taskQueue.length > 0) {
-      const nextTask = this.taskQueue.shift();
-      this.executeTask(worker, nextTask);
-    }
-  }
-  
-  terminate() {
-    this.workers.forEach(w => w.terminate());
-  }
-}
-
-// Usage
-const pool = new WorkerPool('worker.js', 4);
-
-async function processItems(items) {
-  const results = await Promise.all(
-    items.map(item => pool.runTask(item))
-  );
-  return results;
-}
-```
-
----
-
-### Compositor Thread (Not User-Controllable)
-
-**Browser's Internal Parallelism**:
-```
-Main Thread               Compositor Thread
-├── JavaScript           ├── Scrolling (independent)
-├── Layout               ├── CSS transform animations
-├── Paint (draw calls)   ├── CSS opacity animations
-└── ...                  └── Rasterization (async)
-
-GPU-Accelerated:
-- transform: translateX/Y/Z, scale, rotate
-- opacity
-- filter (some, like blur)
-
-NOT GPU-Accelerated:
-- left, top, width, height (triggers layout)
-- background-color (triggers paint)
-```
-
-**Smooth Scrolling Without Main Thread**:
-```css
-/* ✅ Compositor-only (smooth 60fps, even if Main Thread blocked) */
-.box {
-  transform: translateY(0);
-  transition: transform 0.3s;
-}
-
-.box:hover {
-  transform: translateY(100px);
-}
-
-/* ❌ Main Thread required (janky if blocked) */
-.box {
-  top: 0;
-  transition: top 0.3s;
-}
-
-.box:hover {
-  top: 100px;
-}
-```
-
----
-
-### What NOT to Do
-
-- ❌ **Heavy computation on Main Thread** (blocks UI)
-- ❌ **Create Workers in loops** (startup cost, memory overhead)
-- ❌ **Pass non-transferable large objects** (copy overhead)
-- ❌ **Expect Workers to access DOM** (not available)
-- ❌ **Forget to terminate Workers** (memory leak)
-- ❌ **Use Workers for trivial tasks** (postMessage overhead > benefit)
-
----
-
-## 3. Clear Real-World Examples
-
-### Example 1: Figma – OffscreenCanvas in Worker
-
-**Challenge**: Render complex graphics without blocking UI.
-
-**Solution**: OffscreenCanvas in Web Worker:
-```javascript
-// Main Thread
-const canvas = document.getElementById('canvas');
+// Main thread: create canvas and transfer to worker
+const canvas = document.getElementById('myCanvas');
 const offscreen = canvas.transferControlToOffscreen();
-
-const worker = new Worker('render-worker.js');
 worker.postMessage({ canvas: offscreen }, [offscreen]);
 
-// render-worker.js
+// Worker thread: render without blocking main thread
 self.onmessage = (e) => {
-  const canvas = e.data.canvas;
-  const ctx = canvas.getContext('2d');
-  
-  function render() {
-    // Complex rendering (doesn't block Main Thread)
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawComplexGraphics(ctx);
-    
-    requestAnimationFrame(render);
-  }
-  
-  render();
+  const ctx = e.data.canvas.getContext('2d');
+  // All canvas rendering here — main thread free!
+  ctx.fillRect(0, 0, 400, 300);
 };
 ```
 
-**Result**: 60fps rendering while Main Thread handles user input.
+Used by: Figma (WebGL rendering in workers), Google Earth (3D rendering), video editors.
 
 ---
 
-### Example 2: Google Sheets – Calculation Engine in Worker
+## 3. Real-World Examples
 
-**Challenge**: Recalculate 10,000 cells without freezing spreadsheet.
+### Figma — OffscreenCanvas + Workers
+Figma's design canvas renders using WebGL in a dedicated worker via OffscreenCanvas. The main thread handles only UI interactions (toolbar clicks, keyboard shortcuts). This makes Figma's canvas render without ever competing with the main thread's event processing — enabling responsive interactions even during complex design renders.
 
-**Solution**: Formula calculation in Worker:
-```javascript
-// Main Thread
-const worker = new Worker('calc-worker.js');
+### Google Photos — Image Processing Workers
+Google Photos uses Web Workers for client-side image processing (thumbnail generation, filter application, EXIF parsing). Heavy image manipulations that would take 500ms+ on the main thread run in workers while the user can continue browsing their library.
 
-// User edits cell A1
-worker.postMessage({
-  type: 'recalc',
-  changedCell: 'A1',
-  value: 42,
-  formulas: getAllFormulas()
-});
+### VS Code (Browser) — Language Server in Worker
+VS Code Web (vscode.dev) runs the language server protocol (LSP) — responsible for IntelliSense, error checking, auto-complete — in a dedicated Web Worker. Code completions are computed off the main thread, keeping the editor responsive while IntelliSense processes large codebases.
 
-// calc-worker.js
-self.onmessage = (e) => {
-  const { changedCell, value, formulas } = e.data;
-  
-  // Recalculate dependent cells (CPU-intensive)
-  const results = recalculateDependents(changedCell, value, formulas);
-  
-  self.postMessage({ type: 'results', results });
-};
-
-// Main Thread: Update UI
-worker.onmessage = (e) => {
-  e.data.results.forEach(({ cell, value }) => {
-    updateCell(cell, value);
-  });
-};
-```
-
-**Result**: Instant user input, calculations in background.
-
----
-
-### Example 3: VSCode – Syntax Highlighting in Worker
-
-**Challenge**: Highlight 10,000 lines of code without janky typing.
-
-**Solution**: Tokenization in Worker:
-```javascript
-// Main Thread (editor)
-editor.on('change', (text) => {
-  worker.postMessage({ type: 'tokenize', text });
-});
-
-// syntax-worker.js
-self.onmessage = (e) => {
-  const { text } = e.data;
-  
-  // Tokenize code (regex-heavy, CPU-intensive)
-  const tokens = tokenize(text);
-  
-  self.postMessage({ type: 'tokens', tokens });
-};
-
-// Main Thread: Apply syntax highlighting
-worker.onmessage = (e) => {
-  applyHighlighting(e.data.tokens);
-};
-```
-
-**Result**: Typing remains responsive (0ms input delay).
+### Slack — SharedWorker for Tab Coordination
+Slack uses a SharedWorker to maintain a single WebSocket connection shared across multiple open Slack tabs. All tabs communicate through the shared worker rather than each opening their own connection — reducing server load and preventing duplicate notification delivery.
 
 ---
 
@@ -531,156 +159,121 @@ worker.onmessage = (e) => {
 
 ### Sample Answer (7+ Years Level)
 
-> **Question**: "Explain Main Thread vs Worker Threads."
+*"The main thread in the browser is single-threaded and handles JS execution, DOM manipulation, style calculation, layout, and paint — all in the same thread. This makes it the critical bottleneck: any JS that takes longer than the frame budget creates jank or blocked interactions.*
 
-**Answer**:
+*Workers solve this by providing true OS-level threads for computation, but without DOM access. The communication model is message passing — data is structured-cloned by default, or transferred as Transferable Objects for zero-copy performance. For real-time data exchange at scale, SharedArrayBuffer with Atomics enables proper shared memory with thread-safe access.*
 
-"Browser uses **multi-threading** but JavaScript is **single-threaded on Main Thread**:
+*Architecturally, I think of the main thread as strictly for UI work: event handling, small DOM updates, animation coordination. CPU-heavy work — image processing, data parsing, ML inference, encryption — should be in Dedicated Workers. The Service Worker handles network concerns separately. This separation mirrors backend microservice thinking: don't put database queries in your web server handler, don't put image processing on your main thread."*
 
-**Main Thread Responsibilities**:
-- JavaScript execution
-- DOM manipulation
-- Style calculation
-- Layout (reflow)
-- Paint
-- Event handlers
-- Rendering
+### Likely Follow-up Questions
 
-**Single-Threaded**: One task at a time. Long task (>50ms) blocks everything.
+1. **"When would you use SharedArrayBuffer vs postMessage?"**
+   → `postMessage` for most cases — simple, safe, no shared state bugs. `SharedArrayBuffer` for high-frequency data exchange where copying overhead is unacceptable (audio processing, video decoding, real-time physics).
 
-**Worker Threads (Parallel JavaScript)**:
+2. **"What's the cost of postMessage?"**
+   → Serialization (structured clone) + thread context switch. For large data, use Transferable Objects. For very frequent small messages, consider batching or SharedArrayBuffer.
 
-**Types**:
-1. **Web Workers**: Dedicated JS thread, no DOM access
-2. **Shared Workers**: Shared across tabs (same origin)
-3. **Service Workers**: Network proxy, offline caching
-4. **Worklets**: Specialized (Paint, Animation, Audio)
+3. **"How does the compositor thread differ from a Web Worker?"**
+   → The compositor thread is a browser-internal thread you can't control via JS. It handles scroll and composited animations independently. Web Workers are user-controlled JS execution threads. Both run parallel to the main thread.
 
-**Communication**:
+4. **"How do you handle errors in Workers?"**
+   → `worker.onerror` catches uncaught errors. For better DX, wrap worker messages in a try/catch protocol with error-typed responses.
+
+---
+
+## 5. Code Examples
+
+### Worker Pool Pattern (Production-Grade)
+
 ```javascript
-// Main Thread
-const worker = new Worker('worker.js');
-worker.postMessage({ data: largeArray });
-
-worker.onmessage = (e) => {
-  console.log('Result:', e.data);
-};
-
-// worker.js
-self.onmessage = (e) => {
-  const result = heavyComputation(e.data);
-  self.postMessage(result);
-};
-```
-
-**Transferable Objects** (zero-copy):
-```javascript
-const buffer = new ArrayBuffer(100 * 1024 * 1024); // 100MB
-worker.postMessage(buffer, [buffer]);
-// Instant transfer (no copy), buffer neutered on Main Thread
-```
-
-**Worker Limitations**:
-- ❌ No DOM access (`document`, `window`)
-- ❌ No localStorage/sessionStorage
-- ✅ Network requests (`fetch`)
-- ✅ Timers (`setTimeout`)
-- ✅ `importScripts()` for libraries
-
-**Use Cases**:
-
-**1. Image Processing**:
-```javascript
-// Send ImageData to Worker, apply filters
-worker.postMessage({ imageData }, [imageData.data.buffer]);
-// Result: UI responsive during processing
-```
-
-**2. Data Parsing**:
-```javascript
-// Parse large JSON in Worker
-worker.postMessage({ type: 'parse', json: jsonString });
-```
-
-**3. Cryptography**:
-```javascript
-// Hash password in Worker (CPU-intensive)
-worker.postMessage({ type: 'hash', password });
-```
-
-**Worker Pool Pattern**:
-```javascript
+// Worker pool — N workers for CPU-heavy parallel tasks
 class WorkerPool {
-  constructor(script, size = 4) {
-    this.workers = Array(size).fill(null).map(() => new Worker(script));
+  constructor(workerUrl, poolSize = navigator.hardwareConcurrency || 4) {
+    this.workers = Array.from({ length: poolSize }, () => new Worker(workerUrl));
+    this.queue = [];
+    this.activeWorkers = new Map(); // worker → { resolve, reject }
+    
+    this.workers.forEach(worker => {
+      worker.onmessage = (e) => this.handleResult(worker, e.data);
+      worker.onerror = (e) => this.handleError(worker, e);
+    });
   }
-  
-  runTask(data) {
-    // Find idle worker, queue if all busy
+
+  run(task) {
+    return new Promise((resolve, reject) => {
+      const availableWorker = this.workers.find(w => !this.activeWorkers.has(w));
+      
+      if (availableWorker) {
+        this.activeWorkers.set(availableWorker, { resolve, reject });
+        availableWorker.postMessage(task);
+      } else {
+        this.queue.push({ task, resolve, reject }); // Queue for next available worker
+      }
+    });
+  }
+
+  handleResult(worker, result) {
+    const { resolve } = this.activeWorkers.get(worker);
+    this.activeWorkers.delete(worker);
+    resolve(result);
+    
+    if (this.queue.length > 0) {
+      const { task, resolve: qResolve, reject: qReject } = this.queue.shift();
+      this.activeWorkers.set(worker, { resolve: qResolve, reject: qReject });
+      worker.postMessage(task);
+    }
   }
 }
+
+// Usage
+const pool = new WorkerPool('/image-processor.worker.js', 4);
+const results = await Promise.all(images.map(img => pool.run({ img })));
 ```
 
-**Reuse workers** (avoid startup cost ~5-10ms).
+### Transferable Objects for Large Data
 
-**Compositor Thread** (browser internal):
-- Handles scrolling independently
-- CSS `transform`, `opacity` animations (60fps, even if Main Thread blocked)
+```javascript
+// Main thread — send large image data to worker without copying
+async function processImageInWorker(imageFile) {
+  const arrayBuffer = await imageFile.arrayBuffer(); // ~5MB image
+  
+  const worker = new Worker('/image-worker.js');
+  
+  return new Promise((resolve) => {
+    worker.onmessage = (e) => {
+      resolve(e.data.processedBuffer); // Receive processed result
+      worker.terminate();
+    };
+    
+    // Transfer the buffer — zero copy! Main thread loses access to arrayBuffer
+    worker.postMessage({ buffer: arrayBuffer }, [arrayBuffer]);
+    
+    // arrayBuffer is now neutered: arrayBuffer.byteLength === 0
+  });
+}
 
-```css
-/* ✅ Compositor-only (smooth) */
-.box { transform: translateY(100px); }
-
-/* ❌ Main Thread required (janky) */
-.box { top: 100px; }
+// Worker (image-worker.js)
+self.onmessage = (e) => {
+  const { buffer } = e.data;
+  const view = new Uint8ClampedArray(buffer);
+  
+  // Apply grayscale filter
+  for (let i = 0; i < view.length; i += 4) {
+    const avg = (view[i] + view[i+1] + view[i+2]) / 3;
+    view[i] = view[i+1] = view[i+2] = avg;
+  }
+  
+  // Transfer back
+  self.postMessage({ processedBuffer: buffer }, [buffer]);
+};
 ```
-
-**Real-World Examples**:
-
-**Figma**: OffscreenCanvas in Worker for rendering (60fps while editing).
-
-**Google Sheets**: Calculation engine in Worker (recalc 10K cells without freezing UI).
-
-**VSCode**: Syntax highlighting in Worker (responsive typing with 10K lines).
-
-**Trade-offs**:
-
-- **Workers**: Parallel execution, but postMessage overhead (serialize/deserialize)
-- **Transferable**: Fast (zero-copy), but object neutered on sender
-- **Worker Pool**: Amortizes startup cost, but memory overhead (4-8 workers = 40-80MB)
-
-**When NOT to Use Workers**:
-- Trivial tasks (postMessage overhead > benefit)
-- Frequent DOM access needed (Workers can't touch DOM)
-- Data transfer cost > computation cost
-
-**Follow-up I Expect**:
-
-Q: 'How do you decide what to offload to Workers?'
-A: Profile with Chrome DevTools. If task >50ms on Main Thread, consider Worker. Balance: postMessage cost (serialize/deserialize) vs computation time. Large data + heavy computation = good candidate. Small data + light computation = stay on Main Thread.
-
-Q: 'What's the overhead of postMessage?'
-A: Structured clone algorithm: ~1-5ms per MB (depends on complexity). Transferable objects: ~0ms (zero-copy). Use transferables for large ArrayBuffers, ImageBitmaps.
-
-Q: 'How would you debug Workers?'
-A: Chrome DevTools → Sources → Threads panel. Each Worker appears as separate thread. Set breakpoints, inspect variables. Console.log works (appears in main console)."
 
 ---
 
 ## 6. Why & How Summary
 
-### Why It Matters
+**Why it matters:**
+The main thread is the most scarce resource in frontend systems. Every millisecond consumed by non-UI work is a millisecond not available for rendering, animation, and input response. Worker threads provide the escape valve — true parallel compute without jeopardizing UI responsiveness. At scale, well-architected worker usage is the difference between a responsive app that handles 10MB data imports without freezing and a janky app that locks up on any heavy operation.
 
-**UI Responsiveness**: Main Thread blocking = frozen UI (no scrolling, clicking, typing)  
-**Performance**: Workers enable parallel execution (heavy computation doesn't block UI)  
-**User Experience**: Long tasks (>50ms) cause jank—Workers keep UI smooth (60fps)
-
-### How It Works
-
-**Main Thread**: Single-threaded, handles JS + DOM + render (blocking one blocks all)  
-**Worker Threads**: Separate JS execution, no DOM access, communicate via postMessage  
-**Transferables**: Zero-copy transfer (ArrayBuffer, MessagePort, ImageBitmap)  
-**Compositor Thread**: Browser internal, smooth scrolling + transform/opacity animations (independent of Main Thread)  
-**Worker Pool**: Reuse workers (avoid startup cost), queue tasks (load balancing)
-
-**FAANG Expectation**: Explain Main Thread responsibilities, Worker types (Web/Shared/Service/Worklet), postMessage communication, transferable objects (zero-copy), Worker limitations (no DOM), use cases (image processing, data parsing, crypto), Worker Pool pattern, Compositor Thread (transform/opacity), real-world examples (Figma, Google Sheets, VSCode), profiling to decide when to use Workers, postMessage overhead
+**How it works:**
+The main thread is a single OS thread that owns the DOM, event loop, and rendering pipeline. Workers are additional OS threads spawned from the browser process, each with their own V8 instance, heap, and event loop. They cannot access the DOM but can use most Web APIs. Communication is via structured-cloned message passing (deep copy) or Transferable Object transfer (zero-copy ownership transfer). SharedArrayBuffer enables true shared memory between threads with Atomic operations for synchronization. The compositor thread (browser-managed) handles scroll and composited CSS animations independently of both, ensuring smooth interactions even when the main thread is busy.

@@ -132,6 +132,7 @@ class Perceptron:
                 
                 if error != 0:
                     # Update rule
+                    # new Formula: wnew​=wold​+learning_rate×error×input
                     self.weights += lr * error * xi
                     self.bias += lr * error
                     errors += 1

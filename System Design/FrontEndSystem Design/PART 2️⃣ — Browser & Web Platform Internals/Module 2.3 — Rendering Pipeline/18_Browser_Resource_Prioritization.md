@@ -1,536 +1,222 @@
 # 18. Browser Resource Prioritization
 
+---
+
 ## 1. High-Level Explanation (Frontend Interview Level)
 
-**Browser Resource Prioritization** controls the order and priority of resource loading—browsers assign priorities based on resource type and viewport position, and developers can influence this with hints like preload, prefetch, and fetchpriority to optimize loading performance.
+When a browser parses HTML and discovers resources to download (scripts, styles, images, fonts, etc.), it doesn't fetch them all with equal urgency. The browser has a prioritization system that decides which resources should be fetched first, based on their type, location in the document, and rendering impact.
 
-- **Fetch Priority**: High (critical CSS/fonts), Medium (images in viewport), Low (offscreen images)
-- **Resource Hints**: preload (high priority now), prefetch (low priority future), preconnect (early DNS/TLS)
-- **Priority Hints**: fetchpriority attribute to manually adjust resource priority
+**Why prioritization exists:**
+- Bandwidth is limited (especially mobile)
+- Some resources block rendering (CSS, synchronous JS)
+- Others are critical for UX (LCP hero image, above-fold fonts)
+- Others are optional until user interaction (offscreen images, lazy-loaded routes)
 
-**Key Principle**: "Load critical resources first—optimize network waterfall with priority hints."
+**The goal:** Get the page visible and interactive as fast as possible, given finite bandwidth.
+
+**Key mechanisms:**
+- **Built-in browser heuristics** — CSS and blocking scripts always get high priority
+- **`<link rel="preload">`** — Tell the browser explicitly: "fetch this now, I'll need it soon"
+- **`<link rel="prefetch">`** — Tell the browser: "fetch this when idle, for the next navigation"
+- **`<link rel="preconnect">`** — Warm up the TCP/TLS connection to a third-party origin
+- **`fetchpriority` attribute** — Override the browser's default priority (`high`, `low`, `auto`)
+- **Lazy loading** (`loading="lazy"`, dynamic `import()`) — Defer non-critical resources
 
 ---
 
 ## 2. Deep-Dive Explanation (Senior / Staff Level)
 
-### Default Browser Prioritization
+### Browser's Default Priority Assignment
 
-**Browser's Priority Queue**:
-```
-Highest Priority:
-├── HTML document (blocks everything)
-├── CSS in <head> (render-blocking)
-└── JavaScript <script> in <head> (parser-blocking)
+Chrome assigns each resource a network priority:
 
-High Priority:
-├── Fonts (if used in viewport)
-├── Images in viewport
-└── XHR/fetch (explicitly high priority)
+| Resource Type | Default Priority | Notes |
+|--------------|-----------------|-------|
+| HTML document | **Highest** | Navigation request |
+| CSS (in `<head>`) | **Highest** | Render-blocking |
+| Synchronous `<script>` | **High** | Parser-blocking |
+| `<script defer>` | **Low** (loaded) / **High** (executed) | Downloaded low-priority, but executes before DOMContentLoaded |
+| `<script async>` | **Low** | Downloaded & executed when ready |
+| Preloaded resources (`<link rel="preload">`) | Matches `as` attribute type |  |
+| Fonts (`@font-face`) | **High** as Web Font | Blocks text rendering |
+| Images above-fold | **High** | Detected by viewport position heuristic |
+| Images below-fold | **Low** | Deferred until bandwidth available |
+| `fetch()` API call | **High** | Same as XHR by default |
+| Service Worker main script | **High** | Needed to intercept fetches |
 
-Medium Priority:
-├── Images in viewport (not critical)
-├── <script async> in <head>
-└── Early images (above fold)
-
-Low Priority:
-├── Images below viewport (lazy load)
-├── <script defer>
-└── Prefetch resources
-
-Lowest Priority:
-└── Resources for next navigation
-```
-
-**Resource Type Priorities** (Chrome):
-```
-Priority Levels (0-5):
-5 (Highest):  Main HTML, blocking CSS, blocking JS
-4 (High):     Fonts, Images in viewport, early XHR
-3 (Medium):   Images slightly below viewport, async scripts
-2 (Low):      Images far below viewport, deferred scripts
-1 (Lowest):   Prefetch resources
-0 (Idle):     Background fetch
-```
-
----
+**Deprioritization:** Chrome will delay low-priority resource fetches when the document is still loading (bandwidth reservation for high-priority resources).
 
 ### Resource Hints
 
-#### 1. **Preload** (Load Now, High Priority)
+**`<link rel="preload">`**
+Tells the browser: "I know I'll need this resource soon, please fetch it at high priority now."
 
-**Purpose**: Tell browser to fetch resource NOW with high priority.
-
-**Syntax**:
 ```html
-<link rel="preload" href="font.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="critical.css" as="style">
-<link rel="preload" href="hero.jpg" as="image">
-<link rel="preload" href="app.js" as="script">
+<!-- LCP hero image — fetch early, avoid LCP being blocked by discovery time -->
+<link rel="preload" href="/hero.webp" as="image" fetchpriority="high">
+
+<!-- Critical font — fetch before @font-face rule is parsed from stylesheet -->
+<link rel="preload" href="/fonts/inter-500.woff2" as="font" type="font/woff2" crossorigin>
+
+<!-- Critical JS chunk that will be needed immediately -->
+<link rel="preload" href="/vendor.js" as="script">
+
+<!-- API call needed early in page lifecycle -->
+<link rel="preload" href="/api/user" as="fetch" crossorigin>
 ```
 
-**Use Cases**:
+**The `as` attribute is mandatory** — it tells the browser which resource type to use for priority assignment, cache lookup, and request headers.
+
+**`<link rel="prefetch">`**
+Tells the browser: "I'll need this resource in the NEXT navigation, not the current page. Fetch it when idle."
+
 ```html
-<!-- ✅ Critical fonts (avoid FOIT/FOUT) -->
-<link rel="preload" href="/fonts/heading.woff2" as="font" crossorigin>
+<!-- Prefetch the next page's main bundle while user reads current page -->
+<link rel="prefetch" href="/app.next-route.js" as="script">
 
-<!-- ✅ Critical CSS (before link stylesheet) -->
-<link rel="preload" href="/styles/critical.css" as="style">
-<link rel="stylesheet" href="/styles/critical.css">
-
-<!-- ✅ Hero image (LCP candidate) -->
-<link rel="preload" href="/images/hero.jpg" as="image">
-
-<!-- ✅ Critical JavaScript (before script tag) -->
-<link rel="preload" href="/js/critical.js" as="script">
+<!-- Prefetch product image before user clicks "next" in a carousel -->
+<link rel="prefetch" href="/products/item-4.jpg" as="image">
 ```
 
-**Benefits**:
-- Starts download ASAP (high priority)
-- Discovered before parser reaches resource
-- Reduces latency (parallel download)
+**Key difference from preload:**
+- `preload` = current page, high priority, browser MUST fetch
+- `prefetch` = future navigation, idle priority, browser MAY fetch (respects data saver mode)
 
-**Drawbacks**:
-- **Not cached across pages** (page-specific)
-- **Wastes bandwidth** if not used
-- **Can delay other resources** (steals priority)
+**`<link rel="preconnect">`**
+Pre-establishes TCP + TLS connection to a third-party origin before any resource from that origin is needed:
 
-**Best Practice**:
 ```html
-<!-- ❌ BAD: Preload everything (wastes bandwidth) -->
-<link rel="preload" href="font1.woff2" as="font">
-<link rel="preload" href="font2.woff2" as="font">
-<link rel="preload" href="image1.jpg" as="image">
-<link rel="preload" href="image2.jpg" as="image">
-
-<!-- ✅ GOOD: Preload only critical (LCP candidates) -->
-<link rel="preload" href="heading-font.woff2" as="font" crossorigin>
-<link rel="preload" href="hero-image.jpg" as="image">
-```
-
----
-
-#### 2. **Prefetch** (Load Later, Low Priority)
-
-**Purpose**: Tell browser to fetch resource for FUTURE navigation (low priority).
-
-**Syntax**:
-```html
-<link rel="prefetch" href="/page2.html">
-<link rel="prefetch" href="/page2.js">
-<link rel="prefetch" href="/page2.css">
-```
-
-**Use Cases**:
-```html
-<!-- ✅ Next page assets (likely navigation) -->
-<link rel="prefetch" href="/product-page.html">
-<link rel="prefetch" href="/product-page.js">
-
-<!-- ✅ Search results (user typing) -->
-<input type="search" oninput="prefetchResults()">
-<script>
-function prefetchResults() {
-  const query = input.value;
-  if (query.length > 2) {
-    // Prefetch likely result page
-    const link = document.createElement('link');
-    link.rel = 'prefetch';
-    link.href = `/search?q=${query}`;
-    document.head.appendChild(link);
-  }
-}
-</script>
-
-<!-- ✅ Product details (user hovering) -->
-<a href="/product/123" onmouseenter="prefetch('/product/123')">
-  Product 123
-</a>
-```
-
-**Benefits**:
-- Low priority (doesn't block critical resources)
-- **Cached across navigations** (HTTP cache)
-- Instant navigation (already downloaded)
-
-**Drawbacks**:
-- Wasted bandwidth if user doesn't navigate
-- Low priority (may not finish before navigation)
-
-**Prefetch vs Preload**:
-```
-Preload:
-├── High priority (NOW)
-├── Current page
-├── Not cached across pages
-└── Use for critical resources
-
-Prefetch:
-├── Low priority (FUTURE)
-├── Next page
-├── Cached across pages (HTTP cache)
-└── Use for likely next navigation
-```
-
----
-
-#### 3. **Preconnect** (Early Connection Setup)
-
-**Purpose**: Establish early DNS + TCP + TLS connection (save ~100-300ms).
-
-**Syntax**:
-```html
-<link rel="preconnect" href="https://cdn.example.com">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://api.example.com">
-```
-
-**Connection Steps**:
-```
-Without preconnect:
-1. Parse HTML (10ms)
-2. Discover <link href="https://cdn.example.com/style.css">
-3. DNS lookup (50ms)
-4. TCP handshake (30ms)
-5. TLS negotiation (50ms)
-6. HTTP request (50ms)
-7. Download (100ms)
-Total: 290ms
-
-With preconnect:
-<link rel="preconnect" href="https://cdn.example.com">
-0. DNS lookup (50ms) ← During HTML parse
-0. TCP handshake (30ms) ← During HTML parse
-0. TLS negotiation (50ms) ← During HTML parse
-1. Parse HTML (10ms)
-2. Discover <link href="https://cdn.example.com/style.css">
-3. HTTP request (50ms) ← Connection ready!
-4. Download (100ms)
-Total: 160ms (saved 130ms)
-```
-
-**Use Cases**:
-```html
-<!-- ✅ CDN for static assets -->
-<link rel="preconnect" href="https://cdn.example.com">
-
-<!-- ✅ Google Fonts (2 domains) -->
+<!-- Pre-warm connection to third-party font service -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-<!-- ✅ API server (known origin) -->
-<link rel="preconnect" href="https://api.example.com">
-
-<!-- ✅ Third-party analytics (known) -->
-<link rel="preconnect" href="https://www.google-analytics.com">
+<!-- Pre-warm CDN used for assets (a.cdn.example.com) -->
+<link rel="preconnect" href="https://a.cdn.example.com">
 ```
 
-**Benefits**:
-- Saves DNS + TCP + TLS time (~100-300ms)
-- Parallel with HTML parsing
-- Low cost (just connection, no data transfer)
+**Cost:** Each `preconnect` consumes a TCP connection slot. Don't preconnect to origins you're not sure about — wasting a connection slot can be detrimental.
 
-**Drawbacks**:
-- Connection kept open (~10s idle, consumes resources)
-- Limit to 6-10 preconnects (browser limit)
-- Wasted if not used within ~10s
+**`<link rel="dns-prefetch">`**
+Cheaper version of `preconnect` — only resolves DNS, no TCP/TLS warm-up. Use as fallback for browsers that don't support `preconnect`, or for origins where you don't want full connection pre-warming:
 
-**Best Practice**:
 ```html
-<!-- ❌ BAD: Too many preconnects (wasted connections) -->
-<link rel="preconnect" href="https://cdn1.com">
-<link rel="preconnect" href="https://cdn2.com">
-<link rel="preconnect" href="https://cdn3.com">
-... (20 preconnects)
-
-<!-- ✅ GOOD: Only critical origins -->
-<link rel="preconnect" href="https://cdn.example.com"> <!-- Main CDN -->
-<link rel="preconnect" href="https://api.example.com"> <!-- API -->
+<link rel="dns-prefetch" href="https://third-party-analytics.example.com">
 ```
 
----
+### `fetchpriority` Attribute
 
-#### 4. **DNS-Prefetch** (DNS Only)
+Introduced in Chromium 101+ and Safari 17.2+. Allows explicit priority override on individual resources:
 
-**Purpose**: Resolve DNS only (cheaper than preconnect).
-
-**Syntax**:
 ```html
-<link rel="dns-prefetch" href="https://cdn.example.com">
+<!-- LCP image — boost priority so it doesn't compete with minor images -->
+<img src="/hero.jpg" fetchpriority="high" alt="Hero">
+
+<!-- Below-fold images — reduce priority -->
+<img src="/decoration.jpg" fetchpriority="low" alt="" loading="lazy">
+
+<!-- API call needed for initial render — high priority -->
+<script>
+  fetch('/api/critical-data', { priority: 'high' });
+</script>
+
+<!-- Analytics — doesn't affect rendering, deprioritize -->
+<script>
+  fetch('/analytics/event', { priority: 'low' });
+</script>
 ```
 
-**DNS-Prefetch vs Preconnect**:
-```
-DNS-Prefetch:
-├── DNS lookup ONLY (cheapest)
-├── No TCP/TLS (saved ~30ms, costs ~20ms)
-├── Use for many origins (20+)
+**Use case for LCP optimization:**
+Without `fetchpriority="high"` on the LCP image, the browser might initially assign it medium priority (treating it as a normal image). By the time the preload scanner OR the image tag itself is processed, other medium-priority resources (unused CSS, deferred scripts) may already occupy bandwidth. `fetchpriority="high"` forces the browser to treat the LCP image at the same priority as render-blocking CSS.
 
-Preconnect:
-├── DNS + TCP + TLS (saves ~100-300ms)
-├── Keeps connection open (~10s)
-├── Use for critical origins (3-5)
-```
+### Lazy Loading
 
-**Use Cases**:
+**Images:** `loading="lazy"` defers image loading until the image is within a threshold distance of the viewport (typically 1250px in Chrome for mobile):
+
 ```html
-<!-- ✅ Many third-party origins (ads, social) -->
-<link rel="dns-prefetch" href="https://facebook.com">
-<link rel="dns-prefetch" href="https://twitter.com">
-<link rel="dns-prefetch" href="https://ads-provider.com">
-... (20+ domains OK)
+<!-- Only loads when user is about to scroll to it -->
+<img src="/below-fold.jpg" loading="lazy" alt="Content image">
 
-<!-- vs -->
-
-<!-- ✅ Critical origins (preconnect) -->
-<link rel="preconnect" href="https://cdn.example.com">
-<link rel="preconnect" href="https://api.example.com">
-... (3-5 domains max)
+<!-- NEVER lazy-load LCP images! -->
+<img src="/hero.jpg" alt="Hero"> <!-- No loading="lazy" on above-fold! -->
 ```
 
----
-
-### Priority Hints (fetchpriority)
-
-**Purpose**: Manually adjust resource priority (Chrome 101+).
-
-**Syntax**:
-```html
-<!-- Image priority -->
-<img src="hero.jpg" fetchpriority="high">
-<img src="thumbnail.jpg" fetchpriority="low">
-
-<!-- Script priority -->
-<script src="critical.js" fetchpriority="high"></script>
-<script src="analytics.js" fetchpriority="low"></script>
-
-<!-- Link priority -->
-<link rel="preload" href="font.woff2" as="font" fetchpriority="high">
-```
-
-**Values**:
-- `fetchpriority="high"` — Increase priority (critical LCP image)
-- `fetchpriority="low"` — Decrease priority (analytics, ads)
-- `fetchpriority="auto"` — Browser default (default)
-
-**Use Cases**:
-
-**1. Boost LCP Image**:
-```html
-<!-- Hero image (LCP candidate) -->
-<img src="hero.jpg" fetchpriority="high" alt="Hero">
-
-<!-- Other images (not LCP) -->
-<img src="thumbnail1.jpg" alt="Thumb 1">
-<img src="thumbnail2.jpg" alt="Thumb 2">
-
-Result:
-- hero.jpg: Priority 4 (High) → downloads first
-- thumbnails: Priority 3 (Medium) → wait
-- LCP improved 0.5-1s
-```
-
-**2. Defer Non-Critical JS**:
-```html
-<!-- Critical app JS -->
-<script src="app.js" fetchpriority="high"></script>
-
-<!-- Analytics (non-critical) -->
-<script src="analytics.js" fetchpriority="low"></script>
-
-Result:
-- app.js: High priority (fast TTI)
-- analytics.js: Low priority (doesn't block)
-```
-
-**3. Balance Multiple Images**:
-```html
-<!-- Above-fold (critical) -->
-<img src="hero.jpg" fetchpriority="high">
-<img src="product1.jpg" fetchpriority="high">
-
-<!-- Below-fold (defer) -->
-<img src="product2.jpg" fetchpriority="low" loading="lazy">
-<img src="product3.jpg" fetchpriority="low" loading="lazy">
-
-Result:
-- hero + product1: Download immediately
-- product2 + product3: Wait (low priority + lazy load)
-```
-
----
-
-### Lazy Loading (Native)
-
-**Purpose**: Defer offscreen images/iframes until near viewport.
-
-**Syntax**:
-```html
-<img src="offscreen.jpg" loading="lazy" alt="Offscreen">
-<iframe src="embed.html" loading="lazy"></iframe>
-```
-
-**How It Works**:
-```
-Viewport: 1000px height
-
-Image positions:
-├── hero.jpg (0px) ← In viewport
-├── product1.jpg (500px) ← In viewport
-├── product2.jpg (1500px) ← Below viewport (lazy)
-└── product3.jpg (2000px) ← Below viewport (lazy)
-
-Load sequence:
-1. hero.jpg: Load immediately (in viewport)
-2. product1.jpg: Load immediately (in viewport)
-3. Scroll to 1000px
-4. product2.jpg: Trigger load (near viewport, ~500px threshold)
-5. Scroll to 1500px
-6. product3.jpg: Trigger load
-```
-
-**Benefits**:
-- Reduces initial bandwidth (only visible images)
-- Faster LCP (critical images load first)
-- Better INP (less network congestion)
-
-**Best Practice**:
-```html
-<!-- ✅ Above-fold: Eager load -->
-<img src="hero.jpg" alt="Hero">
-
-<!-- ✅ Below-fold: Lazy load -->
-<img src="product1.jpg" loading="lazy" alt="Product 1">
-<img src="product2.jpg" loading="lazy" alt="Product 2">
-
-<!-- ❌ Don't lazy load LCP image -->
-<img src="hero.jpg" loading="lazy"> <!-- BAD: delays LCP -->
-```
-
----
-
-### Resource Prioritization Strategy
-
-**Optimal Loading Sequence**:
-```html
-<!DOCTYPE html>
-<html>
-<head>
-  <!-- 1. Preconnect to critical origins (early DNS/TCP/TLS) -->
-  <link rel="preconnect" href="https://cdn.example.com">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  
-  <!-- 2. Preload critical resources (high priority) -->
-  <link rel="preload" href="/fonts/heading.woff2" as="font" crossorigin>
-  <link rel="preload" href="/images/hero.jpg" as="image">
-  
-  <!-- 3. Inline critical CSS (instant FCP) -->
-  <style>
-    /* Critical above-fold styles (5KB max) */
-  </style>
-  
-  <!-- 4. Async load full CSS (non-blocking) -->
-  <link rel="preload" href="/styles/main.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-  
-  <!-- 5. Defer non-critical JS -->
-  <script src="/js/app.js" defer></script>
-  <script src="/js/analytics.js" fetchpriority="low" defer></script>
-</head>
-<body>
-  <!-- 6. LCP image with high priority -->
-  <img src="/images/hero.jpg" fetchpriority="high" alt="Hero">
-  
-  <!-- 7. Below-fold images lazy load -->
-  <img src="/images/product1.jpg" loading="lazy" alt="Product 1">
-  <img src="/images/product2.jpg" loading="lazy" alt="Product 2">
-  
-  <!-- 8. Prefetch likely next page -->
-  <link rel="prefetch" href="/product-page.html">
-</body>
-</html>
-```
-
-**Timeline**:
-```
-0ms:   HTML parsing starts
-5ms:   Preconnect to CDN (DNS + TCP + TLS in parallel)
-10ms:  Preload hero.jpg (high priority, parallel)
-15ms:  Preload heading font (high priority, parallel)
-20ms:  Inline CSS parsed → FCP (First Contentful Paint)
-100ms: Hero image loaded → LCP (Largest Contentful Paint)
-150ms: Full CSS loaded (async, non-blocking)
-200ms: app.js loaded (defer, after HTML parsed)
-300ms: analytics.js loaded (low priority, defer)
-Idle:  Prefetch next page (low priority, cached)
-```
-
----
-
-## 3. Clear Real-World Examples
-
-### Example 1: Amazon – Preload Hero Image (LCP Optimization)
-
-**Challenge**: Hero image discovered late (after CSS), delaying LCP.
-
-**Solution**: Preload hero image in `<head>`:
-```html
-<head>
-  <!-- Preload hero (discovered before CSS) -->
-  <link rel="preload" href="/images/hero.jpg" as="image">
-  
-  <!-- Boost priority -->
-  <link rel="preload" href="/images/hero.jpg" as="image" fetchpriority="high">
-</head>
-<body>
-  <img src="/images/hero.jpg" alt="Hero">
-</body>
-```
-
-**Result**: LCP improved 3.5s → 2.1s (1.4s faster, 40% improvement).
-
----
-
-### Example 2: Google – Prefetch Search Results
-
-**Challenge**: User searches, result page loads slowly.
-
-**Solution**: Prefetch results while user types:
+**Route-level code splitting** (lazy loading JS chunks):
 ```javascript
-const searchInput = document.getElementById('search');
+// React — route is lazy-loaded when user navigates there
+const ProductPage = lazy(() => import('./routes/ProductPage'));
 
-searchInput.addEventListener('input', () => {
-  const query = searchInput.value;
-  
-  if (query.length > 2) {
-    // Prefetch likely result page
-    const link = document.createElement('link');
-    link.rel = 'prefetch';
-    link.href = `/search?q=${query}`;
-    document.head.appendChild(link);
-  }
+// Next.js — automatic route-level code splitting by default
+// Manual lazy loading with dynamic import
+const HeavyChart = dynamic(() => import('./HeavyChart'), {
+  loading: () => <Spinner />,
+  ssr: false, // Client-side only
 });
 ```
 
-**Result**: Instant navigation (result page already cached).
+### Priority and the Preload Scanner
+
+The preload scanner runs ahead of the main parser to discover resources. But it can only find resources declared in HTML. Resources discovered via CSS (`@font-face`, `background-image`) or JavaScript execution are not discovered by the preload scanner.
+
+```html
+<!-- ✅ Preload scanner FINDS this — HTML declaration -->
+<link rel="preload" href="/fonts/inter.woff2" as="font" crossorigin>
+
+<!-- ❌ Preload scanner MISSES this — discovered only when CSS is parsed -->
+<!-- In CSS: @font-face { src: url('/fonts/inter.woff2'); } -->
+
+<!-- Solution: also declare as preload in HTML when font is critical -->
+```
+
+**This is why `<link rel="preload">` for fonts is important** — it promotes the font fetch to scanner-discoverable HTML, giving it a head start.
+
+### Priority in HTTP/2 and HTTP/3
+
+HTTP/2 introduced stream prioritization — individual request streams within a single connection can be assigned weights. Modern browsers use this to signal resource priorities to the server, which can use it to schedule data transmission order.
+
+In practice, Chrome's priority signals translate to H2 stream weights that hint to CDNs and servers to send CSS/critical JS bytes before image bytes. CDN support for priority varies significantly.
+
+### Resource Loading Performance Budget
+
+Production systems define a **performance budget** per page type:
+
+| Page Type | JS Budget | CSS Budget | Image Budget | Font Budget |
+|-----------|-----------|-----------|--------------|-------------|
+| Marketing landing | 200KB | 50KB | 200KB | 2 fonts |
+| Product listing | 300KB | 75KB | Lazy load | 2 fonts |
+| Admin dashboard | 500KB | 100KB | Lazy load | 2 fonts |
+
+Bundler CI checks enforce these budgets on every PR, preventing regressions.
 
 ---
 
-### Example 3: Netflix – Preconnect to Video CDN
+## 3. Real-World Examples
 
-**Challenge**: Video playback delayed by DNS + TLS (~200ms).
+### Netflix — Priority Hints for LCP
+Netflix's homepage has a large hero image as the LCP element. They use `<link rel="preload">` in the SSR HTML plus `fetchpriority="high"` directly on the `<img>` tag to ensure the hero image is fetched at the absolute highest priority, competing only with CSS and blocking scripts. This dramatically reduces their LCP score.
 
-**Solution**: Preconnect to CDN early:
-```html
-<head>
-  <!-- Preconnect to video CDN -->
-  <link rel="preconnect" href="https://video-cdn.netflix.com">
-</head>
+### Airbnb — Prefetching on Hover
+Airbnb prefetches listing detail pages when the user hovers over a search result card for 200ms+ (before they click). When the user actually navigates, the JS bundle and initial data for the detail page are already downloaded. The perceived navigation is near-instant.
 
-<!-- When user clicks play, connection ready -->
-<video src="https://video-cdn.netflix.com/video123.mp4"></video>
+```javascript
+// On hover/focus for 200ms → prefetch next route
+function usePrefetchOnHover(href) {
+  return {
+    onMouseEnter: debounce(() => {
+      router.prefetch(href); // Next.js: triggers <link rel="prefetch">
+    }, 200),
+  };
+}
 ```
 
-**Result**: Video starts 200ms faster (saved DNS + TLS).
+### Google — `fetchpriority` for Search Results
+Google's search results page uses `fetchpriority="high"` on the first few result favicons and `fetchpriority="low"` on ads and below-fold content. This ensures the primary search result content loads without competing with supplementary resources.
+
+### Next.js — Automatic Priority Optimization
+Next.js's `<Image>` component automatically:
+- Adds `loading="lazy"` for non-priority images
+- Adds `fetchpriority="high"` for `priority` prop images (LCP)
+- Generates `<link rel="preload">` for priority images
+- Converts images to WebP/AVIF for smaller transfer sizes
 
 ---
 
@@ -538,245 +224,114 @@ searchInput.addEventListener('input', () => {
 
 ### Sample Answer (7+ Years Level)
 
-> **Question**: "Explain browser resource prioritization."
+*"Browser resource prioritization is how the browser allocates limited bandwidth across many concurrent resource downloads. CSS and blocking scripts get highest priority because they're on the Critical Rendering Path. Fonts, above-fold images, and fetch API calls default to high priority. Below-fold images, async scripts, and prefetches get low priority.*
 
-**Answer**:
+*For LCP optimization specifically, `<link rel="preload">` + `fetchpriority='high'` on the hero image is the standard pattern. Preload makes the resource parser-discoverable earlier (the preload scanner finds it in `<head>`), and `fetchpriority='high'` ensures it doesn't compete with other high-priority resources for bandwidth.*
 
-"Browser assigns **priorities** to resources based on **type** and **viewport position**. Developers can influence with **resource hints** and **priority hints**:
+*`preconnect` is critical for pages using Google Fonts, third-party CDNs, or any cross-origin API called in the first second of load. Each cross-origin request pays DNS + TCP + TLS overhead — preconnect eliminates that overhead for the most impactful third-party origins.*
 
----
+*At scale, these are enforced via performance budgets in CI pipelines — every PR checks that new routes don't exceed JS/CSS bundle size thresholds, and that critical resources have proper priority hints."*
 
-### Default Priorities
+### Likely Follow-up Questions
 
-Browser's priority queue:
+1. **"What's the difference between `preload` and `prefetch`?"**
+   → `preload`: current page, mandatory high-priority fetch, used for resources needed during current page load. `prefetch`: future navigation, idle-priority, browser may skip on data saver or when busy.
 
-**Highest** (5):
-- HTML document
-- Blocking CSS (`<link rel='stylesheet'>` in `<head>`)
-- Blocking JS (`<script>` in `<head>`, no async/defer)
+2. **"Can you over-preload? What happens?"**
+   → Yes. Every `preload` that isn't used within 3 seconds triggers a console warning in Chrome ("resource was preloaded but not used"). Over-preloading wastes bandwidth and can delay higher-priority resources by competing for connections.
 
-**High** (4):
-- Fonts (if used in viewport)
-- Images in viewport
-- High-priority XHR/fetch
+3. **"How does Next.js `<Image priority>` work?"**
+   → It emits `<link rel="preload" as="image" fetchpriority="high">` in the document `<head>`, removes `loading="lazy"`, and sets `fetchpriority="high"` on the img element directly. Multi-level hint for maximum priority.
 
-**Medium** (3):
-- Images slightly below viewport
-- `<script async>`
-
-**Low** (2):
-- Images far below viewport
-- `<script defer>`
-
-**Lowest** (1):
-- Prefetch resources
+4. **"When would you use `dns-prefetch` vs `preconnect`?"**
+   → `dns-prefetch` for origins where you want DNS resolved but don't want to waste a full TCP connection slot. `preconnect` for origins you will definitely load critical resources from (Google Fonts, your API origin, CDN). Use both together for maximum compatibility: `preconnect` + `dns-prefetch` as fallback.
 
 ---
 
-### Resource Hints
+## 5. Code Examples
 
-**1. Preload** (load NOW, high priority):
-```html
-<link rel="preload" href="hero.jpg" as="image">
-<link rel="preload" href="font.woff2" as="font" crossorigin>
-```
-
-**Use**: Critical resources (LCP image, fonts, critical CSS/JS).
-
-**Benefits**: High priority, starts download ASAP.
-
-**Drawbacks**: Not cached across pages, wastes bandwidth if not used.
-
-**2. Prefetch** (load LATER, low priority):
-```html
-<link rel="prefetch" href="/next-page.html">
-```
-
-**Use**: Likely next navigation (next page, search results).
-
-**Benefits**: Low priority (doesn't block), cached across pages (HTTP cache).
-
-**Drawbacks**: Wasted bandwidth if user doesn't navigate.
-
-**Preload vs Prefetch**:
-- **Preload**: High priority, current page, not cached across pages
-- **Prefetch**: Low priority, next page, cached across pages
-
-**3. Preconnect** (early DNS + TCP + TLS):
-```html
-<link rel="preconnect" href="https://cdn.example.com">
-```
-
-**Use**: Known origins (CDN, API, fonts).
-
-**Benefits**: Saves ~100-300ms (DNS + TCP + TLS).
-
-**Example**:
-```
-Without preconnect: 290ms (DNS 50ms + TCP 30ms + TLS 50ms + HTTP 50ms + Download 100ms)
-With preconnect:    160ms (HTTP 50ms + Download 100ms, DNS/TCP/TLS during HTML parse)
-Saved: 130ms
-```
-
-**Drawbacks**: Connection kept open ~10s (limit to 3-5 origins).
-
-**4. DNS-Prefetch** (DNS only, cheaper):
-```html
-<link rel="dns-prefetch" href="https://ads.com">
-```
-
-**Use**: Many origins (20+), third-party (ads, social).
-
-**DNS-Prefetch vs Preconnect**:
-- **DNS-Prefetch**: DNS only (cheapest), many origins (20+)
-- **Preconnect**: DNS + TCP + TLS (expensive), critical origins (3-5)
-
----
-
-### Priority Hints (fetchpriority)
-
-**Chrome 101+**: Manually adjust priority.
+### Comprehensive Resource Hints Template
 
 ```html
-<!-- Boost LCP image -->
-<img src="hero.jpg" fetchpriority="high">
-
-<!-- Defer analytics -->
-<script src="analytics.js" fetchpriority="low"></script>
-```
-
-**Values**:
-- `fetchpriority="high"` — Increase priority (critical)
-- `fetchpriority="low"` — Decrease priority (non-critical)
-- `fetchpriority="auto"` — Browser default
-
-**Use Cases**:
-- **High**: LCP image, critical JS
-- **Low**: Analytics, ads, below-fold images
-
----
-
-### Lazy Loading
-
-**Native lazy loading** (defer offscreen):
-```html
-<img src="offscreen.jpg" loading="lazy">
-```
-
-**Triggers**: When image near viewport (~500px threshold).
-
-**Benefits**: Reduces initial bandwidth, faster LCP (critical images first).
-
-**Best Practice**:
-```html
-<!-- ✅ Above-fold: Eager -->
-<img src="hero.jpg">
-
-<!-- ✅ Below-fold: Lazy -->
-<img src="product.jpg" loading="lazy">
-
-<!-- ❌ Don't lazy load LCP -->
-<img src="hero.jpg" loading="lazy"> <!-- BAD -->
-```
-
----
-
-### Optimal Strategy
-
-```html
+<!DOCTYPE html>
+<html>
 <head>
-  <!-- 1. Preconnect (early connection) -->
-  <link rel="preconnect" href="https://cdn.example.com">
+  <!-- 1. Preconnect to critical third-party origins (max 6) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://analytics.example.com"> <!-- fallback -->
   
-  <!-- 2. Preload critical resources -->
-  <link rel="preload" href="hero.jpg" as="image" fetchpriority="high">
-  <link rel="preload" href="font.woff2" as="font" crossorigin>
+  <!-- 2. Preload critical resources for current page -->
+  <!-- LCP image — must be discoverable by preload scanner -->
+  <link rel="preload" href="/images/hero.webp" as="image" fetchpriority="high">
+  <!-- Critical font used above fold -->  
+  <link rel="preload" href="/fonts/inter-500.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Critical JS required for interactivity -->
+  <link rel="preload" href="/app.chunk.js" as="script">
   
-  <!-- 3. Inline critical CSS (instant FCP) -->
-  <style>/* Critical CSS */</style>
+  <!-- 3. RENDER-BLOCKING CSS (intentionally blocking — contains critical styles) -->
+  <style>
+    /* Critical above-fold CSS inlined here */
+    body { margin: 0; font-family: 'Inter', sans-serif; }
+    .hero { min-height: 100vh; display: flex; align-items: center; }
+  </style>
   
-  <!-- 4. Async full CSS -->
-  <link rel="preload" href="main.css" as="style" onload="this.rel='stylesheet'">
+  <!-- 4. Non-critical CSS loaded asynchronously -->
+  <link rel="preload" href="/styles.css" as="style" onload="this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="/styles.css"></noscript>
   
-  <!-- 5. Defer JS -->
-  <script src="app.js" defer></script>
-  <script src="analytics.js" fetchpriority="low" defer></script>
+  <!-- 5. Defer app JS -->
+  <script src="/app.chunk.js" defer></script>
 </head>
 <body>
-  <!-- 6. LCP image (high priority) -->
-  <img src="hero.jpg" fetchpriority="high">
+  <!-- fetchpriority="high" on LCP element -->
+  <img src="/images/hero.webp" alt="Hero" fetchpriority="high" width="1200" height="600">
   
-  <!-- 7. Below-fold lazy -->
-  <img src="product.jpg" loading="lazy">
-  
-  <!-- 8. Prefetch next page -->
-  <link rel="prefetch" href="/next-page.html">
+  <!-- Below-fold images: lazy loaded -->
+  <img src="/images/product.webp" alt="Product" loading="lazy" width="400" height="300">
 </body>
+</html>
 ```
 
----
+### Programmatic Priority Control
 
-### Real-World Examples
+```javascript
+// Dynamic preload for route-based splitting
+function prefetchRoute(routePath) {
+  // Create preload link dynamically
+  const link = document.createElement('link');
+  link.rel = 'prefetch';
+  link.href = routePath;
+  link.as = 'document';
+  document.head.appendChild(link);
+}
 
-**Amazon**: Preload hero image (LCP 3.5s → 2.1s, 40% improvement).
+// Intersection Observer for image lazy-load control
+const lazyLoadObserver = new IntersectionObserver(
+  (entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const img = entry.target;
+        img.src = img.dataset.src;           // Swap in real src
+        img.removeAttribute('data-src');
+        lazyLoadObserver.unobserve(img);     // Stop observing
+      }
+    });
+  },
+  { rootMargin: '200px' } // Start 200px before element enters viewport
+);
 
-**Google**: Prefetch search results (instant navigation).
-
-**Netflix**: Preconnect to video CDN (200ms faster playback).
-
----
-
-### Trade-offs
-
-**Preload**:
-- ✅ High priority (fast)
-- ❌ Not cached across pages (page-specific)
-- ❌ Wastes bandwidth if not used
-
-**Prefetch**:
-- ✅ Cached across pages (HTTP cache)
-- ✅ Low priority (doesn't block)
-- ❌ Wasted if user doesn't navigate
-
-**Preconnect**:
-- ✅ Saves 100-300ms (DNS + TCP + TLS)
-- ❌ Connection kept open ~10s (resource cost)
-- ❌ Limit to 3-5 origins
-
-**fetchpriority**:
-- ✅ Fine-grained control
-- ❌ Chrome only (limited support)
-
-**Follow-up I Expect**:
-
-Q: 'When to use preload vs prefetch?'
-A: **Preload** for current page critical resources (LCP image, fonts). **Prefetch** for likely next navigation (next page, search results). Preload = high priority NOW, prefetch = low priority FUTURE.
-
-Q: 'How many preconnects?'
-A: Limit to **3-5 critical origins** (CDN, API, fonts). Each connection kept open ~10s (resource cost). For many origins (20+), use **dns-prefetch** (cheaper, DNS only).
-
-Q: 'fetchpriority browser support?'
-A: Chrome 101+, Edge 101+ (Chromium-based). Not Safari/Firefox yet. Progressive enhancement: add fetchpriority (Chromium benefits), no harm others (ignored)."
+document.querySelectorAll('img[data-src]').forEach(img => {
+  lazyLoadObserver.observe(img);
+});
+```
 
 ---
 
 ## 6. Why & How Summary
 
-### Why It Matters
+**Why it matters:**
+Resource prioritization directly affects Core Web Vitals — LCP, FCP, and TTI. Misaligned priorities (hero image at medium priority, minor CSS at high) cause LCP regressions. Missing preconnect hints add 100-300ms to first requests from third-party origins. Unused preloads waste bandwidth. Getting prioritization right is low-effort, high-impact work that scales across essentially all traffic without additional infrastructure. Google uses resource priority hints as a ranking signal, and field LCP scores affect SEO.
 
-**Loading Performance**: Critical resources first (LCP image, fonts, critical CSS) → faster FCP/LCP/TTI  
-**Network Efficiency**: Preconnect saves 100-300ms (DNS + TCP + TLS), prefetch caches next page (instant navigation)  
-**User Experience**: Lazy loading reduces initial bandwidth, smooth loading prioritizes above-fold  
-**Core Web Vitals**: Optimized loading improves LCP (preload hero), FID (defer non-critical JS), CLS (size attributes)
-
-### How It Works
-
-**Default Priorities**: Browser assigns 0-5 priority (5=HTML/blocking CSS/JS highest, 4=fonts/viewport images high, 3=async scripts medium, 2=offscreen images/defer scripts low, 1=prefetch lowest)  
-**Preload**: `<link rel="preload" as="image/font/style/script">` high priority fetch NOW for current page, not cached across pages, use for LCP candidates (hero image, critical fonts)  
-**Prefetch**: `<link rel="prefetch">` low priority fetch FUTURE navigation, cached across pages (HTTP cache), use for likely next page  
-**Preconnect**: `<link rel="preconnect">` early DNS+TCP+TLS during HTML parse saves 100-300ms, limit 3-5 critical origins (CDN/API/fonts), connection kept open ~10s  
-**DNS-Prefetch**: `<link rel="dns-prefetch">` DNS only (cheaper), use for many origins (20+) third-party (ads/social)  
-**fetchpriority**: `fetchpriority="high/low/auto"` Chrome 101+ manual priority adjustment, high for LCP image/critical JS, low for analytics/ads  
-**Lazy Loading**: `loading="lazy"` native defer offscreen images/iframes until near viewport (~500px threshold), reduces initial bandwidth, don't lazy load LCP image
-
-**FAANG Expectation**: Explain default browser priorities (0-5 levels by resource type and viewport position), four resource hints (preload high priority current page, prefetch low priority next page, preconnect early connection saves 100-300ms, dns-prefetch DNS only for many origins), preload vs prefetch differences (priority, caching, use cases), preconnect cost/benefit (saves DNS+TCP+TLS but keeps connection open limit 3-5), fetchpriority attribute (high/low manual adjustment Chrome 101+), lazy loading (loading="lazy" defer offscreen don't use on LCP), optimal loading strategy (preconnect→preload critical→inline critical CSS→async full CSS→defer JS→lazy below-fold→prefetch next), real-world examples (Amazon preload hero 40% LCP improvement, Google prefetch search instant navigation, Netflix preconnect video 200ms faster), trade-offs (preload not cached across pages, prefetch wasted if no navigation, preconnect resource cost limit origins, fetchpriority browser support limited)
+**How it works:**
+The browser's network prioritization stack assigns each resource a priority tier (Highest, High, Medium, Low, Lowest) based on resource type, document position, and viewport position. High-priority resources get network connections first and are served before low-priority ones when bandwidth is constrained. Resource hints (`preload`, `prefetch`, `preconnect`, `dns-prefetch`) and the `fetchpriority` attribute allow developers to override or supplement these heuristics. The preload scanner discovers HTML-declared resources early — resources discovered only via CSS or JS execution are inevitably discovered later and thus fetched later. Lazy loading deferral (`loading="lazy"`, dynamic `import()`) moves non-critical resources out of the critical path entirely.

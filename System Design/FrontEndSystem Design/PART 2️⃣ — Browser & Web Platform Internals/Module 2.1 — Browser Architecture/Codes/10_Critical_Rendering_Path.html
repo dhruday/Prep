@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Critical Rendering Path Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      padding: 20px;
+    }
+    h1 { text-align: center; color: #60a5fa; margin-bottom: 6px; font-size: 1.6rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 24px; font-size: 0.9rem; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    .card {
+      background: #1e2130;
+      border: 1px solid #2d3551;
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .card h2 { color: #f59e0b; font-size: 1rem; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Waterfall */
+    .waterfall { display: flex; flex-direction: column; gap: 6px; }
+    .wf-row { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; }
+    .wf-label { width: 110px; color: #94a3b8; text-align: right; flex-shrink: 0; }
+    .wf-track { flex: 1; background: #2d3551; border-radius: 4px; height: 22px; position: relative; }
+    .wf-bar {
+      height: 100%; border-radius: 4px;
+      position: absolute;
+      display: flex; align-items: center; padding-left: 6px;
+      font-size: 0.7rem; color: #fff; white-space: nowrap; overflow: hidden;
+      transition: width 1s ease, left 0.8s ease;
+    }
+    .blocking  { background: #ef4444; }
+    .css       { background: #f59e0b; }
+    .js-defer  { background: #3b82f6; }
+    .js-async  { background: #8b5cf6; }
+    .image     { background: #10b981; }
+    .html      { background: #06b6d4; }
+    .paint-line {
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 2px;
+      background: #fff;
+      opacity: 0.6;
+    }
+
+    /* Timeline axis */
+    .wf-axis { display: flex; margin-left: 118px; margin-top: 4px; }
+    .wf-axis span { flex: 1; font-size: 0.65rem; color: #475569; text-align: center; }
+
+    /* Steps */
+    .steps { display: flex; flex-direction: column; gap: 8px; }
+    .step {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border-left: 3px solid transparent;
+      transition: all 0.4s;
+      opacity: 0.4;
+    }
+    .step.active { opacity: 1; border-left-color: #60a5fa; background: #1a2035; }
+    .step .num { background: #334155; border-radius: 50%; width: 24px; height: 24px;
+                 display: flex; align-items: center; justify-content: center;
+                 font-size: 0.75rem; flex-shrink: 0; color: #60a5fa; font-weight: bold; }
+    .step .info h4 { font-size: 0.85rem; color: #e2e8f0; }
+    .step .info p { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+
+    /* Metrics */
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    .metric {
+      background: #0f1117;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .metric .val { font-size: 1.5rem; font-weight: bold; }
+    .metric .lbl { font-size: 0.7rem; color: #64748b; margin-top: 2px; }
+    .good  { color: #10b981; }
+    .warn  { color: #f59e0b; }
+    .bad   { color: #ef4444; }
+
+    /* Controls */
+    .controls { text-align: center; margin: 18px 0 10px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    button {
+      padding: 9px 18px;
+      border: none; border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.85; }
+    .btn-bad  { background: #ef4444; color: #fff; }
+    .btn-good { background: #10b981; color: #fff; }
+    .btn-info { background: #3b82f6; color: #fff; }
+
+    /* Legend */
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: #94a3b8; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* FCP marker explanation */
+    .fcp-note {
+      text-align: center; font-size: 0.75rem; color: #94a3b8; margin-top: 10px;
+      background: #162032; padding: 8px 12px; border-radius: 6px;
+    }
+    .fcp-note span { color: #fff; font-weight: bold; }
+
+    /* Script comparison table */
+    .table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 10px; }
+    .table th { background: #1a2035; color: #60a5fa; padding: 8px 10px; text-align: left; }
+    .table td { padding: 7px 10px; border-top: 1px solid #2d3551; vertical-align: top; }
+    .table tr:nth-child(even) td { background: #161b2e; }
+    .tag { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; }
+    .tag-block { background: #7f1d1d; color: #fca5a5; }
+    .tag-safe  { background: #14532d; color: #86efac; }
+    .tag-ok    { background: #1e3a5f; color: #93c5fd; }
+  </style>
+</head>
+<body>
+
+<h1>⚡ Critical Rendering Path (CRP) Demo</h1>
+<p class="subtitle">Visualize how different resource strategies affect First Paint timing</p>
+
+<div class="controls">
+  <button class="btn-bad"  onclick="runScenario('bad')">😱 Bad CRP (Blocking)</button>
+  <button class="btn-good" onclick="runScenario('good')">✅ Optimized CRP</button>
+  <button class="btn-info" onclick="runScenario('ssr')">🚀 SSR Optimized</button>
+</div>
+
+<div class="grid">
+  <!-- Waterfall -->
+  <div class="card">
+    <h2>📊 Resource Waterfall</h2>
+    <div id="waterfall" class="waterfall">
+      <!-- filled by JS -->
+    </div>
+    <div class="wf-axis" id="axis">
+      <span>0</span><span>200ms</span><span>400ms</span><span>600ms</span><span>800ms</span>
+    </div>
+    <div class="fcp-note">
+      First Paint at: <span id="fcp-time">—</span> &nbsp;|&nbsp; LCP at: <span id="lcp-time">—</span>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot html"></div> HTML</div>
+      <div class="legend-item"><div class="legend-dot css"></div> CSS (blocking)</div>
+      <div class="legend-item"><div class="legend-dot blocking"></div> Sync JS (blocking)</div>
+      <div class="legend-item"><div class="legend-dot js-defer"></div> Deferred JS</div>
+      <div class="legend-item"><div class="legend-dot js-async"></div> Async JS</div>
+      <div class="legend-item"><div class="legend-dot image"></div> Images</div>
+    </div>
+  </div>
+
+  <!-- CRP Steps -->
+  <div class="card">
+    <h2>🔄 CRP Steps</h2>
+    <div class="steps" id="crp-steps">
+      <div class="step" id="s1"><div class="num">1</div><div class="info"><h4>HTML Parsing → DOM</h4><p>Browser tokenizes HTML and builds DOM incrementally as bytes arrive.</p></div></div>
+      <div class="step" id="s2"><div class="num">2</div><div class="info"><h4>CSS Parsing → CSSOM</h4><p>CSS is render-blocking. Browser stops painting until CSSOM is complete.</p></div></div>
+      <div class="step" id="s3"><div class="num">3</div><div class="info"><h4>JavaScript Execution</h4><p>Sync JS pauses HTML parsing. Defer/Async JS avoids this.</p></div></div>
+      <div class="step" id="s4"><div class="num">4</div><div class="info"><h4>Render Tree = DOM + CSSOM</h4><p>Only visible nodes included. display:none is excluded.</p></div></div>
+      <div class="step" id="s5"><div class="num">5</div><div class="info"><h4>Layout → Paint → Composite</h4><p>Geometry calculated, pixels drawn, GPU layers composited.</p></div></div>
+      <div class="step" id="s6"><div class="num">6</div><div class="info"><h4>🎨 First Paint (FCP)</h4><p>User sees first meaningful content. This is what CRP optimization targets.</p></div></div>
+    </div>
+    <div class="metrics" id="metrics">
+      <div class="metric"><div class="val bad" id="m-fcp">—</div><div class="lbl">FCP (ms)</div></div>
+      <div class="metric"><div class="val bad" id="m-blocking">—</div><div class="lbl">Blocking Resources</div></div>
+      <div class="metric"><div class="val bad" id="m-lcp">—</div><div class="lbl">LCP (ms)</div></div>
+      <div class="metric"><div class="val bad" id="m-score">—</div><div class="lbl">CRP Score</div></div>
+    </div>
+  </div>
+
+  <!-- Script Attribute Comparison -->
+  <div class="card" style="grid-column: 1 / -1;">
+    <h2>📋 Script Loading Strategies Comparison</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Strategy</th><th>Blocks Parser?</th><th>Blocks Render?</th>
+          <th>Execution Timing</th><th>Use Case</th><th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>&lt;script src&gt;</code></td>
+          <td class="bad">Yes ❌</td><td class="bad">Yes ❌</td>
+          <td>Immediate, in order</td>
+          <td>Legacy only</td>
+          <td><span class="tag tag-block">AVOID</span></td>
+        </tr>
+        <tr>
+          <td><code>&lt;script defer&gt;</code></td>
+          <td class="good">No ✅</td><td class="good">No ✅</td>
+          <td>After DOM parsed, in order</td>
+          <td>App scripts needing DOM</td>
+          <td><span class="tag tag-safe">PREFERRED</span></td>
+        </tr>
+        <tr>
+          <td><code>&lt;script async&gt;</code></td>
+          <td class="good">No ✅</td><td class="good">No ✅</td>
+          <td>ASAP, may be out-of-order</td>
+          <td>Independent analytics, ads</td>
+          <td><span class="tag tag-ok">GOOD FOR INDEPENDENT</span></td>
+        </tr>
+        <tr>
+          <td><code>&lt;script type="module"&gt;</code></td>
+          <td class="good">No ✅</td><td class="good">No ✅</td>
+          <td>Deferred by default, in order</td>
+          <td>Modern ES modules</td>
+          <td><span class="tag tag-safe">PREFERRED (MODERN)</span></td>
+        </tr>
+        <tr>
+          <td>Inline <code>&lt;script&gt;</code></td>
+          <td class="bad">Yes ❌</td><td class="bad">Yes ❌</td>
+          <td>Immediate (but no network wait)</td>
+          <td>Tiny critical scripts only</td>
+          <td><span class="tag tag-ok">USE SPARINGLY</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const TOTAL_WIDTH = 100; // % across waterfall
+
+  const scenarios = {
+    bad: {
+      label: 'Bad (Blocking)',
+      fcp: 780, lcp: 980, blocking: 3, score: 'F',
+      resources: [
+        { name: 'index.html',  type: 'html',     start: 0,   dur: 15, label: 'HTML' },
+        { name: 'styles.css',  type: 'css',       start: 15,  dur: 18, label: 'CSS (blocking render)' },
+        { name: 'normalize.css',type:'css',       start: 15,  dur: 14, label: 'CSS' },
+        { name: 'app.js',      type: 'blocking',  start: 33,  dur: 28, label: 'app.js (sync, blocks!)' },
+        { name: 'vendor.js',   type: 'blocking',  start: 61,  dur: 32, label: 'vendor.js (sync, blocks!)' },
+        { name: 'hero.jpg',    type: 'image',     start: 93,  dur: 20, label: 'hero.jpg' },
+        { name: 'analytics.js',type: 'blocking',  start: 61,  dur: 15, label: 'analytics.js (sync!)' },
+      ],
+      fcp_at: 93, lcp_at: 100
+    },
+    good: {
+      label: 'Optimized',
+      fcp: 320, lcp: 520, blocking: 1, score: 'A',
+      resources: [
+        { name: 'index.html',   type: 'html',     start: 0,  dur: 15, label: 'HTML (+ inline critical CSS)' },
+        { name: '[critical CSS inline]', type:'css', start: 0, dur: 2, label: 'Critical CSS (inline ⚡)' },
+        { name: 'hero.jpg',     type: 'image',    start: 2,  dur: 25, label: 'hero.jpg (preloaded 🚀)' },
+        { name: 'styles.css',   type: 'css',      start: 15, dur: 18, label: 'Full CSS (non-blocking)' },
+        { name: 'vendor.js',    type: 'js-defer', start: 15, dur: 30, label: 'vendor.js defer ✅' },
+        { name: 'app.js',       type: 'js-defer', start: 15, dur: 25, label: 'app.js defer ✅' },
+        { name: 'analytics.js', type: 'js-async', start: 15, dur: 15, label: 'analytics.js async ✅' },
+      ],
+      fcp_at: 30, lcp_at: 55
+    },
+    ssr: {
+      label: 'SSR Optimized',
+      fcp: 145, lcp: 280, blocking: 0, score: 'A+',
+      resources: [
+        { name: 'SSR HTML (pre-rendered)',type:'html', start: 0, dur: 22, label: 'SSR: pre-rendered HTML ⚡' },
+        { name: '[critical CSS inline]', type:'css',  start: 0, dur: 2,  label: 'Critical CSS inline ⚡' },
+        { name: 'hero.jpg',  type: 'image',  start: 2,  dur: 16, label: 'hero.jpg (preloaded 🚀)' },
+        { name: 'app.js',    type: 'js-defer', start: 22, dur: 30, label: 'app.js (hydration, defer)' },
+        { name: 'styles.css',type: 'css',    start: 22, dur: 15, label: 'Full CSS (non-blocking)' },
+      ],
+      fcp_at: 22, lcp_at: 38
+    }
+  };
+
+  function runScenario(key) {
+    const sc = scenarios[key];
+    const MAX = sc.resources.reduce((m, r) => Math.max(m, r.start + r.dur), 0);
+
+    // Render waterfall
+    const wf = document.getElementById('waterfall');
+    wf.innerHTML = '';
+    sc.resources.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'wf-row';
+      const pct = v => (v / MAX * 100).toFixed(1) + '%';
+      row.innerHTML = `
+        <div class="wf-label">${r.name}</div>
+        <div class="wf-track">
+          <div class="wf-bar ${r.type}" style="left:${pct(r.start)};width:0" data-w="${pct(r.dur)}">${r.label}</div>
+        </div>
+      `;
+      wf.appendChild(row);
+    });
+
+    // FCP / LCP lines
+    const fcp_pct = (sc.fcp_at / MAX * 100).toFixed(1) + '%';
+    const lcp_pct = (sc.lcp_at / MAX * 100).toFixed(1) + '%';
+    document.querySelectorAll('.wf-track').forEach(track => {
+      track.innerHTML += `<div class="paint-line" style="left:${fcp_pct};background:#60a5fa" title="FCP"></div>`;
+      track.innerHTML += `<div class="paint-line" style="left:${lcp_pct};background:#10b981" title="LCP"></div>`;
+    });
+
+    // Animate bars
+    setTimeout(() => {
+      document.querySelectorAll('.wf-bar').forEach(bar => {
+        bar.style.width = bar.dataset.w;
+      });
+    }, 50);
+
+    // Animate CRP steps
+    const steps = ['s1','s2','s3','s4','s5','s6'];
+    steps.forEach(id => document.getElementById(id).classList.remove('active'));
+    steps.forEach((id, i) => {
+      setTimeout(() => document.getElementById(id).classList.add('active'), i * 320);
+    });
+
+    // Update metrics
+    const fcpCls = sc.fcp < 400 ? 'good' : sc.fcp < 700 ? 'warn' : 'bad';
+    const lcpCls = sc.lcp < 500 ? 'good' : sc.lcp < 800 ? 'warn' : 'bad';
+    setTimeout(() => {
+      document.getElementById('fcp-time').textContent = sc.fcp + 'ms';
+      document.getElementById('lcp-time').textContent = sc.lcp + 'ms';
+      document.getElementById('m-fcp').textContent = sc.fcp;
+      document.getElementById('m-fcp').className = 'val ' + fcpCls;
+      document.getElementById('m-lcp').textContent = sc.lcp;
+      document.getElementById('m-lcp').className = 'val ' + lcpCls;
+      document.getElementById('m-blocking').textContent = sc.blocking;
+      document.getElementById('m-blocking').className = 'val ' + (sc.blocking === 0 ? 'good' : sc.blocking <= 1 ? 'warn' : 'bad');
+      document.getElementById('m-score').textContent = sc.score;
+      document.getElementById('m-score').className = 'val ' + (sc.score === 'A+' ? 'good' : sc.score === 'A' ? 'good' : 'bad');
+    }, 1400);
+  }
+
+  // Auto-run bad scenario on load
+  runScenario('bad');
+</script>
+</body>
+</html>

@@ -1,596 +1,258 @@
 # 20. Browser Storage Options Overview
 
+---
+
 ## 1. High-Level Explanation (Frontend Interview Level)
 
-**Browser Storage Options** provide client-side data persistence with different capabilities—Cookies (HTTP headers, 4KB), LocalStorage (sync 5-10MB), SessionStorage (tab-scoped 5-10MB), IndexedDB (async large datasets), Cache API (Service Worker offline assets)—each optimized for specific use cases.
+Browsers provide multiple storage mechanisms, each designed for different use cases, performance profiles, and security constraints. Choosing the right storage option is a critical architectural decision that affects security, performance, capacity, and offline capability.
 
-- **Cookies**: HTTP headers, 4KB, sent with every request, expire
-- **LocalStorage**: Synchronous key-value, 5-10MB, persists across sessions
-- **SessionStorage**: Like LocalStorage but tab-scoped (cleared on close)
-- **IndexedDB**: Async NoSQL database, large storage (50MB-unlimited), transactions
-- **Cache API**: Service Worker asset caching, offline-first PWAs
+**The five major browser storage mechanisms:**
 
-**Key Principle**: "Choose storage based on data size, persistence, and access patterns."
+| Storage | Capacity | Sync/Async | Persists? | HTTP Sent? | JS Access |
+|---------|----------|------------|-----------|-----------|-----------|
+| **Cookies** | ~4KB | Sync | Yes (configurable) | **Yes** | Yes (unless HttpOnly) |
+| **LocalStorage** | ~5-10MB | **Sync** | Yes | No | Yes |
+| **SessionStorage** | ~5-10MB | **Sync** | Tab session only | No | Yes |
+| **IndexedDB** | 50MB–quota | **Async** | Yes | No | Yes |
+| **Cache API** | Quota-based | **Async** | Yes | No | Yes (via SW) |
+
+**Plus newer additions:**
+- **Origin Private File System (OPFS)** — High-performance file storage, async
+- **Web Storage (localStorage/sessionStorage)** — Simple key-value
 
 ---
 
 ## 2. Deep-Dive Explanation (Senior / Staff Level)
 
-### Storage Comparison Table
+### Cookies
 
-| Feature | Cookies | LocalStorage | SessionStorage | IndexedDB | Cache API |
-|---------|---------|-------------|---------------|-----------|-----------|
-| **Capacity** | 4KB | 5-10MB | 5-10MB | 50MB-unlimited | Unlimited (quota) |
-| **Persistence** | Expires | Forever | Tab-close | Forever | Forever |
-| **Scope** | Domain + path | Origin | Tab | Origin | Origin |
-| **Accessibility** | Client + Server | Client only | Client only | Client only | Client only (SW) |
-| **API** | `document.cookie` | Sync key-value | Sync key-value | Async DB | Async cache |
-| **HTTP** | Sent with requests | No | No | No | No |
-| **Use Case** | Auth tokens | Settings | Form data | Large datasets | Offline assets |
+Cookies are the original browser storage — designed for server-state coordination, not client data storage.
 
----
+**Key attributes:**
+```http
+Set-Cookie: session=abc123; 
+  Path=/; 
+  Domain=example.com;
+  Expires=Sat, 01 Jan 2026 00:00:00 GMT;
+  HttpOnly;      # Can't be accessed by JavaScript — prevents XSS token theft
+  Secure;        # Only sent over HTTPS
+  SameSite=Lax;  # Lax: sent on same-site + top-level navigation; Strict: same-site only; None: always (+ requires Secure)
+```
 
-### 1. Cookies
+**Why cookies exist for auth:**
+- They are sent automatically with every HTTP request to the matching domain
+- `HttpOnly` cookies cannot be stolen by XSS because JavaScript cannot read them
+- The browser handles authentication — no JS code needed to add auth headers
 
-**Purpose**: Small data sent with every HTTP request.
+**Cookie limitations:**
+- 4KB limit per cookie (20 cookies per domain typical limit)
+- Sent with every request — affects bandwidth for large cookies
+- Third-party cookie deprecation (2024+) — Chrome is blocking third-party cookies
+- Not suitable for large data storage
 
-**API**:
+**SameSite impact on CSRF:**
+```
+SameSite=Lax  (default since Chrome 80): Cookie sent on top-level GET navigation, 
+              NOT on cross-site POST → prevents most CSRF attacks
+SameSite=Strict: Cookie never sent on cross-site request at all → safest
+SameSite=None: Cross-site allowed, requires Secure attribute → for legitimate 
+               cross-site use cases (third-party embeds)
+```
+
+### LocalStorage
+
+A simple key-value store scoped to an origin (scheme + domain + port). Persists indefinitely across sessions.
+
+**API:**
 ```javascript
-// Set cookie
-document.cookie = "user=john; max-age=3600; path=/; secure; samesite=strict";
-
-// Read cookies (all at once)
-const cookies = document.cookie;
-// "user=john; theme=dark; session=abc123"
-
-// Parse cookies
-function getCookie(name) {
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? match[2] : null;
-}
-
-const user = getCookie('user'); // "john"
-
-// Delete cookie (set max-age=0)
-document.cookie = "user=; max-age=0";
+// Synchronous — BLOCKS the main thread!
+localStorage.setItem('key', JSON.stringify({ data: 'value' }));
+const data = JSON.parse(localStorage.getItem('key') || '{}');
+localStorage.removeItem('key');
+localStorage.clear(); // Dangerous — clears ALL origin data!
 ```
 
-**Cookie Attributes**:
+**Critical limitation — synchronous:**
+LocalStorage is **synchronous and blocks the main thread**. A read/write of a 5MB JSON blob will freeze UI. Large writes can cause significant jank.
+
+**When to use:**
+- Small, simple user preferences (theme, locale, last-selected tab)
+- Non-sensitive configuration flags
+- Data up to a few KB that's needed across sessions
+
+**When NOT to use:**
+- Auth tokens (XSS accessible — JS can read everything in localStorage)
+- Large data (synchronous = blocking)
+- Service Workers cannot access localStorage (synchronous API not available in worker context)
+
+**Security consideration:** Any XSS vulnerability in your app can steal all localStorage data. This is why JWTs should NOT be stored in localStorage if you have any third-party scripts.
+
+### SessionStorage
+
+Identical API to localStorage, but:
+- **Scoped to the browser tab** — new tab = new session storage
+- **Cleared when tab closes** (not on page navigation within tab)
+- Not shared between tabs, even for the same origin
+
+**Use cases:**
+- Multi-step form data that shouldn't persist beyond the session
+- Tab-specific UI state (which accordion is open)
+- Shopping cart for a single checkout flow
+
+### IndexedDB
+
+A fully-featured, **async, transactional, object-oriented database** built into the browser. It's the right tool for large-scale client-side storage needs.
+
+**Capabilities:**
+- Stores any structured-cloneable data (objects, arrays, Blobs, ArrayBuffers)
+- Indexed queries (not just key lookups)
+- Cursor-based traversal
+- Transactions with rollback
+- Works in Service Workers
+- Capacity: typically 50% of free disk space (browsers vary; Chrome: up to ~2GB per origin)
+- Async by design — no main thread blocking
+
+**Raw API is verbose — use a library:**
 ```javascript
-document.cookie = "token=abc123;" +
-  "max-age=3600;" +        // Expires in 1 hour (seconds)
-  "expires=Wed, 21 Oct 2025 07:28:00 GMT;" + // Or absolute date
-  "path=/;" +              // Available on all paths
-  "domain=.example.com;" + // Available on subdomains
-  "secure;" +              // HTTPS only
-  "samesite=strict";       // CSRF protection
-
-// SameSite values:
-// - strict: No cross-site requests (most secure)
-// - lax: GET requests only (default)
-// - none: All cross-site (requires Secure)
-```
-
-**Limitations**:
-- **Size**: 4KB per cookie, ~50 cookies per domain
-- **Performance**: Sent with EVERY request (bloats headers)
-- **Security**: Accessible by JavaScript (XSS risk unless `httponly`)
-
-**Best Practices**:
-```javascript
-// ✅ GOOD: Secure auth token (httponly, secure, samesite)
-// Set by server (httponly can't be read by JS):
-Set-Cookie: session=abc; HttpOnly; Secure; SameSite=Strict; Max-Age=3600
-
-// ❌ BAD: Large data in cookies (sent with every request)
-document.cookie = "data=" + JSON.stringify(largeObject); // BAD
-
-// ✅ GOOD: Use localStorage for large data
-localStorage.setItem('data', JSON.stringify(largeObject));
-```
-
----
-
-### 2. LocalStorage
-
-**Purpose**: Persistent key-value storage (survives browser close).
-
-**API**:
-```javascript
-// Set item
-localStorage.setItem('theme', 'dark');
-localStorage.setItem('user', JSON.stringify({ name: 'John', age: 30 }));
-
-// Get item
-const theme = localStorage.getItem('theme'); // 'dark'
-const user = JSON.parse(localStorage.getItem('user')); // { name: 'John', age: 30 }
-
-// Remove item
-localStorage.removeItem('theme');
-
-// Clear all
-localStorage.clear();
-
-// Check existence
-if (localStorage.getItem('theme')) {
-  // Theme exists
-}
-
-// Iterate keys
-for (let i = 0; i < localStorage.length; i++) {
-  const key = localStorage.key(i);
-  const value = localStorage.getItem(key);
-  console.log(key, value);
-}
-```
-
-**Capacity**: 5-10MB (browser-dependent).
-
-**Scope**: Origin (protocol + domain + port).
-```
-https://example.com:443     → Separate storage
-https://sub.example.com:443 → Separate storage
-http://example.com:80       → Separate storage
-```
-
-**Synchronous** (blocks Main Thread):
-```javascript
-// ❌ BAD: Large data (blocks UI)
-const large = JSON.stringify(new Array(1000000).fill('data')); // ~8MB
-localStorage.setItem('large', large); // Blocks Main Thread 50-200ms
-
-// ✅ BETTER: Use IndexedDB (async) for large data
-```
-
-**Events** (cross-tab synchronization):
-```javascript
-// Tab 1: Set item
-localStorage.setItem('theme', 'dark');
-
-// Tab 2: Listen for changes
-window.addEventListener('storage', (event) => {
-  console.log('Key changed:', event.key);        // 'theme'
-  console.log('Old value:', event.oldValue);     // 'light'
-  console.log('New value:', event.newValue);     // 'dark'
-  console.log('URL:', event.url);                // Tab 1 URL
-  
-  // Update UI
-  applyTheme(event.newValue);
-});
-
-// Note: Event fires in OTHER tabs (not the tab that made the change)
-```
-
-**Use Cases**:
-- User preferences (theme, language)
-- Settings (collapsed sidebar, font size)
-- Cached API responses (small datasets)
-- Draft content (autosave)
-
-**Limitations**:
-- Synchronous (blocks Main Thread)
-- 5-10MB limit (varies by browser)
-- Only strings (must JSON.stringify/parse)
-- No transactions (can corrupt data if write interrupted)
-
----
-
-### 3. SessionStorage
-
-**Purpose**: Like LocalStorage but tab-scoped (cleared on tab close).
-
-**API** (same as LocalStorage):
-```javascript
-sessionStorage.setItem('formData', JSON.stringify(formValues));
-const formData = JSON.parse(sessionStorage.getItem('formData'));
-sessionStorage.removeItem('formData');
-sessionStorage.clear();
-```
-
-**Scope**: Tab-specific (separate per tab, even same URL).
-```
-Tab 1: sessionStorage.setItem('count', '1');
-Tab 2: sessionStorage.setItem('count', '2');
-
-// Tab 1: getItem('count') → '1'
-// Tab 2: getItem('count') → '2'
-// Separate storage
-```
-
-**Lifecycle**:
-```
-Open tab          → sessionStorage created
-Navigate pages    → sessionStorage persists (same tab)
-Refresh page      → sessionStorage persists
-Duplicate tab     → sessionStorage COPIED to new tab
-Close tab         → sessionStorage CLEARED
-```
-
-**Use Cases**:
-- Multi-step forms (wizard progress)
-- Temporary filters (search state)
-- Single-session data (shopping cart)
-- Tab-specific state
-
-**Example** (form wizard):
-```javascript
-// Step 1: Save data
-function saveStep1(data) {
-  const wizard = JSON.parse(sessionStorage.getItem('wizard') || '{}');
-  wizard.step1 = data;
-  sessionStorage.setItem('wizard', JSON.stringify(wizard));
-}
-
-// Step 2: Save data
-function saveStep2(data) {
-  const wizard = JSON.parse(sessionStorage.getItem('wizard') || '{}');
-  wizard.step2 = data;
-  sessionStorage.setItem('wizard', JSON.stringify(wizard));
-}
-
-// Step 3: Retrieve all data
-function submitWizard() {
-  const wizard = JSON.parse(sessionStorage.getItem('wizard') || '{}');
-  // wizard = { step1: {...}, step2: {...} }
-  
-  submitForm(wizard);
-  sessionStorage.removeItem('wizard');
-}
-
-// If page refreshed during wizard, data persists (same tab)
-```
-
----
-
-### 4. IndexedDB
-
-**Purpose**: Async NoSQL database for large datasets.
-
-**Characteristics**:
-- **Capacity**: 50MB (Safari) to unlimited (Chrome, ask permission at ~1GB)
-- **Async**: Doesn't block Main Thread
-- **Transactions**: ACID guarantees (atomicity, consistency, isolation, durability)
-- **Indexes**: Fast queries (like SQL indexes)
-- **Types**: Stores any JS value (objects, Blob, File)
-
-**API** (low-level, verbose):
-```javascript
-// Open database
-const request = indexedDB.open('myDatabase', 1);
+// Raw IndexedDB API (verbose but important to know)
+const request = indexedDB.open('MyDatabase', 1);
 
 request.onupgradeneeded = (event) => {
   const db = event.target.result;
-  
-  // Create object store (like table)
-  const store = db.createObjectStore('users', { keyPath: 'id', autoIncrement: true });
-  
-  // Create indexes (for queries)
+  const store = db.createObjectStore('users', { keyPath: 'id' });
   store.createIndex('email', 'email', { unique: true });
-  store.createIndex('age', 'age', { unique: false });
 };
 
 request.onsuccess = (event) => {
   const db = event.target.result;
-  
-  // Write data (transaction)
-  const transaction = db.transaction(['users'], 'readwrite');
-  const store = transaction.objectStore('users');
-  
-  store.add({ name: 'John', email: 'john@example.com', age: 30 });
-  store.add({ name: 'Jane', email: 'jane@example.com', age: 25 });
-  
-  transaction.oncomplete = () => {
-    console.log('Transaction complete');
-  };
+  const tx = db.transaction('users', 'readwrite');
+  tx.objectStore('users').add({ id: 1, name: 'Alice', email: 'alice@example.com' });
 };
 
-// Read data
-function getUser(id) {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['users'], 'readonly');
-    const store = transaction.objectStore('users');
-    const request = store.get(id);
-    
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
+// Modern: Use libraries like idb (Jake Archibald's wrapper)
+import { openDB } from 'idb';
 
-const user = await getUser(1); // { id: 1, name: 'John', ... }
-
-// Query by index
-function getUsersByAge(minAge) {
-  return new Promise((resolve) => {
-    const transaction = db.transaction(['users'], 'readonly');
-    const store = transaction.objectStore('users');
-    const index = store.index('age');
-    
-    const range = IDBKeyRange.lowerBound(minAge);
-    const results = [];
-    
-    index.openCursor(range).onsuccess = (event) => {
-      const cursor = event.target.result;
-      if (cursor) {
-        results.push(cursor.value);
-        cursor.continue();
-      } else {
-        resolve(results);
-      }
-    };
-  });
-}
-
-const adults = await getUsersByAge(18); // All users age >= 18
-```
-
-**Wrapper Libraries** (easier API):
-
-**Dexie.js**:
-```javascript
-import Dexie from 'dexie';
-
-const db = new Dexie('myDatabase');
-
-// Define schema
-db.version(1).stores({
-  users: '++id, name, email, age' // ++id = autoIncrement
+const db = await openDB('MyDatabase', 1, {
+  upgrade(db) {
+    db.createObjectStore('users', { keyPath: 'id' });
+  },
 });
 
-// Add data
-await db.users.add({ name: 'John', email: 'john@example.com', age: 30 });
-
-// Get data
-const user = await db.users.get(1);
-
-// Query
-const adults = await db.users.where('age').aboveOrEqual(18).toArray();
-
-// Update
-await db.users.update(1, { age: 31 });
-
-// Delete
-await db.users.delete(1);
+await db.put('users', { id: 1, name: 'Alice', email: 'alice@example.com' });
+const user = await db.get('users', 1);
+const allUsers = await db.getAll('users');
 ```
 
-**Use Cases**:
-- Offline-first apps (sync data when online)
-- Large datasets (product catalog, email archive)
-- Media files (images, videos)
-- Complex queries (filtering, sorting)
-- Progressive Web Apps (PWA)
+**Production use cases:**
+- Offline-first apps (store full dataset for offline use)
+- Client-side draft saving (document editors)
+- Large configuration data
+- Local search indexes
+- Image/file caching when Cache API isn't suitable
+- Workbox uses IndexedDB internally for cache metadata
 
----
+### Cache API
 
-### 5. Cache API
+The **Cache API** stores Request/Response pairs — it's designed for HTTP response caching, not arbitrary data. Used exclusively by Service Workers (and sometimes directly by pages).
 
-**Purpose**: Service Worker asset caching for offline-first PWAs.
-
-**API**:
 ```javascript
-// Service Worker (sw.js)
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open('v1').then((cache) => {
-      return cache.addAll([
-        '/',
-        '/styles/main.css',
-        '/scripts/app.js',
-        '/images/logo.png'
-      ]);
-    })
-  );
-});
+// Open or create a named cache
+const cache = await caches.open('my-cache-v1');
 
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Return cached response or fetch from network
-      return response || fetch(event.request);
-    })
-  );
-});
-```
+// Cache a response
+await cache.put('/api/products', new Response(JSON.stringify(products)));
 
-**Main Thread API**:
-```javascript
-// Store response
-const response = await fetch('/api/data');
-const cache = await caches.open('api-cache');
-await cache.put('/api/data', response.clone());
+// Or use add() to fetch + cache in one step
+await cache.add('/images/hero.webp');
+await cache.addAll(['/app.js', '/styles.css', '/offline.html']);
 
-// Retrieve cached response
-const cachedResponse = await caches.match('/api/data');
-if (cachedResponse) {
-  const data = await cachedResponse.json();
-}
+// Read from cache
+const response = await cache.match('/api/products');
+const data = response ? await response.json() : null;
 
-// Delete cache
-await caches.delete('api-cache');
-
-// List all caches
+// Delete stale caches
 const cacheNames = await caches.keys();
+await Promise.all(
+  cacheNames
+    .filter(name => name !== 'my-cache-v1') // Delete all other versions
+    .map(name => caches.delete(name))
+);
 ```
 
-**Use Cases**:
-- Offline web apps (PWA)
-- Static asset caching (CSS, JS, images)
-- API response caching (stale-while-revalidate)
-- Background sync (queue failed requests)
+**Key difference from IndexedDB:**
+- Cache API stores HTTP responses — proper HTTP semantics (status codes, headers, body)
+- Ideal for: JS bundles, CSS, images, HTML pages (PWA shell and content)
+- Not ideal for: structured app data or anything needing queries
 
-**Cache Strategies**:
+### Origin Private File System (OPFS)
 
-**1. Cache-First**:
+The newest storage mechanism, designed for high-performance binary file access:
+
 ```javascript
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request);
-    })
-  );
-});
+const root = await navigator.storage.getDirectory();
+const fileHandle = await root.getFileHandle('data.bin', { create: true });
+
+// Synchronous access (only in Web Workers!) — very fast
+const accessHandle = await fileHandle.createSyncAccessHandle();
+const buffer = new Uint8Array(1024);
+accessHandle.write(buffer);  // Synchronous I/O in worker thread
+accessHandle.close();
 ```
 
-**2. Network-First**:
+OPFS is used by SQLite-over-WASM (wa-sqlite), Fluent Bit, and other tools that need high-throughput file I/O in the browser.
+
+### Storage Quota and Eviction
+
+The `navigator.storage` API provides quota management:
+
 ```javascript
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Cache for next time
-        caches.open('dynamic').then((cache) => {
-          cache.put(event.request, response.clone());
-        });
-        return response;
-      })
-      .catch(() => caches.match(event.request))
-  );
+// Check available quota
+const estimate = await navigator.storage.estimate();
+console.log({
+  quota: (estimate.quota / 1024 / 1024).toFixed(0) + 'MB',
+  usage: (estimate.usage / 1024 / 1024).toFixed(0) + 'MB',
+  available: ((estimate.quota - estimate.usage) / 1024 / 1024).toFixed(0) + 'MB',
 });
+
+// Request persistent storage (prevents eviction under storage pressure)
+// Shows permission prompt to user in some browsers
+const isPersisted = await navigator.storage.persist();
+console.log('Storage persisted:', isPersisted);
 ```
 
-**3. Stale-While-Revalidate**:
-```javascript
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((response) => {
-        caches.open('dynamic').then((cache) => {
-          cache.put(event.request, response.clone());
-        });
-        return response;
-      });
-      
-      return cached || fetchPromise;
-    })
-  );
-});
-```
+**Storage eviction policy (without persistence):**
+Browser can evict non-persistent storage under disk pressure, following LRU (least recently used) per origin. Persistent storage (`storage.persist()`) is protected from eviction.
+
+### Security Summary
+
+| Storage | XSS Risk | CSRF Risk | Notes |
+|---------|----------|-----------|-------|
+| Cookies (HttpOnly) | **None** (JS can't read) | Medium (mitigated by SameSite) | Best for auth tokens |
+| Cookies (without HttpOnly) | **High** | Medium | Avoid for auth |
+| LocalStorage | **High** (XSS readable) | None (not sent with requests) | Do NOT store auth tokens |
+| SessionStorage | **High** | None | Same as localStorage |
+| IndexedDB | **High** | None | Readable by XSS |
+| Cache API | **Medium** | None | SW-gated, harder to exfiltrate |
 
 ---
 
-### Storage Quotas
+## 3. Real-World Examples
 
-**Quota Limits**:
-```
-Safari:
-├── LocalStorage: 5MB
-├── IndexedDB: 50MB
-└── Cache API: 50MB
+### Auth Token Storage — The Right Pattern
 
-Chrome:
-├── LocalStorage: 10MB
-├── IndexedDB: 60% of available disk space
-└── Cache API: 60% of available disk space
+*Controversial but important:*
+- **HttpOnly Cookie** — Best security. Auth token invisible to JS, automatic CSRF protection with SameSite=Strict.
+- **Memory (JS variable / state)** — Token gone on page refresh, but safe from XSS persistence. Used by financial apps.
+- **LocalStorage** — Convenient but XSS-stealable. NOT recommended for sensitive tokens if you have third-party scripts.
 
-Firefox:
-├── LocalStorage: 10MB
-├── IndexedDB: 50% of available disk space
-└── Cache API: 50% of available disk space
-```
+### Figma — IndexedDB for File Caching
+Figma caches design file data in IndexedDB, enabling instant reopen of recently used files. The IDB store holds compressed binary blobs of design state, with cache invalidation based on server-side version checking.
 
-**Check Quota**:
-```javascript
-if (navigator.storage && navigator.storage.estimate) {
-  const estimate = await navigator.storage.estimate();
-  console.log('Used:', estimate.usage, 'bytes');
-  console.log('Quota:', estimate.quota, 'bytes');
-  console.log('Percentage:', (estimate.usage / estimate.quota * 100).toFixed(2) + '%');
-}
+### Notion — LocalStorage for Editor Preferences + IndexedDB for Drafts
+Notion stores user UI preferences (sidebar collapsed, panel sizes) in LocalStorage. Unsaved page edits are stored in IndexedDB, enabling crash recovery — "we found unsaved changes" on next load.
 
-// Example output:
-// Used: 157,286,400 bytes (150MB)
-// Quota: 10,737,418,240 bytes (10GB)
-// Percentage: 1.46%
-```
-
-**Request Persistent Storage** (prevent eviction):
-```javascript
-if (navigator.storage && navigator.storage.persist) {
-  const isPersisted = await navigator.storage.persist();
-  console.log('Persistent:', isPersisted); // true = won't be evicted
-}
-```
-
----
-
-## 3. Clear Real-World Examples
-
-### Example 1: Gmail – IndexedDB for Email Archive
-
-**Challenge**: Store 10,000 emails offline (50MB+).
-
-**Solution**: IndexedDB with indexes:
-```javascript
-const db = new Dexie('GmailCache');
-
-db.version(1).stores({
-  emails: '++id, from, subject, *labels, date'
-  // *labels = multi-entry index (array)
-});
-
-// Store emails
-await db.emails.bulkAdd(emails);
-
-// Query by label
-const inbox = await db.emails.where('labels').equals('inbox').toArray();
-
-// Full-text search (subject)
-const results = await db.emails.where('subject').startsWithIgnoreCase('meeting').toArray();
-```
-
-**Result**: Instant offline access to emails (no network).
-
----
-
-### Example 2: Twitter – Cache API for Offline PWA
-
-**Challenge**: Show tweets offline.
-
-**Solution**: Service Worker caching:
-```javascript
-// sw.js
-self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/api/tweets')) {
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        const fetchPromise = fetch(event.request).then((response) => {
-          caches.open('tweets').then((cache) => {
-            cache.put(event.request, response.clone());
-          });
-          return response;
-        });
-        
-        return cached || fetchPromise; // Show cached immediately
-      })
-    );
-  }
-});
-```
-
-**Result**: Tweets load instantly (cached), update in background.
-
----
-
-### Example 3: Figma – SessionStorage for Undo/Redo
-
-**Challenge**: Preserve undo history during page refresh.
-
-**Solution**: SessionStorage (tab-scoped):
-```javascript
-// Save history on change
-function saveHistory() {
-  sessionStorage.setItem('history', JSON.stringify(undoStack));
-}
-
-// Restore on page load
-function restoreHistory() {
-  const history = sessionStorage.getItem('history');
-  if (history) {
-    undoStack = JSON.parse(history);
-  }
-}
-
-// Persists during refresh (same tab), cleared on tab close
-```
+### Twitter Lite (PWA) — Cache API via Service Worker
+Twitter Lite caches the app shell (HTML, JS, CSS, icons) in the Cache API via Service Worker, enabling instant load and offline support. API response caching uses a mix of Cache API (network first) and IndexedDB (structured query support).
 
 ---
 
@@ -598,239 +260,128 @@ function restoreHistory() {
 
 ### Sample Answer (7+ Years Level)
 
-> **Question**: "Compare browser storage options."
+*"Browser storage comes in five main forms, each with a specific role. Cookies are session/auth coordination state — the only storage that's included in HTTP requests, making HttpOnly + SameSite cookies the right choice for auth tokens (they're invisible to JS, preventing XSS theft).*
 
-**Answer**:
+*LocalStorage and SessionStorage are simple synchronous key-value stores. They're useful for small user preferences but immediately disqualify themselves for any large data (synchronous = main thread blocking) or sensitive data (fully XSS-accessible).*
 
-"Browser offers **5 storage mechanisms** with different trade-offs:
+*IndexedDB is the enterprise-grade client storage — async, transactional, queryable, large capacity, Service Worker compatible. For offline-first apps, draft auto-saving, or any structured client data, IndexedDB is the right answer. I'd use the `idb` wrapper library to avoid the low-level callback API.*
+
+*The Cache API is designed for HTTP response caching — store Request/Response pairs. It's the Service Worker's native storage layer, ideal for app shell caching, API response caching, and any PWA offline strategy.*
+
+*For auth token security: HttpOnly cookie for the actual token, with SameSite=Lax/Strict. Never localStorage for tokens when you're hosting any third-party scripts."*
+
+### Likely Follow-up Questions
+
+1. **"Why shouldn't you store JWTs in localStorage?"**
+   → Any XSS vulnerability (including in a third-party script you loaded) can read all localStorage data. `document.cookie` doesn't expose HttpOnly cookies — localStorage has no such protection.
+
+2. **"What's the difference between the Cache API and IndexedDB for offline apps?"**
+   → Cache API is for storing HTTP responses (JS files, CSS, images, API JSON), optimized for network-layer caching. IndexedDB is for structured application data (user profile, feed items, drafts) needing queries and transactions. A full offline app uses both: Cache API for assets, IndexedDB for data.
+
+3. **"What happens to localStorage if the user clears browser data?"**
+   → It's cleared. That's a key difference from cookies with explicit expiry. For durable storage, use `navigator.storage.persist()` to request persistent storage (prompts user permission).
+
+4. **"How large can IndexedDB get?"**
+   → Browser-dependent. Chrome: up to 60% of free disk or 2GB minimum. Firefox: similar. In practice, you should monitor usage via `navigator.storage.estimate()` and handle `QuotaExceededError` gracefully.
 
 ---
 
-### Comparison
+## 5. Code Examples
 
-| Storage | Capacity | Persist | Scope | API | HTTP | Use Case |
-|---------|----------|---------|-------|-----|------|----------|
-| **Cookies** | 4KB | Expires | Domain | Sync | ✅ Sent | Auth tokens |
-| **LocalStorage** | 5-10MB | Forever | Origin | Sync | ❌ | Settings |
-| **SessionStorage** | 5-10MB | Tab-close | Tab | Sync | ❌ | Form data |
-| **IndexedDB** | 50MB+ | Forever | Origin | Async | ❌ | Large data |
-| **Cache API** | Unlimited | Forever | Origin | Async | ❌ | Offline assets |
+### Storage Decision Matrix — Helper
 
----
-
-### 1. Cookies
-
-**Purpose**: Small data sent with HTTP requests.
-
-**API**:
 ```javascript
-document.cookie = "token=abc; max-age=3600; secure; samesite=strict";
-const user = getCookie('user');
+// Architectural decision helper
+function chooseStorage(requirements) {
+  const {
+    needsHttpRequest,  // Must be sent with requests (auth)
+    sensitiveData,     // Security-sensitive
+    size,              // Approximate data size
+    needsQuery,        // Need to index/query the data
+    needsWorkerAccess, // Must work in Service Worker
+    sessionOnly,       // Should clear on tab close
+  } = requirements;
+  
+  if (needsHttpRequest) return 'Cookie (HttpOnly + SameSite)';
+  if (sessionOnly && size < '1MB') return 'SessionStorage';
+  if (!sensitiveData && size < '10KB' && !needsWorkerAccess) return 'LocalStorage';
+  if (needsQuery || needsWorkerAccess || size > '100KB') return 'IndexedDB';
+  if (needsHttpResponse) return 'Cache API'; // Storing network responses
+  return 'IndexedDB'; // Default for complex cases
+}
 ```
 
-**Attributes**:
-- `max-age`: Expiry (seconds)
-- `secure`: HTTPS only
-- `samesite`: CSRF protection (strict/lax/none)
-- `httponly`: Server-only (no JS access, prevents XSS)
+### Complete IndexedDB Wrapper with Error Handling
 
-**Limitations**:
-- 4KB per cookie
-- Sent with EVERY request (bloats headers)
-- Performance cost (unnecessary data transfer)
-
-**Use**: Auth tokens (session, JWT).
-
----
-
-### 2. LocalStorage
-
-**Purpose**: Persistent key-value storage.
-
-**API**:
 ```javascript
-localStorage.setItem('theme', 'dark');
-const theme = localStorage.getItem('theme');
-localStorage.removeItem('theme');
+import { openDB } from 'idb';
+
+// Singleton database instance
+let dbInstance = null;
+
+async function getDB() {
+  if (dbInstance) return dbInstance;
+  
+  dbInstance = await openDB('AppDB', 2, {
+    upgrade(db, oldVersion, newVersion) {
+      // Version 1: basic stores
+      if (oldVersion < 1) {
+        db.createObjectStore('drafts', { keyPath: 'id', autoIncrement: true });
+        db.createObjectStore('preferences', { keyPath: 'key' });
+      }
+      
+      // Version 2: add index to drafts
+      if (oldVersion < 2) {
+        const tx = db.transaction('drafts', 'readwrite');
+        tx.store.createIndex('updatedAt', 'updatedAt');
+      }
+    },
+    blocked() {
+      // Another tab has the old version open — prompt user to close other tabs
+      console.warn('Database upgrade blocked. Please close other tabs.');
+    },
+    blocking() {
+      // This tab is blocking an upgrade in another tab
+      dbInstance.close();
+      window.location.reload();
+    },
+  });
+  
+  return dbInstance;
+}
+
+// Type-safe API
+export const storage = {
+  async saveDraft(content) {
+    const db = await getDB();
+    return db.put('drafts', { content, updatedAt: Date.now() });
+  },
+  
+  async getRecentDrafts(limit = 10) {
+    const db = await getDB();
+    const index = db.transaction('drafts').store.index('updatedAt');
+    return index.getAll(IDBKeyRange.lowerBound(0), limit);
+  },
+  
+  async setPreference(key, value) {
+    const db = await getDB();
+    return db.put('preferences', { key, value });
+  },
+  
+  async getPreference(key, defaultValue = null) {
+    const db = await getDB();
+    const result = await db.get('preferences', key);
+    return result?.value ?? defaultValue;
+  },
+};
 ```
-
-**Capacity**: 5-10MB (browser-dependent).
-
-**Scope**: Origin (protocol + domain + port).
-
-**Synchronous**: Blocks Main Thread (avoid large data).
-
-**Events**: Cross-tab sync:
-```javascript
-window.addEventListener('storage', (event) => {
-  console.log('Changed:', event.key, event.newValue);
-});
-```
-
-**Use**: User preferences, settings, cached responses (small).
-
----
-
-### 3. SessionStorage
-
-**Purpose**: Like LocalStorage but tab-scoped (cleared on close).
-
-**API** (same as LocalStorage):
-```javascript
-sessionStorage.setItem('formData', JSON.stringify(data));
-```
-
-**Lifecycle**:
-- Open tab: Created
-- Navigate: Persists
-- Refresh: Persists
-- Close tab: **Cleared**
-- Duplicate tab: **Copied**
-
-**Use**: Multi-step forms, temporary filters, tab-specific state.
-
----
-
-### 4. IndexedDB
-
-**Purpose**: Async NoSQL database (large datasets).
-
-**Characteristics**:
-- **Capacity**: 50MB (Safari) to unlimited (Chrome, ask at ~1GB)
-- **Async**: Doesn't block Main Thread
-- **Transactions**: ACID (atomicity, consistency, isolation, durability)
-- **Indexes**: Fast queries
-- **Types**: Any JS value (objects, Blob, File)
-
-**API** (with Dexie.js):
-```javascript
-const db = new Dexie('myDB');
-db.version(1).stores({ users: '++id, name, email, age' });
-
-await db.users.add({ name: 'John', age: 30 });
-const adults = await db.users.where('age').aboveOrEqual(18).toArray();
-```
-
-**Use**: Offline apps, large datasets, media files, complex queries.
-
----
-
-### 5. Cache API
-
-**Purpose**: Service Worker asset caching (offline PWAs).
-
-**API**:
-```javascript
-// Service Worker
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request);
-    })
-  );
-});
-```
-
-**Strategies**:
-- **Cache-First**: Fast, offline-first (static assets)
-- **Network-First**: Fresh data, fallback to cache (API)
-- **Stale-While-Revalidate**: Instant + background update
-
-**Use**: Offline web apps, static assets, API caching.
-
----
-
-### Storage Quotas
-
-**Check quota**:
-```javascript
-const { usage, quota } = await navigator.storage.estimate();
-console.log('Used:', usage / 1024 / 1024, 'MB');
-console.log('Quota:', quota / 1024 / 1024, 'MB');
-```
-
-**Request persistent** (prevent eviction):
-```javascript
-const persisted = await navigator.storage.persist();
-```
-
----
-
-### Decision Tree
-
-**Authentication**: Cookies (sent with requests, httponly).
-
-**User preferences**: LocalStorage (persists, small data).
-
-**Multi-step form**: SessionStorage (tab-scoped, cleared on close).
-
-**Large datasets**: IndexedDB (async, unlimited, queries).
-
-**Offline assets**: Cache API (Service Worker, PWA).
-
----
-
-### Real-World
-
-**Gmail**: IndexedDB for 10,000 emails (50MB+), instant offline access.
-
-**Twitter**: Cache API (tweets cached, stale-while-revalidate).
-
-**Figma**: SessionStorage (undo history persists during refresh).
-
----
-
-### Trade-offs
-
-**Cookies**:
-- ✅ Sent with requests (auth)
-- ❌ 4KB limit, performance cost (bloats headers)
-
-**LocalStorage**:
-- ✅ Simple, persistent
-- ❌ Synchronous (blocks), 5-10MB limit, only strings
-
-**SessionStorage**:
-- ✅ Tab-scoped (isolated)
-- ❌ Cleared on tab close, 5-10MB limit
-
-**IndexedDB**:
-- ✅ Async, unlimited, transactions
-- ❌ Complex API (use Dexie), overkill for small data
-
-**Cache API**:
-- ✅ Offline-first, unlimited
-- ❌ Service Worker required, complex
-
-**Follow-up I Expect**:
-
-Q: 'When to use LocalStorage vs IndexedDB?'
-A: **LocalStorage** for small data (<5MB), simple key-value (settings, theme). **Synchronous** (blocks Main Thread). **IndexedDB** for large data (>5MB), complex queries, offline apps. **Async** (doesn't block). Example: Settings → LocalStorage, Email archive → IndexedDB.
-
-Q: 'Security concerns with LocalStorage?'
-A: **XSS vulnerability**: If attacker injects script, can read all LocalStorage. **Don't store sensitive data** (auth tokens, passwords). Use **httponly cookies** for auth (JS can't access). LocalStorage OK for non-sensitive (theme, preferences).
-
-Q: 'How does storage event work?'
-A: Fires in **other tabs** (not the tab that changed). Cross-tab synchronization. Example: Tab 1 changes theme → Tab 2 receives storage event → Tab 2 updates UI. Use for real-time sync across tabs."
 
 ---
 
 ## 6. Why & How Summary
 
-### Why It Matters
+**Why it matters:**
+Storage choices directly affect security (auth token theft, XSS attack surface), performance (synchronous LocalStorage blocking vs async IndexedDB), and user experience (offline capability, draft auto-save, fast data re-access). Incorrect storage choices are a major source of security vulnerabilities in production applications (stored XSS via localStorage token theft) and performance regressions (multi-MB synchronous localStorage reads on every navigation). Storage architecture is a core design decision in any production frontend system.
 
-**Data Persistence**: Store user data client-side (offline access, reduced server load, faster UX)  
-**Offline-First**: Cache assets + data enables PWAs working without network  
-**Performance**: Cached data instant load (no network latency), reduced server requests  
-**User Experience**: Settings persist across sessions, forms preserve on refresh, smooth offline experience
-
-### How It Works
-
-**Cookies**: 4KB HTTP headers sent with every request, expire, attributes (max-age/secure/samesite/httponly), use for auth tokens  
-**LocalStorage**: 5-10MB sync key-value origin-scoped persists forever, storage event cross-tab sync, use for settings/preferences  
-**SessionStorage**: Like LocalStorage but tab-scoped cleared on tab close, persists during refresh/navigate, copied on duplicate tab, use for multi-step forms  
-**IndexedDB**: 50MB-unlimited async NoSQL database, transactions (ACID), indexes (fast queries), stores any type (objects/Blob/File), Dexie wrapper simplifies API, use for offline apps/large datasets  
-**Cache API**: Service Worker asset caching, strategies (cache-first offline-first, network-first fresh data, stale-while-revalidate instant+background), use for PWA offline assets  
-**Quotas**: Safari 50MB, Chrome/Firefox 60% disk space, check with navigator.storage.estimate(), request persistent with persist() prevents eviction
-
-**FAANG Expectation**: Compare five storage options with capacity/persistence/scope/API/use cases, Cookies (4KB sent with requests httponly secure samesite for auth), LocalStorage (5-10MB sync persistent origin-scoped for settings), SessionStorage (tab-scoped cleared on close for forms), IndexedDB (50MB+ async transactions indexes for large data), Cache API (Service Worker offline assets PWA), storage events cross-tab sync, quotas (check estimate request persist), security (XSS risk LocalStorage don't store sensitive use httponly cookies), decision tree (auth→Cookies, preferences→LocalStorage, forms→SessionStorage, large data→IndexedDB, offline→Cache API), real-world examples (Gmail IndexedDB 10K emails, Twitter Cache API stale-while-revalidate, Figma SessionStorage undo history), trade-offs (Cookies 4KB limit bloats headers, LocalStorage sync blocks, IndexedDB complex API overkill small data, Cache API Service Worker required)
+**How it works:**
+Each storage mechanism is implemented differently at the browser level: Cookies are HTTP protocol constructs managed by the browser's network stack and included in requests. LocalStorage and SessionStorage are synchronous JavaScript APIs backed by in-process databases (LevelDB in Chrome) accessed on the main thread. IndexedDB is an async API backed by a persistent database engine (also LevelDB in Chrome), with operations routed through IPC to a separate database process. The Cache API is managed by the Service Worker's context and stores serialized HTTP responses. All storage (except HttpOnly cookies) is accessible to JavaScript at the origin level, making XSS vulnerabilities able to read all stored non-cookie data. Storage quota management ensures origins can't exhaust device disk space, with the browser enforcing limits and evicting best-effort (non-persisted) storage under disk pressure.

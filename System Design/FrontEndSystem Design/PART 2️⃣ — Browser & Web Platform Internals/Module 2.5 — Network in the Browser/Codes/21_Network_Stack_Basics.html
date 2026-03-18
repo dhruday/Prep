@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Network Stack Basics Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e2e8f0; padding: 20px; }
+    h1 { text-align: center; color: #60a5fa; margin-bottom: 4px; font-size: 1.5rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.88rem; }
+
+    .grid { display: grid; grid-template-columns: 1fr 360px; gap: 18px; }
+    .card { background: #1e2130; border: 1px solid #2d3551; border-radius: 12px; padding: 16px; }
+    .card h2 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+    /* Waterfall timeline */
+    .wf-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 0.78rem; }
+    .wf-label { width: 130px; color: #94a3b8; text-align: right; flex-shrink: 0; font-size: 0.73rem; }
+    .wf-track { flex: 1; background: #2d3551; border-radius: 4px; height: 26px; position: relative; }
+    .wf-bar {
+      height: 100%; border-radius: 4px; position: absolute;
+      display: flex; align-items: center; padding-left: 8px;
+      font-size: 0.68rem; color: #fff; white-space: nowrap;
+      transition: width 0.8s ease, left 0.6s ease;
+    }
+    .seg-dns   { background: #b45309; }
+    .seg-tcp   { background: #1d4ed8; }
+    .seg-tls   { background: #7c3aed; }
+    .seg-ttfb  { background: #0f766e; }
+    .seg-dl    { background: #15803d; }
+
+    /* Step-by-step diagram */
+    .step-flow { display: flex; flex-direction: column; gap: 6px; }
+    .step-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px; border-radius: 8px; background: #161b2e;
+      border-left: 3px solid #2d3551; transition: all 0.3s;
+      font-size: 0.77rem;
+    }
+    .step-item.active { border-left-color: #60a5fa; background: #1a2035; }
+    .step-item.done   { border-left-color: #10b981; background: #0a1a10; }
+    .step-num { background: #2d3551; border-radius: 4px; padding: 2px 8px; font-size: 0.7rem; font-weight: bold; flex-shrink: 0; color: #60a5fa; }
+    .step-content h4 { font-size: 0.82rem; color: #e2e8f0; }
+    .step-content p  { font-size: 0.72rem; color: #475569; margin-top: 2px; }
+    .step-time { margin-left: auto; font-size: 0.72rem; color: #f59e0b; font-family: monospace; white-space: nowrap; }
+
+    /* Packet diagram */
+    .packet-row { display: flex; gap: 0; margin-bottom: 4px; border-radius: 6px; overflow: hidden; }
+    .pkt-seg { padding: 6px 10px; font-size: 0.7rem; text-align: center; font-weight: bold; }
+
+    /* Controls */
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 18px; }
+    button { padding: 8px 16px; border: none; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 0.82rem; transition: opacity 0.2s; }
+    button:hover { opacity: 0.8; }
+    button:disabled { opacity: 0.35; cursor: default; }
+    .btn-a { background: #3b82f6; color: #fff; }
+    .btn-b { background: #8b5cf6; color: #fff; }
+    .btn-c { background: #10b981; color: #fff; }
+    .btn-d { background: #f59e0b; color: #000; }
+
+    /* RTT slider */
+    .rtt-control { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding: 10px 14px; background: #1e2130; border-radius: 8px; }
+    .rtt-control label { font-size: 0.8rem; color: #94a3b8; white-space: nowrap; }
+    input[type=range] { flex: 1; }
+    .rtt-val { font-size: 1rem; font-weight: bold; color: #60a5fa; width: 70px; text-align: right; }
+
+    .insight { background: #162032; border: 1px solid #1e3a5f; border-radius: 7px; padding: 10px; font-size: 0.76rem; color: #93c5fd; margin-top: 10px; }
+    .insight strong { color: #fff; }
+
+    .metric-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .metric { flex: 1; background: #0f1117; border-radius: 8px; padding: 10px; text-align: center; }
+    .metric .val { font-size: 1.6rem; font-weight: bold; }
+    .metric .lbl { font-size: 0.65rem; color: #475569; margin-top: 2px; }
+    .mv-good { color: #10b981; } .mv-warn { color: #f59e0b; } .mv-bad { color: #ef4444; }
+
+    .legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .leg { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #94a3b8; }
+    .leg-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+    .layer-stack { display: flex; flex-direction: column; gap: 3px; }
+    .proto-layer {
+      padding: 8px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: bold;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .proto-layer .desc { font-size: 0.7rem; font-weight: normal; color: rgba(255,255,255,0.6); }
+  </style>
+</head>
+<body>
+<h1>🌐 Network Stack Basics</h1>
+<p class="subtitle">DNS → TCP → TLS → HTTP waterfall — visualize every millisecond</p>
+
+<div class="rtt-control">
+  <label>🌍 Round-Trip Time (RTT):</label>
+  <input type="range" min="10" max="300" value="80" id="rtt-slider" oninput="updateRTT()" />
+  <span class="rtt-val" id="rtt-label">80ms</span>
+  <label style="margin-left:10px">Connection:</label>
+  <select id="conn-type" onchange="updateRTT()" style="background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;border-radius:5px;padding:4px 8px;font-size:0.78rem">
+    <option value="new">New Connection (cold)</option>
+    <option value="keepalive">Keep-Alive (warm)</option>
+    <option value="preconnect">Preconnect (pre-warmed)</option>
+  </select>
+</div>
+
+<div class="controls">
+  <button class="btn-a" id="btn-simulate" onclick="simulate()">▶ Simulate Request</button>
+  <button class="btn-b" onclick="showPacketStructure()">📦 Show Packet Layers</button>
+  <button class="btn-c" onclick="showTLSHandshake()">🔐 TLS Handshake Detail</button>
+</div>
+
+<div class="grid">
+  <!-- Left: waterfall + metrics -->
+  <div>
+    <div class="card">
+      <h2 style="color:#60a5fa">⏱ Network Waterfall</h2>
+      <div class="metric-row">
+        <div class="metric"><div class="val mv-good" id="m-total">—</div><div class="lbl">Total Time</div></div>
+        <div class="metric"><div class="val mv-warn" id="m-ttfb">—</div><div class="lbl">TTFB</div></div>
+        <div class="metric"><div class="val mv-bad"  id="m-overhead">—</div><div class="lbl">Protocol Overhead</div></div>
+      </div>
+
+      <div id="waterfall-rows"></div>
+      <div class="legend" style="margin-top:8px">
+        <div class="leg"><div class="leg-dot seg-dns"></div> DNS Lookup</div>
+        <div class="leg"><div class="leg-dot seg-tcp"></div> TCP Handshake</div>
+        <div class="leg"><div class="leg-dot seg-tls"></div> TLS Handshake</div>
+        <div class="leg"><div class="leg-dot seg-ttfb"></div> TTFB (Server)</div>
+        <div class="leg"><div class="leg-dot seg-dl"></div> Download</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2 style="color:#f59e0b">⚙️ Protocol Stack (OSI Model — Browser Perspective)</h2>
+      <div class="layer-stack">
+        <div class="proto-layer" style="background:#1d4ed8">HTTP/S or HTTP2/3 (Application Layer) <span class="desc">Requests, Responses, Headers</span></div>
+        <div class="proto-layer" style="background:#2563eb">TLS 1.3 (Session/Presentation Layer) <span class="desc">Encryption, Cert Validation</span></div>
+        <div class="proto-layer" style="background:#1e3a5f">TCP or QUIC (Transport Layer) <span class="desc">Reliable delivery, flow control</span></div>
+        <div class="proto-layer" style="background:#0f2a5c">IP (Network Layer) <span class="desc">Routing packets across networks</span></div>
+        <div class="proto-layer" style="background:#0a1a3d">Ethernet/Wi-Fi (Data Link + Physical) <span class="desc">Physical transmission</span></div>
+      </div>
+      <div class="insight" style="margin-top:10px">
+        <strong>Browser-relevant layers:</strong> The browser deals with HTTP, TLS, and half of TCP.
+        The OS handles IP, TCP flow control, and the physical layer.
+        HTTP/3 (QUIC) moves to UDP + handles its own reliability, removing TCP's HOL blocking.
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Step-by-step -->
+  <div>
+    <div class="card">
+      <h2 style="color:#94a3b8">🔄 Request Steps</h2>
+      <div class="step-flow" id="step-flow">
+        <div class="step-item" id="sn-dns">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>🔍 DNS Lookup</h4>
+            <p>Resolve hostname → IP address. Browser cache → OS cache → Recursive resolver → Authoritative DNS.</p>
+          </div>
+          <span class="step-time" id="st-dns">—</span>
+        </div>
+        <div class="step-item" id="sn-tcp">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>🤝 TCP Handshake (3-way)</h4>
+            <p>SYN → SYN-ACK → ACK. Costs 1 RTT before any data. Skipped with Keep-Alive / QUIC.</p>
+          </div>
+          <span class="step-time" id="st-tcp">—</span>
+        </div>
+        <div class="step-item" id="sn-tls">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>🔐 TLS 1.3 Handshake</h4>
+            <p>Client Hello + Server Hello. TLS 1.3 = 1 RTT (or 0-RTT resumption). TLS 1.2 = 2 RTTs.</p>
+          </div>
+          <span class="step-time" id="st-tls">—</span>
+        </div>
+        <div class="step-item" id="sn-req">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>📤 HTTP Request Sent</h4>
+            <p>GET /resource HTTP/1.1 over established connection. Server begins processing.</p>
+          </div>
+          <span class="step-time" id="st-req">—</span>
+        </div>
+        <div class="step-item" id="sn-ttfb">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h4>⏳ TTFB (Time To First Byte)</h4>
+            <p>Server processes request = DB query + rendering + sending first byte. Ideal &lt;200ms.</p>
+          </div>
+          <span class="step-time" id="st-ttfb">—</span>
+        </div>
+        <div class="step-item" id="sn-dl">
+          <div class="step-num">6</div>
+          <div class="step-content">
+            <h4>⬇️ Download Response</h4>
+            <p>Server sends response body in TCP segments. Browser can start parsing HTML as bytes arrive.</p>
+          </div>
+          <span class="step-time" id="st-dl">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="packet-card" style="margin-top:14px;display:none">
+      <h2 style="color:#8b5cf6">📦 HTTP Packet Layers</h2>
+      <div id="packet-layers"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentRTT = 80;
+  let connectionType = 'new';
+
+  function updateRTT() {
+    currentRTT = parseInt(document.getElementById('rtt-slider').value);
+    connectionType = document.getElementById('conn-type').value;
+    document.getElementById('rtt-label').textContent = currentRTT + 'ms';
+  }
+
+  function calcPhases(rtt, connType) {
+    const dns = connType === 'keepalive' || connType === 'preconnect' ? 0 : Math.round(rtt * 0.5 + 5);
+    const tcp = connType === 'keepalive' || connType === 'preconnect' ? 0 : rtt;
+    const tls = connType === 'keepalive' ? 0 : connType === 'preconnect' ? 0 : rtt;
+    const ttfb = Math.round(rtt * 0.7 + 30);
+    const dl = Math.round(rtt * 0.5 + 20);
+    return { dns, tcp, tls, ttfb, dl };
+  }
+
+  async function simulate() {
+    document.getElementById('btn-simulate').disabled = true;
+    const ph = calcPhases(currentRTT, connectionType);
+    const total = ph.dns + ph.tcp + ph.tls + ph.ttfb + ph.dl;
+    const overhead = ph.dns + ph.tcp + ph.tls;
+
+    // Reset steps
+    ['sn-dns','sn-tcp','sn-tls','sn-req','sn-ttfb','sn-dl'].forEach(id => {
+      document.getElementById(id).className = 'step-item';
+    });
+    ['st-dns','st-tcp','st-tls','st-req','st-ttfb','st-dl'].forEach(id => {
+      document.getElementById(id).textContent = '...';
+    });
+
+    // Render waterfall
+    const MAX = total;
+    const rows = [
+      { label: 'DNS Lookup',         cls: 'seg-dns',  start: 0,  dur: ph.dns },
+      { label: 'TCP 3-way Handshake',cls: 'seg-tcp',  start: ph.dns, dur: ph.tcp },
+      { label: 'TLS 1.3 Handshake',  cls: 'seg-tls',  start: ph.dns + ph.tcp, dur: ph.tls },
+      { label: 'HTTP Req + TTFB',    cls: 'seg-ttfb', start: ph.dns + ph.tcp + ph.tls, dur: ph.ttfb },
+      { label: 'Download Body',      cls: 'seg-dl',   start: ph.dns + ph.tcp + ph.tls + ph.ttfb, dur: ph.dl },
+    ];
+
+    const wf = document.getElementById('waterfall-rows');
+    wf.innerHTML = rows.map(r => `
+      <div class="wf-row">
+        <div class="wf-label">${r.label}</div>
+        <div class="wf-track">
+          <div class="wf-bar ${r.cls}" style="left:${(r.start/MAX*100).toFixed(1)}%;width:0" data-w="${Math.max(r.dur/MAX*100, 0.5).toFixed(1)}%">
+            ${r.dur > 0 ? r.dur + 'ms' : '(cached)'}
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    setTimeout(() => {
+      document.querySelectorAll('.wf-bar').forEach(b => b.style.width = b.dataset.w + (b.dataset.w.endsWith('%') ? '' : '%'));
+    }, 50);
+
+    // Animate steps
+    const steps = [
+      { id: 'sn-dns',  stId: 'st-dns',  label: ph.dns > 0 ? `${ph.dns}ms`,    desc: ph.dns === 0 ? 'Cached ✔' : null },
+      { id: 'sn-tcp',  stId: 'st-tcp',  label: ph.tcp > 0 ? `${ph.tcp}ms`,    desc: ph.tcp === 0 ? 'Reusing connection ✔' : null },
+      { id: 'sn-tls',  stId: 'st-tls',  label: ph.tls > 0 ? `${ph.tls}ms`,    desc: ph.tls === 0 ? 'Session resumed ✔' : null },
+      { id: 'sn-req',  stId: 'st-req',  label: '<1ms', desc: null },
+      { id: 'sn-ttfb', stId: 'st-ttfb', label: `${ph.ttfb}ms`, desc: null },
+      { id: 'sn-dl',   stId: 'st-dl',   label: `${ph.dl}ms`, desc: null },
+    ];
+
+    let elapsed = 0;
+    for (const step of steps) {
+      await sleep(300);
+      document.getElementById(step.id).classList.add('active');
+      document.getElementById(step.stId).textContent = step.desc || step.label;
+      if (step.desc) {
+        document.getElementById(step.id).querySelector('p').textContent = step.desc;
+      }
+      await sleep(200);
+      document.getElementById(step.id).classList.remove('active');
+      document.getElementById(step.id).classList.add('done');
+    }
+
+    document.getElementById('m-total').textContent = total + 'ms';
+    document.getElementById('m-total').className = 'val ' + (total < 200 ? 'mv-good' : total < 500 ? 'mv-warn' : 'mv-bad');
+    document.getElementById('m-ttfb').textContent = ph.ttfb + 'ms';
+    document.getElementById('m-overhead').textContent = overhead + 'ms';
+    document.getElementById('m-overhead').className = 'val ' + (overhead < 100 ? 'mv-good' : overhead < 250 ? 'mv-warn' : 'mv-bad');
+
+    document.getElementById('btn-simulate').disabled = false;
+  }
+
+  function showPacketStructure() {
+    const card = document.getElementById('packet-card');
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('packet-layers').innerHTML = `
+      <p style="font-size:0.76rem;color:#94a3b8;margin-bottom:8px">An HTTP request travels through these encapsulation layers on the wire:</p>
+      <div class="packet-row"><div class="pkt-seg" style="flex:0.6;background:#1d4ed8">Ethernet Frame Header</div><div class="pkt-seg" style="flex:0.5;background:#1e40af">IP Header</div><div class="pkt-seg" style="flex:0.5;background:#2563eb">TCP Header</div><div class="pkt-seg" style="flex:0.6;background:#7c3aed">TLS Record</div><div class="pkt-seg" style="flex:2;background:#15803d">HTTP Request<br><span style="font-size:0.65rem;color:rgba(255,255,255,0.6)">GET / HTTP/1.1<br>Host: example.com<br>Headers...</span></div></div>
+      <div style="margin-top:10px">
+        <table style="width:100%;border-collapse:collapse;font-size:0.76rem">
+          <tr style="background:#1a2035"><th style="padding:6px;text-align:left;color:#60a5fa">Layer</th><th style="padding:6px;text-align:left;color:#60a5fa">Header Size</th><th style="padding:6px;text-align:left;color:#60a5fa">Purpose</th></tr>
+          <tr style="border-top:1px solid #2d3551"><td style="padding:6px">Ethernet</td><td style="padding:6px">14–22 bytes</td><td style="padding:6px">MAC addressing within LAN</td></tr>
+          <tr style="border-top:1px solid #2d3551;background:#161b2e"><td style="padding:6px">IP (IPv4)</td><td style="padding:6px">20 bytes minimum</td><td style="padding:6px">Source/Dest IP, fragmentation, TTL</td></tr>
+          <tr style="border-top:1px solid #2d3551"><td style="padding:6px">TCP</td><td style="padding:6px">20–60 bytes</td><td style="padding:6px">Seq/Ack numbers, port, flags, window size</td></tr>
+          <tr style="border-top:1px solid #2d3551;background:#161b2e"><td style="padding:6px">TLS Record</td><td style="padding:6px">5 bytes + MAC</td><td style="padding:6px">Content type, version, encrypted payload length</td></tr>
+          <tr style="border-top:1px solid #2d3551"><td style="padding:6px">HTTP Request</td><td style="padding:6px">Variable (~200–500b)</td><td style="padding:6px">Method, URI, Host header, Cookie, etc.</td></tr>
+        </table>
+      </div>
+    `;
+  }
+
+  function showTLSHandshake() {
+    document.getElementById('packet-card').style.display = 'block';
+    document.getElementById('packet-layers').innerHTML = `
+      <p style="font-size:0.76rem;color:#94a3b8;margin-bottom:8px"><strong style="color:#c4b5fd">TLS 1.3 Handshake</strong> — 1 RTT (half of TLS 1.2's 2 RTTs)</p>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.78rem">
+        ${[
+          { from: 'Client', to: 'Server', msg: 'Client Hello', note: 'Supported ciphers, key share (Diffie-Hellman), SNI', color: '#3b82f6' },
+          { from: 'Server', to: 'Client', msg: 'Server Hello + Certificate', note: 'Selected cipher, key share, cert for verification', color: '#8b5cf6' },
+          { from: 'Server', to: 'Client', msg: 'Server Finished', note: 'First encrypted message — keys derived!', color: '#8b5cf6' },
+          { from: 'Client', to: 'Server', msg: 'Client Finished + HTTP Request', note: '0.5 RTT later — first app data piggybacked!', color: '#3b82f6' },
+          { from: 'Server', to: 'Client', msg: 'HTTP Response', note: 'Encrypted response arrives', color: '#10b981' },
+        ].map(s => `
+          <div style="padding:8px 10px;border-radius:6px;background:#161b2e;border-left:3px solid ${s.color}">
+            <span style="color:${s.color};font-weight:bold">${s.from} → ${s.to}:</span>
+            <span style="color:#e2e8f0;margin-left:6px">${s.msg}</span>
+            <span style="color:#475569;font-size:0.7rem;display:block;margin-top:2px">${s.note}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="insight" style="margin-top:8px">
+        <strong>0-RTT (TLS 1.3 Session Resumption):</strong> If the client has a pre-shared key from a previous session,
+        it can send application data in the <em>very first message</em> — zero extra RTT! However, replay attacks are possible so only use for idempotent GET requests.
+      </div>
+    `;
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  simulate();
+</script>
+</body>
+</html>

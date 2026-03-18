@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Memory Management in Browser</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e2e8f0; padding: 20px; }
+    h1 { text-align: center; color: #60a5fa; margin-bottom: 4px; font-size: 1.5rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.88rem; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .card { background: #1e2130; border: 1px solid #2d3551; border-radius: 12px; padding: 16px; }
+    .card h2 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+    /* Heap visualization */
+    .heap-visual {
+      background: #060a0e; border-radius: 8px; height: 200px;
+      position: relative; overflow: hidden;
+    }
+    .heap-bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      transition: height 0.5s ease;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .heap-gen { width: 100%; display: flex; }
+    .heap-seg {
+      height: 20px; display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; overflow: hidden; transition: flex 0.5s ease;
+    }
+    .seg-new   { background: #1d4ed8; color: #fff; }
+    .seg-old   { background: #b45309; color: #fff; }
+    .seg-large { background: #7c3aed; color: #fff; }
+    .seg-free  { background: #1a1a1a; color: #374151; }
+
+    .heap-label-row { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 0.7rem; color: #64748b; }
+
+    /* Memory chart */
+    canvas#mem-chart { width: 100%; height: 100px; display: block; border-radius: 8px; background: #060a0e; }
+
+    /* Metrics */
+    .metric-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .metric {
+      flex: 1; background: #0f1117; border-radius: 8px; padding: 10px; text-align: center;
+    }
+    .metric .val { font-size: 1.5rem; font-weight: bold; }
+    .metric .lbl { font-size: 0.65rem; color: #475569; margin-top: 2px; }
+    .v-good { color: #10b981; } .v-warn { color: #f59e0b; } .v-bad { color: #ef4444; }
+
+    /* Object log */
+    .obj-log {
+      background: #060a0e; border-radius: 8px; padding: 8px; max-height: 160px; overflow-y: auto;
+      font-family: 'Courier New', monospace; font-size: 0.74rem;
+    }
+    .ol-alloc { color: #86efac; } .ol-gc { color: #f87171; } .ol-warn { color: #fbbf24; } .ol-info { color: #475569; }
+
+    /* GC animation */
+    .gc-overlay {
+      position: absolute; inset: 0; background: rgba(239,68,68,0.15);
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; font-weight: bold; color: #f87171;
+      opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    }
+
+    /* Controls */
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
+    button { padding: 8px 15px; border: none; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: opacity 0.2s; }
+    button:hover { opacity: 0.8; }
+    .btn-a { background: #3b82f6; color: #fff; }
+    .btn-b { background: #ef4444; color: #fff; }
+    .btn-c { background: #8b5cf6; color: #fff; }
+    .btn-d { background: #10b981; color: #fff; }
+    .btn-e { background: #f59e0b; color: #000; }
+    .btn-stop { background: #374151; color: #fff; }
+
+    /* Leak patterns table */
+    .leak-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+    .leak-table th { background: #1a2035; color: #60a5fa; padding: 7px 8px; text-align: left; }
+    .leak-table td { padding: 6px 8px; border-top: 1px solid #2d3551; vertical-align: top; }
+    .leak-table tr:nth-child(even) td { background: #161b2e; }
+    .tag-bad  { display:inline-block; padding:1px 6px; border-radius:5px; background:#7f1d1d; color:#fca5a5; font-size:0.67rem; font-weight:bold; }
+    .tag-fix  { display:inline-block; padding:1px 6px; border-radius:5px; background:#14532d; color:#86efac; font-size:0.67rem; font-weight:bold; }
+
+    .insight { background: #162032; border: 1px solid #1e3a5f; border-radius: 7px; padding: 10px; font-size: 0.76rem; color: #93c5fd; margin-top: 10px; }
+    .insight strong { color: #fff; }
+
+    /* Garbage collection steps */
+    .gc-steps { display: flex; flex-direction: column; gap: 6px; }
+    .gc-step {
+      display: flex; gap: 8px; align-items: flex-start;
+      padding: 8px; border-radius: 7px; background: #161b2e;
+      transition: background 0.3s; font-size: 0.77rem;
+    }
+    .gc-step.active { background: #1a2035; border-left: 3px solid #60a5fa; }
+    .gc-step .num { background: #2d3551; border-radius: 4px; padding: 2px 7px; font-size: 0.7rem; font-weight: bold; flex-shrink: 0; color: #60a5fa; }
+  </style>
+</head>
+<body>
+<h1>🧠 Memory Management in the Browser</h1>
+<p class="subtitle">Heap allocation, garbage collection, memory leaks, and WeakRef</p>
+
+<div class="controls">
+  <button class="btn-a" onclick="allocateNormal()">+ Allocate Objects</button>
+  <button class="btn-b" onclick="createLeak()">💀 Create Memory Leak</button>
+  <button class="btn-c" onclick="createClosureLeak()">🔒 Closure Leak</button>
+  <button class="btn-d" onclick="fixLeak()">✅ Fix + Cleanup</button>
+  <button class="btn-e" onclick="runGC()">🗑 Simulate GC Cycle</button>
+  <button class="btn-stop" onclick="stopAll()">↩ Reset</button>
+</div>
+
+<div class="grid">
+  <!-- Left: Heap visual + chart -->
+  <div>
+    <div class="card">
+      <h2 style="color:#60a5fa">📊 Heap Memory State</h2>
+      <div class="metric-row">
+        <div class="metric"><div class="val v-good" id="m-used">0 MB</div><div class="lbl">Heap Used</div></div>
+        <div class="metric"><div class="val v-good" id="m-limit">512 MB</div><div class="lbl">Heap Limit</div></div>
+        <div class="metric"><div class="val v-good" id="m-gc">0</div><div class="lbl">GC Cycles</div></div>
+        <div class="metric"><div class="val v-good" id="m-refs">0</div><div class="lbl">Live Refs</div></div>
+      </div>
+
+      <div style="position:relative">
+        <div class="heap-visual" id="heap-viz">
+          <div class="heap-bar" id="heap-bar" style="height:10px">
+            <div class="heap-gen">
+              <div class="heap-seg seg-new" id="seg-new" style="flex:1">New Space</div>
+              <div class="heap-seg seg-old" id="seg-old" style="flex:0.5">Old Space</div>
+              <div class="heap-seg seg-large" id="seg-large" style="flex:0.2">Large</div>
+              <div class="heap-seg seg-free" id="seg-free" style="flex:5">Free</div>
+            </div>
+          </div>
+          <div class="gc-overlay" id="gc-overlay">🗑 GC RUNNING...</div>
+        </div>
+        <div class="heap-label-row">
+          <span style="color:#1d4ed8">■ New (Young gen)</span>
+          <span style="color:#b45309">■ Old (Tenured)</span>
+          <span style="color:#7c3aed">■ Large Object</span>
+          <span style="color:#374151">□ Free</span>
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div style="font-size:0.72rem;color:#475569;margin-bottom:4px">Memory over time</div>
+        <canvas id="mem-chart" width="600" height="100"></canvas>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2 style="color:#94a3b8">🔄 V8 GC Algorithm Steps</h2>
+      <div class="gc-steps" id="gc-steps">
+        <div class="gc-step" id="gs1"><div class="num">1</div><div><strong>Mark (Roots):</strong> Start from GC roots (global vars, stack). Mark all reachable objects.</div></div>
+        <div class="gc-step" id="gs2"><div class="num">2</div><div><strong>Mark (Object Graph):</strong> Traverse the object reference graph. Any reachable = alive.</div></div>
+        <div class="gc-step" id="gs3"><div class="num">3</div><div><strong>Sweep:</strong> Reclaim memory of all UNMARKED objects. They're unreachable = garbage.</div></div>
+        <div class="gc-step" id="gs4"><div class="num">4</div><div><strong>Compact:</strong> (Optional) Move live objects together to reduce fragmentation.</div></div>
+        <div class="gc-step" id="gs5"><div class="num">5</div><div><strong>Minor GC:</strong> Scavenge the "new space" (short-lived objects). Fast — runs frequently.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Log + Leaks table -->
+  <div>
+    <div class="card">
+      <h2 style="color:#94a3b8">📋 Allocation Log</h2>
+      <div class="obj-log" id="obj-log">
+        <div class="ol-info">// Click a button to start</div>
+      </div>
+      <div class="insight">
+        <strong>How to detect leaks:</strong><br>
+        Chrome DevTools → Memory tab → Take Heap Snapshot. Compare two snapshots over time.
+        Look for growing <code>Detached DOM trees</code> or closure arrays in the retainer path.
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2 style="color:#ef4444">🕳 Common Memory Leak Patterns</h2>
+      <table class="leak-table">
+        <thead><tr><th>Pattern</th><th>Why it Leaks</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>globalLeak = []</code></td>
+            <td>Global vars never GC'd — root objects live forever</td>
+            <td><span class="tag-fix">Use let/const in function scope</span></td>
+          </tr>
+          <tr>
+            <td>Event listener not removed</td>
+            <td>Listener holds ref to element; element can't be GC'd</td>
+            <td><span class="tag-fix">element.removeEventListener()</span></td>
+          </tr>
+          <tr>
+            <td>setInterval never cleared</td>
+            <td>Callback closure keeps scope alive forever</td>
+            <td><span class="tag-fix">clearInterval(id)</span></td>
+          </tr>
+          <tr>
+            <td>Detached DOM nodes</td>
+            <td>JS reference to removed DOM element persists</td>
+            <td><span class="tag-fix">Set references to null</span></td>
+          </tr>
+          <tr>
+            <td>Closure over large data</td>
+            <td>Inner function prevents outer scope from GC</td>
+            <td><span class="tag-fix">Set unused data to null in closure</span></td>
+          </tr>
+          <tr>
+            <td>Growing Map/Set as cache</td>
+            <td>Cache never evicts → unbounded growth</td>
+            <td><span class="tag-fix">Use WeakMap/WeakSet</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2 style="color:#8b5cf6">🔮 WeakRef & WeakMap Demo</h2>
+      <div style="font-size:0.77rem;color:#94a3b8;margin-bottom:8px">
+        <code>WeakRef</code> holds a "weak" reference — GC can collect the object if no other strong ref exists.
+        <code>WeakMap</code> keys are weakly held — entries auto-removed when key object is GC'd.
+      </div>
+      <div style="background:#060a0e;border-radius:8px;padding:10px;font-family:monospace;font-size:0.74rem;color:#94a3b8">
+<span style="color:#475569">// WeakRef — won't prevent GC</span>
+<br><span style="color:#93c5fd">let</span> obj = { data: <span style="color:#86efac">"big chunk"</span> };
+<br><span style="color:#93c5fd">const</span> ref = <span style="color:#fbbf24">new</span> WeakRef(obj);
+<br>obj = <span style="color:#86efac">null</span>; <span style="color:#475569">// strong ref gone</span>
+<br><span style="color:#475569">// GC can now collect it</span>
+<br>ref.deref(); <span style="color:#475569">// may return undefined after GC</span>
+<br><br><span style="color:#475569">// WeakMap — auto-evicts when key is GC'd</span>
+<br><span style="color:#93c5fd">const</span> cache = <span style="color:#fbbf24">new</span> WeakMap();
+<br>cache.set(domElement, expensiveData);
+<br><span style="color:#475569">// When domElement is removed → entry auto-cleared</span>
+      </div>
+      <div class="insight" style="margin-top:8px">
+        <strong>When to use WeakMap:</strong> Attaching metadata to DOM nodes without preventing their cleanup. Perfect for component data stores that should auto-cleanup when the element is removed.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let heapUsed = 0;
+  let liveRefs = 0;
+  let gcCycles = 0;
+  let leakArray = null;
+  let leakInterval = null;
+  let allocInterval = null;
+  let logLines = [];
+  let chartData = [];
+  let running = false;
+
+  const chart = document.getElementById('mem-chart');
+  const ctx = chart.getContext('2d');
+
+  function addLog(msg, type = 'info') {
+    logLines.push(`<div class="ol-${type}">${msg}</div>`);
+    if (logLines.length > 35) logLines.shift();
+    const box = document.getElementById('obj-log');
+    box.innerHTML = logLines.join('');
+    box.scrollTop = 9999;
+  }
+
+  function updateMetrics() {
+    const bar = document.getElementById('heap-bar');
+    const pct = Math.min(heapUsed / 200, 1);
+    bar.style.height = Math.max(10, pct * 185) + 'px';
+
+    document.getElementById('seg-new').style.flex = Math.max(0.5, liveRefs * 0.3);
+    document.getElementById('seg-old').style.flex = Math.max(0.2, gcCycles * 0.15);
+    document.getElementById('seg-free').style.flex = Math.max(0.5, (200 - heapUsed) / 30);
+
+    const usedStr = heapUsed.toFixed(1) + ' MB';
+    document.getElementById('m-used').textContent = usedStr;
+    document.getElementById('m-used').className = 'val ' + (heapUsed < 50 ? 'v-good' : heapUsed < 120 ? 'v-warn' : 'v-bad');
+    document.getElementById('m-gc').textContent = gcCycles;
+    document.getElementById('m-refs').textContent = liveRefs;
+
+    chartData.push(heapUsed);
+    if (chartData.length > 80) chartData.shift();
+    drawChart();
+  }
+
+  function drawChart() {
+    ctx.clearRect(0, 0, chart.width, chart.height);
+    ctx.fillStyle = '#060a0e';
+    ctx.fillRect(0, 0, chart.width, chart.height);
+    if (chartData.length < 2) return;
+
+    const max = Math.max(200, ...chartData);
+    const w = chart.width / (chartData.length - 1);
+
+    ctx.beginPath();
+    ctx.strokeStyle = heapUsed > 120 ? '#ef4444' : '#3b82f6';
+    ctx.lineWidth = 2;
+    chartData.forEach((v, i) => {
+      const x = i * w;
+      const y = chart.height - (v / max) * chart.height;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // threshold line at 120
+    ctx.strokeStyle = '#374151';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([5, 5]);
+    const warningY = chart.height - (120 / max) * chart.height;
+    ctx.beginPath(); ctx.moveTo(0, warningY); ctx.lineTo(chart.width, warningY); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function allocateNormal(silent = false) {
+    if (allocInterval) clearInterval(allocInterval);
+    let count = 0;
+    allocInterval = setInterval(() => {
+      if (count++ > 12) { clearInterval(allocInterval); return; }
+      heapUsed += Math.random() * 3 + 1;
+      liveRefs += Math.floor(Math.random() * 8 + 2);
+      if (!silent) addLog(`+ Allocated ${(Math.random()*200+50).toFixed(0)} objects → heap: ${heapUsed.toFixed(1)}MB`, 'alloc');
+      updateMetrics();
+    }, 300);
+  }
+
+  function createLeak() {
+    addLog('💀 Creating global array leak — grows forever', 'warn');
+    if (leakInterval) clearInterval(leakInterval);
+    leakArray = [];
+    leakInterval = setInterval(() => {
+      const chunk = new Array(5000).fill(Math.random());
+      leakArray.push(chunk); // never cleared!
+      heapUsed += 0.5;
+      liveRefs += 50;
+      addLog(`⚠️ Leak: leakArray has ${leakArray.length} chunks | heap: ${heapUsed.toFixed(1)}MB`, 'warn');
+      updateMetrics();
+    }, 400);
+  }
+
+  function createClosureLeak() {
+    addLog('🔒 Simulating closure leak: interval captures large array', 'warn');
+    const bigData = new Array(100000).fill('x'.repeat(100));
+    addLog(`  bigData: ~${(bigData.join('').length / 1024 / 1024).toFixed(1)}MB captured in closure`, 'warn');
+    heapUsed += 15;
+    liveRefs += 100000;
+    // The interval keeps bigData alive
+    const id = setInterval(() => {
+      addLog(`  Closure still alive... bigData.length = ${bigData.length}`, 'warn');
+    }, 800);
+    setTimeout(() => clearInterval(id), 4000); // auto-clear after demo
+    updateMetrics();
+    addLog('Fix: set bigData = null inside the closure after use', 'info');
+  }
+
+  function fixLeak() {
+    clearInterval(leakInterval);
+    leakArray = null;
+    addLog('✅ clearInterval() + leakArray = null', 'gc');
+    addLog('✅ All strong references released', 'gc');
+    addLog('→ GC can now reclaim the memory on next collection', 'alloc');
+    heapUsed = Math.max(5, heapUsed * 0.35);
+    liveRefs = Math.max(0, Math.floor(liveRefs * 0.2));
+    updateMetrics();
+    flashGC();
+  }
+
+  async function runGC() {
+    addLog('🗑 Simulating GC cycle (Mark-Sweep-Compact)...', 'gc');
+    const steps = ['gs1','gs2','gs3','gs4','gs5'];
+
+    flashGC();
+    for (let i = 0; i < steps.length; i++) {
+      steps.forEach(s => document.getElementById(s).classList.remove('active'));
+      document.getElementById(steps[i]).classList.add('active');
+      await sleep(400);
+    }
+    steps.forEach(s => document.getElementById(s).classList.remove('active'));
+
+    const collected = heapUsed * 0.3;
+    heapUsed = Math.max(2, heapUsed - collected);
+    liveRefs = Math.max(0, Math.floor(liveRefs * 0.6));
+    gcCycles++;
+    addLog(`🗑 GC collected ${collected.toFixed(1)}MB | heap now: ${heapUsed.toFixed(1)}MB`, 'gc');
+    updateMetrics();
+  }
+
+  function flashGC() {
+    const ov = document.getElementById('gc-overlay');
+    ov.style.opacity = '1';
+    setTimeout(() => ov.style.opacity = '0', 600);
+  }
+
+  function stopAll() {
+    clearInterval(leakInterval);
+    clearInterval(allocInterval);
+    heapUsed = 0; liveRefs = 0; gcCycles = 0;
+    chartData = [];
+    leakArray = null;
+    logLines = [];
+    document.getElementById('obj-log').innerHTML = '<div class="ol-info">// Cleared. Click a button to start.</div>';
+    updateMetrics();
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  updateMetrics();
+</script>
+</body>
+</html>

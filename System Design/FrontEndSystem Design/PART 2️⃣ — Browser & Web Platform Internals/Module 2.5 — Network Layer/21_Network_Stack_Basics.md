@@ -1,511 +1,191 @@
 # 21. Network Stack Basics
 
+---
+
 ## 1. High-Level Explanation (Frontend Interview Level)
 
-**Network Stack Basics** describe the layered protocols (DNS, TCP, TLS, HTTP) that browsers use to fetch resources—understanding this stack explains latency sources (DNS 20-120ms, TCP handshake 30-100ms, TLS 50-150ms) and optimization opportunities (preconnect, HTTP/2, CDN).
+Before a single byte of HTML reaches the browser, the browser must establish a connection to the server. This involves multiple protocol layers — DNS, TCP, TLS — each adding latency. Understanding the network stack is essential to reasoning about real-world page load performance beyond code-level optimizations.
 
-- **DNS Resolution**: Domain → IP address (20-120ms, cacheable)
-- **TCP Connection**: 3-way handshake establishes connection (30-100ms RTT)
-- **TLS Handshake**: Secure HTTPS negotiation (50-150ms, 1-2 RTTs)
-- **HTTP Request/Response**: Actual data transfer (varies by size)
+**The layers a web request traverses:**
 
-**Key Principle**: "Every request goes through DNS → TCP → TLS → HTTP—minimize round trips with connection reuse and early connections."
+```
+Browser
+  ↓ DNS Resolution   — "What is the IP address for api.example.com?"
+  ↓ TCP Handshake    — Establish reliable connection (3-way)
+  ↓ TLS Handshake    — Establish encrypted, authenticated session
+  ↓ HTTP Request     — Send GET /page HTTP/2
+  ↓ Server Response  — Server processes and sends bytes back
+Browser renders
+```
+
+**Key metrics:**
+- **TTFB (Time to First Byte)** — Time from request start to receiving first response byte
+- **RTT (Round Trip Time)** — Network latency one way + response time back (50ms = 50ms per round trip)
+- **Bandwidth** — How much data can be transferred per second (often not the bottleneck)
+- **Connection cost** — DNS + TCP + TLS latency before any data flows
+
+**Why frontend engineers must understand this:**
+- Every resource hint (`preconnect`, `dns-prefetch`, `preload`) targets a specific network cost
+- Choosing HTTP/2 vs HTTP/3 affects how resources are parallelized
+- CDN architecture decisions directly reduce these network costs by moving servers closer to users
+- Understanding RTT is why CDN edge nodes exist: 100ms RTT from New York to a London user → move server to London → 20ms RTT
 
 ---
 
 ## 2. Deep-Dive Explanation (Senior / Staff Level)
 
-### Network Stack Layers
-
-**OSI Model (Simplified for Web)**:
-```
-Layer 7: Application (HTTP, HTTPS, WebSocket)
-         ├── HTTP/1.1, HTTP/2, HTTP/3
-         └── Request/Response, Headers, Body
-
-Layer 6: Presentation (TLS/SSL)
-         ├── Encryption (symmetric AES)
-         ├── Handshake (asymmetric RSA/ECDSA)
-         └── Certificate validation
-
-Layer 4: Transport (TCP, UDP)
-         ├── TCP: Reliable, ordered, connection-oriented
-         └── UDP: Unreliable, unordered, connectionless (HTTP/3)
-
-Layer 3: Network (IP)
-         ├── IPv4: 32-bit address (e.g., 192.168.1.1)
-         └── IPv6: 128-bit address
-
-Layer 2: Data Link (Ethernet, WiFi)
-         └── MAC addresses
-
-Layer 1: Physical (cables, radio waves)
-```
-
-**Browser Network Stack**:
-```
-User enters URL: https://example.com/page.html
-
-Step 1: DNS Resolution (Layer 7 → 3)
-├── Query: "What's the IP for example.com?"
-├── Check browser cache (10s-1hr)
-├── Check OS cache
-├── Query DNS server (recursive)
-├── Response: "93.184.216.34"
-└── Time: 20-120ms (or 0ms if cached)
-
-Step 2: TCP Connection (Layer 4)
-├── SYN packet: Client → Server
-├── SYN-ACK packet: Server → Client
-├── ACK packet: Client → Server
-├── Connection established (3-way handshake)
-└── Time: 30-100ms (1 RTT)
-
-Step 3: TLS Handshake (Layer 6)
-├── ClientHello (supported ciphers, TLS version)
-├── ServerHello (chosen cipher, certificate)
-├── Client verifies certificate
-├── Key exchange (generate session keys)
-├── Finished messages
-└── Time: 50-150ms (1-2 RTTs)
-
-Step 4: HTTP Request (Layer 7)
-├── Client sends: GET /page.html HTTP/1.1
-├── Server responds: 200 OK + HTML
-└── Time: TTFB (Time To First Byte) + download
-
-Total: DNS + TCP + TLS + HTTP = 100-370ms + download time
-```
-
----
-
 ### DNS Resolution
 
-**DNS Query Process**:
+DNS (Domain Name System) translates hostnames to IP addresses. The process:
+
 ```
-Browser cache (10s-1hr)
-  ↓ (miss)
-OS cache (system-wide)
-  ↓ (miss)
-Router cache (local network)
-  ↓ (miss)
-ISP DNS server
-  ↓ (miss)
-Root nameserver (.)
-  ↓
-TLD nameserver (.com)
-  ↓
-Authoritative nameserver (example.com)
-  ↓
-IP address: 93.184.216.34
+Browser checks DNS cache (in memory, ~1ms)
+    ↓ (if miss)
+OS checks /etc/hosts file (platform DNS)
+    ↓ (if miss)
+OS checks OS DNS cache
+    ↓ (if miss)
+Query sent to configured recursive DNS resolver (ISP or 1.1.1.1 / 8.8.8.8)
+    ↓
+Recursive resolver queries root nameservers → TLD nameservers → authoritative nameservers
+    ↓
+IP address returned, cached at multiple levels with TTL
 ```
 
-**DNS Record Types**:
-```
-A record:     Domain → IPv4
-              example.com → 93.184.216.34
+**DNS latency:** 20-200ms depending on cache hit rate and geographic distance.
 
-AAAA record:  Domain → IPv6
-              example.com → 2606:2800:220:1:248:1893:25c8:1946
+**Browser DNS cache:** Chrome caches DNS responses in-memory for 60 seconds by default, but respects the TTL in the DNS response.
 
-CNAME:        Alias → Canonical name
-              www.example.com → example.com
-
-MX:           Mail server
-              example.com → mail.example.com
-
-TXT:          Text data (SPF, DKIM, verification)
-```
-
-**DNS Caching**:
-```javascript
-// Browser cache
-DNS entry stored for TTL (Time To Live):
-example.com → 93.184.216.34 (TTL: 300s = 5 min)
-
-After 300s: Entry expires, re-query DNS
-
-// Typical TTLs:
-Short:  300s (5 min) - dynamic IPs
-Medium: 3600s (1 hr) - normal sites
-Long:   86400s (24 hr) - stable infrastructure
-```
-
-**DNS Optimization**:
+**`dns-prefetch`** resolves DNS for a domain before a request is needed:
 ```html
-<!-- 1. DNS Prefetch (resolve DNS early) -->
-<link rel="dns-prefetch" href="//cdn.example.com">
+<link rel="dns-prefetch" href="https://third-party-api.example.com">
+```
+Cost: ~1 DNS UDP packet exchange. No TCP/TLS established.
 
-<!-- 2. Preconnect (DNS + TCP + TLS) -->
-<link rel="preconnect" href="https://cdn.example.com">
+### TCP Handshake
 
-<!-- Savings:
-   dns-prefetch: ~20-120ms (DNS only)
-   preconnect:   ~100-370ms (DNS + TCP + TLS)
--->
+TCP (Transmission Control Protocol) provides reliable, ordered delivery. Before data flows, a 3-way handshake establishes the connection:
+
+```
+Client → Server: SYN           (1 RTT begins)
+Server → Client: SYN-ACK
+Client → Server: ACK           (1 RTT completes)
+        ↓
+Client → Server: HTTP Request  (2nd RTT begins — data flow starts)
+Server → Client: HTTP Response
 ```
 
-**DNS Performance**:
+**TCP takes 1 RTT before any data flows.** On a 50ms RTT connection, this is 50ms of pure overhead before the first byte of data is sent.
+
+**Congestion Control — TCP Slow Start:**
+TCP doesn't immediately send data at full speed. It starts with a small **congestion window (cwnd)**, typically 10 TCP segments (~14KB for 1.4KB MTU), and doubles on each acknowledgment until congestion is detected:
+
 ```
-Uncached DNS query:
-├── Best case:   20ms  (ISP cache hit)
-├── Average:     50ms  (1-2 hops)
-├── Worst case:  120ms (root nameserver)
-└── Timeout:     5-10s (failure)
-
-Cached DNS query:
-└── ~0ms (browser/OS cache hit)
-```
-
----
-
-### TCP Connection
-
-**3-Way Handshake**:
-```
-Client                           Server
-  │                                 │
-  │────── SYN (seq=100) ────────────→│  Step 1: Client initiates
-  │                                 │
-  │←───── SYN-ACK (seq=200, ────────│  Step 2: Server acknowledges
-  │        ack=101)                 │          + sends own SYN
-  │                                 │
-  │────── ACK (ack=201) ────────────→│  Step 3: Client acknowledges
-  │                                 │
-  │      Connection established     │
-  │                                 │
-  │────── Data transfer ────────────→│
-  │←───── Data transfer ────────────│
-
-Time: 1 RTT (Round Trip Time)
+Round 1: 14KB sent
+Round 2: 28KB sent (if no loss)
+Round 3: 56KB sent
+...
+Until: packet loss detected → back to slow start
 ```
 
-**RTT (Round Trip Time)**:
-```
-RTT = Time for packet to travel Client → Server → Client
+**Performance implication:** Small files downloaded over a fresh TCP connection pay a disproportionate startup cost. A 1KB CSS file might require 3+ RTTs if the slow start limits early window size. This is why bundling resources (HTTP/1.1 era) made sense — one large contiguous file amortizes the TCP startup cost.
 
-Examples:
-├── Same city:       10-30ms
-├── Same country:    30-80ms
-├── Across ocean:    100-200ms
-├── Satellite:       500-700ms
-└── Mobile (3G):     100-500ms
-```
-
-**TCP Parameters**:
-```javascript
-// Socket options (server-side Node.js)
-const net = require('net');
-const server = net.createServer((socket) => {
-  socket.setKeepAlive(true, 60000);  // Keep connection alive
-  socket.setNoDelay(true);           // Disable Nagle's algorithm (low latency)
-  socket.setTimeout(30000);          // 30s timeout
-});
-```
-
-**Connection Limits**:
-```
-Browser connection limits (per domain):
-├── HTTP/1.1:  6 connections (Chrome, Firefox)
-├── HTTP/2:    1 connection (multiplexed)
-└── HTTP/3:    1 connection (QUIC)
-
-Workaround (HTTP/1.1): Domain sharding
-static1.example.com  (6 connections)
-static2.example.com  (6 connections)
-static3.example.com  (6 connections)
-= 18 parallel connections
-
-Note: Not needed with HTTP/2 (single multiplexed connection)
-```
-
----
-
-### TLS/SSL Handshake
-
-**TLS 1.2 Handshake** (2 RTTs):
-```
-Client                           Server
-  │                                 │
-  │────── ClientHello ──────────────→│  RTT 1: Negotiate
-  │ (TLS version, ciphers)          │
-  │                                 │
-  │←───── ServerHello ──────────────│
-  │ (Chosen cipher, certificate)    │
-  │                                 │
-  │────── ClientKeyExchange ────────→│  RTT 2: Key exchange
-  │────── ChangeCipherSpec ─────────→│
-  │────── Finished ─────────────────→│
-  │                                 │
-  │←───── ChangeCipherSpec ─────────│
-  │←───── Finished ─────────────────│
-  │                                 │
-  │      Encrypted connection       │
-  │                                 │
-  │────── Application data ─────────→│
-
-Time: 2 RTTs (~100ms on 50ms RTT)
-```
-
-**TLS 1.3 Handshake** (1 RTT, faster):
-```
-Client                           Server
-  │                                 │
-  │────── ClientHello ──────────────→│  RTT 1: Negotiate + Key
-  │ (TLS 1.3, ciphers, key share)   │
-  │                                 │
-  │←───── ServerHello ──────────────│
-  │ (Cipher, key share, Finished)   │
-  │←───── Application data ─────────│  ← Can send data immediately!
-  │                                 │
-  │────── Finished ─────────────────→│
-  │────── Application data ─────────→│
-
-Time: 1 RTT (~50ms on 50ms RTT)
-Savings: 50% faster than TLS 1.2
-```
-
-**TLS 1.3 0-RTT** (Zero RTT, resumed connection):
-```
-Client                           Server
-  │                                 │
-  │────── ClientHello ──────────────→│  0 RTT: Send data immediately
-  │────── Application data ─────────→│  (using session ticket from previous)
-  │                                 │
-  │←───── ServerHello ──────────────│
-  │←───── Application data ─────────│
-
-Time: 0 RTT (data sent with first packet!)
-Use case: Repeat visits (session resumption)
-```
-
-**Certificate Validation**:
-```
-Server sends certificate:
-├── Common Name (CN): example.com
-├── Issuer: Let's Encrypt
-├── Valid: 2025-01-01 to 2026-01-01
-└── Public key
-
-Client validates:
-1. Certificate not expired ✓
-2. Hostname matches (example.com) ✓
-3. Trusted Certificate Authority (Let's Encrypt in root store) ✓
-4. Certificate chain valid ✓
-
-If any fails → Browser warning (NET::ERR_CERT_INVALID)
-```
-
-**HTTPS Performance**:
-```
-TLS overhead:
-├── TLS 1.2:  100-150ms (2 RTTs)
-├── TLS 1.3:  50-100ms  (1 RTT)
-├── 0-RTT:    0ms       (resumed)
-└── CPU cost: ~1ms      (encryption/decryption)
-
-Certificate size:
-├── RSA-2048:   ~2KB
-├── ECDSA-256:  ~1KB    (smaller, faster)
-└── Transfer:   ~10ms on slow 3G
-```
-
----
-
-### HTTP Request/Response
-
-**HTTP/1.1 Request**:
-```http
-GET /page.html HTTP/1.1
-Host: example.com
-User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)
-Accept: text/html,application/xhtml+xml
-Accept-Encoding: gzip, deflate, br
-Connection: keep-alive
-Cookie: session=abc123
-```
-
-**HTTP/1.1 Response**:
-```http
-HTTP/1.1 200 OK
-Date: Thu, 13 Feb 2026 10:00:00 GMT
-Content-Type: text/html; charset=utf-8
-Content-Length: 1234
-Content-Encoding: gzip
-Cache-Control: max-age=3600
-Set-Cookie: session=abc123; Secure; HttpOnly
-Connection: keep-alive
-
-<!DOCTYPE html>
-<html>...</html>
-```
-
-**TTFB (Time To First Byte)**:
-```
-TTFB = DNS + TCP + TLS + Server processing + Network transfer
-
-Good TTFB:
-├── <100ms:   Excellent (CDN, cached)
-├── 100-300ms: Good (server processing)
-├── 300-600ms: Average (slow server)
-└── >600ms:    Poor (optimize server/network)
-```
-
-**HTTP Status Codes**:
-```
-1xx Informational:
-├── 100 Continue
-└── 101 Switching Protocols (WebSocket)
-
-2xx Success:
-├── 200 OK
-├── 201 Created (POST success)
-├── 204 No Content (DELETE success)
-└── 206 Partial Content (range request)
-
-3xx Redirection:
-├── 301 Moved Permanently (permanent redirect)
-├── 302 Found (temporary redirect)
-├── 304 Not Modified (cached, no download)
-└── 307 Temporary Redirect (preserve method)
-
-4xx Client Error:
-├── 400 Bad Request
-├── 401 Unauthorized (need auth)
-├── 403 Forbidden (no permission)
-├── 404 Not Found
-└── 429 Too Many Requests (rate limit)
-
-5xx Server Error:
-├── 500 Internal Server Error
-├── 502 Bad Gateway (proxy error)
-├── 503 Service Unavailable (overloaded)
-└── 504 Gateway Timeout (upstream timeout)
-```
-
----
-
-### Network Waterfall
-
-**Chrome DevTools Network Tab**:
-```
-Timeline breakdown:
-
-Request:
-├── Queueing (0-5ms):        Wait for available connection
-├── Stalled (0-20ms):        Browser internal delay
-├── DNS Lookup (0-120ms):    Resolve domain to IP
-├── Initial connection (30-100ms): TCP 3-way handshake
-├── SSL (50-150ms):          TLS handshake
-├── Request sent (1-5ms):    Send HTTP request
-├── Waiting (TTFB) (50-500ms): Server processing
-└── Content Download (10-1000ms): Transfer response
-
-Total: Sum of all phases
-```
-
-**Optimization Targets**:
-```
-1. DNS Lookup:
-   ├── Reduce: dns-prefetch, preconnect
-   └── Target: <20ms (cached)
-
-2. Initial connection:
-   ├── Reduce: Connection reuse (keep-alive)
-   └── Target: <50ms (reused = 0ms)
-
-3. SSL:
-   ├── Reduce: TLS 1.3, session resumption (0-RTT)
-   └── Target: <50ms (TLS 1.3) or 0ms (resumed)
-
-4. TTFB:
-   ├── Reduce: CDN, caching, faster server
-   └── Target: <100ms
-
-5. Content Download:
-   ├── Reduce: Compression (gzip, brotli), minification
-   └── Target: <100ms per resource
-```
-
----
-
-## 3. Clear Real-World Examples
-
-### Example 1: Amazon – Preconnect to CDN
-
-**Challenge**: Images loaded from CDN (dns + TCP + TLS delay ~200ms).
-
-**Solution**: Preconnect in `<head>`:
+**`preconnect`** performs DNS + TCP + TLS pre-warming:
 ```html
-<head>
-  <link rel="preconnect" href="https://images-na.ssl-images-amazon.com">
-</head>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+```
+After `preconnect`, the next request to this origin has a ready connection — no DNS/TCP/TLS penalty.
 
-<!-- Later in body -->
-<img src="https://images-na.ssl-images-amazon.com/product.jpg">
+### TLS Handshake
+
+TLS (Transport Layer Security) adds authentication (certificates) and encryption on top of TCP:
+
+**TLS 1.2 handshake (older, 2 RTTs after TCP):**
+```
+TCP established
+Client → Server: ClientHello (cipher suites, TLS version)
+Server → Client: ServerHello + Certificate + ServerHelloDone  (1 RTT)
+Client → Server: ClientKeyExchange + ChangeCipherSpec + Finished
+Server → Client: ChangeCipherSpec + Finished                  (2nd RTT)
+Client → Server: HTTP Request (3rd RTT)
+Server → Client: Data
+```
+Total overhead: 2 RTTs before data. On a 100ms RTT line: 200ms before any HTTP.
+
+**TLS 1.3 handshake (1 RTT):**
+```
+TCP established
+Client → Server: ClientHello + Key Share
+Server → Client: ServerHello + Certificate + Finished          (1 RTT)
+Client → Server: HTTP Request + Finished (data starts!)
+Server → Client: Data
+```
+TLS 1.3 reduced the handshake to 1 RTT — 50% improvement over TLS 1.2.
+
+**TLS 1.3 0-RTT (session resumption):**
+If the client has previously connected to the server and has a session ticket:
+```
+Client → Server: ClientHello + 0-RTT data (HTTP Request embedded!)
+Server → Client: Response (data starts!)
+```
+Zero additional RTT for resumed sessions. This enables instant HTTPS reconnection.
+
+**Security note:** 0-RTT has replay attack vulnerabilities for non-idempotent requests. Should only be used for safe/idempotent requests (GET). POST requests with 0-RTT can be replayed by a network attacker.
+
+### Total Connection Cost
+
+```
+Full cost for a new HTTPS connection (TLS 1.3):
+  DNS:         20-200ms
+  TCP:         1 RTT
+  TLS 1.3:     1 RTT
+  HTTP:        1 RTT
+Total:  ~ 3 RTTs + DNS time
+
+On a 50ms RTT network:  ~150ms + 50ms DNS = ~200ms before first byte
+On a 200ms RTT network: ~600ms + 100ms DNS = ~700ms before first byte
 ```
 
-**Timeline**:
-```
-Without preconnect:
-├── Parse HTML: 10ms
-├── Discover <img>: 10ms
-├── DNS: 50ms
-├── TCP: 50ms
-├── TLS: 50ms
-├── Request: 50ms
-└── Total: 220ms
+**This is why CDN edge nodes are architecturally critical:**
+- User in London hitting US CDN (200ms RTT) = 700ms connection cost
+- User in London hitting London CDN edge (20ms RTT) = 70ms connection cost
+- 10x reduction in connection overhead
 
-With preconnect:
-├── Parse HTML: 10ms (DNS + TCP + TLS in parallel)
-├── Discover <img>: 10ms (connection ready!)
-├── Request: 50ms
-└── Total: 70ms (saved 150ms)
-```
+### HTTP/2 Connection Multiplexing
 
-**Result**: Images load 150ms faster (68% improvement).
+HTTP/2 keeps the same underlying TCP + TLS stack but completely reimagines the application layer:
+
+- **Single TCP connection** per origin (not 6 parallel)
+- **Multiplex** unlimited request/response streams over that connection
+- **HPACK header compression** — repeated headers (like `Authorization`, `Accept`) sent as references to a shared table
+
+**Why this matters for the network stack:**
+One TCP connection = one congestion window that grows over time. Multiple requests share the same slow-start amortization, making HTTP/2 efficient even for many small resources.
+
+### QUIC / HTTP/3
+
+HTTP/3 moves from TCP to **QUIC** (Quick UDP Internet Connections), implementing reliability and congestion control at the application layer over UDP:
+
+- **No TCP handshake** — QUIC and TLS 1.3 combine into a single 1-RTT setup
+- **No TCP HOL blocking** — independent streams per QUIC stream (TCP blocking affects all)
+- **Connection migration** — IP address can change (WiFi → cellular) without disconnecting
+- **0-RTT reconnect** with session tickets
 
 ---
 
-### Example 2: Google – TLS 1.3 Adoption
+## 3. Real-World Examples
 
-**Challenge**: TLS 1.2 handshake adds 100ms latency (2 RTTs).
+### Google — Invented QUIC / HTTP/3
+Google deployed QUIC for all Google.com, Google Search, YouTube traffic in 2015 internally. They saw 3% faster load times on desktop and 8% on mobile globally, primarily from eliminating TCP HOL blocking on mobile high-packet-loss networks.
 
-**Solution**: TLS 1.3 (1 RTT) + 0-RTT resumption:
-```
-First visit (TLS 1.3):
-├── 1 RTT: 50ms (vs TLS 1.2: 100ms)
-└── Saved: 50ms
+### Cloudflare CDN — TLS 1.3 + 0-RTT
+Cloudflare routes traffic through 300+ global edge nodes. All traffic uses TLS 1.3. Clients that have previously connected get 0-RTT session resumption — their HTTP/3 request is piggy-backed onto the initial QUIC packet for truly zero connection overhead on repeat visits.
 
-Repeat visit (0-RTT):
-├── 0 RTT: 0ms (session ticket)
-└── Saved: 50-100ms
-```
+### Amazon S3 / CloudFront — DNS Anycast
+AWS uses Anycast DNS — the same IP address routes to the closest of dozens of edge nodes globally. When your browser resolves `d1q2xyz.cloudfront.net`, DNS routes to the nearest CloudFront POP. The user connects to a server 10ms away even though the IP "looks like" one server.
 
-**Result**: 50-100ms faster HTTPS connections globally.
-
----
-
-### Example 3: Netflix – HTTP/2 Connection Reuse
-
-**Challenge**: HTTP/1.1 requires 6 connections per domain (TCP + TLS overhead).
-
-**Solution**: HTTP/2 single multiplexed connection:
-```
-HTTP/1.1:
-├── 6 connections × (TCP 50ms + TLS 50ms) = 600ms overhead
-├── Max 6 parallel requests
-└── Head-of-line blocking per connection
-
-HTTP/2:
-├── 1 connection × (TCP 50ms + TLS 50ms) = 100ms overhead
-├── Unlimited parallel requests (multiplexing)
-└── No head-of-line blocking (stream prioritization)
-
-Saved: 500ms setup time
-```
-
-**Result**: Faster page loads, fewer connections.
+### E-Commerce Checkout — Connection Cost Impact
+A checkout page making 20 API calls to different microservice origins (payment, inventory, shipping, user profile) on HTTP/1.1 would require 20 separate DNS + TCP + TLS handshakes per origin. HTTP/2 reduces this to one connection per origin. `preconnect` hints for known API origins eliminate the handshake cost entirely on first load.
 
 ---
 
@@ -513,225 +193,119 @@ Saved: 500ms setup time
 
 ### Sample Answer (7+ Years Level)
 
-> **Question**: "Explain the network stack for a web request."
+*"A web request goes through DNS resolution (IP lookup, 20-200ms), a TCP handshake (1 RTT — creates the reliable connection), and TLS negotiation (1 RTT for TLS 1.3, 2 RTTs for 1.2 — establishes encryption and authentication) before the first byte of HTTP data flows. On a 100ms RTT connection, that's 300ms of overhead before any content arrives.*
 
-**Answer**:
+*This is the fundamental justification for CDN architecture — moving the server closer to the user reduces RTT from 200ms to 20ms, cutting connection overhead 10x. Not code, not bundles — just geography.*
 
-"Browser network request goes through **layered protocols**:
+*TCP Slow Start is equally important: new TCP connections start with a small congestion window (~14KB). A page that requires 100KB of critical CSS on a fresh connection needs 4+ RTTs just to download that CSS due to slow start ramping. This is why connection reuse (HTTP/2), persistent connections, and `preconnect` hints are performance primitives.*
 
----
+*HTTP/3 (QUIC) addresses the remaining TCP limitations: it eliminates TCP-level HOL blocking (one lost packet in TCP blocks all stream data; in QUIC, each stream is independent), enables connection migration (mobile hand-off), and combines QUIC + TLS 1.3 into a single 1-RTT setup."*
 
-### Network Stack Layers
+### Likely Follow-up Questions
 
-```
-Application (HTTP):  Request/Response
-Presentation (TLS):  Encryption
-Transport (TCP):     Reliable delivery
-Network (IP):        Routing
-Data Link (Ethernet): Physical transfer
-```
+1. **"What is TTFB and what affects it?"**
+   → Time to First Byte: DNS + TCP + TLS + server processing time + network transit. CDN reduces network costs; server-side caching and SSG reduce processing time.
 
----
+2. **"Why don't we just preconnect to everything?"**
+   → Each `preconnect` occupies a TCP connection slot (browsers limit per-origin and total connections). Preconnecting to origins that end up not being used wastes these slots and may delay actual connections. Limit to the 6-10 most critical origins.
 
-### Request Timeline
+3. **"What is TCP Slow Start and why does it matter for frontend?"**
+   → TCP starts with a small congestion window and ramps up exponentially. A fresh connection can only send ~14KB in the first round trip. This makes repeated connections (HTTP/1.1) inefficient for small resources and justifies connection reuse (HTTP/2) and `preconnect`.
 
-**URL**: `https://example.com/page.html`
-
-**Step 1: DNS Resolution** (20-120ms):
-```
-Query: "What's IP for example.com?"
-Check: Browser cache → OS cache → DNS server
-Response: "93.184.216.34"
-Time: 0ms (cached) to 120ms (uncached)
-```
-
-**Step 2: TCP Connection** (30-100ms, 1 RTT):
-```
-3-way handshake:
-Client → Server: SYN
-Server → Client: SYN-ACK
-Client → Server: ACK
-Connection established
-Time: 1 RTT (50ms on 50ms RTT)
-```
-
-**Step 3: TLS Handshake** (50-150ms):
-```
-TLS 1.2: 2 RTTs (~100ms)
-├── ClientHello (ciphers)
-├── ServerHello (certificate)
-├── Key exchange
-└── Finished
-
-TLS 1.3: 1 RTT (~50ms)
-├── ClientHello (ciphers + key share)
-└── ServerHello (cipher + key, can send data immediately)
-
-0-RTT: 0ms (session resumption, repeat visits)
-```
-
-**Step 4: HTTP Request** (TTFB + download):
-```
-Request: GET /page.html HTTP/1.1
-Response: 200 OK + HTML
-TTFB: 50-500ms (server processing)
-Download: Varies by size
-```
-
-**Total Latency**:
-```
-DNS (50ms) + TCP (50ms) + TLS (50ms) + TTFB (100ms) = 250ms
-
-Optimized (cached DNS, reused connection, TLS 1.3):
-DNS (0ms) + TCP (0ms) + TLS (0ms) + TTFB (100ms) = 100ms
-```
+4. **"What is Anycast DNS and how does it help CDNs?"**
+   → Anycast routes the same IP address to multiple physical servers. BGP routing directs each request to the geographically nearest one. CDNs use this so the same CDN domain resolves to the nearest PoP for every user globally.
 
 ---
 
-### DNS Optimization
+## 5. Code Examples
 
-**DNS Prefetch**:
-```html
-<link rel="dns-prefetch" href="//cdn.example.com">
-```
-Resolves DNS early (saves 20-120ms).
+### Navigation Timing Network Breakdown
 
-**Preconnect**:
-```html
-<link rel="preconnect" href="https://cdn.example.com">
-```
-DNS + TCP + TLS early (saves 100-370ms).
+```javascript
+// Detailed network breakdown using Navigation Timing API Level 2
+function getNetworkBreakdown() {
+  const [nav] = performance.getEntriesByType('navigation');
+  
+  return {
+    // DNS
+    dnsStart:      nav.domainLookupStart,
+    dnsEnd:        nav.domainLookupEnd,
+    dnsDuration:   nav.domainLookupEnd - nav.domainLookupStart,
+    
+    // TCP
+    tcpStart:      nav.connectStart,
+    tcpEnd:        nav.connectEnd, // Includes TLS if HTTPS
+    tcpDuration:   nav.connectEnd - nav.connectStart,
+    
+    // TLS (extracted from connect phase)
+    tlsStart:      nav.secureConnectionStart,
+    tlsEnd:        nav.connectEnd,
+    tlsDuration:   nav.secureConnectionStart > 0 
+                     ? nav.connectEnd - nav.secureConnectionStart 
+                     : 0,
+    
+    // Request/Response
+    requestStart:  nav.requestStart,
+    responseStart: nav.responseStart, // = TTFB
+    responseEnd:   nav.responseEnd,
+    
+    // Metrics
+    ttfb:          nav.responseStart - nav.fetchStart,
+    download:      nav.responseEnd - nav.responseStart,
+    totalNetwork:  nav.responseEnd - nav.fetchStart,
+  };
+}
 
----
-
-### TCP Connection
-
-**3-way handshake** (1 RTT):
-- SYN → SYN-ACK → ACK
-- Cost: 30-100ms (varies by distance)
-
-**Connection reuse** (HTTP keep-alive):
-```http
-Connection: keep-alive
-```
-Reuse connection for multiple requests (0ms overhead).
-
-**Connection limits**:
-- HTTP/1.1: 6 per domain (domain sharding workaround)
-- HTTP/2: 1 multiplexed connection (unlimited streams)
-
----
-
-### TLS/SSL
-
-**TLS 1.2**: 2 RTTs (~100ms)  
-**TLS 1.3**: 1 RTT (~50ms, 50% faster)  
-**0-RTT**: 0ms (session resumption, repeat visits)
-
-**Certificate validation**:
-1. Not expired ✓
-2. Hostname matches ✓
-3. Trusted CA ✓
-4. Chain valid ✓
-
-Fails → Browser warning.
-
----
-
-### HTTP Request/Response
-
-**TTFB** (Time To First Byte):
-```
-TTFB = DNS + TCP + TLS + Server processing + Network
+// Send to analytics/RUM
+window.addEventListener('load', () => {
+  const breakdown = getNetworkBreakdown();
+  // Report to backend
+  navigator.sendBeacon('/analytics/network', JSON.stringify(breakdown));
+});
 ```
 
-Good TTFB:
-- <100ms: Excellent (CDN)
-- 100-300ms: Good
-- >600ms: Poor (optimize)
+### Resource Timing for Individual Requests
 
-**Status codes**:
-- 2xx: Success (200 OK, 201 Created)
-- 3xx: Redirect (301 Permanent, 304 Not Modified cached)
-- 4xx: Client error (404 Not Found, 429 Rate limit)
-- 5xx: Server error (500 Internal, 503 Unavailable)
-
----
-
-### Network Waterfall (DevTools)
-
-**Phases**:
-1. **Queueing** (0-5ms): Wait for available connection
-2. **DNS Lookup** (0-120ms): Resolve domain
-3. **Initial connection** (30-100ms): TCP handshake
-4. **SSL** (50-150ms): TLS handshake
-5. **Request sent** (1-5ms): Send HTTP request
-6. **Waiting (TTFB)** (50-500ms): Server processing
-7. **Content Download** (10-1000ms): Transfer response
-
-**Optimization targets**:
-- DNS: <20ms (cached)
-- Connection: 0ms (reused)
-- SSL: <50ms (TLS 1.3) or 0ms (0-RTT)
-- TTFB: <100ms (CDN, caching)
-- Download: <100ms per resource (compression)
-
----
-
-### Real-World
-
-**Amazon**: Preconnect to CDN (saved 150ms, 68% improvement).
-
-**Google**: TLS 1.3 adoption (50-100ms faster connections).
-
-**Netflix**: HTTP/2 single connection (saved 500ms setup, unlimited parallel).
-
----
-
-### Trade-offs
-
-**Preconnect**:
-- ✅ Saves 100-370ms (DNS + TCP + TLS)
-- ❌ Keeps connection open (~10s, limit 3-5 origins)
-
-**TLS 1.3**:
-- ✅ 50% faster than TLS 1.2 (1 RTT vs 2 RTTs)
-- ✅ 0-RTT session resumption (instant repeat visits)
-- ❌ Browser/server support required
-
-**Connection Reuse**:
-- ✅ 0ms overhead (no new handshake)
-- ❌ HTTP/1.1: Max 6 per domain (head-of-line blocking)
-- ✅ HTTP/2: 1 multiplexed (unlimited streams, no blocking)
-
-**Follow-up I Expect**:
-
-Q: 'What's the cost of a new HTTPS connection?'
-A: DNS (20-120ms) + TCP (30-100ms, 1 RTT) + TLS (50-150ms, 1-2 RTTs) = **100-370ms** total. Optimized: DNS cached (0ms) + connection reused (0ms) + TLS 0-RTT (0ms) = **near-instant**.
-
-Q: 'How does preconnect work?'
-A: `<link rel="preconnect">` in `<head>` tells browser to establish DNS + TCP + TLS connection **during HTML parsing** (parallel). When resource discovered later, connection ready (saves 100-370ms). Limit to 3-5 critical origins (connections kept open ~10s).
-
-Q: 'TLS 1.3 vs TLS 1.2?'
-A: **TLS 1.2**: 2 RTTs (~100ms on 50ms RTT). **TLS 1.3**: 1 RTT (~50ms, 50% faster). **0-RTT** (TLS 1.3): Session resumption (0ms, instant repeat visits using session ticket). TLS 1.3 also: faster cipher suites, smaller certificates (ECDSA), better security."
+```javascript
+// Monitor individual API call network performance
+function instrumentFetch(url, options = {}) {
+  const startMark = `fetch-start-${url}`;
+  const endMark = `fetch-end-${url}`;
+  
+  performance.mark(startMark);
+  
+  return fetch(url, options)
+    .then(response => {
+      performance.mark(endMark);
+      performance.measure(`fetch-${url}`, startMark, endMark);
+      
+      const [measure] = performance.getEntriesByName(`fetch-${url}`);
+      
+      // Also get resource timing for network breakdown
+      const resourceEntries = performance.getEntriesByName(url);
+      const resourceEntry = resourceEntries[resourceEntries.length - 1];
+      
+      if (resourceEntry) {
+        console.log({
+          url,
+          ttfb: resourceEntry.responseStart - resourceEntry.fetchStart,
+          download: resourceEntry.responseEnd - resourceEntry.responseStart,
+          total: measure.duration,
+          cached: resourceEntry.transferSize === 0,
+        });
+      }
+      
+      return response;
+    });
+}
+```
 
 ---
 
 ## 6. Why & How Summary
 
-### Why It Matters
+**Why it matters:**
+The network stack is responsible for a significant portion of page load time that exists entirely outside your application code. A perfectly optimized React app can still load slowly due to DNS, TCP, or TLS overhead. Understanding these costs enables architectural decisions — CDN usage, `preconnect` hints, HTTP/2 adoption, QUIC migration — that eliminate these overheads at scale. CDN placement and HTTP/3 adoption are infrastructure decisions that can save 200-500ms per user per page load without touching a single line of application code.
 
-**Latency Sources**: Every request incurs DNS (20-120ms) + TCP (30-100ms) + TLS (50-150ms) = 100-370ms before data transfer  
-**Optimization Impact**: Preconnect saves 100-370ms per origin, TLS 1.3 saves 50ms, connection reuse eliminates handshake overhead  
-**User Experience**: Network latency directly impacts page load (fast networks <100ms TTFB, slow networks 500ms+ TTFB)  
-**Mobile Networks**: Higher latency (3G: 100-500ms RTT, 4G: 30-100ms RTT)—optimization more critical
-
-### How It Works
-
-**DNS Resolution**: Browser cache (10s-1hr) → OS cache → ISP DNS → root nameserver, returns IP address, cached with TTL, optimize with dns-prefetch (DNS only 20-120ms) or preconnect (DNS+TCP+TLS 100-370ms)  
-**TCP Connection**: 3-way handshake (SYN → SYN-ACK → ACK) 1 RTT (30-100ms depends on distance), HTTP/1.1 limit 6 connections per domain (domain sharding workaround), HTTP/2 single multiplexed connection (unlimited streams), connection reuse with keep-alive (0ms overhead subsequent requests)  
-**TLS Handshake**: TLS 1.2 (2 RTTs ~100ms ClientHello/ServerHello/KeyExchange/Finished), TLS 1.3 (1 RTT ~50ms faster combines steps), 0-RTT (session resumption instant with ticket from previous), certificate validation (expiry/hostname/trusted CA/chain)  
-**HTTP Request/Response**: TTFB (DNS+TCP+TLS+server processing+network), status codes (2xx success, 3xx redirect, 4xx client error, 5xx server error), compression (gzip/brotli reduce transfer time)  
-**Network Waterfall**: Queueing → DNS Lookup → Initial Connection → SSL → Request Sent → Waiting (TTFB) → Content Download, optimize each phase (cache DNS, reuse connection, TLS 1.3/0-RTT, CDN for TTFB, compression for download)
-
-**FAANG Expectation**: Explain layered network stack (Application HTTP → Presentation TLS → Transport TCP → Network IP), request timeline with latencies (DNS 20-120ms, TCP 30-100ms 1 RTT, TLS 50-150ms 1-2 RTTs, TTFB 50-500ms), DNS optimization (dns-prefetch DNS only, preconnect DNS+TCP+TLS saves 100-370ms limit 3-5 origins), TCP 3-way handshake (SYN/SYN-ACK/ACK 1 RTT), connection limits (HTTP/1.1 6 per domain domain sharding, HTTP/2 1 multiplexed unlimited streams), connection reuse keep-alive (0ms overhead), TLS versions (1.2: 2 RTTs ~100ms, 1.3: 1 RTT ~50ms, 0-RTT: instant resumption), TTFB components and targets (<100ms excellent CDN), network waterfall phases and optimization targets, real-world examples (Amazon preconnect 150ms saved 68%, Google TLS 1.3 50-100ms faster, Netflix HTTP/2 500ms saved), trade-offs (preconnect saves time but keeps connection open limit origins, TLS 1.3 faster but requires support, connection reuse 0ms but HTTP/1.1 limited 6 per domain head-of-line blocking)
+**How it works:**
+A browser's HTTP request traverses: (1) DNS resolution — hostname to IP lookup, cached at browser/OS/resolver levels with TTL-based expiration; (2) TCP handshake — 3-way SYN/SYN-ACK/ACK, 1 RTT overhead, starts TCP slow start (small initial congestion window that grows exponentially); (3) TLS handshake — TLS 1.3 requires 1 RTT to exchange keys and certificates, with 0-RTT available for session resumption; (4) HTTP request — application-layer data exchange. Total fresh connection cost: DNS + 2-3 RTTs before data. HTTP/2 reuses a single TCP connection for all requests to an origin. HTTP/3/QUIC eliminates TCP HOL blocking by running independent streams over UDP with in-built reliability.
