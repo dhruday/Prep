@@ -632,7 +632,7 @@ Never skip a section. Never summarise.
 ## 🎯 1. Interview Opening Answer
 > What to say in the first 60 seconds. Crisp. Confident. Numbers included where relevant.
 
-[3–5 sentence answer written in first person, interview-ready, architecture-focused]
+[short and simple answer written in first person, interview-ready, architecture-focused]
 
 ---
 
