@@ -269,9 +269,9 @@
 
     // Animate steps
     const steps = [
-      { id: 'sn-dns',  stId: 'st-dns',  label: ph.dns > 0 ? `${ph.dns}ms`,    desc: ph.dns === 0 ? 'Cached ✔' : null },
-      { id: 'sn-tcp',  stId: 'st-tcp',  label: ph.tcp > 0 ? `${ph.tcp}ms`,    desc: ph.tcp === 0 ? 'Reusing connection ✔' : null },
-      { id: 'sn-tls',  stId: 'st-tls',  label: ph.tls > 0 ? `${ph.tls}ms`,    desc: ph.tls === 0 ? 'Session resumed ✔' : null },
+      { id: 'sn-dns',  stId: 'st-dns',  label: ph.dns > 0 ?? `${ph.dns}ms`,    desc: ph.dns === 0 ? 'Cached ✔' : null },
+      { id: 'sn-tcp',  stId: 'st-tcp',  label: ph.tcp > 0 ?? `${ph.tcp}ms`,    desc: ph.tcp === 0 ? 'Reusing connection ✔' : null },
+      { id: 'sn-tls',  stId: 'st-tls',  label: ph.tls > 0 ?? `${ph.tls}ms`,    desc: ph.tls === 0 ? 'Session resumed ✔' : null },
       { id: 'sn-req',  stId: 'st-req',  label: '<1ms', desc: null },
       { id: 'sn-ttfb', stId: 'st-ttfb', label: `${ph.ttfb}ms`, desc: null },
       { id: 'sn-dl',   stId: 'st-dl',   label: `${ph.dl}ms`, desc: null },
