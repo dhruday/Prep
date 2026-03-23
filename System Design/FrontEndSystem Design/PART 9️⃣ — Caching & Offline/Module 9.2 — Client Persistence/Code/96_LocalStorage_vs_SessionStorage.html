@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 96 – localStorage vs sessionStorage</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>💾 localStorage vs sessionStorage</h1>
+<p class="sub">Topic 96 · Module 9.2 — Client Persistence · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Live Sandbox</div>
+  <div class="tab" onclick="setTab(2)">Comparison Table</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Web Storage API — scoped, synchronous, string-only</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Both localStorage and sessionStorage share the same Web Storage API surface (getItem/setItem/removeItem/clear) but differ in persistence scope. At SAP, we use localStorage for user theme preferences and savedColumns, and sessionStorage for in-flight form wizard step so refreshing a tab preserves the draft but closing clears it.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:8px">localStorage</div>
+        <ul style="color:#94a3b8;font-size:.8rem;list-style:none;line-height:1.9">
+          <li>📌 Persists across tabs AND browser restart</li>
+          <li>🔑 Scoped to origin (scheme+host+port)</li>
+          <li>📡 Tab A writes → Tab B reads immediately (via storage event)</li>
+          <li>📏 ~5 MB limit</li>
+          <li>✅ Best for: theme, preferences, user settings</li>
+        </ul>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:8px">sessionStorage</div>
+        <ul style="color:#94a3b8;font-size:.8rem;list-style:none;line-height:1.9">
+          <li>🕐 Cleared when tab/window closes</li>
+          <li>🔒 Scoped to tab (not shared between tabs)</li>
+          <li>🛡️ New tab from same origin = empty sessionStorage</li>
+          <li>📏 ~5 MB limit</li>
+          <li>✅ Best for: form wizard steps, OTP state, temp search filter</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Web Storage sandbox</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+      <select id="storageType" style="background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:.82rem">
+        <option value="local">localStorage</option>
+        <option value="session">sessionStorage</option>
+      </select>
+      <input id="storageKey" placeholder="key" style="background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:.82rem;width:100px"/>
+      <input id="storageVal" placeholder="value" style="background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:6px 10px;border-radius:6px;font-size:.82rem;width:140px"/>
+      <button onclick="wsSet()" style="padding:6px 12px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:6px;cursor:pointer;font-size:.8rem">setItem</button>
+      <button onclick="wsGet()" style="padding:6px 12px;background:#1e3a5f;border:1px solid #60a5fa;color:#60a5fa;border-radius:6px;cursor:pointer;font-size:.8rem">getItem</button>
+      <button onclick="wsRemove()" style="padding:6px 12px;background:#3d0808;border:1px solid #ef4444;color:#ef4444;border-radius:6px;cursor:pointer;font-size:.8rem">removeItem</button>
+      <button onclick="wsClear()" style="padding:6px 12px;background:#1e2130;border:1px solid #f59e0b;color:#f59e0b;border-radius:6px;cursor:pointer;font-size:.8rem">clear</button>
+    </div>
+    <div id="ws-log" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;font-size:.75rem;max-height:120px;overflow-y:auto;color:#475569"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Comparison: localStorage vs sessionStorage vs Cookies vs IndexedDB</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Aspect</th>
+        <th style="padding:8px;border:1px solid #2d3551">localStorage</th>
+        <th style="padding:8px;border:1px solid #2d3551">sessionStorage</th>
+        <th style="padding:8px;border:1px solid #2d3551">Cookies</th>
+        <th style="padding:8px;border:1px solid #2d3551">IndexedDB</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Persistence</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Until cleared</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#60a5fa">Tab session</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Expiry date</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Until cleared</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Size</td><td style="padding:8px;text-align:center;border:1px solid #2d3551">~5 MB</td><td style="padding:8px;text-align:center;border:1px solid #2d3551">~5 MB</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#ef4444">4 KB</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">GBs</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Sent to server</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">No</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">No</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#ef4444">Yes (requests)</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">No</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">JS accessible</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Yes</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Yes</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">If not HttpOnly</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Yes</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Cross-tab sync</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">✅ (storage event)</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#ef4444">❌</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">✅ (via server)</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">✅ (BroadcastChannel)</td></tr>
+    </table>
+    <div style="background:#3d0808;border:1px solid #ef4444;border-radius:8px;padding:10px;margin-top:10px;font-size:.78rem;color:#fca5a5">
+      ⚠️ <b>Security</b>: Never store sensitive data (JWTs, passwords, PII) in localStorage/sessionStorage. XSS can read everything. Use HttpOnly cookies for auth tokens.
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Typed wrapper + cross-tab sync</h3>
+    <pre><span class="cm">// ─── Typed localStorage helper (SAP pattern) ───</span>
+<span class="kw">type</span> StorageSchema = {
+  theme: <span class="str">'light'</span> | <span class="str">'dark'</span>;
+  <span class="str">'saved-columns'</span>: <span class="kw">string</span>[];
+  language: <span class="kw">string</span>;
+};
+<span class="kw">const</span> storage = {
+  <span class="fn">get</span>&lt;K <span class="kw">extends</span> <span class="kw">keyof</span> StorageSchema&gt;(key: K): StorageSchema[K] | <span class="kw">null</span> {
+    <span class="kw">const</span> raw = localStorage.<span class="fn">getItem</span>(key);
+    <span class="kw">return</span> raw ? <span class="fn">JSON</span>.<span class="fn">parse</span>(raw) : <span class="kw">null</span>;
+  },
+  <span class="fn">set</span>&lt;K <span class="kw">extends</span> <span class="kw">keyof</span> StorageSchema&gt;(key: K, value: StorageSchema[K]) {
+    localStorage.<span class="fn">setItem</span>(key, <span class="fn">JSON</span>.<span class="fn">stringify</span>(value));
+  },
+};
+
+<span class="cm">// ─── Cross-tab sync ───</span>
+window.<span class="fn">addEventListener</span>(<span class="str">'storage'</span>, (e: StorageEvent) =&gt; {
+  <span class="kw">if</span> (e.key === <span class="str">'theme'</span>) <span class="fn">applyTheme</span>(e.newValue <span class="kw">as</span> <span class="str">'light'</span> | <span class="str">'dark'</span>);
+});
+
+<span class="cm">// ─── sessionStorage form wizard ───</span>
+<span class="kw">const</span> WizardStorage = {
+  <span class="fn">saveStep</span>(step: <span class="kw">number</span>, data: <span class="kw">unknown</span>) {
+    sessionStorage.<span class="fn">setItem</span>(<span class="str">`wizard-step-${step}`</span>, <span class="fn">JSON</span>.<span class="fn">stringify</span>(data));
+  },
+  <span class="fn">getStep</span>&lt;T&gt;(step: <span class="kw">number</span>): T | <span class="kw">null</span> {
+    <span class="kw">const</span> raw = sessionStorage.<span class="fn">getItem</span>(<span class="str">`wizard-step-${step}`</span>);
+    <span class="kw">return</span> raw ? <span class="fn">JSON</span>.<span class="fn">parse</span>(raw) : <span class="kw">null</span>;
+  },
+  <span class="fn">clear</span>() {
+    [<span class="fn">1</span>, <span class="fn">2</span>, <span class="fn">3</span>].<span class="fn">forEach</span>(s =&gt; sessionStorage.<span class="fn">removeItem</span>(<span class="str">`wizard-step-${s}`</span>));
+  },
+};</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const logEl=document.getElementById('ws-log');
+function wsLog(msg,c='#94a3b8'){const d=document.createElement('div');d.style.color=c;d.textContent=new Date().toLocaleTimeString().slice(0,8)+' '+msg;logEl.prepend(d);}
+function getStorage(){return document.getElementById('storageType').value==='local'?localStorage:sessionStorage;}
+function wsSet(){const k=document.getElementById('storageKey').value;const v=document.getElementById('storageVal').value;if(!k){wsLog('⚠ enter a key','#f59e0b');return;}getStorage().setItem(k,v);wsLog(`setItem('${k}','${v}') → saved`,'#10b981');}
+function wsGet(){const k=document.getElementById('storageKey').value;if(!k){wsLog('⚠ enter a key','#f59e0b');return;}const v=getStorage().getItem(k);wsLog(v!==null?`getItem('${k}') → '${v}'`:`getItem('${k}') → null (not found)`,v!==null?'#60a5fa':'#ef4444');}
+function wsRemove(){const k=document.getElementById('storageKey').value;if(!k){wsLog('⚠ enter a key','#f59e0b');return;}getStorage().removeItem(k);wsLog(`removeItem('${k}') → done`,'#f59e0b');}
+function wsClear(){getStorage().clear();wsLog('clear() → all items removed','#ef4444');}
+</script>
+</body>
+</html>

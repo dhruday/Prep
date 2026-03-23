@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 47 – Local Component State</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.green{color:#10b981}.amber{color:#f59e0b}.red{color:#ef4444}
+.counter-box{background:#0f1117;border:1px solid #2d3551;border-radius:10px;padding:16px;display:inline-flex;flex-direction:column;align-items:center;gap:10px;min-width:120px}
+</style>
+</head>
+<body>
+<h1>📦 Local Component State</h1>
+<p class="sub">Topic 47 · Module 5.1 — State Fundamentals · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">What is Local State</div>
+  <div class="tab" onclick="setTab(1)">Live Demos</div>
+  <div class="tab" onclick="setTab(2)">When to Keep Local</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Local State — owned by one component</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Local component state is state that is <strong>owned, managed, and consumed entirely within a single component</strong>. In React: <code>useState</code>, <code>useReducer</code>. In Angular: component-scoped variables / signals. In Vue: <code>ref()</code> / <code>reactive()</code>. The state is initialised fresh on mount and destroyed on unmount.</p>
+    <div style="font-size:.82rem;line-height:2;background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px">
+      <div><span class="green">✔ UI state</span> — isOpen, isSelected, inputValue — lives here</div>
+      <div><span class="green">✔ Form draft state</span> — text being typed, before submit</div>
+      <div><span class="green">✔ Animation state</span> — hover, focus, toggle</div>
+      <div><span class="amber">⚠ Move to global if</span> multiple unrelated components need it</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Each counter has its own local state — isolated</h3>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div class="counter-box">
+        <div style="font-size:.8rem;color:#94a3b8">Counter A</div>
+        <div id="ca" style="font-size:2rem;color:#60a5fa;font-weight:700">0</div>
+        <div style="display:flex;gap:6px">
+          <button onclick="adj('ca',-1)" style="padding:4px 12px;background:#1e2130;border:1px solid #2d3551;border-radius:6px;color:#e2e8f0;cursor:pointer">−</button>
+          <button onclick="adj('ca',1)" style="padding:4px 12px;background:#1e3a5f;border:1px solid #60a5fa;border-radius:6px;color:#60a5fa;cursor:pointer">+</button>
+        </div>
+      </div>
+      <div class="counter-box">
+        <div style="font-size:.8rem;color:#94a3b8">Counter B</div>
+        <div id="cb" style="font-size:2rem;color:#10b981;font-weight:700">0</div>
+        <div style="display:flex;gap:6px">
+          <button onclick="adj('cb',-1)" style="padding:4px 12px;background:#1e2130;border:1px solid #2d3551;border-radius:6px;color:#e2e8f0;cursor:pointer">−</button>
+          <button onclick="adj('cb',1)" style="padding:4px 12px;background:#10b98122;border:1px solid #10b981;border-radius:6px;color:#10b981;cursor:pointer">+</button>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:14px;font-size:.8rem;color:#94a3b8">➜ A and B track completely independent state. Changing A never affects B — that's local state in action.</div>
+    <div style="margin-top:12px">
+      <div style="font-size:.8rem;font-weight:700;color:#e2e8f0;margin-bottom:6px">Controlled form input (local state)</div>
+      <input id="form-input" oninput="updateInput(this.value)" placeholder="Type here..." style="width:100%;padding:8px 12px;background:#0f1117;border:1px solid #2d3551;border-radius:8px;color:#e2e8f0;font-size:.85rem;outline:none">
+      <div id="form-display" style="margin-top:6px;font-size:.8rem;color:#94a3b8">Value: ""</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Should this state be local or global?</h3>
+    <div style="font-size:.82rem;color:#94a3b8;line-height:2.2">
+      <div><span class="green">✔ Keep LOCAL</span> — tooltip open/closed</div>
+      <div><span class="green">✔ Keep LOCAL</span> — accordion expanded</div>
+      <div><span class="green">✔ Keep LOCAL</span> — form field value (until submit)</div>
+      <div><span class="green">✔ Keep LOCAL</span> — hover/focus state</div>
+      <div><span class="green">✔ Keep LOCAL</span> — pagination page number (or URL state)</div>
+      <div><span class="amber">⬆ LIFT UP</span> — if parent needs to know about it (sibling communication)</div>
+      <div><span class="amber">⬆ GLOBALISE</span> — if 3+ unrelated components need it (user auth, theme, cart)</div>
+      <div style="margin-top:10px;padding:10px;background:#0f1117;border:1px solid #2d3551;border-radius:6px">
+        💡 <strong style="color:#e2e8f0">Colocation principle</strong>: state should live as close as possible to where it is used. Only lift when forced by sibling/parent needs.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>useState, useReducer, and derived state</h3>
+    <pre><span class="cm">// useState — simple single value</span>
+<span class="kw">const</span> [isOpen, setIsOpen] = <span class="attr">useState</span>(<span class="kw">false</span>);
+<span class="kw">const</span> [count, setCount] = <span class="attr">useState</span>(0);
+
+<span class="cm">// Functional update — always use when next state depends on prev</span>
+<span class="kw">const</span> increment = () =&gt; setCount(prev =&gt; prev + 1);
+
+<span class="cm">// useReducer — complex state with multiple sub-values</span>
+<span class="kw">type</span> State = { count: <span class="kw">number</span>; history: <span class="kw">number</span>[] };
+<span class="kw">type</span> Action =
+  | { type: <span class="str">'increment'</span> }
+  | { type: <span class="str">'decrement'</span> }
+  | { type: <span class="str">'reset'</span> };
+
+<span class="kw">function</span> <span class="attr">reducer</span>(state: State, action: Action): State {
+  <span class="kw">switch</span> (action.type) {
+    <span class="kw">case</span> <span class="str">'increment'</span>:
+      <span class="kw">return</span> { count: state.count + 1, history: [...state.history, state.count + 1] };
+    <span class="kw">case</span> <span class="str">'reset'</span>:
+      <span class="kw">return</span> { count: 0, history: [] };
+    <span class="kw">default</span>: <span class="kw">return</span> state;
+  }
+}
+
+<span class="cm">// Derived state — computed from existing state, not stored separately</span>
+<span class="kw">const</span> [items, setItems] = <span class="attr">useState</span>([...]);
+<span class="kw">const</span> total = items.<span class="attr">reduce</span>((s, i) =&gt; s + i.price, 0); <span class="cm">// derived</span>
+<span class="cm">// Don't: const [total, setTotal] = useState(0); // duplicated state</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const vals={ca:0,cb:0};
+function adj(id,d){vals[id]+=d;document.getElementById(id).textContent=vals[id];}
+function updateInput(v){document.getElementById('form-display').textContent='Value: "'+v+'"';}
+</script>
+</body>
+</html>

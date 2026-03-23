@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 79 – Long Tasks & Yielding Control</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>⏳ Long Tasks & Yielding Control</h1>
+<p class="sub">Topic 79 · Module 7.4 — Main Thread · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">What Is a Long Task</div>
+  <div class="tab" onclick="setTab(1)">Long Task Simulator</div>
+  <div class="tab" onclick="setTab(2)">Yielding Strategies</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Long Tasks — the threshold and why it matters</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:10px">The browser defines a <strong>Long Task</strong> as any main-thread task taking ≥ 50 ms. Why 50 ms? To maintain 60 fps you have a 16 ms budget per frame. 50 ms is the threshold beyond which users perceive UI as "slow to respond" (RAIL model). Long Tasks directly degrade INP (Interaction to Next Paint) and TTI.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+      <div>
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Common Long Task culprits</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:2">
+          <li>📦 Synchronous JS module evaluation</li>
+          <li>🔄 Unvirtualized list renders</li>
+          <li>🧮 Heavy JSON parsing / serialisation</li>
+          <li>🎨 Forced synchronous layouts</li>
+          <li>📊 Complex reselect computations</li>
+        </ul>
+      </div>
+      <div>
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Detection APIs</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:2">
+          <li>PerformanceObserver (longTask)</li>
+          <li>Chrome DevTools Performance panel</li>
+          <li>Lighthouse "Minimize main-thread work"</li>
+          <li>web-vitals.js onINP callback</li>
+          <li>scheduler.yield() (Chrome 115+)</li>
+        </ul>
+      </div>
+    </div>
+    <p style="font-size:.78rem;color:#f59e0b;margin-top:10px;background:#0f1117;padding:8px;border-radius:6px"><strong>At SAP:</strong> SAP Fiori order management dashboard had an 800ms long task on initial data load — caused by synchronous normalisation of a 5 000-item dataset. Split into 100-item chunks with setTimeout → reduced to 8 × 50ms tasks → TTI improved from 5.2 s → 1.8 s.</p>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Long task viewer — run a long task and see it reported</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button onclick="runLong(200)" style="padding:7px 14px;background:#3d0808;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.82rem">Run 200ms long task</button>
+      <button onclick="runLong(500)" style="padding:7px 14px;background:#3d0808;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.82rem">Run 500ms long task</button>
+      <button onclick="runChunked(500)" style="padding:7px 14px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:8px;cursor:pointer;font-size:.82rem">Run 500ms CHUNKED (50ms each)</button>
+      <button onclick="clearLt()" style="padding:7px 14px;background:#1e2130;border:1px solid #2d3551;color:#94a3b8;border-radius:8px;cursor:pointer;font-size:.82rem">Clear</button>
+    </div>
+    <div id="lt-timeline" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;min-height:60px;margin-bottom:8px;position:relative;overflow:hidden">
+      <div style="font-size:.72rem;color:#475569">Timeline</div>
+    </div>
+    <div id="lt-log" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;font-size:.75rem;max-height:120px;overflow-y:auto;color:#475569">Click a button to run tasks…</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Three yielding strategies</h3>
+    <div style="display:grid;gap:8px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:12px;border-radius:8px">
+        <strong style="color:#60a5fa">setTimeout(fn, 0)</strong><br>
+        <span style="color:#94a3b8">Classic macrotask yield. Guaranteed to let the browser respond to inputs and paint before calling fn. Problem: task priority is the same as timers — analytics events may execute before user-visible work.</span>
+        <pre style="margin-top:6px">items.<span class="fn">forEach</span>((item, i) =&gt; {
+  <span class="kw">if</span> (i % chunkSize === <span class="fn">0</span>) <span class="fn">setTimeout</span>(() =&gt; <span class="fn">process</span>(item), <span class="fn">0</span>);
+  <span class="kw">else</span> <span class="fn">process</span>(item);
+});</pre>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:12px;border-radius:8px">
+        <strong style="color:#10b981">MessageChannel (faster yield)</strong><br>
+        <span style="color:#94a3b8">MessageChannel.postMessage() schedules a microtask-adjacent, slightly higher priority macrotask than setTimeout. Used by React's scheduler internally because setTimeout min delay is clamped to 4ms in nested calls.</span>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;padding:12px;border-radius:8px">
+        <strong style="color:#a78bfa">scheduler.yield() (Chrome 115+)</strong><br>
+        <span style="color:#94a3b8">New API: await scheduler.yield() yields the current task at user-blocking priority, resuming before background timers. The cleanest ergonomics: just await in async functions. Polyfillable with MessageChannel.</span>
+        <pre style="margin-top:6px"><span class="kw">async function</span> <span class="fn">processAll</span>(items: Item[]) {
+  <span class="kw">for</span> (<span class="kw">const</span> [i, item] <span class="kw">of</span> items.<span class="fn">entries</span>()) {
+    <span class="kw">if</span> (i % <span class="fn">10</span> === <span class="fn">0</span>) <span class="kw">await</span> scheduler.<span class="fn">yield</span>();
+    <span class="fn">process</span>(item);
+  }
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Long task detection + chunking utility</h3>
+    <pre><span class="cm">// ─── Detect long tasks ───</span>
+<span class="kw">const</span> observer = <span class="kw">new</span> <span class="fn">PerformanceObserver</span>((list) =&gt; {
+  <span class="kw">for</span> (<span class="kw">const</span> entry <span class="kw">of</span> list.<span class="fn">getEntries</span>()) {
+    console.<span class="fn">warn</span>(<span class="str">`Long Task detected: ${entry.duration.toFixed(0)}ms`</span>, entry);
+    <span class="cm">// Send to analytics for RUM baseline</span>
+    <span class="fn">trackEvent</span>(<span class="str">'long_task'</span>, { duration: entry.duration, page: window.location.pathname });
+  }
+});
+observer.<span class="fn">observe</span>({ type: <span class="str">'longtask'</span>, buffered: <span class="kw">true</span> });
+
+<span class="cm">// ─── Reusable chunked processor ───</span>
+<span class="kw">function</span> <span class="fn">yieldToMain</span>(): Promise&lt;<span class="kw">void</span>&gt; {
+  <span class="cm">// scheduler.yield() with fallback</span>
+  <span class="kw">if</span> (<span class="str">'scheduler'</span> <span class="kw">in</span> self &amp;&amp; <span class="str">'yield'</span> <span class="kw">in</span> scheduler)
+    <span class="kw">return</span> (scheduler <span class="kw">as</span> <span class="kw">any</span>).<span class="fn">yield</span>();
+  <span class="kw">return new</span> <span class="fn">Promise</span>(resolve =&gt; <span class="fn">setTimeout</span>(resolve, <span class="fn">0</span>));
+}
+
+<span class="kw">async function</span> <span class="fn">chunkProcess</span>&lt;T&gt;(
+  items: T[], work: (item: T) =&gt; <span class="kw">void</span>, chunkSize = <span class="fn">20</span>
+): Promise&lt;<span class="kw">void</span>&gt; {
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="fn">0</span>; i &lt; items.length; i++) {
+    work(items[i]);
+    <span class="kw">if</span> ((i + <span class="fn">1</span>) % chunkSize === <span class="fn">0</span>) <span class="kw">await</span> <span class="fn">yieldToMain</span>();
+  }
+}
+
+<span class="cm">// Usage: SAP order normalisation</span>
+<span class="kw">await</span> <span class="fn">chunkProcess</span>(rawOrders, (o) =&gt; dispatch(<span class="fn">addOrder</span>(<span class="fn">normalise</span>(o))));</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const ltlog=document.getElementById('lt-log');
+const tl=document.getElementById('lt-timeline');
+function addLog(msg,color='#94a3b8'){const d=document.createElement('div');d.style.color=color;d.textContent=new Date().toLocaleTimeString().slice(0,8)+' '+msg;ltlog.prepend(d);}
+
+let tlOffset=40;
+function addBlock(ms,color,label){
+  const block=document.createElement('div');
+  block.style.cssText=`position:absolute;top:20px;left:${tlOffset}px;width:${Math.min(ms/3,300)}px;height:20px;background:${color};border-radius:3px;font-size:.65rem;display:flex;align-items:center;justify-content:center;color:#fff;overflow:hidden`;
+  block.textContent=label;
+  tl.appendChild(block);
+  tlOffset+=Math.min(ms/3,300)+4;
+}
+
+function runLong(ms){
+  const t0=performance.now();
+  while(performance.now()-t0<ms){}
+  const actual=Math.round(performance.now()-t0);
+  addBlock(actual,'#ef4444',`${actual}ms`);
+  addLog(`Long task completed: ${actual}ms — LONG TASK reported by browser PerformanceObserver`,'#ef4444');
+}
+
+function runChunked(total){
+  const chunkMs=50;
+  const chunks=Math.ceil(total/chunkMs);
+  let done=0;
+  addLog(`Starting chunked task: ${total}ms / ${chunkMs}ms chunks = ${chunks} chunks`,'#10b981');
+  function chunk(){
+    const t0=performance.now();
+    while(performance.now()-t0<chunkMs){}
+    done++;
+    addBlock(chunkMs,'#10b981',`${chunkMs}ms`);
+    if(done<chunks){setTimeout(chunk,0);}
+    else{addLog(`Chunked task done: ${chunks} × 50ms chunks — no long tasks!`,'#10b981');}
+  }
+  chunk();
+}
+function clearLt(){ltlog.innerHTML='Click a button to run tasks…';while(tl.children.length>1)tl.removeChild(tl.lastChild);tlOffset=40;}
+</script>
+</body>
+</html>

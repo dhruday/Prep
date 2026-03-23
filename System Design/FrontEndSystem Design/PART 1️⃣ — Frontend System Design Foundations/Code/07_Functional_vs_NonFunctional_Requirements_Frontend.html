@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Functional vs Non-Functional Requirements</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px}
+    h1{text-align:center;color:#60a5fa;margin-bottom:4px;font-size:1.5rem}
+    .subtitle{text-align:center;color:#94a3b8;margin-bottom:18px;font-size:.88rem}
+    .sorter-area{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:16px;margin-bottom:14px}
+    .sorter-area h2{font-size:.82rem;text-transform:uppercase;letter-spacing:1px;color:#f59e0b;margin-bottom:10px}
+    .requirement-pool{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;min-height:50px;padding:8px;background:#0f1117;border-radius:7px;border:1px dashed #2d3551}
+    .req-chip{padding:5px 10px;border-radius:5px;background:#2d3551;color:#e2e8f0;cursor:pointer;font-size:.75rem;border:1px solid transparent;transition:all .2s;user-select:none}
+    .req-chip:hover{border-color:#60a5fa;background:#1e3a5f;color:#93c5fd}
+    .req-chip.sorted{opacity:.4;cursor:default}
+    .bins{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+    .bin{border-radius:9px;padding:12px;min-height:100px;border:2px dashed}
+    .bin-func{border-color:#10b981;background:#0b1f14}
+    .bin-nfunc{border-color:#60a5fa;background:#0f1929}
+    .bin-title{font-size:.78rem;font-weight:bold;margin-bottom:8px}
+    .bin-title span{font-size:.68rem;font-weight:normal;color:#94a3b8}
+    .bin-items{display:flex;flex-wrap:wrap;gap:6px;min-height:40px}
+    .bin-chip{padding:4px 8px;border-radius:4px;font-size:.73rem;cursor:pointer;transition:all .2s}
+    .bin-chip:hover{opacity:.7}
+    .func-chip{background:#14532d;color:#86efac;border:1px solid #166534}
+    .nfunc-chip{background:#1e3a5f;color:#93c5fd;border:1px solid #1d4ed8}
+    .mismatch{background:#7f1d1d!important;color:#fca5a5!important;border-color:#991b1b!important;animation:shake .3s}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+    .score-bar{height:8px;background:#2d3551;border-radius:4px;margin-top:8px;overflow:hidden}
+    .score-fill{height:100%;background:linear-gradient(90deg,#10b981,#60a5fa);border-radius:4px;transition:width .4s;width:0%}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:16px}
+    .card h2{font-size:.82rem;text-transform:uppercase;letter-spacing:1px;color:#60a5fa;margin-bottom:10px}
+    .req-table{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:.75rem}
+    .req-table th{background:#162032;color:#60a5fa;padding:7px 10px;text-align:left;font-size:.68rem;text-transform:uppercase}
+    .req-table td{background:#0f1117;padding:7px 10px;border-bottom:1px solid #1e2130}
+    .req-table tr td:first-child{border-radius:5px 0 0 5px}
+    .req-table tr td:last-child{border-radius:0 5px 5px 0}
+    .badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:.64rem;font-weight:bold}
+    .b-func{background:#14532d;color:#86efac}
+    .b-nfunc{background:#1e3a5f;color:#93c5fd}
+    .b-impl{background:#312e81;color:#c4b5fd}
+    .insight{background:#162032;border-left:3px solid #f59e0b;padding:9px 12px;border-radius:0 6px 6px 0;font-size:.74rem;line-height:1.6;margin-top:10px;color:#fcd34d}
+    .insight strong{color:#fff}
+  </style>
+</head>
+<body>
+<h1>📋 Functional vs Non-Functional Requirements</h1>
+<p class="subtitle">Sort the requirements below — click to assign each to the correct category</p>
+
+<div class="sorter-area">
+  <h2>🎮 Interactive Sorter — Click a requirement, then click the correct bin</h2>
+  <div class="requirement-pool" id="pool">
+    <div class="req-chip" data-type="func" onclick="selectChip(this)">User can post a tweet</div>
+    <div class="req-chip" data-type="nfunc" onclick="selectChip(this)">Feed loads in &lt;2 seconds (P95)</div>
+    <div class="req-chip" data-type="func" onclick="selectChip(this)">User can like / unlike a post</div>
+    <div class="req-chip" data-type="nfunc" onclick="selectChip(this)">System supports 10M concurrent users</div>
+    <div class="req-chip" data-type="func" onclick="selectChip(this)">User can follow / unfollow accounts</div>
+    <div class="req-chip" data-type="nfunc" onclick="selectChip(this)">All pages pass WCAG 2.1 AA</div>
+    <div class="req-chip" data-type="func" onclick="selectChip(this)">User sees real-time like counts</div>
+    <div class="req-chip" data-type="nfunc" onclick="selectChip(this)">99.9% uptime SLA</div>
+    <div class="req-chip" data-type="func" onclick="selectChip(this)">User can upload images / video</div>
+    <div class="req-chip" data-type="nfunc" onclick="selectChip(this)">LCP under 2.5 seconds on 3G</div>
+    <div class="req-chip" data-type="func" onclick="selectChip(this)">User gets notifications for mentions</div>
+    <div class="req-chip" data-type="nfunc" onclick="selectChip(this)">GDPR compliant data handling</div>
+  </div>
+  <div class="bins">
+    <div class="bin bin-func" onclick="dropInBin('func')">
+      <div class="bin-title" style="color:#10b981">✅ Functional Requirements <span>— WHAT the system does</span></div>
+      <div class="bin-items" id="bin-func"></div>
+    </div>
+    <div class="bin bin-nfunc" onclick="dropInBin('nfunc')">
+      <div class="bin-title" style="color:#60a5fa">⚙️ Non-Functional Requirements <span>— HOW WELL the system works</span></div>
+      <div class="bin-items" id="bin-nfunc"></div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;font-size:.76rem">
+    <span id="score-label" style="color:#94a3b8">Sorted: 0/12</span>
+    <div class="score-bar" style="flex:1"><div class="score-fill" id="score-fill"></div></div>
+    <button onclick="resetSorter()" style="background:#2d3551;border:1px solid #475569;color:#e2e8f0;padding:4px 12px;border-radius:5px;cursor:pointer;font-size:.72rem">↺ Reset</button>
+  </div>
+</div>
+
+<div class="grid2" style="margin-bottom:14px">
+  <div class="card">
+    <h2>📚 Definition Reference</h2>
+    <table class="req-table">
+      <tr><th>Type</th><th>Question it answers</th><th>Measurable?</th></tr>
+      <tr><td><span class="badge b-func">Functional</span></td><td>What should the system do?</td><td>Via acceptance tests</td></tr>
+      <tr><td><span class="badge b-nfunc">Non-Functional</span></td><td>How should the system perform?</td><td>Via SLOs / metrics</td></tr>
+      <tr><td><span class="badge b-impl">Implicit NFR</span></td><td>What is assumed but un-stated?</td><td>Via audits (a11y, security)</td></tr>
+    </table>
+    <div class="insight">
+      <strong>Golden rule:</strong> In FAANG interviews, every NFR must have a NUMBER. Not "fast" — "LCP &lt; 2.5s". Not "available" — "99.9% uptime = 8.7 hrs downtime/yr".
+    </div>
+  </div>
+  <div class="card">
+    <h2>🎯 NFR Priority for Frontend Systems</h2>
+    <table class="req-table">
+      <tr><th>NFR</th><th>Metric</th><th>Target</th></tr>
+      <tr><td>Performance</td><td>LCP / FCP / CLS</td><td>Core Web Vitals Green</td></tr>
+      <tr><td>Availability</td><td>Uptime SLA</td><td>99.9% – 99.99%</td></tr>
+      <tr><td>Scalability</td><td>Concurrent users</td><td>Define before design</td></tr>
+      <tr><td>Accessibility</td><td>WCAG Level</td><td>AA (enterprise), AAA (govt)</td></tr>
+      <tr><td>Security</td><td>OWASP compliance</td><td>No critical findings</td></tr>
+      <tr><td>Maintainability</td><td>Code complexity</td><td>Bundle &lt; 200KB initial</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>🗺️ Hruday's Real-World Requirements Gathering — SAP to Microsoft/Adobe/Salesforce</h2>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.75rem">
+    <div style="background:#0f1117;border-radius:7px;padding:10px">
+      <div style="color:#10b981;font-weight:bold;margin-bottom:6px">Lighthouse Jump (SAP)</div>
+      <div style="color:#94a3b8;line-height:1.7"><span class="badge b-func">Func</span> Paginated dashboard with 500k rows<br><span class="badge b-nfunc">NFR</span> LCP &lt;2.5s, FID &lt;100ms<br><span class="badge b-impl">Implicit</span> Must work on IE11 (enterprise)</div>
+    </div>
+    <div style="background:#0f1117;border-radius:7px;padding:10px">
+      <div style="color:#60a5fa;font-weight:bold;margin-bottom:6px">WCAG AA (Bosch)</div>
+      <div style="color:#94a3b8;line-height:1.7"><span class="badge b-func">Func</span> All interactive controls keyboard-focusable<br><span class="badge b-nfunc">NFR</span> 0 WCAG AA violations<br><span class="badge b-impl">Implicit</span> Screen reader tested on NVDA/JAWS</div>
+    </div>
+    <div style="background:#0f1117;border-radius:7px;padding:10px">
+      <div style="color:#a78bfa;font-weight:bold;margin-bottom:6px">Micro-Frontend (Oracle)</div>
+      <div style="color:#94a3b8;line-height:1.7"><span class="badge b-func">Func</span> Independent team deployments<br><span class="badge b-nfunc">NFR</span> No cross-team cascading failures<br><span class="badge b-impl">Implicit</span> Shared Design System tokens</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selected = null;
+let sortedCount = 0;
+const total = 12;
+
+function selectChip(el) {
+  if (el.classList.contains('sorted')) return;
+  document.querySelectorAll('.req-chip.selected').forEach(c => c.style.outline = '');
+  selected = el;
+  el.style.outline = '2px solid #f59e0b';
+}
+
+function dropInBin(type) {
+  if (!selected) return;
+  const correctType = selected.dataset.type;
+  const text = selected.textContent;
+  const chipClass = type === 'func' ? 'func-chip' : 'nfunc-chip';
+  const chip = document.createElement('div');
+  chip.className = 'bin-chip ' + chipClass;
+  chip.textContent = text;
+  chip.title = 'Click to return to pool';
+
+  if (type !== correctType) {
+    chip.classList.add('mismatch');
+    document.getElementById('bin-' + type).appendChild(chip);
+    setTimeout(() => {
+      chip.remove();
+    }, 600);
+    selected.style.outline = '';
+    selected = null;
+    return;
+  }
+
+  chip.onclick = () => {
+    selected = null;
+    chip.remove();
+    const original = document.querySelector(`.req-chip[data-label="${text}"]`) ||
+      Array.from(document.querySelectorAll('.req-chip.sorted')).find(c => c.textContent === text);
+    if (original) {
+      original.classList.remove('sorted');
+      original.style.opacity = '1';
+      original.style.outline = '';
+    }
+    sortedCount--;
+    updateScore();
+  };
+
+  document.getElementById('bin-' + type).appendChild(chip);
+  selected.classList.add('sorted');
+  selected.style.outline = '';
+  selected = null;
+  sortedCount++;
+  updateScore();
+}
+
+function updateScore() {
+  document.getElementById('score-label').textContent = `Sorted: ${sortedCount}/${total}`;
+  document.getElementById('score-fill').style.width = (sortedCount / total * 100) + '%';
+}
+
+function resetSorter() {
+  document.querySelectorAll('.bin-items').forEach(b => b.innerHTML = '');
+  document.querySelectorAll('.req-chip').forEach(c => {
+    c.classList.remove('sorted');
+    c.style.opacity = '1';
+    c.style.outline = '';
+  });
+  selected = null;
+  sortedCount = 0;
+  updateScore();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Storage Quotas & OPFS</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px}
+    h1{text-align:center;color:#60a5fa;margin-bottom:4px;font-size:1.5rem}
+    .subtitle{text-align:center;color:#94a3b8;margin-bottom:18px;font-size:.88rem}
+    .tabs{display:flex;gap:6px;margin-bottom:14px}
+    .tab{padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.75rem;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;transition:all .2s}
+    .tab.active{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd}
+    .panel{display:none}.panel.show{display:block}
+    .card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:16px;margin-bottom:12px}
+    .card h2{font-size:.82rem;text-transform:uppercase;color:#60a5fa;margin-bottom:10px;letter-spacing:.8px}
+    .quota-viz{background:#0f1117;border-radius:10px;padding:14px;margin-bottom:12px}
+    .disk-bar{height:40px;border-radius:6px;background:#1e2130;border:1px solid #2d3551;overflow:hidden;position:relative;margin-bottom:8px}
+    .disk-fill{height:100%;border-radius:6px;transition:width .6s ease;display:flex;align-items:center;padding-left:8px;font-size:.7rem;font-weight:bold}
+    .origin-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:.75rem}
+    .origin-name{width:180px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .origin-bar-bg{flex:1;height:10px;background:#0f1117;border-radius:3px;overflow:hidden;cursor:pointer}
+    .origin-bar-fill{height:100%;border-radius:3px;transition:width .5s}
+    .origin-size{width:45px;text-align:right;font-size:.7rem}
+    .evict-btn{padding:2px 8px;border-radius:3px;font-size:.63rem;border:none;cursor:pointer;transition:.2s}
+    .storage-type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+    .stype{background:#1e2130;border-radius:8px;padding:10px;text-align:center;border:1px solid #2d3551;cursor:pointer;transition:all .2s}
+    .stype:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+    .stype-name{font-size:.73rem;font-weight:bold;margin-bottom:4px}
+    .stype-quota{font-size:1rem;font-weight:bold;margin:4px 0}
+    .stype-evict{font-size:.63rem;color:#94a3b8}
+    .badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:.62rem;margin-top:4px}
+    .b-temp{background:#451a03;color:#fcd34d}
+    .b-pers{background:#14532d;color:#86efac}
+    .b-session{background:#1e3a5f;color:#93c5fd}
+    .persist-demo{background:#1e2130;border-radius:10px;padding:14px;margin-bottom:12px}
+    .persist-demo h2{font-size:.82rem;text-transform:uppercase;color:#10b981;margin-bottom:10px}
+    .status-badge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:.72rem;font-weight:bold;margin-left:8px}
+    .btn{padding:7px 14px;border-radius:6px;font-size:.74rem;cursor:pointer;border:none;transition:all .2s;font-weight:bold}
+    .btn-blue{background:#1e3a5f;color:#93c5fd}
+    .btn-blue:hover{background:#1d4ed8;color:#fff}
+    .btn-green{background:#14532d;color:#86efac}
+    .btn-green:hover{background:#16a34a;color:#fff}
+    .output{background:#0d1117;border:1px solid #2d3551;border-radius:7px;padding:10px;font-size:.74rem;font-family:monospace;min-height:60px;white-space:pre-wrap;color:#86efac;margin-top:8px}
+    .opfs-explorer{background:#1e2130;border-radius:10px;padding:14px;margin-bottom:12px}
+    .opfs-explorer h2{font-size:.82rem;text-transform:uppercase;color:#a78bfa;margin-bottom:10px}
+    .file-tree{background:#0f1117;border-radius:7px;padding:10px;font-family:monospace;font-size:.76rem;min-height:80px}
+    .dir-item{color:#60a5fa;cursor:pointer}
+    .file-item{color:#e2e8f0;padding-left:20px}
+    .file-item span{color:#94a3b8;font-size:.68rem;margin-left:8px}
+    .file-ops{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    pre{background:#0d1117;border:1px solid #2d3551;border-radius:7px;padding:10px;font-size:.72rem;font-family:monospace;line-height:1.6;white-space:pre-wrap;margin:6px 0}
+    .comparison-table{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:.75rem}
+    .comparison-table th{background:#162032;color:#60a5fa;padding:8px 10px;text-align:left;font-size:.68rem;text-transform:uppercase}
+    .comparison-table td{background:#0f1117;padding:8px 10px;border-bottom:1px solid #1e2130}
+    .comparison-table tr td:first-child{border-radius:5px 0 0 5px}
+    .comparison-table tr td:last-child{border-radius:0 5px 5px 0}
+    .check{color:#10b981}.cross{color:#ef4444}
+  </style>
+</head>
+<body>
+<h1>🗄️ Storage Quotas & OPFS</h1>
+<p class="subtitle">Interactive guide to browser storage limits, persistent storage, and the Origin Private Filesystem</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('quotas', this)">Storage Quotas</div>
+  <div class="tab" onclick="switchTab('persist', this)">Persistent Storage</div>
+  <div class="tab" onclick="switchTab('opfs', this)">OPFS Demo</div>
+  <div class="tab" onclick="switchTab('compare', this)">Comparison</div>
+</div>
+
+<!-- PANEL 1: Quotas -->
+<div id="panel-quotas" class="panel show">
+  <div class="quota-viz">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:.78rem;color:#94a3b8;">Chrome Quota Model — <strong style="color:#e2e8f0">~60% of free disk</strong></span>
+      <div style="display:flex;gap:6px">
+        <label style="font-size:.72rem;color:#94a3b8">Free disk:</label>
+        <input type="range" id="disk-slider" min="5" max="100" value="20" oninput="updateQuota(this.value)" style="width:100px">
+        <span id="disk-val" style="color:#60a5fa;font-size:.72rem;width:40px">20GB</span>
+      </div>
+    </div>
+    <div class="disk-bar">
+      <div class="disk-fill" id="quota-bar" style="background:linear-gradient(90deg,#10b981,#3b82f6);width:30%">Quota Pool</div>
+    </div>
+    <div style="font-size:.72rem;color:#94a3b8;margin-bottom:12px">Available quota pool: <strong id="quota-pool" style="color:#10b981">12GB</strong> — shared across all origins on device</div>
+
+    <div style="font-size:.77rem;color:#94a3b8;margin-bottom:8px">Per-origin usage (sorted by LRU — leftmost gets evicted first under pressure)</div>
+    <div id="origins-list">
+      <div class="origin-row">
+        <span class="origin-name" style="color:#ef4444">⏰ maps.google.com (30d ago)</span>
+        <div class="origin-bar-bg"><div class="origin-bar-fill" style="background:#10b981;width:28%"></div></div>
+        <span class="origin-size">850MB</span>
+        <button class="evict-btn" style="background:#7f1d1d;color:#fca5a5" onclick="evictOrigin(this,'maps')">Evict</button>
+      </div>
+      <div class="origin-row">
+        <span class="origin-name" style="color:#f59e0b">⏱️ trello.com (12d ago)</span>
+        <div class="origin-bar-bg"><div class="origin-bar-fill" style="background:#10b981;width:4%"></div></div>
+        <span class="origin-size">120MB</span>
+        <button class="evict-btn" style="background:#7f1d1d;color:#fca5a5" onclick="evictOrigin(this,'trello')">Evict</button>
+      </div>
+      <div class="origin-row">
+        <span class="origin-name" style="color:#10b981">✅ yourapp.com (today) [persistent]</span>
+        <div class="origin-bar-bg"><div class="origin-bar-fill" style="background:#3b82f6;width:16%"></div></div>
+        <span class="origin-size">480MB</span>
+        <button class="evict-btn" style="background:#1e3a5f;color:#475569;cursor:not-allowed">Protected</button>
+      </div>
+      <div class="origin-row">
+        <span class="origin-name" style="color:#94a3b8">figma.com (2d ago)</span>
+        <div class="origin-bar-bg"><div class="origin-bar-fill" style="background:#10b981;width:45%"></div></div>
+        <span class="origin-size">1.35GB</span>
+        <button class="evict-btn" style="background:#7f1d1d;color:#fca5a5" onclick="evictOrigin(this,'figma')">Evict</button>
+      </div>
+    </div>
+  </div>
+  <div class="storage-type-grid">
+    <div class="stype" style="border-color:#10b981" onclick="showStorageInfo('localStorage')">
+      <div class="stype-name" style="color:#10b981">localStorage</div>
+      <div class="stype-quota" style="color:#e2e8f0">5–10MB</div>
+      <div class="stype-evict">Manual only</div>
+      <span class="badge b-pers">Manual persist</span>
+    </div>
+    <div class="stype" style="border-color:#60a5fa" onclick="showStorageInfo('indexeddb')">
+      <div class="stype-name" style="color:#60a5fa">IndexedDB</div>
+      <div class="stype-quota" style="color:#e2e8f0">~Quota share</div>
+      <div class="stype-evict">LRU eviction</div>
+      <span class="badge b-temp">Temporary default</span>
+    </div>
+    <div class="stype" style="border-color:#a78bfa" onclick="showStorageInfo('cache')">
+      <div class="stype-name" style="color:#a78bfa">Cache API</div>
+      <div class="stype-quota" style="color:#e2e8f0">~Quota share</div>
+      <div class="stype-evict">LRU eviction</div>
+      <span class="badge b-temp">Temporary default</span>
+    </div>
+    <div class="stype" style="border-color:#f59e0b" onclick="showStorageInfo('sessionStorage')">
+      <div class="stype-name" style="color:#f59e0b">sessionStorage</div>
+      <div class="stype-quota" style="color:#e2e8f0">5–10MB</div>
+      <div class="stype-evict">Tab close</div>
+      <span class="badge b-session">Session only</span>
+    </div>
+  </div>
+  <div id="storage-info" class="card" style="display:none;border-color:#60a5fa">
+    <div id="storage-info-body"></div>
+  </div>
+</div>
+
+<!-- PANEL 2: Persistent Storage -->
+<div id="panel-persist" class="panel">
+  <div class="persist-demo">
+    <h2>🔒 navigator.storage API</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn btn-blue" onclick="checkStorageEstimate()">Check Usage (estimate)</button>
+      <button class="btn btn-green" onclick="checkPersisted()">Check Persisted Status</button>
+      <button class="btn btn-green" onclick="requestPersist()">Request Persistent Storage</button>
+    </div>
+    <div class="output" id="persist-output">Click a button above to interact with the Storage API...</div>
+    <div style="margin-top:12px;font-size:.76rem;color:#94a3b8;line-height:1.7">
+      <strong style="color:#e2e8f0">Safari ITP warning:</strong> Safari evicts storage for origins not visited in <strong style="color:#ef4444">7 days</strong> — regardless of quota. Persistent storage may not be fully honoured. Always implement a graceful "cache miss → network fetch" fallback.
+    </div>
+  </div>
+  <div class="card">
+    <h2>📋 Production Pattern — Storage Guard</h2>
+    <pre style="color:#86efac">// Service Worker: request persistent storage on install
+self.addEventListener('install', async (event) => {
+  event.waitUntil(async function() {
+    // 1. Cache app shell
+    const cache = await caches.open('app-v3');
+    await cache.addAll(['/index.html', '/app.js']);
+    
+    // 2. Request persistent storage
+    const isPersistent = await navigator.storage.persist();
+    console.log('Persistent:', isPersistent);
+    
+    // 3. Monitor usage — proactively prune at 80%
+    const { usage, quota } = await navigator.storage.estimate();
+    const pct = usage / quota;
+    if (pct > 0.8) {
+      // Delete old version caches
+      const all = await caches.keys();
+      await Promise.all(all.filter(n => n !== 'app-v3').map(n => caches.delete(n)));
+    }
+  }());
+});</pre>
+  </div>
+</div>
+
+<!-- PANEL 3: OPFS -->
+<div id="panel-opfs" class="panel">
+  <div class="opfs-explorer">
+    <h2>📁 OPFS File Explorer (Live API)</h2>
+    <div style="font-size:.74rem;color:#94a3b8;margin-bottom:10px">OPFS is only available on HTTPS or localhost. This demo uses the actual OPFS API if available.</div>
+    <div class="file-ops">
+      <button class="btn btn-blue" onclick="opfsCreateFile()">Create File</button>
+      <button class="btn btn-green" onclick="opfsWriteFile()">Write Content</button>
+      <button class="btn btn-blue" onclick="opfsReadFile()">Read File</button>
+      <button class="btn btn-blue" onclick="opfsListFiles()">List Files</button>
+      <button class="btn" style="background:#7f1d1d;color:#fca5a5" onclick="opfsDeleteFile()">Delete File</button>
+    </div>
+    <div class="file-tree" id="opfs-tree" style="margin-top:10px">Loading OPFS root...</div>
+    <div class="output" id="opfs-output" style="margin-top:8px">OPFS output will appear here...</div>
+  </div>
+  <div class="card">
+    <h2>🔬 OPFS Sync Access Handle (Web Worker Pattern)</h2>
+    <pre style="color:#a78bfa">// ONLY available inside Web Workers — synchronous, high-performance
+// Used by SQLite WASM, Photoshop Web, Adobe Acrobat Web
+
+// web-worker.js
+async function runInWorker() {
+  const root = await navigator.storage.getDirectory();
+  const fileHandle = await root.getFileHandle('data.db', { create: true });
+  
+  // Sync Access Handle — no await needed!
+  const sync = await fileHandle.createSyncAccessHandle();
+  
+  const encoder = new TextEncoder();
+  const data = encoder.encode(JSON.stringify({ records: [] }));
+  
+  sync.write(data, { at: 0 });      // sync write at byte offset 0
+  sync.flush();                      // ensure bytes are persisted
+  
+  const readBuf = new Uint8Array(sync.getSize());
+  sync.read(readBuf, { at: 0 });    // sync read
+  sync.close();
+  
+  // Post result back to main thread
+  self.postMessage({ data: new TextDecoder().decode(readBuf) });
+}</pre>
+  </div>
+</div>
+
+<!-- PANEL 4: Comparison -->
+<div id="panel-compare" class="panel">
+  <div class="card">
+    <h2>📊 Storage API Comparison Matrix</h2>
+    <table class="comparison-table">
+      <tr><th>Feature</th><th>localStorage</th><th>IndexedDB</th><th>Cache API</th><th>OPFS</th></tr>
+      <tr><td>Max size</td><td>~5–10MB</td><td>Quota share</td><td>Quota share</td><td>Quota share</td></tr>
+      <tr><td>Data format</td><td>String only</td><td>Any (blob OK)</td><td>HTTP Response</td><td>Binary file</td></tr>
+      <tr><td>Random access</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅ Byte offset</td></tr>
+      <tr><td>Sync API</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅ (Worker only)</td></tr>
+      <tr><td>Structured query</td><td class="cross">❌</td><td class="check">✅ Indexes</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+      <tr><td>Auto-evictable</td><td class="cross">❌</td><td class="check">✅ (temp)</td><td class="check">✅ (temp)</td><td class="check">✅ (temp)</td></tr>
+      <tr><td>Persistent option</td><td>Always on</td><td class="check">✅ via API</td><td class="check">✅ via API</td><td class="check">✅ via API</td></tr>
+      <tr><td>Best for</td><td>Config, tokens</td><td>App data, offline</td><td>SW cache</td><td>SQLite, WASM files</td></tr>
+    </table>
+  </div>
+  <div style="background:#1e2130;border:1px solid #f59e0b;border-radius:10px;padding:14px;margin-bottom:12px">
+    <div style="font-size:.82rem;font-weight:bold;color:#f59e0b;margin-bottom:8px">⚡ Decision Guide</div>
+    <div style="font-size:.76rem;line-height:1.9">
+      <div>• <strong>Small config/preferences ({"<"}100KB):</strong> <span style="color:#93c5fd">localStorage</span></div>
+      <div>• <strong>Structured app data (user data, cached API responses):</strong> <span style="color:#93c5fd">IndexedDB + React Query / Dexie.js</span></div>
+      <div>• <strong>Offline network request caching (service worker):</strong> <span style="color:#93c5fd">Cache API</span></div>
+      <div>• <strong>Large binary files, SQLite DB, WASM assets:</strong> <span style="color:#93c5fd">OPFS</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('show'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('show');
+  btn.classList.add('active');
+}
+
+function updateQuota(val) {
+  const gb = parseInt(val);
+  document.getElementById('disk-val').textContent = gb + 'GB';
+  const pool = (gb * 0.6).toFixed(1);
+  document.getElementById('quota-pool').textContent = pool + 'GB';
+  const pct = (gb / 100 * 30);
+  document.getElementById('quota-bar').style.width = pct + '%';
+}
+
+function evictOrigin(btn, name) {
+  const row = btn.closest('.origin-row');
+  row.style.opacity = '0.3';
+  row.style.textDecoration = 'line-through';
+  btn.textContent = 'Evicted';
+  btn.style.background = '#1a1a1a';
+  btn.style.color = '#475569';
+  btn.disabled = true;
+}
+
+const storageInfo = {
+  localStorage: { t: 'localStorage — Synchronous String Storage', b: 'Stores only strings (JSON.stringify to save objects). Synchronous read/write blocks the main thread. Quota: 5–10MB per origin. NEVER evicted unless: code calls localStorage.clear(), user clears browser data, or quota exceeded (throws QuotaExceededError). Safest for small configuration values, JWT tokens, user preferences. NOT suitable for blob data or large caches.' },
+  indexeddb: { t: 'IndexedDB — Structured Client-Side Database', b: 'Full transactional database supporting: string/number/date/blob/file values, indexes for fast queries, transactions for atomicity. Async API (Promise-based). Quota: shares origin\'s quota pool. Evicted under pressure (LRU) unless navigator.storage.persist() granted. Libraries: Dexie.js (excellent DX), idb (thin wrapper). Best for: complex structured app data, offline-first sync, large dataset local caching.' },
+  cache: { t: 'Cache API — HTTP Response Cache', b: 'Stores HTTP Request/Response pairs. Designed for service worker caching strategies. Each entry is a full HTTP response with headers. Async API. Quota: shares origin\'s quota pool. Evicted under pressure unless persistent. Use with Workbox for cache-first/network-first/stale-while-revalidate strategies. Version your caches (app-v1, app-v2) and delete old versions in service worker activate event.' },
+  sessionStorage: { t: 'sessionStorage — Tab-Scoped Temporary Storage', b: 'Identical API to localStorage but cleared when the tab/window closes. Each tab has its own isolated sessionStorage — not shared across tabs (unlike localStorage which is shared per origin). Use for: multi-step form state, auth code flow state (PKCE), wizard step tracking. Never use for data that needs to survive tab close.' }
+};
+function showStorageInfo(key) {
+  const d = storageInfo[key];
+  document.getElementById('storage-info-body').innerHTML = `<strong style="font-size:.82rem;color:#60a5fa">${d.t}</strong><p style="font-size:.75rem;color:#94a3b8;margin-top:7px;line-height:1.7">${d.b}</p>`;
+  document.getElementById('storage-info').style.display = 'block';
+}
+
+async function checkStorageEstimate() {
+  const out = document.getElementById('persist-output');
+  if (!navigator.storage?.estimate) { out.textContent = 'Storage API not available in this browser context.'; return; }
+  const { usage, quota } = await navigator.storage.estimate();
+  const pct = (usage / quota * 100).toFixed(1);
+  out.textContent = `Storage Estimate:
+  Used:  ${(usage/1024/1024).toFixed(2)} MB
+  Quota: ${(quota/1024/1024).toFixed(2)} MB
+  Usage: ${pct}%
+  ${pct > 80 ? '⚠️ WARNING: Over 80% — proactive pruning recommended' : '✅ Healthy storage levels'}`;
+}
+async function checkPersisted() {
+  const out = document.getElementById('persist-output');
+  if (!navigator.storage?.persisted) { out.textContent = 'Storage API not available.'; return; }
+  const isPersistent = await navigator.storage.persisted();
+  out.textContent = `Persistent storage: ${isPersistent ? '✅ YES — data will not be auto-evicted' : '❌ NO — data may be evicted under disk pressure'}`;
+}
+async function requestPersist() {
+  const out = document.getElementById('persist-output');
+  if (!navigator.storage?.persist) { out.textContent = 'Storage API not available.'; return; }
+  const granted = await navigator.storage.persist();
+  out.textContent = granted 
+    ? '✅ Persistent storage GRANTED — this origin\'s data is now protected from eviction'
+    : '❌ Persistent storage DENIED — \nSafari: requires recent user interaction\nChrome: auto-grants for installed PWAs\nFirefox: shows browser permission prompt';
+}
+
+// OPFS demos
+async function getOPFSRoot() {
+  if (!navigator.storage?.getDirectory) throw new Error('OPFS not available');
+  return await navigator.storage.getDirectory();
+}
+async function opfsCreateFile() {
+  const out = document.getElementById('opfs-output');
+  try {
+    const root = await getOPFSRoot();
+    await root.getFileHandle('demo.json', { create: true });
+    out.textContent = '✅ Created: demo.json in OPFS root';
+    opfsListFiles();
+  } catch(e) { out.textContent = '❌ ' + e.message; }
+}
+async function opfsWriteFile() {
+  const out = document.getElementById('opfs-output');
+  try {
+    const root = await getOPFSRoot();
+    const fh = await root.getFileHandle('demo.json', { create: true });
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify({ origin: location.origin, ts: new Date().toISOString(), demo: 'OPFS write test' }, null, 2));
+    await w.close();
+    out.textContent = '✅ Written demo.json:\n' + JSON.stringify({ origin: location.origin, ts: new Date().toISOString(), demo: 'OPFS write test' }, null, 2);
+    opfsListFiles();
+  } catch(e) { out.textContent = '❌ ' + e.message; }
+}
+async function opfsReadFile() {
+  const out = document.getElementById('opfs-output');
+  try {
+    const root = await getOPFSRoot();
+    const fh = await root.getFileHandle('demo.json');
+    const file = await fh.getFile();
+    const text = await file.text();
+    out.textContent = '📖 Contents of demo.json:\n' + text;
+  } catch(e) { out.textContent = '❌ Cannot read (create file first): ' + e.message; }
+}
+async function opfsListFiles() {
+  const tree = document.getElementById('opfs-tree');
+  const out = document.getElementById('opfs-output');
+  try {
+    const root = await getOPFSRoot();
+    const entries = [];
+    for await (const [name, handle] of root.entries()) {
+      entries.push({ name, type: handle.kind });
+    }
+    tree.innerHTML = '<div class="dir-item">📁 / (OPFS root)</div>' + 
+      entries.map(e => `<div class="file-item">${e.type==='directory'?'📁':'📄'} ${e.name}<span>${e.type}</span></div>`).join('') +
+      (entries.length === 0 ? '<div style="color:#475569;padding-left:20px">Empty — create a file first</div>' : '');
+    out.textContent = `Listed ${entries.length} entries in OPFS root`;
+  } catch(e) { tree.textContent = '❌ OPFS not available: ' + e.message; }
+}
+async function opfsDeleteFile() {
+  const out = document.getElementById('opfs-output');
+  try {
+    const root = await getOPFSRoot();
+    await root.removeEntry('demo.json');
+    out.textContent = '🗑️ Deleted demo.json';
+    opfsListFiles();
+  } catch(e) { out.textContent = '❌ Cannot delete: ' + e.message; }
+}
+
+// Init
+opfsListFiles();
+</script>
+</body>
+</html>

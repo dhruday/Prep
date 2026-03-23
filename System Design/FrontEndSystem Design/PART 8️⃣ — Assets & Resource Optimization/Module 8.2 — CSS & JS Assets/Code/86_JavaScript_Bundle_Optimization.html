@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 86 – JavaScript Bundle Optimization</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>📦 JavaScript Bundle Optimization</h1>
+<p class="sub">Topic 86 · Module 8.2 — CSS & JS Assets · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Bundle Analyser</div>
+  <div class="tab" onclick="setTab(2)">Optimisation Checklist</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>JS bundle size — the biggest parse/execute bottleneck</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:10px">Unlike images (decoded once), JavaScript must be downloaded, parsed, compiled, and executed on every page load. 1 MB of JS ≈ 8 s parse + execute on a low-end mobile device. At SAP, a legacy jQuery + Angular hybrid app had a 2.8 MB initial bundle — code splitting + deferred Angular routes cut it to 280 KB initial.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+      <div>
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Bundle bloat sources</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:2">
+          <li>🔁 Duplicate dependencies (lodash × 3 versions)</li>
+          <li>📦 Importing whole library (import _ from 'lodash')</li>
+          <li>⚡ No code splitting (all routes in one chunk)</li>
+          <li>🔧 Dev dependencies leaked to production</li>
+          <li>🌐 Polyfills for browsers you don't support</li>
+        </ul>
+      </div>
+      <div>
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Optimisation levers</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:2">
+          <li>✂️ Code splitting (route + component level)</li>
+          <li>🌳 Tree shaking (ESM + sideEffects: false)</li>
+          <li>🔎 Bundle analysis (webpack-bundle-analyzer)</li>
+          <li>🏷️ Module federation (share chunks across MFEs)</li>
+          <li>📊 Import cost VSCode extension</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Interactive bundle composition — see impact of choices</h3>
+    <div style="font-size:.78rem;color:#94a3b8;margin-bottom:8px">Toggle dependencies to see how they affect bundle size</div>
+    <div id="bundle-toggles" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.78rem;margin-bottom:10px"></div>
+    <div id="bundle-visual" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;font-size:.78rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>JS bundle optimisation checklist</h3>
+    <div style="display:grid;gap:6px;font-size:.78rem" id="checklist">
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer;background:#0f1117;padding:8px;border-radius:6px"><input type="checkbox" onchange="updateChecklist()"> <span>Enable code splitting (React.lazy / Angular loadChildren)</span></label>
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer;background:#0f1117;padding:8px;border-radius:6px"><input type="checkbox" onchange="updateChecklist()"> <span>Set "sideEffects": false in package.json for full tree shaking</span></label>
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer;background:#0f1117;padding:8px;border-radius:6px"><input type="checkbox" onchange="updateChecklist()"> <span>Run webpack-bundle-analyzer to find duplicate / large deps</span></label>
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer;background:#0f1117;padding:8px;border-radius:6px"><input type="checkbox" onchange="updateChecklist()"> <span>Use named imports (import { debounce } from 'lodash-es')</span></label>
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer;background:#0f1117;padding:8px;border-radius:6px"><input type="checkbox" onchange="updateChecklist()"> <span>Set browserslist targets to avoid unnecessary polyfills</span></label>
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer;background:#0f1117;padding:8px;border-radius:6px"><input type="checkbox" onchange="updateChecklist()"> <span>Add size-limit CI gate (fail build if bundle exceeds budget)</span></label>
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer;background:#0f1117;padding:8px;border-radius:6px"><input type="checkbox" onchange="updateChecklist()"> <span>Enable gzip/brotli on server/CDN</span></label>
+    </div>
+    <div id="checklist-score" style="margin-top:10px;font-size:.82rem;color:#94a3b8">0 / 7 completed</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Bundle optimization config patterns</h3>
+    <pre><span class="cm">// ─── webpack splitChunks config ───</span>
+module.<span class="attr">exports</span> = {
+  optimization: {
+    splitChunks: {
+      chunks: <span class="str">'all'</span>,
+      cacheGroups: {
+        vendor: {
+          test: /node_modules/,
+          name: (module) =&gt; {
+            <span class="kw">const</span> pkg = module.context.match(/node_modules\/(.*?)(?:\/|$)/)[<span class="fn">1</span>];
+            <span class="kw">return</span> <span class="str">`vendor.${pkg}`</span>;  <span class="cm">// per-package chunk for better caching</span>
+          },
+        },
+      },
+    },
+  },
+};
+
+<span class="cm">// ─── Vite manual chunks ───</span>
+<span class="fn">build</span>({
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        react: [<span class="str">'react'</span>, <span class="str">'react-dom'</span>],
+        router: [<span class="str">'react-router-dom'</span>],
+        charts: [<span class="str">'recharts'</span>],
+      },
+    },
+  },
+});
+
+<span class="cm">// ─── Angular lazy route (deferred chunk) ───</span>
+<span class="kw">const</span> routes: Routes = [
+  {
+    path: <span class="str">'orders'</span>,
+    loadChildren: () =&gt; <span class="kw">import</span>(<span class="str">'./orders/orders.module'</span>)
+      .<span class="fn">then</span>(m =&gt; m.OrdersModule)
+  }
+];
+
+<span class="cm">// ─── Named import (tree-shakeable) ───</span>
+<span class="kw">import</span> { debounce } <span class="kw">from</span> <span class="str">'lodash-es'</span>; <span class="cm">// 2KB</span>
+<span class="cm">// NOT: import _ from 'lodash';        // 72KB</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const deps=[
+  {name:'react + react-dom',kb:130,color:'#60a5fa',on:true},
+  {name:'lodash (full)',kb:72,color:'#ef4444',on:false},
+  {name:'lodash-es (named)',kb:3,color:'#10b981',on:true},
+  {name:'moment.js',kb:232,color:'#ef4444',on:false},
+  {name:'date-fns (named)',kb:12,color:'#10b981',on:true},
+  {name:'chart.js',kb:174,color:'#f59e0b',on:false},
+  {name:'recharts',kb:210,color:'#f59e0b',on:false},
+  {name:'App code',kb:45,color:'#a78bfa',on:true},
+];
+
+function renderToggles(){
+  const c=document.getElementById('bundle-toggles');
+  c.innerHTML=deps.map((d,i)=>`<label style="display:flex;gap:6px;align-items:center;background:#0f1117;padding:6px;border-radius:6px;border:1px solid ${d.on?d.color:'#2d3551'};cursor:pointer"><input type="checkbox" ${d.on?'checked':''} onchange="toggleDep(${i})"><span style="color:${d.color}">${d.name}</span><span style="color:#475569;font-size:.7rem;margin-left:auto">${d.kb}KB</span></label>`).join('');
+  renderBundleViz();
+}
+function toggleDep(i){deps[i].on=!deps[i].on;renderToggles();}
+function renderBundleViz(){
+  const active=deps.filter(d=>d.on);
+  const total=active.reduce((s,d)=>s+d.kb,0);
+  const gzip=Math.round(total*0.28);
+  const bv=document.getElementById('bundle-visual');
+  const maxW=400;
+  bv.innerHTML=`<div style="margin-bottom:6px;color:#94a3b8">Total: <strong style="color:${total>500?'#ef4444':total>200?'#f59e0b':'#10b981'}">${total} KB</strong> raw | <strong style="color:#60a5fa">${gzip} KB</strong> gzip</div>`+
+    active.map(d=>{const pct=Math.max(4,Math.round(d.kb/total*100));const w=Math.max(20,Math.round(d.kb/total*maxW));return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><div style="width:${w}px;height:16px;background:${d.color};border-radius:3px;opacity:.85"></div><span style="color:${d.color};font-size:.72rem">${d.name} (${d.kb}KB, ${pct}%)</span></div>`;}).join('');
+}
+renderToggles();
+
+function updateChecklist(){
+  const n=document.querySelectorAll('#checklist input:checked').length;
+  const total=7;
+  document.getElementById('checklist-score').textContent=`${n} / ${total} completed — ${n===total?'✅ Excellent!':n>=4?'🟡 Getting there':'⚠️ More work needed'}`;
+}
+</script>
+</body>
+</html>

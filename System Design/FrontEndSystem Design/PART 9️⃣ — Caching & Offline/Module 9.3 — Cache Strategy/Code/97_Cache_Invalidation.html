@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 97 – Cache Invalidation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:700}
+</style>
+</head>
+<body>
+<h1>🗑️ Cache Invalidation</h1>
+<p class="sub">Topic 97 · Module 9.3 — Cache Strategy · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Strategy Simulator</div>
+  <div class="tab" onclick="setTab(2)">Strategies Guide</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>"There are only two hard things in CS: cache invalidation and naming things" — Phil Karlton</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Cache invalidation is deciding WHEN and HOW to remove or refresh stale cached data. Get it wrong and users see outdated order statuses, stale prices, or gone-missing data. At SAP, the procurement catalog uses content-hash filenames for immutable assets and short-TTL + background-revalidate for API data.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">TTL-based</div>
+        <div style="color:#94a3b8">Cache expires after N seconds. Simple but data may be stale until expiry. Used with <code>max-age</code>.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Event-based</div>
+        <div style="color:#94a3b8">Cache purged on specific events (mutation, webhook, pub/sub). Accurate but complex plumbing.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:6px">Content-hash</div>
+        <div style="color:#94a3b8">Cache key includes file hash. New version = new URL. Old URL cached forever safely (<code>immutable</code>).</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Cache entry lifecycle simulator</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button onclick="ciCache()" style="padding:7px 14px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:8px;cursor:pointer;font-size:.82rem">Fetch & Cache (TTL 10s)</button>
+      <button onclick="ciRead()" style="padding:7px 14px;background:#1e3a5f;border:1px solid #60a5fa;color:#60a5fa;border-radius:8px;cursor:pointer;font-size:.82rem">Read from cache</button>
+      <button onclick="ciInvalidate()" style="padding:7px 14px;background:#3d0808;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.82rem">Invalidate (mutation)</button>
+    </div>
+    <div id="ci-status" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;font-size:.8rem;margin-bottom:6px;color:#94a3b8">Cache is empty</div>
+    <div id="ci-log" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;font-size:.75rem;max-height:100px;overflow-y:auto;color:#475569"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Invalidation strategies — when to use each</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Strategy</th>
+        <th style="padding:8px;border:1px solid #2d3551">Best for</th>
+        <th style="padding:8px;border:1px solid #2d3551">Freshness</th>
+        <th style="padding:8px;border:1px solid #2d3551">Complexity</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">TTL / max-age</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">API data, semi-static</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Medium</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Low</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Immutable + hash</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Versioned JS/CSS/images</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Perfect</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Low</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Stale-While-Revalidate</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">News feeds, catalogs</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">High</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Medium</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Event-driven purge</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">After user mutations</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Exact</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#ef4444">High</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Cache-Control: no-store</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Sensitive/PII data</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Always fresh</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Lowest</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>React Query / TanStack Query invalidation + HTTP cache headers</h3>
+    <pre><span class="cm">// ─── React Query — invalidate on mutation ───</span>
+<span class="kw">const</span> queryClient = <span class="fn">useQueryClient</span>();
+<span class="kw">const</span> mutation = <span class="fn">useMutation</span>({
+  mutationFn: <span class="fn">updateOrder</span>,
+  onSuccess: () =&gt; {
+    <span class="cm">// exact invalidation</span>
+    queryClient.<span class="fn">invalidateQueries</span>({ queryKey: [<span class="str">'orders'</span>] });
+    <span class="cm">// or optimistically update without refetch</span>
+    queryClient.<span class="fn">setQueryData</span>([<span class="str">'orders'</span>, <span class="str">'ORD-001'</span>], updatedOrder);
+  },
+});
+
+<span class="cm">// ─── HTTP cache: immutable hashed assets ───</span>
+<span class="cm">// nginx config</span>
+location ~* \.(js|css|woff2)$ {
+  add_header Cache-Control <span class="str">"public, max-age=31536000, immutable"</span>;
+}
+location = /index.html {
+  add_header Cache-Control <span class="str">"no-cache"</span>; <span class="cm">// always revalidate HTML</span>
+}
+
+<span class="cm">// ─── SWR (next.js) revalidateOnMutate ───</span>
+<span class="kw">const</span> { data, mutate } = <span class="fn">useSWR</span>(<span class="str">'/api/orders'</span>, fetcher, {
+  revalidateOnFocus: <span class="kw">false</span>,
+  dedupingInterval: <span class="fn">60000</span>,
+});
+<span class="kw">async function</span> <span class="fn">submitOrder</span>(data) {
+  <span class="kw">await</span> <span class="fn">postOrder</span>(data);
+  <span class="fn">mutate</span>(); <span class="cm">// trigger revalidation</span>
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+let ciEntry=null,ciExpiry=null;const statusEl=document.getElementById('ci-status');const logEl=document.getElementById('ci-log');
+function ciLog(msg,c='#94a3b8'){const d=document.createElement('div');d.style.color=c;d.textContent=new Date().toLocaleTimeString().slice(0,8)+' '+msg;logEl.prepend(d);}
+function renderStatus(){if(!ciEntry){statusEl.style.color='#94a3b8';statusEl.textContent='Cache is empty';return;}const rem=Math.max(0,Math.ceil((ciExpiry-Date.now())/1000));statusEl.style.color=rem>0?'#10b981':'#f59e0b';statusEl.textContent=`Cached: ${JSON.stringify(ciEntry)} | TTL: ${rem}s remaining`;}
+function ciCache(){ciEntry={price:Math.round(Math.random()*9000+1000),currency:'EUR'};ciExpiry=Date.now()+10000;renderStatus();ciLog(`MISS → fetched from API, cached for 10s`,'#10b981');setInterval(()=>renderStatus(),500);}
+function ciRead(){if(!ciEntry){ciLog('MISS → cache empty, must fetch from network','#ef4444');return;}const rem=Math.max(0,Math.ceil((ciExpiry-Date.now())/1000));if(rem>0){ciLog(`HIT → returning ${JSON.stringify(ciEntry)} (${rem}s left)`,'#60a5fa');}else{ciLog(`STALE → ${rem}s past expiry, should revalidate`,'#f59e0b');}renderStatus();}
+function ciInvalidate(){ciEntry=null;ciExpiry=null;renderStatus();ciLog('INVALIDATED → cache purged after mutation event','#ef4444');}
+</script>
+</body>
+</html>

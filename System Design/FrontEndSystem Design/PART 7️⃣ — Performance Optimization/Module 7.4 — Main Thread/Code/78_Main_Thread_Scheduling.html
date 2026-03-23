@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 78 – Main Thread Scheduling</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🧵 Main Thread Scheduling</h1>
+<p class="sub">Topic 78 · Module 7.4 — Main Thread · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Task Queue Visualiser</div>
+  <div class="tab" onclick="setTab(2)">Scheduling APIs</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>The single-threaded browser — why scheduling matters</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:10px">JavaScript runs on a single main thread shared by: script execution, style/layout calculation, paint, compositing, and input event handling. A 200 ms synchronous task blocks ALL of these — user clicks feel frozen. At SAP a 300-row data-grid initialising synchronously blocked input for 400 ms on every filter change.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:10px;border-radius:8px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:4px">setTimeout(fn, 0)</div>
+        <div style="color:#94a3b8">Pushes macrotask to end of queue. Non-blocking but lowest priority — paint + I/O go first. Good for deferring non-urgent work.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:10px;border-radius:8px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:4px">requestIdleCallback</div>
+        <div style="color:#94a3b8">Runs only when the browser is idle (after paint). deadline.timeRemaining() tells you how much time is left. Ideal for analytics, preload, background tasks. No iOS Safari support.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;padding:10px;border-radius:8px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:4px">scheduler.postTask</div>
+        <div style="color:#94a3b8">Chromium Scheduler API (2023). Three priorities: user-blocking, user-visible, background. Supports signal-based cancellation. React 18 concurrent mode uses similar internals.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Task queue visualiser — see blocking vs yielding</h3>
+    <div style="font-size:.78rem;color:#94a3b8;margin-bottom:8px">Click "Add long task" to simulate a 300ms synchronous block. Watch the animation stutter. Then click "Yield version" to see it chunked.</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button onclick="addLongTask()" style="padding:7px 14px;background:#3d0808;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.82rem">Add blocking task (300ms)</button>
+      <button onclick="addYielded()" style="padding:7px 14px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:8px;cursor:pointer;font-size:.82rem">Add yielded task (10ms chunks)</button>
+      <button onclick="clearLog2()" style="padding:7px 14px;background:#1e2130;border:1px solid #2d3551;color:#94a3b8;border-radius:8px;cursor:pointer;font-size:.82rem">Clear</button>
+    </div>
+    <div style="position:relative;height:40px;background:#0f1117;border:1px solid #2d3551;border-radius:8px;overflow:hidden;margin-bottom:8px">
+      <div id="anim-bar" style="position:absolute;left:0;top:0;height:100%;width:20px;background:linear-gradient(90deg,#60a5fa,#a78bfa);border-radius:4px;transition:none"></div>
+    </div>
+    <div style="font-size:.72rem;color:#475569;margin-bottom:6px">Animation above stutters when main thread is blocked. The bar should move smoothly.</div>
+    <div id="task-log" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;font-size:.75rem;max-height:120px;overflow-y:auto;color:#475569">Task log appears here…</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Scheduling APIs — priority ladder</h3>
+    <div style="display:grid;gap:8px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #ef4444;padding:10px;border-radius:8px">
+        <strong style="color:#ef4444">user-blocking (highest)</strong> — input handlers, animations. Must complete in &lt;100ms to avoid INP regression.
+      </div>
+      <div style="background:#0f1117;border:1px solid #f59e0b;padding:10px;border-radius:8px">
+        <strong style="color:#f59e0b">user-visible</strong> — rendering work that the user can see but hasn't triggered directly. React schedules most state updates here in concurrent mode.
+      </div>
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:10px;border-radius:8px">
+        <strong style="color:#60a5fa">background</strong> — analytics, cache warming, prefetch. Runs during idle periods. Can be cancelled cheaply via AbortSignal.
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;padding:10px;border-radius:8px">
+        <strong style="color:#94a3b8">Web Workers</strong> — true parallelism off the main thread. No DOM access. Ideal for: JSON parse, image processing, search indexing. Communicate via postMessage.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Scheduling patterns in TypeScript</h3>
+    <pre><span class="cm">// ─── scheduler.postTask (Chromium) ───</span>
+<span class="kw">declare const</span> scheduler: { postTask: (fn: ()=&gt;<span class="kw">void</span>, opts?: { priority: <span class="kw">string</span>, signal?: AbortSignal }) =&gt; Promise&lt;<span class="kw">void</span>&gt; };
+
+<span class="kw">const</span> controller = <span class="kw">new</span> <span class="fn">TaskController</span>({ priority: <span class="str">'background'</span> });
+scheduler.<span class="fn">postTask</span>(() =&gt; <span class="fn">warmCache</span>(), { signal: controller.signal });
+<span class="cm">// Cancel if user navigates away</span>
+controller.<span class="fn">abort</span>();
+
+<span class="cm">// ─── requestIdleCallback with deadline ───</span>
+<span class="fn">requestIdleCallback</span>((deadline) =&gt; {
+  <span class="kw">while</span> (queue.length &gt; <span class="fn">0</span> &amp;&amp; deadline.<span class="fn">timeRemaining</span>() &gt; <span class="fn">1</span>) {
+    <span class="kw">const</span> task = queue.<span class="fn">shift</span>()!;
+    <span class="fn">processAnalyticsEvent</span>(task);
+  }
+  <span class="kw">if</span> (queue.length &gt; <span class="fn">0</span>) <span class="fn">requestIdleCallback</span>(arguments[<span class="fn">0</span>]); <span class="cm">// reschedule</span>
+}, { timeout: <span class="fn">2000</span> }); <span class="cm">// fallback deadline</span>
+
+<span class="cm">// ─── Chunked work with yield (async generator) ───</span>
+<span class="kw">async function</span>* <span class="fn">processInChunks</span>&lt;T&gt;(items: T[], fn: (item: T) =&gt; <span class="kw">void</span>, chunkSize = <span class="fn">10</span>) {
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="fn">0</span>; i &lt; items.length; i += chunkSize) {
+    items.<span class="fn">slice</span>(i, i + chunkSize).<span class="fn">forEach</span>(fn);
+    <span class="kw">yield</span> <span class="kw">new</span> <span class="fn">Promise</span>(r =&gt; <span class="fn">setTimeout</span>(r, <span class="fn">0</span>)); <span class="cm">// yield to browser</span>
+  }
+}
+
+<span class="cm">// ─── Web Worker for heavy computation ───</span>
+<span class="kw">const</span> worker = <span class="kw">new</span> <span class="fn">Worker</span>(<span class="kw">new</span> <span class="fn">URL</span>(<span class="str">'./search.worker.ts'</span>, <span class="kw">import</span>.meta.url));
+worker.<span class="fn">postMessage</span>({ type: <span class="str">'SEARCH'</span>, query, documents });
+worker.<span class="fn">onmessage</span> = (e) =&gt; <span class="fn">setResults</span>(e.data.results);</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+let pos=0,dir=1;
+function animate(){pos+=dir*3;if(pos>window.innerWidth-60||pos<0)dir*=-1;document.getElementById('anim-bar').style.left=pos+'px';requestAnimationFrame(animate);}
+animate();
+
+const log=document.getElementById('task-log');
+function addLog(msg,color='#94a3b8'){const d=document.createElement('div');d.style.color=color;d.textContent=new Date().toLocaleTimeString()+' '+msg;log.prepend(d);}
+
+function addLongTask(){
+  addLog('▶ Starting blocking task (300ms sync)…','#ef4444');
+  setTimeout(()=>{
+    const start=performance.now();
+    while(performance.now()-start<300){}
+    addLog('✅ Blocking task complete — main thread was frozen for 300ms','#ef4444');
+  },50);
+}
+
+let chunkCount=0;
+function addYielded(){
+  chunkCount=0;
+  addLog('▶ Starting yielded task (10ms chunks)…','#10b981');
+  function chunk(){
+    const start=performance.now();
+    while(performance.now()-start<10){chunkCount++;}
+    addLog(`  chunk ${Math.ceil(chunkCount/100000)} done — yielding back to browser`,'#10b981');
+    if(chunkCount<300000)setTimeout(chunk,0);
+    else addLog('✅ Yielded task complete — animation stayed smooth','#10b981');
+  }
+  chunk();
+}
+function clearLog2(){log.innerHTML='Task log appears here…';}
+</script>
+</body>
+</html>

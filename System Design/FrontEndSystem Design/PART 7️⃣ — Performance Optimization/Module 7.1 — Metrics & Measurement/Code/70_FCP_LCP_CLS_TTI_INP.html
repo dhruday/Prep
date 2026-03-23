@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 70 – FCP, LCP, CLS, TTI, INP</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>⚡ FCP · LCP · CLS · TTI · INP — Deep Dive</h1>
+<p class="sub">Topic 70 · Module 7.1 — Metrics & Measurement · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Metric Timeline</div>
+  <div class="tab" onclick="setTab(1)">CLS Simulator</div>
+  <div class="tab" onclick="setTab(2)">INP Deep Dive</div>
+  <div class="tab" onclick="setTab(3)">Fix Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Page load timeline — when each metric fires</h3>
+    <div id="timeline" style="position:relative;height:120px;background:#0f1117;border:1px solid #2d3551;border-radius:8px;margin-bottom:14px;overflow:hidden;cursor:pointer" onclick="animateTimeline()">
+      <div style="position:absolute;top:8px;left:8px;color:#94a3b8;font-size:.72rem">Click to animate →</div>
+      <div id="tl-bar" style="position:absolute;bottom:0;left:0;height:6px;width:0%;background:linear-gradient(to right,#60a5fa,#10b981,#a78bfa,#f59e0b);transition:width 3s ease"></div>
+      <div id="tl-markers" style="position:absolute;top:20px;left:0;width:100%;height:80px"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;font-size:.75rem">
+      <div style="background:#0f1117;border:1px solid #60a5fa;border-radius:8px;padding:8px;text-align:center">
+        <div style="color:#60a5fa;font-weight:700">FCP</div>
+        <div style="color:#94a3b8">~1.0s</div>
+        <div style="color:#94a3b8;font-size:.7rem">First text/image</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;border-radius:8px;padding:8px;text-align:center">
+        <div style="color:#10b981;font-weight:700">LCP</div>
+        <div style="color:#94a3b8">~2.0s</div>
+        <div style="color:#94a3b8;font-size:.7rem">Largest element</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;border-radius:8px;padding:8px;text-align:center">
+        <div style="color:#a78bfa;font-weight:700">TTI</div>
+        <div style="color:#94a3b8">~3.5s</div>
+        <div style="color:#94a3b8;font-size:.7rem">Fully interactive</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #f59e0b;border-radius:8px;padding:8px;text-align:center">
+        <div style="color:#f59e0b;font-weight:700">CLS</div>
+        <div style="color:#94a3b8">Ongoing</div>
+        <div style="color:#94a3b8;font-size:.7rem">Layout stability</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #ef4444;border-radius:8px;padding:8px;text-align:center">
+        <div style="color:#ef4444;font-weight:700">INP</div>
+        <div style="color:#94a3b8">Per interaction</div>
+        <div style="color:#94a3b8;font-size:.7rem">Input → paint</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>CLS simulator — observe layout shift impact</h3>
+    <div style="font-size:.78rem;color:#94a3b8;margin-bottom:8px">CLS accumulates as elements move unexpectedly. Target: &lt;0.1</div>
+    <div id="cls-stage" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;min-height:100px;position:relative;overflow:hidden;margin-bottom:10px">
+      <div id="cls-text1" style="transition:margin .5s;color:#94a3b8;font-size:.82rem;margin-top:0">📄 SAP Purchase Order #4521</div>
+      <div id="cls-ad" style="display:none;background:#1e2130;border:1px solid #f59e0b;padding:6px;border-radius:4px;font-size:.75rem;color:#f59e0b;margin-bottom:4px">📢 Ad loaded late — pushing content down!</div>
+      <div id="cls-text2" style="color:#94a3b8;font-size:.78rem">Status: Pending Approval</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="triggerShift()" style="padding:7px 14px;background:#1c1300;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;cursor:pointer;font-size:.82rem">Inject Late Ad (causes CLS)</button>
+      <button onclick="fixedLoad()" style="padding:7px 14px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:8px;cursor:pointer;font-size:.82rem">Reserve Space (fixes CLS)</button>
+      <button onclick="resetCLS()" style="padding:7px 14px;background:#1e2130;border:1px solid #2d3551;color:#94a3b8;border-radius:8px;cursor:pointer;font-size:.82rem">Reset</button>
+    </div>
+    <div id="cls-score" style="margin-top:10px;background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;font-size:.8rem">
+      CLS score: <span id="cls-val" style="color:#94a3b8">0.00</span>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>INP — Interaction to Next Paint breakdown</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:.78rem;margin-bottom:12px">
+      <div style="background:#0f1117;border:1px solid #60a5fa;border-radius:8px;padding:10px;text-align:center">
+        <div style="color:#60a5fa;font-weight:700">Input Delay</div>
+        <div style="color:#94a3b8;font-size:.73rem">Event handler waiting for main thread</div>
+      </div>
+      <div style="color:#475569;display:flex;align-items:center;justify-content:center;font-size:1.2rem">+</div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;border-radius:8px;padding:10px;text-align:center">
+        <div style="color:#a78bfa;font-weight:700">Processing Time</div>
+        <div style="color:#94a3b8;font-size:.73rem">JS event handler execution</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;margin-bottom:8px">
+      <div style="background:#0f1117;border:1px solid #10b981;border-radius:8px;padding:10px;text-align:center;min-width:160px">
+        <div style="color:#10b981;font-weight:700">+ Presentation Delay</div>
+        <div style="color:#94a3b8;font-size:.73rem">Render + compositing → paint</div>
+      </div>
+    </div>
+    <div style="background:#0f1117;border:1px solid #f59e0b;padding:10px;border-radius:8px;font-size:.78rem">
+      <strong style="color:#f59e0b">= INP (total)</strong> — 75th percentile of ALL interactions on the page<br>
+      <span style="color:#94a3b8">Good: &lt;200ms · Needs improvement: 200-500ms · Poor: &gt;500ms</span>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Fix patterns for each Core Web Vital</h3>
+    <pre><span class="cm">// ─── Fix LCP ───</span>
+<span class="cm">// 1. Preload hero image</span>
+&lt;<span class="attr">link</span> rel=<span class="str">"preload"</span> as=<span class="str">"image"</span> href=<span class="str">"/hero.webp"</span> fetchpriority=<span class="str">"high"</span>&gt;
+<span class="cm">// 2. Add fetchpriority to img</span>
+&lt;<span class="attr">img</span> src=<span class="str">"/hero.webp"</span> fetchpriority=<span class="str">"high"</span> loading=<span class="str">"eager"</span>&gt;
+
+<span class="cm">// ─── Fix CLS ───</span>
+<span class="cm">// Reserve space for async content with aspect-ratio</span>
+.<span class="attr">hero-image</span> { aspect-ratio: 16/9; width: 100%; }  <span class="cm">/* no shift when image loads */</span>
+<span class="cm">// Reserve ad slot size explicitly</span>
+.<span class="attr">ad-slot</span> { min-height: 90px; }
+
+<span class="cm">// ─── Fix INP (long handler) ───</span>
+<span class="cm">// Break up long synchronous work with scheduler.yield()</span>
+button.<span class="fn">addEventListener</span>(<span class="str">'click'</span>, <span class="kw">async</span> () =&gt; {
+  <span class="fn">updateUIOptimistically</span>();    <span class="cm">// fast: sync</span>
+  <span class="kw">await</span> scheduler.<span class="fn">yield</span>();     <span class="cm">// yield to browser for paint</span>
+  <span class="kw">await</span> <span class="fn">heavyDataTransform</span>(); <span class="cm">// deferred heavy work</span>
+});
+
+<span class="cm">// ─── Measure all CWV in one call ───</span>
+<span class="kw">import</span> { onLCP, onINP, onCLS } <span class="kw">from</span> <span class="str">'web-vitals'</span>;
+[onLCP, onINP, onCLS].<span class="fn">forEach</span>(fn =&gt; fn(m =&gt;
+  navigator.<span class="fn">sendBeacon</span>(<span class="str">'/cwv'</span>, JSON.<span class="fn">stringify</span>(m))
+));</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+function animateTimeline(){const bar=document.getElementById('tl-bar');bar.style.width='0%';setTimeout(()=>{bar.style.width='100%';},50);const cont=document.getElementById('tl-markers');const marks=[{label:'FCP',pct:15,color:'#60a5fa'},{label:'LCP',pct:35,color:'#10b981'},{label:'TTI',pct:60,color:'#a78bfa'},{label:'FID',pct:75,color:'#f59e0b'}];cont.innerHTML=marks.map(m=>`<div style="position:absolute;left:${m.pct}%;top:0;transform:translateX(-50%);text-align:center;font-size:.72rem"><div style="color:${m.color};font-weight:700">${m.label}</div><div style="width:2px;height:20px;background:${m.color};margin:0 auto"></div></div>`).join('');}
+
+let clsVal=0;
+function triggerShift(){const ad=document.getElementById('cls-ad');ad.style.display='block';clsVal+=0.18;document.getElementById('cls-val').textContent=clsVal.toFixed(2);document.getElementById('cls-val').style.color=clsVal<0.1?'#10b981':clsVal<0.25?'#f59e0b':'#ef4444';}
+function fixedLoad(){const ad=document.getElementById('cls-ad');ad.style.display='block';ad.style.minHeight='28px';document.getElementById('cls-val').textContent='0.00 (space reserved — no shift)';document.getElementById('cls-val').style.color='#10b981';}
+function resetCLS(){document.getElementById('cls-ad').style.display='none';clsVal=0;document.getElementById('cls-val').textContent='0.00';document.getElementById('cls-val').style.color='#94a3b8';}
+</script>
+</body>
+</html>

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 31 – DNS Prefetch, Preconnect & Resource Hints</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+  h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+  .sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+  .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+  .tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+  .tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+  .panel{display:none}.panel.active{display:block}
+  .card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+  .card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+  code{background:#0f1117;border:1px solid #2d3551;border-radius:4px;padding:1px 6px;font-size:.82rem;color:#a78bfa}
+  pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;color:#e2e8f0}
+  .kw{color:#60a5fa} .str{color:#10b981} .cm{color:#475569} .attr{color:#f59e0b}
+  .hint-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:12px}
+  .hint-card{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;cursor:pointer;transition:all .2s;border-top:3px solid transparent}
+  .hint-card:hover,.hint-card.selected{border-top-color:var(--col);background:#1a1f2e}
+  .hint-card .tag{font-size:.75rem;font-weight:700;color:var(--col);margin-bottom:6px;text-transform:uppercase}
+  .hint-card p{font-size:.8rem;color:#94a3b8;margin-top:4px}
+  .detail-box{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;margin-top:16px;display:none}
+  .detail-box.show{display:block}
+  .timeline{margin-top:16px}
+  .tl-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:.82rem}
+  .tl-label{width:130px;color:#94a3b8;flex-shrink:0;text-align:right}
+  .tl-bar-wrap{flex:1;background:#0f1117;border-radius:4px;height:22px;position:relative;overflow:hidden;border:1px solid #2d3551}
+  .tl-bar{height:100%;border-radius:3px;transition:width .8s ease;position:absolute;top:0;left:0;display:flex;align-items:center;padding-left:6px;font-size:.72rem;color:#fff;font-weight:600;white-space:nowrap}
+  .tl-val{width:60px;text-align:right;color:#e2e8f0;font-weight:600}
+  .btn{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#e2e8f0;cursor:pointer;font-size:.82rem;transition:all .2s}
+  .btn:hover{background:#2d3551}
+  .btn.primary{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+  .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700;margin-left:6px}
+  .green{color:#10b981} .red{color:#ef4444} .amber{color:#f59e0b} .blue{color:#60a5fa} .purple{color:#a78bfa}
+  .bg-green{background:#10b98122} .bg-red{background:#ef444422} .bg-amber{background:#f59e0b22} .bg-blue{background:#60a5fa22} .bg-purple{background:#a78bfa22}
+  table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:12px}
+  th{background:#0f1117;color:#60a5fa;padding:8px 12px;text-align:left;border-bottom:1px solid #2d3551}
+  td{padding:8px 12px;border-bottom:1px solid #1a1f2e;color:#94a3b8}
+  tr:hover td{background:#1a1f2e;color:#e2e8f0}
+  .inject-log{background:#0a0e14;border:1px solid #2d3551;border-radius:6px;padding:12px;font-family:monospace;font-size:.78rem;min-height:100px;max-height:180px;overflow-y:auto;color:#10b981;margin-top:12px}
+  .inject-log .err{color:#ef4444}
+  .slider-wrap{display:flex;align-items:center;gap:12px;margin:10px 0}
+  .slider-wrap input[type=range]{flex:1;accent-color:#60a5fa}
+  .slider-val{width:50px;text-align:center;font-weight:700;color:#60a5fa}
+</style>
+</head>
+<body>
+
+<h1>🔗 DNS Prefetch, Preconnect & Resource Hints</h1>
+<p class="sub">Topic 31 · Module 2.5 — Network Layer · Hruday's interview prep</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Connection Costs</div>
+  <div class="tab" onclick="setTab(1)">Hint Explorer</div>
+  <div class="tab" onclick="setTab(2)">Before / After LCP</div>
+  <div class="tab" onclick="setTab(3)">Live Head Injection</div>
+</div>
+
+<!-- TAB 0: Connection Cost Breakdown -->
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>What does opening a connection actually cost?</h3>
+    <p style="font-size:.85rem;color:#94a3b8;margin-bottom:16px">
+      Every new origin your page talks to requires: DNS lookup → TCP handshake → TLS handshake.
+      Adjust RTT to simulate network conditions, then see how resource hints eliminate wasted time.
+    </p>
+    <div class="slider-wrap">
+      <span style="font-size:.82rem;color:#94a3b8;width:80px">RTT</span>
+      <input type="range" min="10" max="400" value="80" id="rtt-slider" oninput="updateCosts()">
+      <span class="slider-val" id="rtt-val">80 ms</span>
+    </div>
+    <div id="cost-timeline" class="timeline"></div>
+    <div style="margin-top:16px;font-size:.8rem;color:#94a3b8;border-top:1px solid #2d3551;padding-top:12px">
+      <span class="green">▲ Resource hints push these costs off the critical path</span> — DNS/TCP/TLS happen in parallel while HTML parses.
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Without hints</h3>
+      <div style="font-size:.82rem;color:#94a3b8;line-height:1.9">
+        1. Browser parses HTML<br>
+        2. Finds <code>&lt;script src="cdn.example.com/app.js"&gt;</code><br>
+        3. <span class="red">Stops</span> to DNS resolve <code>cdn.example.com</code><br>
+        4. <span class="red">Waits</span> for TCP handshake<br>
+        5. <span class="red">Waits</span> for TLS handshake<br>
+        6. Finally starts downloading
+      </div>
+      <div id="no-hint-total" style="margin-top:12px;font-size:.85rem;font-weight:700;color:#ef4444"></div>
+    </div>
+    <div class="card">
+      <h3>With <code>preconnect</code></h3>
+      <div style="font-size:.82rem;color:#94a3b8;line-height:1.9">
+        1. <code>&lt;link rel="preconnect"&gt;</code> in <code>&lt;head&gt;</code><br>
+        2. Browser immediately starts DNS + TCP + TLS<br>
+        3. While HTML parses further...<br>
+        4. Finds the script → connection already warm!<br>
+        5. <span class="green">Immediately</span> starts downloading<br>
+        &nbsp;
+      </div>
+      <div id="hint-total" style="margin-top:12px;font-size:.85rem;font-weight:700;color:#10b981"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 1: Hint Explorer -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Click a hint type to explore</h3>
+    <div class="hint-grid" id="hints-grid"></div>
+    <div class="detail-box" id="hint-detail"></div>
+  </div>
+
+  <div class="card">
+    <h3>Comparison Table</h3>
+    <table>
+      <thead><tr><th>Hint</th><th>What it does</th><th>Cost</th><th>When to use</th></tr></thead>
+      <tbody>
+        <tr><td><code>dns-prefetch</code></td><td>Resolves hostname only</td><td>~0.1–1ms CPU</td><td>3rd-party origins you'll load, lower certainty</td></tr>
+        <tr><td><code>preconnect</code></td><td>DNS + TCP + TLS</td><td>~socket + memory</td><td>Certain origins used in first 3s</td></tr>
+        <tr><td><code>preload</code></td><td>Fetches &amp; caches specific resource</td><td>Full download cost</td><td>Critical resources discovered late (fonts, LCP image)</td></tr>
+        <tr><td><code>prefetch</code></td><td>Low-priority fetch for next page</td><td>Full download, idle only</td><td>Resources for likely next navigation</td></tr>
+        <tr><td><code>modulepreload</code></td><td>Fetches + parses JS module</td><td>Full download + parse</td><td>ES modules in critical path</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TAB 2: Before/After LCP -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>SAP Example: 380ms LCP Improvement</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:16px">
+      Hruday's team found the LCP image was hosted on a dedicated CDN origin —
+      not referenced until a CSS background rule was parsed (late discovery). Adding
+      <code>preconnect</code> + <code>preload</code> hints moved it from 2,840ms to 2,460ms LCP.
+    </p>
+
+    <div id="lcp-sim">
+      <div style="margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap">
+        <button class="btn primary" onclick="runLCPSim(false)" id="btn-no-hint">▶ Simulate WITHOUT hints</button>
+        <button class="btn" onclick="runLCPSim(true)" id="btn-with-hint">▶ Simulate WITH hints</button>
+        <button class="btn" onclick="resetLCP()">↺ Reset</button>
+      </div>
+      <div id="lcp-timeline" class="timeline"></div>
+      <div id="lcp-result" style="margin-top:16px;font-size:.95rem;font-weight:700;display:none"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Resource Hint Decision Tree</h3>
+    <div style="font-size:.82rem;color:#94a3b8;line-height:2">
+      <div>📌 <strong style="color:#e2e8f0">Is this a resource critical to first paint?</strong></div>
+      <div style="margin-left:20px">→ Yes + you know the URL → <code class="bg-green green">preload</code></div>
+      <div style="margin-left:20px">→ Yes + it's from a specific origin → <code class="bg-blue blue">preconnect</code></div>
+      <div style="margin-left:20px">→ Maybe + origin uncertain → <code class="bg-amber amber">dns-prefetch</code></div>
+      <div style="margin-left:20px">→ No + needed on next page → <code class="bg-purple purple">prefetch</code></div>
+      <div style="margin-left:20px">→ It's an ES module → <code class="bg-purple purple">modulepreload</code></div>
+    </div>
+    <div style="margin-top:16px;padding:12px;background:#1a1f2e;border-radius:8px;border-left:3px solid #ef4444;font-size:.8rem;color:#94a3b8">
+      ⚠️ <strong style="color:#ef4444">Don't over-preconnect:</strong> Each preconnect opens a real socket and holds TLS state.
+      Limit to 2–3 critical origins. Use <code>dns-prefetch</code> for everything else.
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: Live Head Injection -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Live Head Tag Injector</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:16px">
+      Configure your hints below and inject them into this page's <code>&lt;head&gt;</code>. Open DevTools → Elements to see them appear in real time.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:.82rem;color:#94a3b8;display:block;margin-bottom:4px">Origin URL (e.g. https://fonts.googleapis.com)</label>
+        <input type="text" id="origin-input" value="https://fonts.googleapis.com" style="width:100%;background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:8px 12px;color:#e2e8f0;font-size:.85rem">
+      </div>
+      <div>
+        <label style="font-size:.82rem;color:#94a3b8;display:block;margin-bottom:6px">Hint type</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="hint-type-btns">
+          <button class="btn selected-hint" data-type="dns-prefetch" onclick="selectHintType(this)">dns-prefetch</button>
+          <button class="btn" data-type="preconnect" onclick="selectHintType(this)">preconnect</button>
+          <button class="btn" data-type="preload" onclick="selectHintType(this)">preload</button>
+          <button class="btn" data-type="prefetch" onclick="selectHintType(this)">prefetch</button>
+        </div>
+      </div>
+      <div id="crossorigin-wrap" style="display:none">
+        <label style="font-size:.82rem;color:#94a3b8">
+          <input type="checkbox" id="crossorigin-cb" style="accent-color:#60a5fa;margin-right:6px">
+          Add <code>crossorigin</code> attribute (required for preconnect with CORS, e.g. fonts)
+        </label>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" onclick="injectHint()">💉 Inject into &lt;head&gt;</button>
+        <button class="btn" onclick="clearInjected()">🗑 Clear injected</button>
+      </div>
+    </div>
+
+    <div class="inject-log" id="inject-log">// Inject a hint above to see it added to the document...<br></div>
+
+    <div style="margin-top:16px">
+      <h3 style="color:#60a5fa;font-size:.9rem;margin-bottom:8px">TypeScript utility — injectResourceHints()</h3>
+      <pre><span class="cm">// Production utility used in SAP Fiori performance work</span>
+<span class="kw">interface</span> ResourceHint {
+  rel: <span class="str">'dns-prefetch'</span> | <span class="str">'preconnect'</span> | <span class="str">'preload'</span> | <span class="str">'prefetch'</span> | <span class="str">'modulepreload'</span>;
+  href: <span class="kw">string</span>;
+  as?: <span class="str">'script'</span> | <span class="str">'style'</span> | <span class="str">'font'</span> | <span class="str">'image'</span> | <span class="str">'fetch'</span>;
+  crossorigin?: <span class="kw">boolean</span>;
+  type?: <span class="kw">string</span>; <span class="cm">// MIME type for preload</span>
+}
+
+<span class="kw">function</span> <span class="attr">injectResourceHints</span>(hints: ResourceHint[]): <span class="kw">void</span> {
+  <span class="kw">const</span> fragment = document.<span class="attr">createDocumentFragment</span>();
+
+  hints.<span class="attr">forEach</span>(hint => {
+    <span class="cm">// Deduplicate: skip if already in &lt;head&gt;</span>
+    <span class="kw">const</span> existing = document.<span class="attr">querySelector</span>(
+      `link[rel="${hint.rel}"][href="${hint.href}"]`
+    );
+    <span class="kw">if</span> (existing) <span class="kw">return</span>;
+
+    <span class="kw">const</span> el = document.<span class="attr">createElement</span>(<span class="str">'link'</span>);
+    el.rel = hint.rel;
+    el.href = hint.href;
+    <span class="kw">if</span> (hint.as) el.setAttribute(<span class="str">'as'</span>, hint.as);
+    <span class="kw">if</span> (hint.crossorigin) el.setAttribute(<span class="str">'crossorigin'</span>, <span class="str">''</span>);
+    <span class="kw">if</span> (hint.type) el.setAttribute(<span class="str">'type'</span>, hint.type);
+    fragment.<span class="attr">appendChild</span>(el);
+  });
+
+  document.head.<span class="attr">appendChild</span>(fragment);
+}
+
+<span class="cm">// Usage:</span>
+<span class="attr">injectResourceHints</span>([
+  { rel: <span class="str">'preconnect'</span>, href: <span class="str">'https://fonts.googleapis.com'</span> },
+  { rel: <span class="str">'preconnect'</span>, href: <span class="str">'https://fonts.gstatic.com'</span>, crossorigin: <span class="kw">true</span> },
+  { rel: <span class="str">'dns-prefetch'</span>, href: <span class="str">'https://analytics.example.com'</span> },
+  { rel: <span class="str">'preload'</span>, href: <span class="str">'/hero-image.webp'</span>, as: <span class="str">'image'</span> },
+]);</pre>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== TAB LOGIC =====================
+function setTab(i) {
+  document.querySelectorAll('.tab').forEach((t,idx) => t.classList.toggle('active', idx===i));
+  document.querySelectorAll('.panel').forEach((p,idx) => p.classList.toggle('active', idx===i));
+}
+
+// ===================== TAB 0: Connection Costs =====================
+function updateCosts() {
+  const rtt = +document.getElementById('rtt-slider').value;
+  document.getElementById('rtt-val').textContent = rtt + ' ms';
+
+  // DNS: ~0.5-1 RTT, TCP: 1 RTT, TLS 1.3: 1 RTT
+  const dns = Math.round(rtt * 0.7);
+  const tcp = rtt;
+  const tls = rtt;
+  const ttfb = Math.round(rtt * 0.5);
+  const total = dns + tcp + tls + ttfb;
+  const maxVal = total;
+
+  const rows = [
+    { label: 'DNS Lookup', val: dns, color: '#a78bfa', hint: 'Resolved by dns-prefetch / preconnect' },
+    { label: 'TCP Handshake', val: tcp, color: '#f59e0b', hint: 'Resolved by preconnect' },
+    { label: 'TLS 1.3 Handshake', val: tls, color: '#ef4444', hint: 'Resolved by preconnect' },
+    { label: 'TTFB (request)', val: ttfb, color: '#60a5fa', hint: 'Starts downloading → content arrives' },
+  ];
+
+  const tl = document.getElementById('cost-timeline');
+  tl.innerHTML = rows.map(r => `
+    <div class="tl-row">
+      <div class="tl-label">${r.label}</div>
+      <div class="tl-bar-wrap">
+        <div class="tl-bar" style="background:${r.color};width:${Math.round(r.val/maxVal*100)}%" title="${r.hint}">${r.hint}</div>
+      </div>
+      <div class="tl-val">${r.val}ms</div>
+    </div>
+  `).join('');
+
+  document.getElementById('no-hint-total').textContent = `Total cold start: ${total}ms blocked`;
+  document.getElementById('hint-total').textContent = `Total with preconnect: ~${ttfb}ms (just TTFB)`;
+}
+updateCosts();
+
+// ===================== TAB 1: Hints =====================
+const hints = [
+  {
+    rel: 'dns-prefetch', col: '#a78bfa', tag: 'dns-prefetch',
+    short: 'Resolves hostname in background',
+    desc: 'Performs DNS lookup only — no TCP/TLS. Very cheap (~1ms CPU). Use for third-party origins you\'re less certain about.',
+    code: '<link rel="dns-prefetch" href="https://analytics.example.com">',
+    when: 'Analytics, ad networks, social widgets — origins that might load',
+    warning: null,
+  },
+  {
+    rel: 'preconnect', col: '#60a5fa', tag: 'preconnect',
+    short: 'Full connection: DNS + TCP + TLS',
+    desc: 'Opens and holds a real TCP socket with TLS. Eliminates ALL connection overhead for the first request to that origin. Use for origins you WILL load in first 3 seconds.',
+    code: '<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+    when: 'Google Fonts, CDN domains, API origins used on page load',
+    warning: '⚠️ Limit to 2–3 origins: each holds an open socket and TLS state in memory.',
+  },
+  {
+    rel: 'preload', col: '#10b981', tag: 'preload',
+    short: 'Fetch specific resource, high priority',
+    desc: 'Fetches a resource ASAP at high browser priority and caches it. Uses `as` attribute to tell the browser what it is. Critical for resources discovered late in the parse (LCP images, fonts).',
+    code: '<link rel="preload" href="/hero.webp" as="image">\n<link rel="preload" href="/font.woff2" as="font" crossorigin>',
+    when: 'LCP image, critical web fonts, above-the-fold CSS, render-blocking scripts',
+    warning: '⚠️ Must use `as` attribute — wrong type = resource loaded twice! Must actually be used or browser warns.',
+  },
+  {
+    rel: 'prefetch', col: '#f59e0b', tag: 'prefetch',
+    short: 'Low-priority fetch for next navigation',
+    desc: 'Fetches resource at IDLE priority for use on the next page. Good for prefetching bundles for the next route the user is likely to visit.',
+    code: '<link rel="prefetch" href="/dashboard.chunk.js">',
+    when: 'Next page JS chunk, data for likely navigation, images on next route',
+    warning: null,
+  },
+  {
+    rel: 'modulepreload', col: '#ef4444', tag: 'modulepreload',
+    short: 'Fetch + parse ES module early',
+    desc: 'Like preload but for ES modules: fetches, parses AND pre-evaluates the module graph. Also handles transitive imports. Modern replacement for preload+script[type=module].',
+    code: '<link rel="modulepreload" href="/src/app.js">',
+    when: 'ES modules in critical path, Vite/Rollup-built apps using native modules',
+    warning: null,
+  },
+];
+
+const hintGrid = document.getElementById('hints-grid');
+hintGrid.innerHTML = hints.map((h,i) => `
+  <div class="hint-card" style="--col:${h.col}" onclick="selectHint(${i})">
+    <div class="tag">${h.tag}</div>
+    <div style="font-size:.85rem;color:#e2e8f0;font-weight:600">${h.short}</div>
+    <p>${h.desc.substring(0,60)}...</p>
+  </div>
+`).join('');
+
+function selectHint(i) {
+  document.querySelectorAll('.hint-card').forEach((c,idx) => c.classList.toggle('selected', idx===i));
+  const h = hints[i];
+  const box = document.getElementById('hint-detail');
+  box.className = 'detail-box show';
+  box.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span style="font-size:1.1rem;font-weight:700;color:${h.col}">${h.tag}</span>
+    </div>
+    <p style="font-size:.85rem;color:#94a3b8;margin-bottom:12px">${h.desc}</p>
+    ${h.warning ? `<div style="padding:10px 14px;background:#ef444422;border-left:3px solid #ef4444;border-radius:4px;font-size:.8rem;color:#ef4444;margin-bottom:12px">${h.warning}</div>` : ''}
+    <div style="margin-bottom:8px;font-size:.8rem;color:#64748b">Code example:</div>
+    <pre style="margin:0"><code style="background:none;border:none;padding:0;color:#10b981;font-size:.82rem">${h.code}</code></pre>
+    <div style="margin-top:12px;font-size:.8rem;color:#64748b">Use when: <span style="color:#f59e0b">${h.when}</span></div>
+  `;
+}
+
+// ===================== TAB 2: LCP Simulation =====================
+function resetLCP() {
+  document.getElementById('lcp-timeline').innerHTML = '';
+  document.getElementById('lcp-result').style.display = 'none';
+  document.getElementById('btn-no-hint').disabled = false;
+  document.getElementById('btn-with-hint').disabled = false;
+}
+
+function runLCPSim(withHints) {
+  const tl = document.getElementById('lcp-timeline');
+  tl.innerHTML = '';
+  const result = document.getElementById('lcp-result');
+  result.style.display = 'none';
+
+  const steps = withHints ? [
+    { label: 'HTML Parse', dur: 120, color: '#60a5fa', desc: 'preconnect hint fires at line 3' },
+    { label: 'DNS (parallel)', dur: 0, color: '#a78bfa', desc: 'Already done during HTML parse' },
+    { label: 'TCP+TLS (parallel)', dur: 0, color: '#f59e0b', desc: 'Already done during HTML parse' },
+    { label: 'CSS Parse', dur: 95, color: '#10b981', desc: '' },
+    { label: 'LCP image fetch', dur: 280, color: '#ef4444', desc: 'preloaded — started in parallel' },
+    { label: 'Render', dur: 45, color: '#60a5fa', desc: '' },
+  ] : [
+    { label: 'HTML Parse', dur: 120, color: '#60a5fa', desc: '' },
+    { label: 'CSS Parse', dur: 95, color: '#10b981', desc: '' },
+    { label: 'DNS Lookup', dur: 56, color: '#a78bfa', desc: 'Blocking — found CDN origin in CSS' },
+    { label: 'TCP Handshake', dur: 80, color: '#f59e0b', desc: 'Blocking — new origin' },
+    { label: 'TLS Handshake', dur: 80, color: '#f59e0b', desc: 'Blocking' },
+    { label: 'LCP image fetch', dur: 280, color: '#ef4444', desc: '' },
+    { label: 'Render', dur: 45, color: '#60a5fa', desc: '' },
+  ];
+
+  const total = steps.reduce((s, r) => s + r.dur, 0);
+  let delay = 0;
+
+  steps.forEach((step, i) => {
+    const row = document.createElement('div');
+    row.className = 'tl-row';
+    const pct = total > 0 ? Math.round(step.dur / total * 100) : 100;
+    row.innerHTML = `
+      <div class="tl-label">${step.label}</div>
+      <div class="tl-bar-wrap">
+        <div class="tl-bar" id="lcpbar${i}" style="background:${step.color};width:0%">${step.desc || step.label}</div>
+      </div>
+      <div class="tl-val">${step.dur}ms</div>
+    `;
+    tl.appendChild(row);
+
+    const d = delay;
+    setTimeout(() => {
+      const bar = document.getElementById('lcpbar' + i);
+      if (bar) bar.style.width = pct + '%';
+    }, d * 5 + 100 * i);
+    delay += step.dur;
+  });
+
+  setTimeout(() => {
+    result.style.display = 'block';
+    const lcpTime = total;
+    if (withHints) {
+      result.innerHTML = `✅ LCP: <span class="green">${lcpTime}ms</span> — 380ms saved with preconnect + preload hints`;
+    } else {
+      result.innerHTML = `❌ LCP: <span class="red">${lcpTime}ms</span> — DNS/TCP/TLS block the critical path`;
+    }
+  }, total * 5 + 100 * steps.length + 500);
+}
+
+// ===================== TAB 3: Injection =====================
+let injectedCount = 0;
+const injectedRefs = [];
+let selectedType = 'dns-prefetch';
+
+function selectHintType(btn) {
+  document.querySelectorAll('#hint-type-btns .btn').forEach(b => b.classList.remove('selected-hint'));
+  btn.classList.add('selected-hint');
+  btn.style.borderColor = '#60a5fa';
+  selectedType = btn.dataset.type;
+  document.getElementById('crossorigin-wrap').style.display =
+    (selectedType === 'preconnect' || selectedType === 'preload') ? 'block' : 'none';
+}
+
+function injectHint() {
+  const log = document.getElementById('inject-log');
+  const origin = document.getElementById('origin-input').value.trim();
+  if (!origin) {
+    log.innerHTML += `<span class="err">✖ Please enter an origin URL</span><br>`;
+    return;
+  }
+
+  // Check for existing
+  const existing = document.querySelector(`head link[rel="${selectedType}"][href="${origin}"]`);
+  if (existing) {
+    log.innerHTML += `<span class="err">⚠ Already exists: &lt;link rel="${selectedType}" href="${origin}"&gt;</span><br>`;
+    log.scrollTop = log.scrollHeight;
+    return;
+  }
+
+  const el = document.createElement('link');
+  el.rel = selectedType;
+  el.href = origin;
+  const co = document.getElementById('crossorigin-cb');
+  if (co && co.checked) el.setAttribute('crossorigin', '');
+  el.setAttribute('data-injected', 'true');
+  document.head.appendChild(el);
+  injectedRefs.push(el);
+  injectedCount++;
+
+  const co_attr = (co && co.checked) ? ' crossorigin' : '';
+  log.innerHTML += `<span>✔ [${injectedCount}] &lt;link rel="${selectedType}" href="${origin}"${co_attr}&gt; → &lt;head&gt;</span><br>`;
+  log.scrollTop = log.scrollHeight;
+}
+
+function clearInjected() {
+  const log = document.getElementById('inject-log');
+  injectedRefs.forEach(el => { if (el.parentNode) el.parentNode.removeChild(el); });
+  injectedRefs.length = 0;
+  injectedCount = 0;
+  log.innerHTML = `// Cleared all injected hints.<br>`;
+}
+</script>
+</body>
+</html>

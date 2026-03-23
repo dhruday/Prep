@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 98 – Offline-First Architecture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+.pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:700}
+</style>
+</head>
+<body>
+<h1>📶 Offline-First Architecture</h1>
+<p class="sub">Topic 98 · Module 9.3 — Cache Strategy · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Online/Offline Demo</div>
+  <div class="tab" onclick="setTab(2)">Architecture Layers</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Design for offline as the default, not the exception</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Offline-first means the app loads and functions from local data (IndexedDB + CacheStorage) first, syncing to the server when connectivity is available. At SAP, field engineers inspecting assets in underground facilities need SAP Field Service Management to work without signal. Offline-first reduces dependency on network latency, giving instant loads even online.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">❌ Online-first approach</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:1.9">
+          <li>Fetch from network → if fail → show error</li>
+          <li>App broken when offline</li>
+          <li>Every action requires round-trip</li>
+          <li>Poor mobile experience</li>
+        </ul>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Offline-first approach</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:1.9">
+          <li>Read from local first → sync in background</li>
+          <li>App works without network</li>
+          <li>Mutations queued, synced later</li>
+          <li>Instant loads — feels like native</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Offline mutation queue simulator</h3>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span style="font-size:.83rem;color:#94a3b8">Network:</span>
+      <button id="netToggle" onclick="toggleNetwork()" style="padding:6px 16px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:20px;cursor:pointer;font-size:.82rem;min-width:80px">🟢 Online</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button onclick="oflAction('Create Order')" style="padding:7px 14px;background:#1e3a5f;border:1px solid #60a5fa;color:#60a5fa;border-radius:8px;cursor:pointer;font-size:.82rem">Create Order</button>
+      <button onclick="oflAction('Update Status')" style="padding:7px 14px;background:#1e2130;border:1px solid #a78bfa;color:#a78bfa;border-radius:8px;cursor:pointer;font-size:.82rem">Update Status</button>
+      <button onclick="oflSync()" style="padding:7px 14px;background:#1e2130;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;cursor:pointer;font-size:.82rem">🔄 Sync Queue</button>
+    </div>
+    <div style="font-size:.78rem;color:#475569;margin-bottom:6px">Pending queue (<span id="q-count">0</span> items):</div>
+    <div id="ofl-queue" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;font-size:.75rem;min-height:32px;color:#94a3b8;margin-bottom:6px">empty</div>
+    <div id="ofl-log" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;font-size:.75rem;max-height:90px;overflow-y:auto;color:#475569"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Offline-first architecture layers</h3>
+    <div style="font-size:.8rem">
+      <div style="background:#1e3a5f;border:1px solid #60a5fa;border-radius:8px;padding:10px;margin-bottom:8px">
+        <b style="color:#60a5fa">Layer 1 — App Shell</b>
+        <p style="color:#94a3b8;margin-top:4px">HTML skeleton + CSS + minimal JS cached via Service Worker on first install. App loads instantly on next visit even without network. Navigation works offline.</p>
+      </div>
+      <div style="background:#052e16;border:1px solid #10b981;border-radius:8px;padding:10px;margin-bottom:8px">
+        <b style="color:#10b981">Layer 2 — Local data store (IndexedDB)</b>
+        <p style="color:#94a3b8;margin-top:4px">API responses stored locally. Reads always hit IDB first. Writes queued if offline. On reconnect, background sync drains the queue in order.</p>
+      </div>
+      <div style="background:#2d1a4e;border:1px solid #a78bfa;border-radius:8px;padding:10px;margin-bottom:8px">
+        <b style="color:#a78bfa">Layer 3 — Background Sync (Service Worker)</b>
+        <p style="color:#94a3b8;margin-top:4px">SW listens for online event + Background Sync API fires <code>sync</code> event. Processes queued mutations with retry + exponential backoff.</p>
+      </div>
+      <div style="background:#3d2000;border:1px solid #f59e0b;border-radius:8px;padding:10px">
+        <b style="color:#f59e0b">Layer 4 — Conflict Resolution</b>
+        <p style="color:#94a3b8;margin-top:4px">When offline changes collide with server changes: last-write-wins (simple), version vectors (robust), or user-prompted merge (most flexible — CRDTs for collaborative apps).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Background Sync + IndexedDB mutation queue</h3>
+    <pre><span class="cm">// ─── Service Worker: background sync ───</span>
+self.<span class="fn">addEventListener</span>(<span class="str">'sync'</span>, (event: SyncEvent) =&gt; {
+  <span class="kw">if</span> (event.tag === <span class="str">'pending-mutations'</span>) {
+    event.<span class="fn">waitUntil</span>(<span class="fn">drainQueue</span>());
+  }
+});
+<span class="kw">async function</span> <span class="fn">drainQueue</span>() {
+  <span class="kw">const</span> db = <span class="kw">await</span> <span class="fn">openDB</span>(<span class="str">'sap-queue'</span>, <span class="fn">1</span>);
+  <span class="kw">const</span> items = <span class="kw">await</span> db.<span class="fn">getAll</span>(<span class="str">'mutations'</span>);
+  <span class="kw">for</span> (<span class="kw">const</span> item <span class="kw">of</span> items) {
+    <span class="kw">await</span> <span class="fn">fetch</span>(item.url, { method: item.method, body: item.body });
+    <span class="kw">await</span> db.<span class="fn">delete</span>(<span class="str">'mutations'</span>, item.id);
+  }
+}
+
+<span class="cm">// ─── Client: queue mutation ───</span>
+<span class="kw">async function</span> <span class="fn">safePost</span>(url: <span class="kw">string</span>, data: <span class="kw">unknown</span>) {
+  <span class="kw">if</span> (navigator.onLine) {
+    <span class="kw">return</span> <span class="fn">fetch</span>(url, { method: <span class="str">'POST'</span>, body: <span class="fn">JSON</span>.<span class="fn">stringify</span>(data) });
+  }
+  <span class="cm">// offline: queue it</span>
+  <span class="kw">const</span> db = <span class="kw">await</span> <span class="fn">openDB</span>(<span class="str">'sap-queue'</span>, <span class="fn">1</span>);
+  <span class="kw">await</span> db.<span class="fn">add</span>(<span class="str">'mutations'</span>, { id: <span class="fn">crypto</span>.<span class="fn">randomUUID</span>(), url, method: <span class="str">'POST'</span>, body: <span class="fn">JSON</span>.<span class="fn">stringify</span>(data) });
+  <span class="kw">await</span> navigator.serviceWorker.ready.<span class="fn">then</span>(sw =&gt;
+    sw.<span class="fn">sync</span>.<span class="fn">register</span>(<span class="str">'pending-mutations'</span>)
+  );
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+let isOnline=true;let queue=[];
+const queueEl=document.getElementById('ofl-queue');const logEl=document.getElementById('ofl-log');const qCount=document.getElementById('q-count');const netBtn=document.getElementById('netToggle');
+function oflLog(msg,c='#94a3b8'){const d=document.createElement('div');d.style.color=c;d.textContent=new Date().toLocaleTimeString().slice(0,8)+' '+msg;logEl.prepend(d);}
+function renderQueue(){queueEl.textContent=queue.length?queue.map((q,i)=>`${i+1}. ${q}`).join(' | '):'empty';qCount.textContent=queue.length;}
+function toggleNetwork(){isOnline=!isOnline;netBtn.style.background=isOnline?'#052e16':'#3d0808';netBtn.style.borderColor=isOnline?'#10b981':'#ef4444';netBtn.style.color=isOnline?'#10b981':'#ef4444';netBtn.textContent=isOnline?'🟢 Online':'🔴 Offline';oflLog(isOnline?'Network restored — run Sync Queue to flush':'Network disconnected — actions will be queued',isOnline?'#10b981':'#ef4444');}
+function oflAction(action){if(isOnline){oflLog(`${action} → sent directly to server (online)`,'#10b981');}else{queue.push(action+' #'+Date.now());renderQueue();oflLog(`${action} → queued offline (${queue.length} pending)`,'#f59e0b');}}
+function oflSync(){if(!isOnline){oflLog('Cannot sync — still offline','#ef4444');return;}if(!queue.length){oflLog('Queue empty — nothing to sync','#94a3b8');return;}queue.forEach(q=>oflLog(`SYNC → ${q} sent to server`,'#10b981'));queue=[];renderQueue();oflLog('All queued mutations synced ✅','#10b981');}
+</script>
+</body>
+</html>

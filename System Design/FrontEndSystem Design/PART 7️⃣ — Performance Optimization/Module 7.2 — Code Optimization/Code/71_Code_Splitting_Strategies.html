@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 71 – Code Splitting Strategies</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+td,th{border:1px solid #2d3551;padding:8px 10px;text-align:left}
+th{background:#0f1117;color:#94a3b8}
+</style>
+</head>
+<body>
+<h1>✂️ Code Splitting Strategies</h1>
+<p class="sub">Topic 71 · Module 7.2 — Code Optimization · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Bundle Visualiser</div>
+  <div class="tab" onclick="setTab(2)">Strategies Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Code splitting — ship only what the user needs now</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Without code splitting, all JS ships in one giant bundle. The browser must parse and compile ALL of it before the page becomes interactive — even code for routes the user may never visit. Code splitting breaks the bundle into smaller chunks loaded on demand.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:12px;border-radius:8px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Route-based splitting</div>
+        <div style="color:#94a3b8">Each page/route = separate chunk. Most impactful. Dashboard code not loaded on login page.</div>
+        <div style="color:#10b981;margin-top:4px;font-size:.73rem">✅ Default in Next.js/React Router</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:12px;border-radius:8px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">Component-based splitting</div>
+        <div style="color:#94a3b8">Heavy components (charts, editors, PDF viewer) loaded dynamically. Visible on demand.</div>
+        <div style="color:#10b981;margin-top:4px;font-size:.73rem">✅ React.lazy(), dynamic import()</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;padding:12px;border-radius:8px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:6px">Vendor splitting</div>
+        <div style="color:#94a3b8">Third-party libs (React, lodash) in separate chunk. Long-term caching — doesn't change on deploys.</div>
+        <div style="color:#10b981;margin-top:4px;font-size:.73rem">✅ Webpack SplitChunksPlugin</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;background:#0f1117;border:1px solid #f59e0b;padding:10px;border-radius:8px;font-size:.78rem;color:#94a3b8">
+      <strong style="color:#f59e0b">SAP context:</strong> SAP Fiori dashboard initial bundle was 2.4MB. Route-based code splitting + lazy-loading Chart.js reduced initial load to 380KB. TTI improved from 8.2s → 2.1s on 4G.
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Bundle size — before vs after code splitting</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div>
+        <div style="color:#ef4444;font-weight:700;margin-bottom:8px;font-size:.82rem">❌ Single bundle (2.4MB)</div>
+        <div id="before-chart" style="display:flex;flex-direction:column;gap:4px;font-size:.75rem"></div>
+      </div>
+      <div>
+        <div style="color:#10b981;font-weight:700;margin-bottom:8px;font-size:.82rem">✅ Split bundles (initial: 380KB)</div>
+        <div id="after-chart" style="display:flex;flex-direction:column;gap:4px;font-size:.75rem"></div>
+      </div>
+    </div>
+    <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;font-size:.78rem">
+      Click a route to simulate lazy load: 
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+        <button onclick="loadRoute('Dashboard')" style="padding:5px 10px;background:#1e3a5f;border:1px solid #60a5fa;color:#60a5fa;border-radius:6px;cursor:pointer;font-size:.75rem">Dashboard</button>
+        <button onclick="loadRoute('Settings')" style="padding:5px 10px;background:#1e2130;border:1px solid #2d3551;color:#94a3b8;border-radius:6px;cursor:pointer;font-size:.75rem">Settings</button>
+        <button onclick="loadRoute('Analytics')" style="padding:5px 10px;background:#1e2130;border:1px solid #2d3551;color:#94a3b8;border-radius:6px;cursor:pointer;font-size:.75rem">Analytics</button>
+      </div>
+      <div id="load-status" style="margin-top:8px;color:#94a3b8;font-size:.75rem">Navigate to a route to see chunk loading...</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Strategy comparison</h3>
+    <table>
+      <tr><th>Strategy</th><th>Trigger</th><th>Use case</th><th>Impact</th></tr>
+      <tr><td style="color:#60a5fa">Route-based</td><td>Navigation</td><td>Multi-page apps</td><td style="color:#10b981">Very High</td></tr>
+      <tr><td style="color:#10b981">Component-based</td><td>Visibility / interaction</td><td>Heavy modals, charts</td><td style="color:#10b981">High</td></tr>
+      <tr><td style="color:#a78bfa">Vendor chunk</td><td>Build time</td><td>All apps</td><td style="color:#f59e0b">Medium (cache hit)</td></tr>
+      <tr><td style="color:#f59e0b">Feature flags</td><td>User segment</td><td>A/B testing</td><td style="color:#10b981">High</td></tr>
+      <tr><td style="color:#ef4444">No splitting</td><td>—</td><td>Small apps only</td><td style="color:#ef4444">None / Negative</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Code splitting patterns</h3>
+    <pre><span class="cm">// ─── React: Route-based (React.lazy + Suspense) ───</span>
+<span class="kw">const</span> Dashboard = React.<span class="fn">lazy</span>(() =&gt; import(<span class="str">'./pages/Dashboard'</span>));
+<span class="kw">const</span> Analytics = React.<span class="fn">lazy</span>(() =&gt; import(<span class="str">'./pages/Analytics'</span>));
+
+&lt;<span class="attr">Suspense</span> fallback={&lt;<span class="attr">PageSkeleton</span> /&gt;}&gt;
+  &lt;<span class="attr">Routes</span>&gt;
+    &lt;<span class="attr">Route</span> path=<span class="str">"/dashboard"</span> element={&lt;<span class="attr">Dashboard</span> /&gt;} /&gt;
+    &lt;<span class="attr">Route</span> path=<span class="str">"/analytics"</span> element={&lt;<span class="attr">Analytics</span> /&gt;} /&gt;
+  &lt;/Routes&gt;
+&lt;/Suspense&gt;
+
+<span class="cm">// ─── Component-based: heavy modal ───</span>
+<span class="kw">const</span> ChartModal = React.<span class="fn">lazy</span>(() =&gt; import(<span class="str">'./ChartModal'</span>));
+{showChart &amp;&amp; &lt;<span class="attr">Suspense</span> fallback={null}&gt;&lt;<span class="attr">ChartModal</span> /&gt;&lt;/Suspense&gt;}
+
+<span class="cm">// ─── Dynamic import with prefetch ───</span>
+<span class="cm">// Webpack magic comment — prefetches during browser idle</span>
+<span class="kw">const</span> { default: Chart } = <span class="kw">await</span> import(
+  <span class="str">/* webpackPrefetch: true */</span>
+  <span class="str">'./Chart'</span>
+);
+
+<span class="cm">// ─── Next.js dynamic ───</span>
+<span class="kw">import</span> dynamic <span class="kw">from</span> <span class="str">'next/dynamic'</span>;
+<span class="kw">const</span> HeavyEditor = <span class="fn">dynamic</span>(() =&gt; import(<span class="str">'./Editor'</span>), {
+  loading: () =&gt; &lt;<span class="attr">Skeleton</span> /&gt;,
+  ssr: <span class="kw">false</span>,   <span class="cm">// don't SSR the code-split chunk</span>
+});</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const before=[{name:'vendor (React/etc)',kb:800,color:'#a78bfa'},{name:'Dashboard',kb:450,color:'#60a5fa'},{name:'Analytics + Chart.js',kb:620,color:'#10b981'},{name:'Settings',kb:180,color:'#f59e0b'},{name:'Admin',kb:350,color:'#ef4444'}];
+const after=[{name:'vendor chunk',kb:320,color:'#a78bfa',initial:true},{name:'main (login/home)',kb:60,color:'#60a5fa',initial:true},{name:'dashboard.chunk → lazy',kb:180,color:'#60a5fa',initial:false},{name:'analytics.chunk → lazy',kb:240,color:'#10b981',initial:false},{name:'settings.chunk → lazy',kb:70,color:'#f59e0b',initial:false}];
+const total=before.reduce((s,b)=>s+b.kb,0);
+
+document.getElementById('before-chart').innerHTML=before.map(b=>`
+  <div><span style="color:#94a3b8;display:inline-block;width:180px">${b.name}</span><span style="display:inline-block;height:14px;width:${b.kb/30}px;background:${b.color};border-radius:2px;vertical-align:middle"></span><span style="color:#94a3b8;margin-left:4px">${b.kb}KB</span></div>
+`).join('')+'<div style="color:#ef4444;margin-top:6px;font-weight:600">Total initial: '+total+'KB</div>';
+
+document.getElementById('after-chart').innerHTML=after.map(a=>`
+  <div><span style="color:${a.initial?'#94a3b8':'#475569'};display:inline-block;width:180px">${a.name}</span><span style="display:inline-block;height:14px;width:${a.kb/30}px;background:${a.initial?a.color:'#2d3551'};border-radius:2px;vertical-align:middle"></span><span style="color:${a.initial?'#94a3b8':'#475569'};margin-left:4px">${a.kb}KB</span></div>
+`).join('')+'<div style="color:#10b981;margin-top:6px;font-weight:600">Initial: 380KB — chunks loaded on demand</div>';
+
+const routeChunks={Dashboard:'dashboard.chunk.js (180KB) — loaded on navigate',Settings:'settings.chunk.js (70KB) — loaded on navigate',Analytics:'analytics.chunk.js (240KB, includes Chart.js) — loaded on navigate'};
+const loaded=new Set();
+function loadRoute(r){
+  const st=document.getElementById('load-status');
+  if(loaded.has(r)){st.textContent=r+': already cached — 0ms';st.style.color='#10b981';return;}
+  st.textContent='Loading '+routeChunks[r]+'...';st.style.color='#f59e0b';
+  setTimeout(()=>{loaded.add(r);st.textContent='✅ '+routeChunks[r]+' — cached. Future visits: 0ms network cost.';st.style.color='#10b981';},800);
+}
+</script>
+</body>
+</html>

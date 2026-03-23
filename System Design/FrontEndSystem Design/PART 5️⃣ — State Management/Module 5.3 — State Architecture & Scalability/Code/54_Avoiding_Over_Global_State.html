@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 54 – Avoiding Over-Global State</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🚫 Avoiding Over-Global State</h1>
+<p class="sub">Topic 54 · Module 5.3 — State Architecture & Scalability · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">State Locality Classifier</div>
+  <div class="tab" onclick="setTab(2)">Re-render Impact Demo</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>The over-globalisation anti-pattern</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Putting everything in global state (Redux/Zustand) causes: unnecessary re-renders across the entire tree, tight coupling between unrelated components, hard-to-trace bugs, and bloated store. The principle of <strong>co-location</strong>: state should live as close to where it's needed as possible.</p>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;font-size:.75rem;text-align:center">
+      <div style="background:#0f1117;border:1px solid #10b981;border-radius:8px;padding:10px">
+        <div style="font-size:1.2rem">🏠</div>
+        <div style="color:#10b981;font-weight:600;margin:4px 0">Local</div>
+        <div style="color:#94a3b8">useState useReducer</div>
+        <div style="color:#94a3b8;margin-top:4px;font-size:.7rem">Modal state, form inputs</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #60a5fa;border-radius:8px;padding:10px">
+        <div style="font-size:1.2rem">📦</div>
+        <div style="color:#60a5fa;font-weight:600;margin:4px 0">Lifted</div>
+        <div style="color:#94a3b8">useState in parent</div>
+        <div style="color:#94a3b8;margin-top:4px;font-size:.7rem">Sibling communication</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;border-radius:8px;padding:10px">
+        <div style="font-size:1.2rem">🌿</div>
+        <div style="color:#a78bfa;font-weight:600;margin:4px 0">Context</div>
+        <div style="color:#94a3b8">React Context</div>
+        <div style="color:#94a3b8;margin-top:4px;font-size:.7rem">Subtree with shared state</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #f59e0b;border-radius:8px;padding:10px">
+        <div style="font-size:1.2rem">🌍</div>
+        <div style="color:#f59e0b;font-weight:600;margin:4px 0">Global</div>
+        <div style="color:#94a3b8">Zustand Redux</div>
+        <div style="color:#94a3b8;margin-top:4px;font-size:.7rem">Cross-feature state<br>auth, cart, theme</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #ef4444;border-radius:8px;padding:10px;opacity:.7">
+        <div style="font-size:1.2rem">⚠️</div>
+        <div style="color:#ef4444;font-weight:600;margin:4px 0">Global</div>
+        <div style="color:#94a3b8">over-used</div>
+        <div style="color:#ef4444;margin-top:4px;font-size:.7rem">Everything in Redux → performance disaster</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Classify this state — where should it live?</h3>
+    <div style="font-size:.8rem">
+      <div id="classify-items"></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Re-render impact — over-global vs colocated</h3>
+    <div style="font-size:.78rem;margin-bottom:10px;color:#94a3b8">Every time local state updates, only the owning component should re-render. Global state change triggers all subscribers.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">❌ Modal state in Redux</div>
+        <div style="background:#0f1117;border:1px solid #ef4444;border-radius:8px;padding:10px;font-size:.78rem">
+          <div id="re-bad" style="display:grid;gap:6px"></div>
+          <button onclick="triggerBad()" style="margin-top:10px;padding:5px 12px;font-size:.78rem;background:#300010;border:1px solid #ef4444;color:#ef4444;border-radius:6px;cursor:pointer">Dispatch MODAL_OPEN</button>
+        </div>
+      </div>
+      <div>
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Modal state local (useState)</div>
+        <div style="background:#0f1117;border:1px solid #10b981;border-radius:8px;padding:10px;font-size:.78rem">
+          <div id="re-good" style="display:grid;gap:6px"></div>
+          <button onclick="triggerGood()" style="margin-top:10px;padding:5px 12px;font-size:.78rem;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:6px;cursor:pointer">Toggle Modal (local state)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>State co-location patterns</h3>
+    <pre><span class="cm">// ❌ Over-global — modal state in Zustand</span>
+<span class="kw">const</span> useStore = <span class="fn">create</span>()(set =&gt; ({
+  isModalOpen: <span class="kw">false</span>,  <span class="cm">// should NOT be here</span>
+  cart: [],              <span class="cm">// OK to be here</span>
+  <span class="fn">openModal</span>: () =&gt; set({ isModalOpen: <span class="kw">true</span> }),
+}));
+
+<span class="cm">// ✅ Local state for modal</span>
+<span class="kw">const</span> OrdersPage = () =&gt; {
+  <span class="kw">const</span> [isModalOpen, setModalOpen] = <span class="fn">useState</span>(<span class="kw">false</span>);
+  <span class="kw">return</span> (
+    &lt;&gt;
+      &lt;<span class="attr">Button</span> onClick={() =&gt; setModalOpen(<span class="kw">true</span>)}&gt;New Order&lt;/Button&gt;
+      {isModalOpen &amp;&amp; &lt;<span class="attr">OrderModal</span> onClose={() =&gt; setModalOpen(<span class="kw">false</span>)} /&gt;}
+    &lt;/&gt;
+  );
+};
+
+<span class="cm">// ✅ Rules of thumb for global state:</span>
+<span class="cm">// 1. Used by ≥2 sibling feature subtrees</span>
+<span class="cm">// 2. Persisted across route changes (cart, auth)</span>
+<span class="cm">// 3. Reset explicitly (not on component unmount)</span>
+<span class="cm">// ✅ Everything else → local or lifted state</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const items=[
+  ['Form input field value','Local state (useState)','#10b981'],
+  ['Shopping cart items','Global state (Zustand)','#f59e0b'],
+  ['Modal open/close','Local state (useState)','#10b981'],
+  ['Logged-in user','Global state (Zustand)','#f59e0b'],
+  ['Current wizard step','Local state (useState)','#10b981'],
+  ['Selected theme (dark/light)','Global state (Zustand)','#f59e0b'],
+  ['Tooltip visibility','Local state (useState)','#10b981'],
+  ['SAP purchase order list','Server state (TanStack Query)','#60a5fa'],
+  ['Active tab in a tab group','Local or lifted state','#a78bfa'],
+  ['Notification badge count','Server state (polling)','#60a5fa'],
+];
+document.getElementById('classify-items').innerHTML=items.map(([item,loc,col])=>`
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 4px;border-bottom:1px solid #2d3551">
+    <span style="color:#94a3b8;font-size:.8rem">${item}</span>
+    <span style="color:${col};font-size:.75rem;font-weight:600;white-space:nowrap;margin-left:8px">${loc}</span>
+  </div>
+`).join('');
+
+const components=['NavBar','Sidebar','OrderList','ProductGrid','Footer','UserAvatar','CartButton'];
+document.getElementById('re-bad').innerHTML=components.map(c=>`<div id="bad-${c}" style="padding:4px 8px;background:#1e2130;border-radius:4px;color:#94a3b8">${c}: idle</div>`).join('');
+document.getElementById('re-good').innerHTML=components.map(c=>`<div id="good-${c}" style="padding:4px 8px;background:#1e2130;border-radius:4px;color:#94a3b8">${c}: idle</div>`).join('');
+
+function flash(id,color,text){const el=document.getElementById(id);if(!el)return;el.style.background=color;el.style.color='#0f1117';el.textContent=el.textContent.replace(/:.*$/,': RE-RENDERED ⚡');setTimeout(()=>{el.style.background='#1e2130';el.style.color='#94a3b8';el.textContent=el.textContent.replace(/:.*$/,': idle');},600);}
+
+function triggerBad(){components.forEach(c=>flash('bad-'+c,'#ef4444'));}
+function triggerGood(){flash('good-OrderList','#10b981');}
+</script>
+</body>
+</html>

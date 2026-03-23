@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 46 – Plugin Architecture (Frontend)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.plugin{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px 14px;margin:6px 0;display:flex;justify-content:space-between;align-items:center;font-size:.82rem}
+.toggle{width:36px;height:20px;background:#2d3551;border-radius:10px;cursor:pointer;position:relative;transition:background .2s}
+.toggle.on{background:#10b981}
+.toggle::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s}
+.toggle.on::after{left:18px}
+.log{background:#0a0e14;border:1px solid #2d3551;border-radius:6px;padding:12px;font-family:monospace;font-size:.77rem;color:#10b981;min-height:80px;max-height:180px;overflow-y:auto}
+.green{color:#10b981}.red{color:#ef4444}.amber{color:#f59e0b}
+</style>
+</head>
+<body>
+<h1>🔌 Plugin Architecture (Frontend)</h1>
+<p class="sub">Topic 46 · Module 3.3 — Scale-Oriented Architectures · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">What is Plugin Arch</div>
+  <div class="tab" onclick="setTab(1)">Plugin Registry Demo</div>
+  <div class="tab" onclick="setTab(2)">Hook System</div>
+  <div class="tab" onclick="setTab(3)">Implementation</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Plugin Architecture — Concept</h3>
+    <p style="font-size:.85rem;color:#94a3b8;margin-bottom:14px">Plugin architecture lets a core application be extended without modifying its source. Plugins register themselves and the core calls their hooks at predetermined extension points. Think: VS Code, Webpack, Vite.</p>
+    <div style="font-size:.85rem;color:#94a3b8;line-height:2;background:#0f1117;padding:14px;border-radius:8px;border:1px solid #2d3551">
+      <div><strong style="color:#60a5fa">Core App:</strong> Defines extension points (hooks). Loads plugins. Orchestrates lifecycle.</div>
+      <div><strong style="color:#10b981">Plugin:</strong> Registers at a hook. Receives context. Extends behaviour without touching core.</div>
+      <div><strong style="color:#f59e0b">Extension Point:</strong> A named slot where plugins can inject behaviour (e.g. <code>beforeRender</code>, <code>afterSave</code>, <code>toolbar:add</code>).</div>
+    </div>
+    <div style="margin-top:14px">
+      <div style="font-size:.8rem;font-weight:700;color:#e2e8f0;margin-bottom:8px">Real-world examples in frontend:</div>
+      <div style="font-size:.82rem;color:#94a3b8;line-height:2">
+        🔧 <strong style="color:#60a5fa">Webpack/Vite plugins:</strong> transform, resolve, generate hooks<br>
+        📝 <strong style="color:#60a5fa">Prosemirror/Tiptap:</strong> RTE extensions add commands, mark types, node types<br>
+        🏢 <strong style="color:#60a5fa">SAP Fiori Launchpad:</strong> App tiles registered as plugins by each team<br>
+        🔨 <strong style="color:#60a5fa">VS Code:</strong> Every extension is a plugin to the extension host
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Live Plugin Registry — Toggle plugins on/off</h3>
+    <div id="plugin-list"></div>
+    <div style="margin-top:14px">
+      <div style="font-size:.8rem;font-weight:700;color:#60a5fa;margin-bottom:6px">Active plugins rendering:</div>
+      <div id="plugin-output" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;min-height:60px"></div>
+    </div>
+    <div class="log" id="plugin-log" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Hook system — waterfall execution</h3>
+    <pre><span class="cm">// Core plugin system</span>
+<span class="kw">type</span> Hook&lt;T&gt; = (context: T) =&gt; T | <span class="kw">void</span> | Promise&lt;T | <span class="kw">void</span>&gt;;
+
+<span class="kw">class</span> <span class="attr">PluginSystem</span> {
+  <span class="kw">private</span> hooks = <span class="kw">new</span> Map&lt;<span class="kw">string</span>, Hook&lt;<span class="kw">any</span>&gt;[]&gt;();
+
+  register&lt;T&gt;(hookName: <span class="kw">string</span>, fn: Hook&lt;T&gt;): <span class="kw">void</span> {
+    <span class="kw">if</span> (!<span class="kw">this</span>.hooks.<span class="attr">has</span>(hookName)) <span class="kw">this</span>.hooks.<span class="attr">set</span>(hookName, []);
+    <span class="kw">this</span>.hooks.<span class="attr">get</span>(hookName)!.<span class="attr">push</span>(fn);
+  }
+
+  <span class="kw">async</span> waterfall&lt;T&gt;(hookName: <span class="kw">string</span>, initial: T): Promise&lt;T&gt; {
+    <span class="kw">const</span> fns = <span class="kw">this</span>.hooks.<span class="attr">get</span>(hookName) ?? [];
+    <span class="kw">let</span> result = initial;
+    <span class="kw">for</span> (<span class="kw">const</span> fn <span class="kw">of</span> fns) {
+      result = (<span class="kw">await</span> fn(result)) ?? result;
+    }
+    <span class="kw">return</span> result;
+  }
+}
+
+<span class="cm">// Usage — plugin registers at 'transform:data' hook</span>
+registry.<span class="attr">register</span>(<span class="str">'transform:data'</span>, (data) =&gt; ({
+  ...data,
+  timestamp: Date.<span class="attr">now</span>(),
+}));
+
+<span class="cm">// Core calls all registered transforms in order</span>
+<span class="kw">const</span> processed = <span class="kw">await</span> registry.<span class="attr">waterfall</span>(<span class="str">'transform:data'</span>, rawData);</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Full plugin interface (TypeScript)</h3>
+    <pre><span class="kw">interface</span> AppPlugin {
+  name: <span class="kw">string</span>;
+  version: <span class="kw">string</span>;
+  description: <span class="kw">string</span>;
+  install: (app: PluginContext) =&gt; <span class="kw">void</span>;
+  uninstall?: (app: PluginContext) =&gt; <span class="kw">void</span>;
+}
+
+<span class="kw">interface</span> PluginContext {
+  router: RouterAPI;
+  store: StoreAPI;
+  ui: UIAPI;
+  registerHook: &lt;T&gt;(name: <span class="kw">string</span>, fn: Hook&lt;T&gt;) =&gt; <span class="kw">void</span>;
+}
+
+<span class="cm">// Example plugin — adds an analytics toolbar item</span>
+<span class="kw">const</span> analyticsPlugin: AppPlugin = {
+  name: <span class="str">'analytics-toolbar'</span>,
+  version: <span class="str">'1.0.0'</span>,
+  description: <span class="str">'Adds analytics shortcuts to the toolbar'</span>,
+  install(app) {
+    app.ui.<span class="attr">addToolbarItem</span>({
+      id: <span class="str">'analytics'</span>,
+      icon: <span class="str">'📊'</span>,
+      label: <span class="str">'Analytics'</span>,
+      onClick: () =&gt; app.router.<span class="attr">push</span>(<span class="str">'/analytics'</span>),
+    });
+    app.<span class="attr">registerHook</span>(<span class="str">'beforePageLoad'</span>, async (ctx) =&gt; {
+      await analytics.<span class="attr">track</span>(<span class="str">'page_view'</span>, { path: ctx.path });
+    });
+  },
+};</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const plugins=[
+  {name:'dark-theme',label:'🌙 Dark Theme Plugin',on:true,output:'🌙 Dark theme CSS vars injected'},
+  {name:'analytics',label:'📊 Analytics Plugin',on:true,output:'📊 Tracking: page_view event fired'},
+  {name:'notifications',label:'🔔 Notifications Plugin',on:false,output:'🔔 Notification bell added to header'},
+  {name:'feature-flags',label:'🚩 Feature Flags Plugin',on:true,output:'🚩 Flags loaded: [new-dashboard=true, beta-ui=false]'},
+  {name:'a11y-checker',label:'♿ A11y Checker Plugin',on:false,output:'♿ WCAG AA violations scanner active'},
+];
+
+const log=document.getElementById('plugin-log');
+function renderPlugins(){
+  document.getElementById('plugin-list').innerHTML=plugins.map((p,i)=>`
+    <div class="plugin">
+      <span>${p.label}</span>
+      <div class="toggle${p.on?' on':''}" id="tgl${i}" onclick="togglePlugin(${i})"></div>
+    </div>
+  `).join('');
+  renderOutput();
+}
+function togglePlugin(i){
+  plugins[i].on=!plugins[i].on;
+  const tgl=document.getElementById('tgl'+i);
+  tgl.classList.toggle('on',plugins[i].on);
+  const action=plugins[i].on?'✓ Installed':'✗ Removed';
+  log.innerHTML+=`<span style="color:${plugins[i].on?'#10b981':'#ef4444'}">${action}: ${plugins[i].name}</span><br>`;
+  log.scrollTop=log.scrollHeight;
+  renderOutput();
+}
+function renderOutput(){
+  const active=plugins.filter(p=>p.on);
+  document.getElementById('plugin-output').innerHTML=active.length
+    ?active.map(p=>`<div style="font-size:.8rem;color:#94a3b8;margin:4px 0">${p.output}</div>`).join('')
+    :'<div style="color:#94a3b8;font-size:.8rem"><em>No active plugins</em></div>';
+}
+renderPlugins();
+log.innerHTML='&gt; Plugin registry initialised...<br>';
+</script>
+</body>
+</html>

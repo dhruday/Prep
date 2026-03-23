@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 72 – Angular NgRx: Effects, Selectors, EntityAdapter</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🅰️ Angular NgRx: Effects · Selectors · EntityAdapter</h1>
+<p class="sub">Topic 72 · Module 5.2 — State Tools & Patterns · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">NgRx Architecture</div>
+  <div class="tab" onclick="setTab(1)">Flow Simulator</div>
+  <div class="tab" onclick="setTab(2)">Selectors & EntityAdapter</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>NgRx — Redux for Angular with RxJS</h3>
+    <div style="font-size:.8rem">
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+        <div style="background:#0f1117;border:1px solid #60a5fa;padding:8px 14px;border-radius:8px;color:#60a5fa;font-weight:600">Component</div>
+        <div style="color:#94a3b8">→ dispatch</div>
+        <div style="background:#0f1117;border:1px solid #f59e0b;padding:8px 14px;border-radius:8px;color:#f59e0b;font-weight:600">Action</div>
+        <div style="color:#94a3b8">→</div>
+        <div style="background:#0f1117;border:1px solid #a78bfa;padding:8px 14px;border-radius:8px;color:#a78bfa;font-weight:600">Effects</div>
+        <div style="color:#94a3b8">→ API →</div>
+        <div style="background:#0f1117;border:1px solid #10b981;padding:8px 14px;border-radius:8px;color:#10b981;font-weight:600">Reducer</div>
+        <div style="color:#94a3b8">→</div>
+        <div style="background:#0f1117;border:1px solid #ef4444;padding:8px 14px;border-radius:8px;color:#ef4444;font-weight:600">Store</div>
+        <div style="color:#94a3b8">→ select</div>
+        <div style="background:#0f1117;border:1px solid #60a5fa;padding:8px 14px;border-radius:8px;color:#60a5fa;font-weight:600">Component</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div style="background:#0f1117;border:1px solid #a78bfa;padding:10px;border-radius:8px">
+          <div style="color:#a78bfa;font-weight:700;margin-bottom:6px">Effects</div>
+          <div style="color:#94a3b8;font-size:.75rem;line-height:1.8">Listen for actions, perform side effects (HTTP, router, localStorage), dispatch new action with result. Use RxJS operators (switchMap, mergeMap, catchError).</div>
+        </div>
+        <div style="background:#0f1117;border:1px solid #60a5fa;padding:10px;border-radius:8px">
+          <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Selectors</div>
+          <div style="color:#94a3b8;font-size:.75rem;line-height:1.8">Memoised functions to derive slices of state. createSelector composes selectors. Components subscribe via store.select() — only re-render when derived value changes.</div>
+        </div>
+        <div style="background:#0f1117;border:1px solid #10b981;padding:10px;border-radius:8px">
+          <div style="color:#10b981;font-weight:700;margin-bottom:6px">EntityAdapter</div>
+          <div style="color:#94a3b8;font-size:.75rem;line-height:1.8">Manages collections in a normalised shape: { ids: string[], entities: Map }. Built-in CRUD adapter methods: addOne, removeOne, updateOne, upsertMany.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>NgRx flow simulation — dispatch action and watch it flow</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button onclick="dispatch('loadOrders')" style="padding:7px 14px;background:#1e3a5f;border:1px solid #60a5fa;color:#60a5fa;border-radius:8px;cursor:pointer;font-size:.82rem">dispatch loadOrders</button>
+      <button onclick="dispatch('approveOrder')" style="padding:7px 14px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:8px;cursor:pointer;font-size:.82rem">dispatch approveOrder</button>
+      <button onclick="dispatch('loadFail')" style="padding:7px 14px;background:#300010;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.82rem">dispatch loadOrders (fail)</button>
+    </div>
+    <div id="flow-steps" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-size:.78rem;min-height:60px"></div>
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px">
+        <div style="color:#60a5fa;margin-bottom:4px">Store state</div>
+        <div>Orders: <span id="store-count" style="color:#10b981">0</span></div>
+        <div>Loading: <span id="store-loading" style="color:#94a3b8">false</span></div>
+        <div>Error: <span id="store-error" style="color:#94a3b8">null</span></div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px">
+        <div style="color:#a78bfa;margin-bottom:4px">Selector output</div>
+        <div id="selector-out" style="color:#94a3b8;font-size:.75rem">selectPendingOrders: []</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Selectors (createSelector) and EntityAdapter</h3>
+    <pre><span class="cm">// ─── createSelector ───</span>
+<span class="kw">const</span> selectOrders       = (state: AppState) =&gt; state.orders.entities;
+<span class="kw">const</span> selectOrderIds     = (state: AppState) =&gt; state.orders.ids;
+<span class="kw">const</span> selectStatusFilter = (state: AppState) =&gt; state.ui.statusFilter;
+
+<span class="kw">const</span> selectFilteredOrders = <span class="fn">createSelector</span>(
+  selectOrders,
+  selectOrderIds,
+  selectStatusFilter,
+  (entities, ids, filter) =&gt;           <span class="cm">// memoised!</span>
+    ids
+      .<span class="fn">map</span>(id =&gt; entities[id]!)
+      .<span class="fn">filter</span>(o =&gt; o.status === filter)
+);
+
+<span class="cm">// ─── EntityAdapter ───</span>
+<span class="kw">const</span> ordersAdapter = <span class="fn">createEntityAdapter</span>&lt;Order&gt;({
+  selectId: o =&gt; o.id,
+  sortComparer: (a, b) =&gt; a.date.<span class="fn">localeCompare</span>(b.date),
+});
+
+<span class="kw">const</span> ordersReducer = <span class="fn">createReducer</span>(
+  ordersAdapter.<span class="fn">getInitialState</span>({ loading: <span class="kw">false</span>, error: <span class="kw">null</span> }),
+  <span class="fn">on</span>(loadOrdersSuccess, (state, { orders }) =&gt;
+    ordersAdapter.<span class="fn">setAll</span>(orders, { ...state, loading: <span class="kw">false</span> })   <span class="cm">// replaces all</span>
+  ),
+  <span class="fn">on</span>(approveOrderSuccess, (state, { id }) =&gt;
+    ordersAdapter.<span class="fn">updateOne</span>({ id, changes: { status: <span class="str">'approved'</span> } }, state)
+  ),
+);
+<span class="kw">export const</span> { selectAll, selectById } = ordersAdapter.<span class="fn">getSelectors</span>();</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>NgRx Effects — full type-safe pattern</h3>
+    <pre><span class="kw">@Injectable</span>()
+<span class="kw">export class</span> <span class="fn">OrderEffects</span> {
+  loadOrders$ = <span class="fn">createEffect</span>(() =&gt;
+    <span class="kw">this</span>.actions$.<span class="fn">pipe</span>(
+      <span class="fn">ofType</span>(OrderActions.<span class="attr">loadOrders</span>),
+      <span class="fn">switchMap</span>(() =&gt;
+        <span class="kw">this</span>.orderService.<span class="fn">getAll</span>().<span class="fn">pipe</span>(
+          <span class="fn">map</span>(orders  =&gt; OrderActions.<span class="fn">loadOrdersSuccess</span>({ orders })),
+          <span class="fn">catchError</span>(err =&gt; of(OrderActions.<span class="fn">loadOrdersFailure</span>({ error: err.message })))
+        )
+      )
+    )
+  );
+
+  approveOrder$ = <span class="fn">createEffect</span>(() =&gt;
+    <span class="kw">this</span>.actions$.<span class="fn">pipe</span>(
+      <span class="fn">ofType</span>(OrderActions.<span class="attr">approveOrder</span>),
+      <span class="fn">mergeMap</span>(({ id }) =&gt;             <span class="cm">// mergeMap: allow concurrent approvals</span>
+        <span class="kw">this</span>.orderService.<span class="fn">approve</span>(id).<span class="fn">pipe</span>(
+          <span class="fn">map</span>(() =&gt; OrderActions.<span class="fn">approveOrderSuccess</span>({ id })),
+          <span class="fn">catchError</span>(err =&gt; of(OrderActions.<span class="fn">approveOrderFailure</span>({ error: err.message })))
+        )
+      )
+    )
+  );
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const orders=[{id:'ORD-001',status:'pending'},{id:'ORD-002',status:'pending'},{id:'ORD-003',status:'approved'}];
+let storeOrders=[];
+
+function dispatch(action){
+  const steps=document.getElementById('flow-steps');
+  if(action==='loadOrders'){
+    steps.innerHTML='<span style="color:#f59e0b">→ Action: loadOrders dispatched</span><br>';
+    document.getElementById('store-loading').textContent='true';document.getElementById('store-loading').style.color='#f59e0b';
+    setTimeout(()=>{steps.innerHTML+='<span style="color:#a78bfa">→ Effect: loadOrders$ — HTTP GET /orders</span><br>';},400);
+    setTimeout(()=>{
+      storeOrders=orders.slice();
+      steps.innerHTML+='<span style="color:#10b981">→ Action: loadOrdersSuccess — 3 orders</span><br>';
+      steps.innerHTML+='<span style="color:#10b981">→ Reducer: EntityAdapter.setAll()</span><br>';
+      steps.innerHTML+='<span style="color:#60a5fa">→ Selector: recomputed → Component re-renders</span>';
+      document.getElementById('store-count').textContent=3;document.getElementById('store-loading').textContent='false';document.getElementById('store-loading').style.color='#10b981';
+      document.getElementById('selector-out').textContent='selectPendingOrders: [ORD-001, ORD-002]';document.getElementById('selector-out').style.color='#10b981';
+    },1200);
+  } else if(action==='approveOrder'){
+    steps.innerHTML='<span style="color:#f59e0b">→ Action: approveOrder { id: "ORD-001" }</span><br>';
+    setTimeout(()=>{steps.innerHTML+='<span style="color:#a78bfa">→ Effect: approveOrder$ — HTTP POST /orders/ORD-001/approve</span><br>';},300);
+    setTimeout(()=>{
+      steps.innerHTML+='<span style="color:#10b981">→ Action: approveOrderSuccess</span><br>';
+      steps.innerHTML+='<span style="color:#10b981">→ Reducer: EntityAdapter.updateOne()</span><br>';
+      steps.innerHTML+='<span style="color:#60a5fa">→ Selector: selectPendingOrders recomputes (memoised)</span>';
+      document.getElementById('selector-out').textContent='selectPendingOrders: [ORD-002] (ORD-001 approved)';document.getElementById('selector-out').style.color='#a78bfa';
+    },1000);
+  } else {
+    steps.innerHTML='<span style="color:#ef4444">→ Action: loadOrders dispatched</span><br>';
+    setTimeout(()=>{steps.innerHTML+='<span style="color:#a78bfa">→ Effect: loadOrders$ — HTTP call fails</span><br>';},400);
+    setTimeout(()=>{
+      steps.innerHTML+='<span style="color:#ef4444">→ catchError: loadOrdersFailure { error: "503 Service Unavailable" }</span><br>';
+      steps.innerHTML+='<span style="color:#ef4444">→ Reducer: state.error = "503..."</span><br>';
+      steps.innerHTML+='<span style="color:#60a5fa">→ Component shows error toast (selector for error)</span>';
+      document.getElementById('store-loading').textContent='false';document.getElementById('store-loading').style.color='#94a3b8';
+      document.getElementById('store-error').textContent='"503 Service Unavailable"';document.getElementById('store-error').style.color='#ef4444';
+    },1100);
+  }
+}
+</script>
+</body>
+</html>

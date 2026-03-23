@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 61 – Preload vs Prefetch vs Preconnect</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.green{color:#10b981}.amber{color:#f59e0b}.red{color:#ef4444}
+.hint-card{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;cursor:pointer;transition:border-color .2s}
+.hint-card:hover,.hint-card.active-h{border-color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🔗 Preload vs Prefetch vs Preconnect</h1>
+<p class="sub">Topic 61 · Module 4.4 — Render Performance · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Hint Types</div>
+  <div class="tab" onclick="setTab(1)">Interactive Explorer</div>
+  <div class="tab" onclick="setTab(2)">When to Use</div>
+  <div class="tab" onclick="setTab(3)">Code Examples</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Resource Hints — what each does</h3>
+    <div style="display:grid;gap:10px;font-size:.8rem">
+      ${[
+        {hint:'preload',color:'#ef4444',priority:'HIGH',timing:'Current page',desc:'Tells browser to fetch a critical resource NOW — even if the parser hasn\'t found it yet. Use for fonts, hero images, LCP image, critical JS.',attr:'as="font|style|script|image"'},
+        {hint:'prefetch',color:'#60a5fa',priority:'LOW',timing:'Next navigation',desc:'Hints browser to fetch a resource in idle time for a FUTURE navigation. Not guaranteed. Use for next-page JS chunks.',attr:''},
+        {hint:'preconnect',color:'#10b981',priority:'HIGH',timing:'Connection only',desc:'Pre-establishes DNS+TCP+TLS connection to external origin. Saves 100-300ms when the actual fetch fires. Use for CDN, fonts, API origins.',attr:'crossorigin (for CORS)'},
+        {hint:'dns-prefetch',color:'#a78bfa',priority:'LOW',timing:'DNS only',desc:'DNS resolution only — no TCP, no TLS. Cheaper fallback for preconnect. Good for many third-party origins you\'re not sure of yet.',attr:''},
+        {hint:'modulepreload',color:'#f59e0b',priority:'HIGH',timing:'ES modules',desc:'Like preload for ES module scripts — also parses, compiles, and enters module map. Next.js uses this automatically.',attr:''},
+      ].map(h=>`<div style="background:#0f1117;border-left:3px solid ${h.color};border-radius:8px;padding:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <code style="color:${h.color};font-weight:700">&lt;link rel="${h.hint}"&gt;</code>
+          <span style="background:${h.color}22;color:${h.color};padding:1px 7px;border-radius:4px;font-size:.72rem">${h.priority}</span>
+          <span style="color:#475569;font-size:.72rem">${h.timing}</span>
+          ${h.attr?`<code style="color:#475569;font-size:.72rem">${h.attr}</code>`:''}
+        </div>
+        <div style="color:#94a3b8;line-height:1.8">${h.desc}</div>
+      </div>`).join('')}
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Click each hint to see SAP use-case + timing impact</h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px" id="hint-grid"></div>
+    <div id="hint-detail" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;font-size:.82rem;color:#94a3b8;min-height:80px">Click a hint card above.</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Decision Guide</h3>
+    <div style="font-size:.82rem;color:#94a3b8;line-height:2.2">
+      <div>🔴 <strong style="color:#ef4444">preload</strong> — resource needed NOW on current page (LCP image, critical font, above-fold CSS)</div>
+      <div>🔵 <strong style="color:#60a5fa">prefetch</strong> — resource needed on NEXT page (next route's JS, next image in carousel)</div>
+      <div>🟢 <strong style="color:#10b981">preconnect</strong> — you know you'll fetch from this origin soon (Google Fonts, CDN, Analytics)</div>
+      <div>🟣 <strong style="color:#a78bfa">dns-prefetch</strong> — many third-party origins, low confidence — cheap DNS only</div>
+      <div>🟡 <strong style="color:#f59e0b">modulepreload</strong> — ES module scripts you know are needed (auto in Next.js)</div>
+      <div style="margin-top:10px;padding:10px;background:#0f1117;border:1px solid #2d3551;border-radius:6px">
+        ⚠ <strong style="color:#e2e8f0">Don't over-preload</strong> — preloading too many resources wastes bandwidth and competes with critical content. Only preload top 1-3 resources that directly affect LCP.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Optimised &lt;head&gt; with resource hints</h3>
+    <pre><span class="cm">&lt;!-- preconnect to critical origins --&gt;</span>
+<span class="str">&lt;link</span> rel=<span class="str">"preconnect"</span> href=<span class="str">"https://fonts.googleapis.com"</span><span class="str">&gt;</span>
+<span class="str">&lt;link</span> rel=<span class="str">"preconnect"</span> href=<span class="str">"https://cdn.sap.com"</span> crossorigin<span class="str">&gt;</span>
+
+<span class="cm">&lt;!-- dns-prefetch for less-certain third parties --&gt;</span>
+<span class="str">&lt;link</span> rel=<span class="str">"dns-prefetch"</span> href=<span class="str">"https://analytics.example.com"</span><span class="str">&gt;</span>
+
+<span class="cm">&lt;!-- preload LCP hero image --&gt;</span>
+<span class="str">&lt;link</span> rel=<span class="str">"preload"</span> as=<span class="str">"image"</span>
+  href=<span class="str">"/images/hero.avif"</span>
+  imagesrcset=<span class="str">"/hero-400.avif 400w, /hero-800.avif 800w"</span>
+  imagesizes=<span class="str">"100vw"</span><span class="str">&gt;</span>
+
+<span class="cm">&lt;!-- preload critical font --&gt;</span>
+<span class="str">&lt;link</span> rel=<span class="str">"preload"</span> as=<span class="str">"font"</span> type=<span class="str">"font/woff2"</span>
+  href=<span class="str">"/fonts/inter-var.woff2"</span> crossorigin<span class="str">&gt;</span>
+
+<span class="cm">&lt;!-- prefetch next page's JS (on hover of nav link) --&gt;</span>
+<span class="cm">// Programmatic prefetch on user intent:</span>
+<span class="kw">function</span> <span class="attr">prefetchRoute</span>(path: <span class="kw">string</span>) {
+  <span class="kw">const</span> link = document.<span class="attr">createElement</span>(<span class="str">'link'</span>);
+  link.rel = <span class="str">'prefetch'</span>;
+  link.href = path;
+  document.head.<span class="attr">appendChild</span>(link);
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const hints=[
+  {hint:'preload',color:'#ef4444',save:'400ms',use:'SAP Fiori hero image — preloaded, LCP improved from 2.8s → 1.4s',example:'<link rel="preload" as="image" href="/hero.avif">'},
+  {hint:'prefetch',color:'#60a5fa',save:'300ms (next nav)',use:'SAP procurement — prefetch /order-detail chunk on /product hover',example:'<link rel="prefetch" href="/chunks/orders.js">'},
+  {hint:'preconnect',color:'#10b981',save:'150ms',use:'Preconnect to SAP CDN + Google Fonts origins — saves DNS+TLS per origin',example:'<link rel="preconnect" href="https://cdn.sap.com" crossorigin>'},
+  {hint:'dns-prefetch',color:'#a78bfa',save:'60ms DNS',use:'SAP analytics.js from third-party origin — DNS resolved early',example:'<link rel="dns-prefetch" href="https://analytics.sap.com">'},
+  {hint:'modulepreload',color:'#f59e0b',save:'200ms parse',use:'Preload + parse ES module chunks for SAP Fiori Angular lazy routes',example:'<link rel="modulepreload" href="/chunks/fiori.js">'},
+];
+
+document.getElementById('hint-grid').innerHTML=hints.map((h,i)=>`
+  <div class="hint-card" id="hc${i}" onclick="showHint(${i})">
+    <div style="color:${h.color};font-weight:700;font-size:.82rem">rel="${h.hint}"</div>
+    <div style="color:#10b981;font-size:.73rem;margin-top:2px">saves ~${h.save}</div>
+  </div>
+`).join('');
+
+function showHint(i){
+  const h=hints[i];
+  document.getElementById('hint-detail').innerHTML=`
+    <strong style="color:${h.color}">${h.hint}</strong><br>
+    ${h.use}<br><br>
+    <code style="color:#60a5fa;font-size:.77rem">${h.example}</code>
+  `;
+  document.querySelectorAll('.hint-card').forEach((el,idx)=>el.classList.toggle('active-h',idx===i));
+}
+</script>
+</body>
+</html>

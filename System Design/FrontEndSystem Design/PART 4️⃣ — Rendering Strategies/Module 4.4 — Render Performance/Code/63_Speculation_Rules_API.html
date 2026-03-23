@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 63 – Speculation Rules API</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.green{color:#10b981}.amber{color:#f59e0b}.red{color:#ef4444}
+</style>
+</head>
+<body>
+<h1>🔮 Speculation Rules API</h1>
+<p class="sub">Topic 63 · Module 4.4 — Render Performance · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">What is Speculation</div>
+  <div class="tab" onclick="setTab(1)">Prefetch vs Prerender</div>
+  <div class="tab" onclick="setTab(2)">Rules Explorer</div>
+  <div class="tab" onclick="setTab(3)">Implementation</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Speculation Rules API — instant page navigations</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">The Speculation Rules API (Chrome 109+) is a JSON-based mechanism to instruct the browser to <strong style="color:#10b981">prefetch</strong> (download HTML) or <strong style="color:#60a5fa">prerender</strong> (fully render, execute JS) pages the user is likely to navigate to next. Prerender = ~0ms navigation.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #10b981;padding:12px;border-radius:8px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">prefetch</div>
+        <div style="color:#94a3b8;line-height:1.8">Downloads the HTML of likely-next pages.<br>Low cost. Saves download time on navigation.<br>JS not executed until navigation.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:12px;border-radius:8px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">prerender</div>
+        <div style="color:#94a3b8;line-height:1.8">Full render in background tab.<br>JS, CSS, layout all computed.<br>Navigation = instant (0ms).<br>Costly — use only for near-certain URLs.</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-size:.82rem;color:#94a3b8">
+      <strong style="color:#e2e8f0">Eagerness levels:</strong>
+      <code style="color:#60a5fa">immediate</code> — as soon as script runs &nbsp;|&nbsp;
+      <code style="color:#f59e0b">eager</code> — on hover/pointer-over &nbsp;|&nbsp;
+      <code style="color:#10b981">moderate</code> — 200ms hover &nbsp;|&nbsp;
+      <code style="color:#a78bfa">conservative</code> — pointer-down / tap
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Speculation API vs old &lt;link rel="prefetch"&gt;</h3>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+        <thead><tr style="background:#2d3551">
+          <th style="padding:8px 12px;text-align:left">Feature</th>
+          <th style="padding:8px 12px;text-align:center">&lt;link rel="prefetch"&gt;</th>
+          <th style="padding:8px 12px;text-align:center;color:#10b981">Speculation API (prefetch)</th>
+          <th style="padding:8px 12px;text-align:center;color:#60a5fa">Speculation API (prerender)</th>
+        </tr></thead>
+        <tbody>
+        ${[
+          ['Fetches HTML','✅','✅','✅'],
+          ['Executes JS','❌','❌','✅'],
+          ['Instant navigation','❌','~','✅ ~0ms'],
+          ['Respects CSP','N/A','✅','✅'],
+          ['Eagerness control','❌','✅','✅'],
+          ['URL patterns','Manual','✅ CSS selectors','✅ CSS selectors'],
+          ['Browser support','All','Chrome 109+','Chrome 109+'],
+        ].map(r=>`<tr style="border-bottom:1px solid #2d3551">${r.map((c,i)=>`<td style="padding:7px 12px;text-align:${i===0?'left':'center'};color:${i===2?'#10b981':i===3?'#60a5fa':'#94a3b8'}">${c}</td>`).join('')}</tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Rules explorer — click a scenario</h3>
+    <div id="rules-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px"></div>
+    <div id="rules-detail" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;font-size:.8rem;color:#94a3b8;min-height:60px">Click a scenario above.</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Speculation Rules JSON + dynamic injection</h3>
+    <pre><span class="cm">&lt;!-- Static JSON in HTML --&gt;</span>
+<span class="str">&lt;script</span> type=<span class="str">"speculationrules"</span><span class="str">&gt;</span>
+{
+  <span class="str">"prefetch"</span>: [
+    {
+      <span class="str">"source"</span>: <span class="str">"list"</span>,
+      <span class="str">"urls"</span>: [<span class="str">"/products"</span>, <span class="str">"/about"</span>],
+      <span class="str">"eagerness"</span>: <span class="str">"moderate"</span>
+    }
+  ],
+  <span class="str">"prerender"</span>: [
+    {
+      <span class="str">"source"</span>: <span class="str">"document"</span>,
+      <span class="str">"where"</span>: { <span class="str">"href_matches"</span>: <span class="str">"/products/*"</span> },
+      <span class="str">"eagerness"</span>: <span class="str">"conservative"</span>
+    }
+  ]
+}
+<span class="str">&lt;/script&gt;</span>
+
+<span class="cm">// Dynamic injection based on user behaviour:</span>
+<span class="kw">function</span> <span class="attr">addSpeculationRule</span>(url: <span class="kw">string</span>, type = <span class="str">'prefetch'</span>) {
+  <span class="kw">if</span> (!HTMLScriptElement.<span class="attr">supports</span>?.(<span class="str">'speculationrules'</span>)) <span class="kw">return</span>;
+  <span class="kw">const</span> rules = { [type]: [{ source: <span class="str">'list'</span>, urls: [url] }] };
+  <span class="kw">const</span> script = document.<span class="attr">createElement</span>(<span class="str">'script'</span>);
+  script.type = <span class="str">'speculationrules'</span>;
+  script.textContent = JSON.<span class="attr">stringify</span>(rules);
+  document.head.<span class="attr">appendChild</span>(script);
+}
+
+<span class="cm">// Call on hover of checkout button</span>
+checkoutBtn.<span class="attr">addEventListener</span>(<span class="str">'pointerover'</span>, () =&gt; {
+  <span class="attr">addSpeculationRule</span>(<span class="str">'/checkout'</span>, <span class="str">'prerender'</span>);
+});</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const scenarios=[
+  {label:'E-commerce: prerender /checkout on cart hover',type:'prerender',eagerness:'conservative',rule:'{"prerender":[{"source":"list","urls":["/checkout"],"eagerness":"conservative"}]}',note:'User hovering cart icon = high intent for checkout. Prerender = instant nav.'},
+  {label:'News site: prefetch /sports/* on sports hover',type:'prefetch',eagerness:'moderate',rule:'{"prefetch":[{"source":"document","where":{"href_matches":"/sports/*"},"eagerness":"moderate"}]}',note:'Multiple links match. moderate = 200ms hover to trigger. Low cost, broad coverage.'},
+  {label:'Documentation: eager-prefetch all /docs links',type:'prefetch',eagerness:'eager',rule:'{"prefetch":[{"source":"document","where":{"selector_matches":"docs-nav a"},"eagerness":"eager"}]}',note:'Docs sites: users browse many pages. Prefetch on pointer-over nav links.'},
+  {label:'SPA: prerender next wizard step',type:'prerender',eagerness:'immediate',rule:'{"prerender":[{"source":"list","urls":["/wizard/step-2"],"eagerness":"immediate"}]}',note:'You know step-2 is next. Prerender immediately when step-1 loads — instant step advance.'},
+];
+
+document.getElementById('rules-grid').innerHTML=scenarios.map((s,i)=>`
+  <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;cursor:pointer;font-size:.79rem;transition:border-color .2s" 
+    onclick="showRule(${i})" id="rs${i}">
+    <span style="color:${s.type==='prerender'?'#60a5fa':'#10b981'};font-weight:700">${s.type}</span> — ${s.label}
+  </div>
+`).join('');
+
+function showRule(i){
+  const s=scenarios[i];
+  document.getElementById('rules-detail').innerHTML=`
+    <strong style="color:${s.type==='prerender'?'#60a5fa':'#10b981'}">${s.type}</strong> | eagerness: <span style="color:#f59e0b">${s.eagerness}</span><br>
+    ${s.note}<br><br>
+    <code style="color:#60a5fa;font-size:.75rem">${s.rule}</code>
+  `;
+  document.querySelectorAll('[id^="rs"]').forEach((el,idx)=>{
+    el.style.borderColor=idx===i?'#60a5fa':'#2d3551';
+  });
+}
+</script>
+</body>
+</html>

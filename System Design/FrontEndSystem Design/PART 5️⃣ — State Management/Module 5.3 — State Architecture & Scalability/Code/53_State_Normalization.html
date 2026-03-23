@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 53 – State Normalization</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🗂️ State Normalization</h1>
+<p class="sub">Topic 53 · Module 5.3 — State Architecture & Scalability · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Nested vs Normalised Demo</div>
+  <div class="tab" onclick="setTab(2)">Update Problem Visualised</div>
+  <div class="tab" onclick="setTab(3)">Code (normalizr / EntityAdapter)</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Why normalize state?</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Nested state structures cause two critical problems: <strong>stale duplicates</strong> (same entity appears in multiple places and gets out of sync) and <strong>O(n) lookups</strong> (must search arrays to find by id). Normalisation flattens data into a dictionary keyed by id.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #ef4444;padding:12px;border-radius:8px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">❌ Nested (problematic)</div>
+        <div style="color:#94a3b8;font-size:.75rem;line-height:1.9">
+          orders: [<br>
+          &nbsp;{id:'1', product:{id:'P1', name:'License'}},<br>
+          &nbsp;{id:'2', product:{id:'P1', name:'License'}},<br>
+          ]<br>
+          <span style="color:#ef4444">→ P1 appears twice! Update one = inconsistency</span>
+        </div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:12px;border-radius:8px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Normalised (O(1) lookup)</div>
+        <div style="color:#94a3b8;font-size:.75rem;line-height:1.9">
+          orders:&nbsp;&nbsp;{ ids:['1','2'], entities:{1:{productId:'P1'}, 2:{productId:'P1'}} }<br>
+          products: { ids:['P1'], entities:{P1:{name:'License'}} }<br>
+          <span style="color:#10b981">→ One source of truth. O(1) update.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Click "Update Product Name" — see difference</h3>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="updateName()" style="padding:7px 14px;background:#1e3a5f;border:1px solid #60a5fa;color:#60a5fa;border-radius:8px;cursor:pointer;font-size:.82rem">Update Product P1 name → "SAP Fiori Pro"</button>
+      <button onclick="resetDemo()" style="padding:7px 14px;background:#1e2130;border:1px solid #2d3551;color:#94a3b8;border-radius:8px;cursor:pointer;font-size:.82rem">Reset</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.75rem">
+      <div>
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">Nested state</div>
+        <div id="nested-state" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;font-family:monospace;line-height:1.8"></div>
+        <div id="nested-result" style="margin-top:6px;color:#ef4444;font-size:.72rem"></div>
+      </div>
+      <div>
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">Normalised state</div>
+        <div id="norm-state" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;font-family:monospace;line-height:1.8"></div>
+        <div id="norm-result" style="margin-top:6px;color:#10b981;font-size:.72rem"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Performance comparison</h3>
+    <div style="font-size:.8rem;display:grid;gap:8px">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Find by id (nested)</span><span style="color:#ef4444">O(n)</span></div>
+        <div style="height:10px;background:#ef4444;border-radius:4px;width:90%"></div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Find by id (normalised)</span><span style="color:#10b981">O(1)</span></div>
+        <div style="height:10px;background:#10b981;border-radius:4px;width:8%"></div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Update entity in nested array</span><span style="color:#ef4444">Find + Map (O(n))</span></div>
+        <div style="height:10px;background:#ef4444;border-radius:4px;width:80%"></div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>Update entity normalised</span><span style="color:#10b981">entities[id] = ... (O(1))</span></div>
+        <div style="height:10px;background:#10b981;border-radius:4px;width:8%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>normalizr + EntityAdapter patterns</h3>
+    <pre><span class="cm">// ─── normalizr (normalize API response) ───</span>
+<span class="kw">import</span> { schema, normalize } <span class="kw">from</span> <span class="str">'normalizr'</span>;
+
+<span class="kw">const</span> product = <span class="kw">new</span> schema.<span class="fn">Entity</span>(<span class="str">'products'</span>);
+<span class="kw">const</span> order   = <span class="kw">new</span> schema.<span class="fn">Entity</span>(<span class="str">'orders'</span>, { product });
+<span class="kw">const</span> result  = <span class="fn">normalize</span>(apiResponse, [order]);
+
+<span class="cm">// result.entities → { orders: {...}, products: {...} }</span>
+<span class="cm">// result.result   → ['1', '2']  (ids)</span>
+
+<span class="cm">// ─── NgRx EntityAdapter (built-in normalisation) ───</span>
+<span class="kw">const</span> ordersAdapter = <span class="fn">createEntityAdapter</span>&lt;Order&gt;({
+  selectId: o =&gt; o.id,
+  sortComparer: (a, b) =&gt; a.date.<span class="fn">localeCompare</span>(b.date),
+});
+<span class="kw">const</span> initialState = ordersAdapter.<span class="fn">getInitialState</span>();
+<span class="cm">// { ids: [], entities: {} }</span>
+
+<span class="cm">// Reducer operations:</span>
+ordersAdapter.<span class="fn">addOne</span>(state, order);         <span class="cm">// O(1)</span>
+ordersAdapter.<span class="fn">updateOne</span>(state, { id, changes }); <span class="cm">// O(1)</span>
+ordersAdapter.<span class="fn">removeOne</span>(state, id);         <span class="cm">// O(1)</span>
+ordersAdapter.<span class="fn">upsertMany</span>(state, orders);    <span class="cm">// batch O(1)</span>
+
+<span class="cm">// Selectors:</span>
+<span class="kw">const</span> { selectAll, selectById, selectTotal } = ordersAdapter.<span class="fn">getSelectors</span>();</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+function renderNested(p1name){
+  return `orders: [\n  {id:'1', product:{id:'P1', name:'<b style="color:#60a5fa">${p1name}</b>'}},\n  {id:'2', product:{id:'P1', name:'<b style="${p1name==='License'?'color:#94a3b8':'color:#ef4444'}">${p1name}</b>'}}\n]`;
+}
+function renderNorm(p1name){
+  return `orders: {1:{productId:'P1'}, 2:{productId:'P1'}}\nproducts: {P1:{name:'<b style="color:#10b981">${p1name}</b>'}}`;
+}
+function resetDemo(){document.getElementById('nested-state').innerHTML=renderNested('License');document.getElementById('norm-state').innerHTML=renderNorm('License');document.getElementById('nested-result').textContent='';document.getElementById('norm-result').textContent='';}
+function updateName(){
+  document.getElementById('nested-state').innerHTML=renderNested('SAP Fiori Pro');
+  document.getElementById('nested-result').innerHTML='⚠️ Had to map over BOTH orders to update. If you forget one → stale data!';
+  document.getElementById('norm-state').innerHTML=renderNorm('SAP Fiori Pro');
+  document.getElementById('norm-result').innerHTML='✅ One write: products.P1.name — both orders automatically referencing latest value.';
+}
+resetDemo();
+</script>
+</body>
+</html>

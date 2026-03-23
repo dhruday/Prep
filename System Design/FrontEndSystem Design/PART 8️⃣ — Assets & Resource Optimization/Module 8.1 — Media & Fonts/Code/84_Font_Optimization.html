@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 84 – Font Optimization</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🔤 Font Optimization</h1>
+<p class="sub">Topic 84 · Module 8.1 — Media & Fonts · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">FOUT / FOIT Simulator</div>
+  <div class="tab" onclick="setTab(2">Font Strategy Decision</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Font loading — the invisible CLS and FCP blocker</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:10px">Fonts are render-blocking. The browser must download a font before painting text that uses it. This causes FOIT (Flash of Invisible Text) or FOUT (Flash of Unstyled Text). A 300 KB Google Font delayed FCP by 1.2 s on a 3G connection. Self-hosting + subsetting + font-display:swap cut this to 80 ms at SAP.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #ef4444;padding:10px;border-radius:8px">
+        <strong style="color:#ef4444">font-display: block</strong><br>
+        <span style="color:#94a3b8">Text invisible for up to 3s (FOIT). Full block period — bad for LCP/CLS.</span>
+      </div>
+      <div style="background:#0f1117;border:1px solid #f59e0b;padding:10px;border-radius:8px">
+        <strong style="color:#f59e0b">font-display: swap</strong><br>
+        <span style="color:#94a3b8">Fallback text shows immediately (FOUT). Swaps when custom font loads. Slight CLS if metrics differ.</span>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:10px;border-radius:8px">
+        <strong style="color:#10b981">font-display: optional</strong><br>
+        <span style="color:#94a3b8">100ms window to use custom font; after that fallback is used permanently for that page load. Best for CLS but font may never show.</span>
+      </div>
+    </div>
+    <p style="font-size:.78rem;color:#f59e0b;margin-top:10px;background:#0f1117;padding:8px;border-radius:6px"><strong>Best practice stack:</strong> Self-host WOFF2 + subset to Latin only + <code>font-display: swap</code> + <code>&lt;link rel="preload"&gt;</code> for above-fold fonts. Saves ~200 KB vs full Google Fonts download.</p>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>FOUT / FOIT / font-display simulator</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button onclick="simFoit()" style="padding:7px 14px;background:#3d0808;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.82rem">font-display: block (FOIT)</button>
+      <button onclick="simFout()" style="padding:7px 14px;background:#1e2130;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;cursor:pointer;font-size:.82rem">font-display: swap (FOUT)</button>
+      <button onclick="simOpt()" style="padding:7px 14px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:8px;cursor:pointer;font-size:.82rem">font-display: optional</button>
+    </div>
+    <div id="font-demo" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:20px;font-size:1.2rem;min-height:60px;transition:all .3s">Loading…</div>
+    <div id="font-status" style="margin-top:8px;font-size:.75rem;color:#475569">Click a button to simulate</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Font strategy decision guide</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Strategy</th>
+        <th style="padding:8px;border:1px solid #2d3551">FCP</th>
+        <th style="padding:8px;border:1px solid #2d3551">CLS</th>
+        <th style="padding:8px;border:1px solid #2d3551">Complexity</th>
+        <th style="padding:8px;border:1px solid #2d3551">Use when</th>
+      </tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Google Fonts link</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#ef4444">Slow</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#ef4444">High</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Zero</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Prototypes only</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Self-host WOFF2 + swap</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Fast</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Medium</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Low</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Most production sites</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Self-host + subset + preload</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Fastest</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Low</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Medium</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Performance-critical pages</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">System font stack</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Instant</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Zero</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Zero</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Dashboards, admin UIs</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Variable font</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Fast</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Low</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Medium</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Multi-weight usage (replaces 6+ files)</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Font optimization patterns</h3>
+    <pre><span class="cm">/* ─── Self-hosted WOFF2 + subsetting ───*/</span>
+<span class="attr">@font-face</span> {
+  font-family: <span class="str">'Inter'</span>;
+  src: url(<span class="str">'/fonts/inter-var.woff2'</span>) format(<span class="str">'woff2'</span>);
+  font-weight: <span class="fn">100</span> <span class="fn">900</span>;   <span class="cm">/* variable font — single file */</span>
+  font-display: swap;       <span class="cm">/* FOUT — fallback shows immediately */</span>
+  unicode-range: U+0000-00FF, U+0131; <span class="cm">/* Latin subset only */</span>
+}
+
+<span class="cm">&lt;!-- Preload above-fold font --&gt;</span>
+&lt;<span class="attr">link</span> rel="preload" as="font" type="font/woff2"
+  href="/fonts/inter-var.woff2" crossorigin&gt;
+
+<span class="cm">// ─── Next.js: Google Fonts via next/font ───</span>
+<span class="kw">import</span> { Inter } <span class="kw">from</span> <span class="str">'next/font/google'</span>;
+<span class="kw">const</span> inter = <span class="fn">Inter</span>({
+  subsets: [<span class="str">'latin'</span>],
+  display: <span class="str">'swap'</span>,
+  variable: <span class="str">'--font-inter'</span>,
+  preload: <span class="kw">true</span>, <span class="cm">// auto-preloads used subsets</span>
+});
+<span class="cm">// next/font downloads, self-hosts, and preloads automatically</span>
+<span class="cm">// no Google request from user's browser — faster, more private</span>
+
+<span class="cm">/* ─── Size-adjusted fallback (reduce CLS) ───*/</span>
+<span class="attr">@font-face</span> {
+  font-family: <span class="str">'FallbackArial'</span>;
+  src: local(<span class="str">'Arial'</span>);
+  size-adjust: <span class="fn">107%</span>;         <span class="cm">/* match Inter metrics */</span>
+  ascent-override: <span class="fn">90%</span>;
+  descent-override: <span class="fn">22%</span>;
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const demo=document.getElementById('font-demo');
+const status=document.getElementById('font-status');
+
+function simFoit(){
+  demo.style.color='transparent';demo.textContent='SAP Fiori Dashboard — Custom Font';
+  status.textContent='font-display: block — text invisible (FOIT) for 1.5s…';status.style.color='#ef4444';
+  setTimeout(()=>{demo.style.color='#10b981';demo.style.fontStyle='italic';status.textContent='Font loaded — text now visible. User waited 1.5s for ANY text to appear!';},1500);
+}
+function simFout(){
+  demo.style.fontFamily='serif';demo.style.color='#e2e8f0';demo.textContent='SAP Fiori Dashboard — Custom Font';
+  status.textContent='font-display: swap — fallback serif visible immediately (FOUT)…';status.style.color='#f59e0b';
+  setTimeout(()=>{demo.style.fontFamily='monospace';demo.style.color='#10b981';status.textContent='Custom font swapped in — slight layout shift as metrics differ. Good FCP, minor CLS.';},1400);
+}
+function simOpt(){
+  demo.style.fontFamily='sans-serif';demo.style.color='#e2e8f0';demo.textContent='SAP Fiori Dashboard — System Font';
+  status.textContent='font-display: optional — 100ms window for custom font, then system font locks in';status.style.color='#10b981';
+  setTimeout(()=>{status.textContent='100ms passed — using system font permanently. No CLS, no FOUT. Custom font may warm cache for next visit.';},1000);
+}
+</script>
+</body>
+</html>

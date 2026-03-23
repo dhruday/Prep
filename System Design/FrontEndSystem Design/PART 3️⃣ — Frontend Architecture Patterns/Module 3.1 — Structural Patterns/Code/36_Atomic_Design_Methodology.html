@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 36 – Atomic Design Methodology</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.level{display:flex;align-items:stretch;gap:10px;margin-bottom:10px;cursor:pointer;transition:all .2s}
+.level-icon{width:36px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;border-radius:8px;flex-shrink:0}
+.level-body{flex:1;padding:12px;border-radius:8px;border:1px solid #2d3551;transition:all .2s}
+.level:hover .level-body{border-color:#60a5fa}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:12px}
+@media(max-width:700px){.grid5{grid-template-columns:repeat(2,1fr)}}
+.atom-demo{background:#0f1117;border-radius:8px;padding:10px;text-align:center;font-size:.75rem}
+</style>
+</head>
+<body>
+<h1>⚛️ Atomic Design Methodology</h1>
+<p class="sub">Topic 36 · Module 3.1 — Structural Patterns · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">5 Levels</div>
+  <div class="tab" onclick="setTab(1)">Build-Up Demo</div>
+  <div class="tab" onclick="setTab(2)">SAP Design System</div>
+  <div class="tab" onclick="setTab(3)">Code Examples</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Atomic Design — click each level to explore</h3>
+    <div id="levels"></div>
+    <div id="level-detail" style="display:none;margin-top:12px;padding:14px;background:#0f1117;border-radius:8px;border-left:3px solid #60a5fa;font-size:.82rem;color:#94a3b8"></div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Build a UI — click levels to add layers</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="tab" onclick="buildDemo(0)">Atoms only</button>
+      <button class="tab" onclick="buildDemo(1)">+ Molecules</button>
+      <button class="tab" onclick="buildDemo(2)">+ Organisms</button>
+      <button class="tab" onclick="buildDemo(3)">+ Template</button>
+      <button class="tab" onclick="buildDemo(4)">Full Page</button>
+    </div>
+    <div id="build-demo" style="background:#0f1117;border-radius:8px;padding:16px;border:1px solid #2d3551;min-height:200px"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>SAP Fiori Design System — Atomic Structure</h3>
+    <div style="font-size:.85rem;color:#94a3b8;line-height:1.9;margin-bottom:14px">
+      SAP Fundamental-Styles library follows atomic design. Hruday implemented it across 3 product lines to achieve WCAG AA and visual consistency.
+    </div>
+    <div class="grid5">
+      <div class="atom-demo"><div style="color:#60a5fa;font-size:.7rem;font-weight:700;margin-bottom:6px">ATOMS</div><code style="font-size:.7rem;color:#a78bfa">fd-button</code><br><code style="font-size:.7rem;color:#a78bfa">fd-input</code><br><code style="font-size:.7rem;color:#a78bfa">fd-icon</code><br><code style="font-size:.7rem;color:#a78bfa">fd-badge</code></div>
+      <div class="atom-demo"><div style="color:#10b981;font-size:.7rem;font-weight:700;margin-bottom:6px">MOLECULES</div><code style="font-size:.7rem;color:#a78bfa">fd-search-input</code><br><code style="font-size:.7rem;color:#a78bfa">fd-form-group</code><br><code style="font-size:.7rem;color:#a78bfa">fd-input-group</code></div>
+      <div class="atom-demo"><div style="color:#f59e0b;font-size:.7rem;font-weight:700;margin-bottom:6px">ORGANISMS</div><code style="font-size:.7rem;color:#a78bfa">fd-wizard</code><br><code style="font-size:.7rem;color:#a78bfa">fd-table</code><br><code style="font-size:.7rem;color:#a78bfa">fd-shellbar</code></div>
+      <div class="atom-demo"><div style="color:#a78bfa;font-size:.7rem;font-weight:700;margin-bottom:6px">TEMPLATES</div><code style="font-size:.7rem;color:#a78bfa">ListReport</code><br><code style="font-size:.7rem;color:#a78bfa">ObjectPage</code><br><code style="font-size:.7rem;color:#a78bfa">Worklist</code></div>
+      <div class="atom-demo"><div style="color:#ef4444;font-size:.7rem;font-weight:700;margin-bottom:6px">PAGES</div><code style="font-size:.7rem;color:#a78bfa">SalesOrder</code><br><code style="font-size:.7rem;color:#a78bfa">PurchaseOrder</code><br><code style="font-size:.7rem;color:#a78bfa">Analytics</code></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Atomic folder structure</h3>
+    <pre><span class="str">src/
+  components/
+    atoms/
+      Button/           </span><span class="cm">// Button.tsx + Button.stories.tsx + Button.test.tsx</span>
+<span class="str">      Input/
+      Label/
+      Icon/
+    molecules/
+      SearchBar/        </span><span class="cm">// = Label + Input + Button</span>
+<span class="str">      FormField/        </span><span class="cm">// = Label + Input + ErrorText</span>
+<span class="str">    organisms/
+      NavigationHeader/ </span><span class="cm">// = Logo + SearchBar + UserMenu</span>
+<span class="str">      UserTable/        </span><span class="cm">// = Table + Pagination + FilterBar</span>
+<span class="str">    templates/
+      DashboardLayout/  </span><span class="cm">// = Header + Sidebar + ContentSlot (no real data)</span>
+<span class="str">    pages/
+      DashboardPage/    </span><span class="cm">// = DashboardLayout with real API data</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){
+  document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));
+  document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));
+}
+const levels = [
+  { emoji:'⚛️', name:'Atoms', col:'#60a5fa', examples:'Button, Input, Label, Icon, Badge', desc:'The smallest UI building blocks. Cannot be broken further. Examples: a button, a text input, a label, an icon. They have their own styling but no business logic or context.' },
+  { emoji:'🧬', name:'Molecules', col:'#10b981', examples:'SearchBar (Label + Input + Button), FormField', desc:'Groups of atoms forming a simple functional unit. A SearchBar = Label + Input + Button. Each molecule has one clear purpose.' },
+  { emoji:'🏢', name:'Organisms', col:'#f59e0b', examples:'Header, UserTable, NavigationMenu', desc:'Complex UI sections composed of molecules and/or atoms. A Page Header = Logo (atom) + SearchBar (molecule) + UserMenu (molecule). Organisms are usable sections of UI.' },
+  { emoji:'📐', name:'Templates', col:'#a78bfa', examples:'DashboardLayout, AuthPageLayout', desc:'Page-level structure / wireframe with slots for organisms. Contains NO real data — uses placeholder content. Defines the page\'s skeleton.' },
+  { emoji:'📄', name:'Pages', col:'#ef4444', examples:'DashboardPage, LoginPage', desc:'Templates filled with real data. The final UI the user sees. At this level you connect to APIs and state management. Pages are the only level with real external data.' },
+];
+const el = document.getElementById('levels');
+el.innerHTML = levels.map((l,i) => `
+  <div class="level" onclick="showLevel(${i})">
+    <div class="level-icon" style="background:${l.col}22;font-size:1.2rem">${l.emoji}</div>
+    <div class="level-body">
+      <strong style="color:${l.col}">${l.name}</strong>
+      <span style="color:#94a3b8;font-size:.8rem;margin-left:10px">${l.examples}</span>
+    </div>
+  </div>
+`).join('');
+
+function showLevel(i) {
+  const d = document.getElementById('level-detail');
+  d.style.display='block';
+  d.style.borderColor = levels[i].col;
+  d.innerHTML = `<strong style="color:${levels[i].col}">${levels[i].emoji} ${levels[i].name}:</strong> ${levels[i].desc}`;
+}
+
+function buildDemo(lvl) {
+  const d = document.getElementById('build-demo');
+  const html = [
+    // 0: atoms
+    `<div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span style="padding:6px 14px;background:#60a5fa;border-radius:4px;font-size:.8rem;color:#fff;font-weight:600">Button</span>
+      <span style="padding:6px 10px;background:#0f1117;border:1px solid #2d3551;border-radius:4px;font-size:.8rem;color:#94a3b8">_Input field_</span>
+      <span style="font-size:.8rem;color:#94a3b8;align-self:center">Label</span>
+      <span style="padding:4px 8px;background:#10b98122;border:1px solid #10b981;border-radius:12px;font-size:.72rem;color:#10b981">Badge</span>
+    </div>`,
+    // 1: + molecules
+    `<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;border:1px dashed #10b98155;padding:8px;border-radius:6px">
+      <span style="font-size:.74rem;color:#10b981;font-weight:700;margin-right:4px">SearchBar molecule:</span>
+      <span style="font-size:.8rem;color:#94a3b8;background:#0f1117;border:1px solid #2d3551;border-radius:4px;padding:4px 10px">🔍 Search...</span>
+      <span style="padding:4px 12px;background:#60a5fa;border-radius:4px;font-size:.78rem;color:#fff">Go</span>
+    </div>`,
+    // 2: + organisms
+    `<div style="border:1px dashed #f59e0b55;padding:10px;border-radius:6px;margin-bottom:10px">
+      <div style="font-size:.74rem;color:#f59e0b;font-weight:700;margin-bottom:8px">Header Organism</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:.85rem;font-weight:700;color:#60a5fa">SAP Fiori</span>
+        <span style="font-size:.8rem;color:#94a3b8;background:#0f1117;border:1px solid #2d3551;border-radius:4px;padding:3px 10px">🔍 Search</span>
+        <span style="font-size:.8rem;color:#94a3b8">👤 Hruday</span>
+      </div>
+    </div>`,
+    // 3: + template
+    `<div style="border:1px dashed #a78bfa55;padding:10px;border-radius:6px;margin-bottom:10px">
+      <div style="font-size:.74rem;color:#a78bfa;font-weight:700;margin-bottom:8px">Dashboard Template</div>
+      <div style="display:flex;gap:8px;height:100px">
+        <div style="width:120px;background:#1e2130;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:#94a3b8">Sidebar slot</div>
+        <div style="flex:1;background:#1e2130;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:#94a3b8">Content slot</div>
+      </div>
+    </div>`,
+    // 4: full page
+    `<div style="border:1px solid #ef44445555;padding:10px;border-radius:6px">
+      <div style="font-size:.74rem;color:#ef4444;font-weight:700;margin-bottom:8px">DashboardPage (real data)</div>
+      <div style="display:flex;gap:8px;height:110px">
+        <div style="width:120px;background:#1e2130;border-radius:6px;padding:8px;font-size:.7rem;color:#94a3b8">📊 Analytics<br>📦 Orders<br>👥 Users<br>⚙️ Settings</div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;flex:1">
+            <div style="background:#10b98122;border:1px solid #10b981;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:#10b981">Orders: 1,247</div>
+            <div style="background:#60a5fa22;border:1px solid #60a5fa;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:#60a5fa">Revenue: $84K</div>
+            <div style="background:#f59e0b22;border:1px solid #f59e0b;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:#f59e0b">Users: 342</div>
+          </div>
+        </div>
+      </div>
+    </div>`,
+  ];
+  let combined = '';
+  for(let i=0;i<=lvl;i++) combined += html[i];
+  d.innerHTML = combined;
+}
+buildDemo(0);
+</script>
+</body>
+</html>

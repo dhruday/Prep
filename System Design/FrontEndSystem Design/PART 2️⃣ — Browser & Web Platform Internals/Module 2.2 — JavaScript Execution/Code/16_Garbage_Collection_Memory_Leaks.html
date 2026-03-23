@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Garbage Collection & Memory Leaks in JS</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e2e8f0; padding: 20px; }
+    h1 { text-align: center; color: #60a5fa; margin-bottom: 4px; font-size: 1.5rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.88rem; }
+
+    .tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: 18px; flex-wrap: wrap; }
+    .tab { padding: 8px 18px; border: 2px solid #2d3551; border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 600; background: #1e2130; color: #94a3b8; transition: all 0.2s; }
+    .tab:hover { border-color: #3b82f6; }
+    .tab.active { background: #1e3a5f; border-color: #3b82f6; color: #fff; }
+    .tab.green.active { background: #14532d; border-color: #16a34a; }
+    .tab.red.active   { background: #7f1d1d; border-color: #dc2626; }
+    .tab.amber.active { background: #451a03; border-color: #d97706; }
+    .panel { display: none; } .panel.active { display: block; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    .card { background: #1e2130; border: 1px solid #2d3551; border-radius: 12px; padding: 16px; }
+    .card h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .blue { color: #60a5fa; } .green { color: #10b981; } .red { color: #ef4444; } .amber { color: #f59e0b; } .purple { color: #a78bfa; }
+
+    /* Heap bar */
+    .heap-bar-wrap { background: #0f1117; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+    .heap-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px; }
+    .heap-bar { height: 18px; background: #1e2130; border-radius: 4px; overflow: hidden; }
+    .heap-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease, background 0.3s; }
+    .heap-normal { background: linear-gradient(90deg, #10b981, #34d399); }
+    .heap-warn   { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+    .heap-critical{ background: linear-gradient(90deg, #ef4444, #fca5a5); }
+
+    /* Object graph */
+    .obj-graph { background: #0f1117; border-radius: 8px; padding: 12px; min-height: 200px; position: relative; overflow: hidden; }
+    .node {
+      position: absolute; border-radius: 8px; padding: 6px 10px; font-size: 0.72rem; font-family: monospace;
+      border: 2px solid; cursor: default; text-align: center; transition: all 0.4s;
+    }
+    .node-root  { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+    .node-live  { background: #14532d; border-color: #16a34a; color: #86efac; }
+    .node-dead  { background: #1a0a0a; border-color: #4b1c1c; color: #6b2929; opacity: 0.4; }
+    .node-mark  { background: #312e81; border-color: #7c3aed; color: #c4b5fd; }
+    svg.edges { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    svg.edges line { stroke: #2d3551; stroke-width: 1.5; }
+    svg.edges line.live  { stroke: #10b981; }
+    svg.edges line.dead  { stroke: #4b1c1c; stroke-dasharray: 4,4; }
+
+    /* Log */
+    .log-box { background: #060a0e; border-radius: 8px; padding: 10px; height: 160px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.76rem; }
+    .log-info { color: #93c5fd; } .log-warn { color: #fbbf24; } .log-green { color: #86efac; } .log-red { color: #f87171; }
+
+    /* Leak tracker */
+    .leak-list { min-height: 100px; background: #0f1117; border-radius: 8px; padding: 10px; }
+    .leak-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #1e2130; border-radius: 6px; margin-bottom: 5px; font-size: 0.77rem; animation: fadeIn 0.3s; }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
+    .leak-item .l-name { color: #f59e0b; font-family: monospace; }
+    .leak-item .l-size { color: #a78bfa; }
+    .leak-item .l-type { color: #ef4444; font-size: 0.68rem; }
+
+    /* GC phase display */
+    .phases { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .phase { padding: 5px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; border: 2px solid transparent; transition: all 0.3s; }
+    .phase.active { transform: scale(1.08); }
+    .ph-alloc  { border-color: #3b82f6; color: #3b82f6; } .ph-alloc.active  { background: #3b82f6; color: #fff; }
+    .ph-mark   { border-color: #8b5cf6; color: #8b5cf6; } .ph-mark.active   { background: #8b5cf6; color: #fff; }
+    .ph-sweep  { border-color: #f59e0b; color: #f59e0b; } .ph-sweep.active  { background: #f59e0b; color: #000; }
+    .ph-compact{ border-color: #10b981; color: #10b981; } .ph-compact.active{ background: #10b981; color: #000; }
+
+    .insight { background: #162032; border: 1px solid #1e3a5f; border-radius: 7px; padding: 10px; font-size: 0.76rem; color: #93c5fd; margin-top: 12px; }
+    .insight strong { color: #fff; }
+
+    button { padding: 7px 14px; border: none; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: opacity 0.2s; margin: 2px; }
+    button:hover { opacity: 0.8; }
+    .btn-b { background: #3b82f6; color: #fff; } .btn-g { background: #10b981; color: #fff; }
+    .btn-r { background: #ef4444; color: #fff; } .btn-a { background: #f59e0b; color: #000; }
+    .btn-p { background: #8b5cf6; color: #fff; }
+    .controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; justify-content: center; }
+
+    .gen-box { background: #0f1117; border-radius: 8px; padding: 12px; }
+    .gen-row  { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .gen-item { padding: 4px 10px; border-radius: 5px; font-size: 0.72rem; font-family: monospace; border: 1px solid; animation: fadeIn 0.2s; }
+    .gen-new   { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+    .gen-surv  { background: #14532d; border-color: #16a34a; color: #86efac; }
+    .gen-old   { background: #312e81; border-color: #7c3aed; color: #c4b5fd; }
+    .gen-dead  { background: #1a0a0a; border-color: #4b1c1c; color: #4b1c1c; text-decoration: line-through; }
+  </style>
+</head>
+<body>
+<h1>♻️ Garbage Collection & Memory Leaks in JavaScript</h1>
+<p class="subtitle">Mark-and-Sweep • Generational GC • Leak Patterns • WeakMap vs Map</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('gc')">🔄 GC Algorithm</div>
+  <div class="tab green" onclick="switchTab('gen')">🧬 Generational GC</div>
+  <div class="tab red" onclick="switchTab('leaks')">🔴 Leak Patterns</div>
+  <div class="tab amber" onclick="switchTab('weak')">🔑 WeakMap vs Map</div>
+  <div class="tab" style="border-color:#8b5cf6" onclick="switchTab('heap')">📊 Heap Monitor</div>
+</div>
+
+<!-- TAB 1: GC Algorithm -->
+<div class="panel active" id="tab-gc">
+  <div class="phases">
+    <span class="phase ph-alloc" id="ph-alloc">1. Allocate</span>
+    <span class="phase ph-mark"  id="ph-mark">2. Mark (Roots→Live)</span>
+    <span class="phase ph-sweep" id="ph-sweep">3. Sweep (Reclaim)</span>
+    <span class="phase ph-compact" id="ph-compact">4. Compact</span>
+  </div>
+  <div class="controls">
+    <button class="btn-b" onclick="runMarkSweep()">▶ Run Mark-and-Sweep</button>
+    <button class="btn-g" onclick="addObjects()">➕ Add Objects</button>
+    <button class="btn-r" onclick="dropReferences()">✂️ Drop References</button>
+    <button class="btn-a" onclick="resetGC()">🔁 Reset</button>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h2 class="blue">📦 Object Graph (Heap)</h2>
+      <div class="obj-graph" id="obj-graph" style="height:260px">
+        <svg class="edges" id="edge-svg"></svg>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h2 class="green">📋 GC Log</h2>
+        <div class="log-box" id="gc-log"><div class="log-info">// Click "Run Mark-and-Sweep" to visualise GC</div></div>
+      </div>
+      <div class="insight" id="gc-insight">
+        <strong>Mark-and-Sweep:</strong> Starting from GC roots (window, call stack), the GC paints reachable objects BLACK. Anything left WHITE (unreachable) is garbage and its memory is reclaimed.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: Generational GC -->
+<div class="panel" id="tab-gen">
+  <div class="controls">
+    <button class="btn-b" onclick="allocNewGen()">➕ Allocate (New Space)</button>
+    <button class="btn-g" onclick="runScavenge()">⚡ Scavenge (Young GC)</button>
+    <button class="btn-p" onclick="runMajorGC()">🔄 Major GC (Old Space)</button>
+    <button class="btn-a" onclick="resetGen()">🔁 Reset</button>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h2 class="blue">🆕 New Space (Young Generation)</h2>
+      <div style="font-size:0.72rem;color:#64748b;margin-bottom:8px">From-Space (active) • Scavenge copies live objects to To-Space</div>
+      <div class="gen-box">
+        <div class="gen-row" id="gen-from" style="min-height:40px"></div>
+      </div>
+      <div style="margin-top:10px">
+        <div style="font-size:0.72rem;color:#64748b;margin-bottom:6px">To-Space (promotion buffer)</div>
+        <div class="gen-box"><div class="gen-row" id="gen-to" style="min-height:30px"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 class="purple">🧓 Old Space (Old Generation)</h2>
+      <div style="font-size:0.72rem;color:#64748b;margin-bottom:8px">Survivors (2+ Scavenges) promoted here • Full Mark-Sweep-Compact</div>
+      <div class="gen-box"><div class="gen-row" id="gen-old" style="min-height:80px; flex-wrap:wrap"></div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="log-box" id="gen-log"><div class="log-info">// Generational GC simulator — most objects die young!</div></div>
+  </div>
+  <div class="insight">
+    <strong>Generational Hypothesis:</strong> Most objects die young (allocated in one render cycle, discarded). Scavenge runs every few MB — copies ~1-5% of objects to old space, wipes the rest in one operation. Major GC runs infrequently. This is why temporary objects have almost zero GC cost.
+  </div>
+</div>
+
+<!-- TAB 3: Leak Patterns -->
+<div class="panel" id="tab-leaks">
+  <div class="controls">
+    <button class="btn-r" onclick="demoLeakListener()">🎧 Event Listener Leak</button>
+    <button class="btn-r" onclick="demoLeakDetached()">🌲 Detached DOM Node</button>
+    <button class="btn-r" onclick="demoLeakClosure()">🔒 Closure Over Large Data</button>
+    <button class="btn-r" onclick="demoLeakTimer()">⏱️ setInterval Leak</button>
+    <button class="btn-g" onclick="fixLeaks()">🔧 Fix All Leaks</button>
+    <button class="btn-a" onclick="resetLeaks()">🔁 Reset</button>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h2 class="red">🔴 Active Memory Leaks</h2>
+      <div class="leak-list" id="leak-list"><div style="color:#475569;font-size:0.78rem;padding:10px;text-align:center">No leaks — click a button to introduce one</div></div>
+      <div class="heap-bar-wrap" style="margin-top:10px">
+        <div class="heap-label"><span>Heap Usage</span><span id="leak-heap-pct">8 MB / 100 MB (8%)</span></div>
+        <div class="heap-bar"><div class="heap-fill heap-normal" id="leak-heap-bar" style="width:8%"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 class="amber">📋 Leak Analysis Log</h2>
+      <div class="log-box" id="leak-log"><div class="log-info">// Memory leak simulator</div></div>
+    </div>
+  </div>
+  <div class="insight" id="leak-insight">
+    <strong>LACE Pattern:</strong> <strong>L</strong>isteners not removed • <strong>A</strong>rray/cache without bounds • <strong>C</strong>losures capturing large objects • <strong>E</strong>lements detached from DOM. These are the 4 most common memory leak categories in SPAs.
+  </div>
+</div>
+
+<!-- TAB 4: WeakMap vs Map -->
+<div class="panel" id="tab-weak">
+  <div class="controls">
+    <button class="btn-b" onclick="demoMapLeak()">📌 Map — Strong Reference</button>
+    <button class="btn-g" onclick="demoWeakMap()">✅ WeakMap — Weak Reference</button>
+    <button class="btn-p" onclick="demoWeakRef()">🔍 WeakRef Demo</button>
+    <button class="btn-a" onclick="resetWeak()">🔁 Reset</button>
+  </div>
+  <div class="grid3">
+    <div class="card">
+      <h2 class="red">🗂️ Map (Strong Keys)</h2>
+      <div id="map-visual" style="background:#0f1117;border-radius:8px;padding:10px;min-height:140px">
+        <div style="color:#475569;font-size:0.75rem">Run Map demo to see entries</div>
+      </div>
+      <div style="margin-top:8px;font-size:0.72rem;color:#ef4444" id="map-gc-status"></div>
+    </div>
+    <div class="card">
+      <h2 class="green">🗂️ WeakMap (Weak Keys)</h2>
+      <div id="wm-visual" style="background:#0f1117;border-radius:8px;padding:10px;min-height:140px">
+        <div style="color:#475569;font-size:0.75rem">Run WeakMap demo to see entries</div>
+      </div>
+      <div style="margin-top:8px;font-size:0.72rem;color:#10b981" id="wm-gc-status"></div>
+    </div>
+    <div class="card">
+      <h2 class="purple">🔍 WeakRef</h2>
+      <div id="wr-visual" style="background:#0f1117;border-radius:8px;padding:10px;min-height:140px">
+        <div style="color:#475569;font-size:0.75rem">Run WeakRef demo</div>
+      </div>
+      <div style="margin-top:8px;font-size:0.72rem;color:#a78bfa" id="wr-gc-status"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="log-box" id="weak-log"><div class="log-info">// WeakMap vs Map memory behaviour simulator</div></div>
+  </div>
+  <div class="insight">
+    <strong>Rule:</strong> Use <code style="color:#f59e0b">WeakMap</code> when keys are DOM nodes or component instances — entry auto-removed when key is GC'd. Use <code style="color:#ef4444">Map</code> when you need <code>.size</code>, iteration, or explicit eviction (LRU cache). <code style="color:#a78bfa">WeakRef</code> is for observing without owning — always check <code>.deref()</code> before use.
+  </div>
+</div>
+
+<!-- TAB 5: Heap Monitor -->
+<div class="panel" id="tab-heap">
+  <div class="controls">
+    <button class="btn-b" onclick="startHeapMonitor()">▶ Start Monitor</button>
+    <button class="btn-r" onclick="simulateGrow()">📈 Simulate Leak Growth</button>
+    <button class="btn-g" onclick="triggerGC()">♻️ Trigger GC</button>
+    <button class="btn-a" onclick="stopHeapMonitor()">⏹ Stop</button>
+  </div>
+  <div class="card">
+    <h2 class="blue">📊 Heap Usage Over Time</h2>
+    <canvas id="heap-chart" width="800" height="200" style="width:100%;background:#0f1117;border-radius:8px"></canvas>
+    <div class="grid3" style="margin-top:12px;gap:10px">
+      <div style="background:#0f1117;padding:10px;border-radius:8px;text-align:center">
+        <div style="font-size:0.7rem;color:#64748b">Used Heap</div>
+        <div id="stat-used" style="font-size:1.3rem;color:#60a5fa;font-weight:bold">—</div>
+      </div>
+      <div style="background:#0f1117;padding:10px;border-radius:8px;text-align:center">
+        <div style="font-size:0.7rem;color:#64748b">Total Heap</div>
+        <div id="stat-total" style="font-size:1.3rem;color:#10b981;font-weight:bold">—</div>
+      </div>
+      <div style="background:#0f1117;padding:10px;border-radius:8px;text-align:center">
+        <div style="font-size:0.7rem;color:#64748b">GC Events</div>
+        <div id="stat-gc" style="font-size:1.3rem;color:#f59e0b;font-weight:bold">0</div>
+      </div>
+    </div>
+  </div>
+  <div class="insight">
+    <strong>Chrome DevTools Memory Tab:</strong> Take heap snapshots before and after a suspected leak action. Compare snapshots — anything growing in "Snapshot 2 but not Snapshot 1" is a leak candidate. Look for Detached HTMLElement and growing closure arrays.
+  </div>
+</div>
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // ═══ GC ALGORITHM ═══
+  let gcObjects = [];
+  let gcRefs = [];
+  let gcDropped = new Set();
+
+  function setPhase(p) {
+    ['alloc','mark','sweep','compact'].forEach(ph => {
+      document.getElementById('ph-' + ph).classList.toggle('active', ph === p);
+    });
+  }
+  function gcLog(msg, type='info') {
+    const box = document.getElementById('gc-log');
+    box.innerHTML += `<div class="log-${type}">${msg}</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function addObjects() {
+    const graph = document.getElementById('obj-graph');
+    const svg = document.getElementById('edge-svg');
+    gcObjects = [];
+    gcRefs = [];
+    gcDropped = new Set();
+
+    const nodes = [
+      { id: 'root', label: '🌐 GC Root\n(window)', x: 20, y: 105, type: 'root' },
+      { id: 'comp1', label: 'Component A', x: 160, y: 40, type: 'live' },
+      { id: 'comp2', label: 'Component B', x: 160, y: 130, type: 'live' },
+      { id: 'data1', label: 'userData{}', x: 300, y: 20, type: 'live' },
+      { id: 'data2', label: 'cache[100]', x: 300, y: 80, type: 'live' },
+      { id: 'orphan1', label: 'oldChart{}', x: 300, y: 160, type: 'live' },
+      { id: 'orphan2', label: 'tmpBuffer', x: 420, y: 180, type: 'live' },
+      { id: 'detail', label: 'userDetail', x: 420, y: 30, type: 'live' },
+    ];
+    const edges = [
+      { from: 'root', to: 'comp1' }, { from: 'root', to: 'comp2' },
+      { from: 'comp1', to: 'data1' }, { from: 'comp1', to: 'data2' },
+      { from: 'data1', to: 'detail' },
+      { from: 'comp2', to: 'orphan1' }, { from: 'orphan1', to: 'orphan2' },
+    ];
+    gcObjects = nodes; gcRefs = edges;
+
+    // Position nodes
+    graph.querySelectorAll('.node').forEach(n => n.remove());
+    svg.innerHTML = '';
+    nodes.forEach(n => {
+      const el = document.createElement('div');
+      el.className = `node node-${n.type}`; el.id = 'node-' + n.id;
+      el.style.left = n.x + 'px'; el.style.top = n.y + 'px';
+      el.style.width = '80px';
+      el.textContent = n.label;
+      graph.appendChild(el);
+    });
+    drawEdges();
+    gcLog('// Added 8 objects to heap — root + 7 live objects', 'green');
+    document.getElementById('gc-insight').innerHTML = '<strong>Object Graph:</strong> Arrows show references. The GC starts from roots and follows all arrows. Objects reachable from roots survive; everything else is garbage.';
+    setPhase('alloc');
+  }
+
+  function drawEdges() {
+    const svg = document.getElementById('edge-svg');
+    const graph = document.getElementById('obj-graph');
+    svg.innerHTML = '';
+    gcRefs.forEach(e => {
+      const fromEl = document.getElementById('node-' + e.from);
+      const toEl   = document.getElementById('node-' + e.to);
+      if (!fromEl || !toEl) return;
+      const fx = fromEl.offsetLeft + 80, fy = fromEl.offsetTop + 16;
+      const tx = toEl.offsetLeft, ty = toEl.offsetTop + 16;
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', fx); line.setAttribute('y1', fy);
+      line.setAttribute('x2', tx); line.setAttribute('y2', ty);
+      const dead = gcDropped.has(e.from) || gcDropped.has(e.to);
+      line.setAttribute('class', dead ? 'dead' : 'live');
+      svg.appendChild(line);
+    });
+  }
+
+  function dropReferences() {
+    gcDropped.add('comp2');
+    const el = document.getElementById('node-comp2');
+    if (el) el.className = 'node node-dead';
+    const el2 = document.getElementById('node-orphan1');
+    if (el2) el2.className = 'node node-dead';
+    const el3 = document.getElementById('node-orphan2');
+    if (el3) el3.className = 'node node-dead';
+    drawEdges();
+    gcLog('// comp2 reference dropped (e.g., component unmounted)', 'warn');
+    gcLog('// orphan1 + orphan2 now unreachable — will be collected', 'warn');
+    document.getElementById('gc-insight').innerHTML = '<strong>Unreachable Objects:</strong> comp2, orphan1, orphan2 are cut off from the root. They appear faded — not yet freed, but eligible for collection on the next GC cycle.';
+  }
+
+  async function runMarkSweep() {
+    if (gcObjects.length === 0) { addObjects(); await sleep(500); dropReferences(); await sleep(500); }
+    gcLog('// ── MARK-AND-SWEEP STARTED ──', 'info');
+    setPhase('mark');
+    gcLog('// Phase 1: MARK — traversing from GC roots...', 'info');
+    await sleep(600);
+    ['root','comp1','data1','detail','data2'].forEach(id => {
+      const el = document.getElementById('node-' + id);
+      if (el) { el.className = 'node node-mark'; }
+    });
+    gcLog('// Marked: root → comp1 → data1 → userDetail → cache[100]', 'green');
+    await sleep(700);
+    setPhase('sweep');
+    gcLog('// Phase 2: SWEEP — reclaiming unmarked objects...', 'info');
+    await sleep(500);
+    ['comp2','orphan1','orphan2'].forEach(id => {
+      const el = document.getElementById('node-' + id);
+      if (el) { el.style.display = 'none'; }
+    });
+    gcRefs = gcRefs.filter(e => !gcDropped.has(e.from) && !gcDropped.has(e.to));
+    drawEdges();
+    gcLog('// ✅ Freed: comp2, orphan1, orphan2 (3 objects reclaimed)', 'green');
+    await sleep(600);
+    setPhase('compact');
+    gcLog('// Phase 3: COMPACT — defragmenting heap...', 'info');
+    await sleep(500);
+    ['root','comp1','data1','detail','data2'].forEach(id => {
+      const el = document.getElementById('node-' + id);
+      if (el) el.className = 'node node-live';
+    });
+    gcLog('// ✅ GC complete — heap reduced by 3 objects', 'green');
+    document.getElementById('gc-insight').innerHTML = '<strong>GC Complete:</strong> 5 objects survived (reachable from root). 3 objects were reclaimed. In V8, this runs incrementally in 1-5ms slices to avoid blocking the main thread.';
+    setPhase('');
+  }
+
+  function resetGC() {
+    gcObjects = []; gcRefs = []; gcDropped = new Set();
+    document.getElementById('obj-graph').querySelectorAll('.node').forEach(n => n.remove());
+    document.getElementById('edge-svg').innerHTML = '';
+    document.getElementById('gc-log').innerHTML = '<div class="log-info">// Reset complete</div>';
+    setPhase('');
+  }
+
+  // ═══ GENERATIONAL GC ═══
+  let genObjects = { from: [], to: [], old: [] };
+  let genCount = 0, genScavengeCount = 0;
+
+  function genLog(msg, type='info') {
+    const box = document.getElementById('gen-log');
+    box.innerHTML += `<div class="log-${type}">${msg}</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function renderGen() {
+    const fromEl = document.getElementById('gen-from');
+    const toEl   = document.getElementById('gen-to');
+    const oldEl  = document.getElementById('gen-old');
+    fromEl.innerHTML = genObjects.from.map(o =>
+      `<span class="gen-item ${o.type}" title="Survived: ${o.survived}">${o.id}</span>`
+    ).join('') || '<span style="color:#475569;font-size:0.75rem">empty</span>';
+    toEl.innerHTML = genObjects.to.length ? genObjects.to.map(o =>
+      `<span class="gen-item gen-surv">${o.id}</span>`).join('') : '<span style="color:#475569;font-size:0.75rem">empty</span>';
+    oldEl.innerHTML = genObjects.old.map(o =>
+      `<span class="gen-item gen-old">${o.id}</span>`
+    ).join('') || '<span style="color:#475569;font-size:0.75rem">empty</span>';
+  }
+
+  function allocNewGen() {
+    genCount++;
+    const isLong = Math.random() > 0.7; // 30% survive
+    const obj = { id: `obj${genCount}`, survived: 0, type: isLong ? 'gen-surv' : 'gen-new', isLong };
+    genObjects.from.push(obj);
+    renderGen();
+    genLog(`// alloc obj${genCount} in New Space (${isLong ? 'long-lived' : 'short-lived'})`, 'info');
+  }
+
+  async function runScavenge() {
+    genScavengeCount++;
+    genLog(`// ── SCAVENGE #${genScavengeCount} ──`, 'info');
+    const live = genObjects.from.filter(o => o.isLong || o.survived > 0);
+    const dead = genObjects.from.filter(o => !o.isLong && o.survived === 0);
+    genLog(`// ${dead.length} short-lived objects reclaimed`, 'green');
+    live.forEach(o => { o.survived++; });
+    const toPromote = live.filter(o => o.survived >= 2);
+    const toKeep    = live.filter(o => o.survived < 2);
+    genObjects.to = toKeep;
+    toPromote.forEach(o => {
+      genObjects.old.push(o);
+      genLog(`// ↑ Promoted obj ${o.id} to Old Space (survived ${o.survived} scavenges)`, 'warn');
+    });
+    renderGen();
+    await sleep(400);
+    // Swap from/to
+    genObjects.from = [...genObjects.to];
+    genObjects.to = [];
+    renderGen();
+    genLog(`// From-space wiped — ${genObjects.from.length} objects remain in New Space`, 'green');
+  }
+
+  async function runMajorGC() {
+    const beforeCount = genObjects.old.length;
+    const toKeep = genObjects.old.filter(() => Math.random() > 0.4);
+    const swept = beforeCount - toKeep.length;
+    genObjects.old = toKeep;
+    renderGen();
+    genLog(`// ── MAJOR GC ── Old Space: reclaimed ${swept}/${beforeCount} objects`, 'warn');
+    genLog(`// Mark-Sweep-Compact on Old Space complete`, 'green');
+  }
+
+  function resetGen() {
+    genObjects = { from: [], to: [], old: [] };
+    genCount = 0; genScavengeCount = 0;
+    document.getElementById('gen-log').innerHTML = '<div class="log-info">// Reset</div>';
+    renderGen();
+  }
+
+  // ═══ LEAK PATTERNS ═══
+  let leaks = [];
+  let leakHeap = 8;
+
+  function leakLog(msg, type='info') {
+    const box = document.getElementById('leak-log');
+    box.innerHTML += `<div class="log-${type}">${msg}</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function updateLeakHeap() {
+    const pct = Math.min(leakHeap, 100);
+    const bar = document.getElementById('leak-heap-bar');
+    document.getElementById('leak-heap-pct').textContent = `${leakHeap} MB / 100 MB (${pct}%)`;
+    bar.style.width = pct + '%';
+    bar.className = 'heap-fill ' + (pct < 40 ? 'heap-normal' : pct < 70 ? 'heap-warn' : 'heap-critical');
+  }
+
+  function renderLeaks() {
+    const el = document.getElementById('leak-list');
+    if (!leaks.length) { el.innerHTML = '<div style="color:#475569;font-size:0.78rem;padding:10px;text-align:center">No active leaks</div>'; return; }
+    el.innerHTML = leaks.map(l => `
+      <div class="leak-item">
+        <span class="l-name">${l.name}</span>
+        <span class="l-size">+${l.size} MB</span>
+        <span class="l-type">${l.type}</span>
+      </div>`).join('');
+  }
+
+  function addLeak(name, size, type, msg) {
+    leaks.push({ name, size, type });
+    leakHeap += size;
+    renderLeaks();
+    updateLeakHeap();
+    leakLog(`// ❌ LEAK: ${name} (+${size}MB) — ${msg}`, 'warn');
+  }
+
+  function demoLeakListener() {
+    addLeak('document.resize handler', 15, 'EventListener', 'holds closure over largeDataset[]');
+    leakLog('// document.addEventListener("resize", () => { ... }) — never removed', 'red');
+    leakLog('// FIX: return cleanup fn from useEffect / ngOnDestroy removeEventListener', 'info');
+    document.getElementById('leak-insight').innerHTML = '<strong>Event Listener Leak:</strong> A listener on <code>document</code> or <code>window</code> holds a closure. When the component unmounts, the listener stays registered and its closure scope stays alive in heap. Fix: always call <code>removeEventListener</code> on cleanup.';
+  }
+
+  function demoLeakDetached() {
+    addLeak('detachedTable (DOM subtree)', 25, 'Detached DOM', 'JS ref prevents GC of entire subtree');
+    leakLog('// table = document.createElement("table"); cache.push(table);', 'red');
+    leakLog('// table removed from DOM BUT JS array still holds ref → detached node leak', 'warn');
+    leakLog('// FIX: null out JS references after removing from DOM', 'info');
+    document.getElementById('leak-insight').innerHTML = '<strong>Detached DOM Leak:</strong> Node removed from document but kept in a JS variable. The entire subtree (all children + their listeners + their closures) is retained. Chrome DevTools shows these as "Detached HTMLElement" in heap snapshots.';
+  }
+
+  function demoLeakClosure() {
+    addLeak('closure[[scope]].bigConfig', 8, 'Closure', 'captures entire 8MB config object (only uses .theme)');
+    leakLog('// handler = () => applyTheme(bigConfig.theme);  ← full bigConfig captured', 'red');
+    leakLog('// FIX: const theme = bigConfig.theme;  then () => applyTheme(theme)', 'info');
+    document.getElementById('leak-insight').innerHTML = '<strong>Closure Capture Leak:</strong> The closure captures the <i>entire</i> outer scope object, not just the properties it uses. Extract only the needed value before creating the closure — then the large object can be GC\'d.';
+  }
+
+  function demoLeakTimer() {
+    addLeak('setInterval callback', 20, 'Timer', 'holds 20MB cache, never cleared');
+    leakLog('// setInterval(() => { cache.refresh(); }, 5000) — no clearInterval!', 'red');
+    leakLog('// FIX: const id = setInterval(...); return () => clearInterval(id)', 'info');
+    document.getElementById('leak-insight').innerHTML = '<strong>Timer Leak:</strong> <code>setInterval</code> fires forever. The callback holds a closure over data. Even if the owning component is gone, the interval + its closure stays alive. Always store the interval ID and call <code>clearInterval</code> on cleanup.';
+  }
+
+  function fixLeaks() {
+    leaks = [];
+    leakHeap = 8;
+    renderLeaks();
+    updateLeakHeap();
+    leakLog('// ✅ All leaks fixed: listeners removed, refs nulled, intervals cleared', 'green');
+    leakLog('// Heap returned to baseline: 8 MB', 'green');
+    document.getElementById('leak-insight').innerHTML = '<strong>All Fixed:</strong> Event listeners removed in cleanup. DOM refs nulled after unmount. Closures extract only needed primitives. setInterval IDs stored and cleared. Heap back to 8 MB baseline.';
+  }
+
+  function resetLeaks() {
+    leaks = []; leakHeap = 8;
+    renderLeaks(); updateLeakHeap();
+    document.getElementById('leak-log').innerHTML = '<div class="log-info">// Reset</div>';
+  }
+
+  // ═══ WEAKMAP vs MAP ═══
+  function weakLog(msg, type='info') {
+    const box = document.getElementById('weak-log');
+    box.innerHTML += `<div class="log-${type}">${msg}</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function demoMapLeak() {
+    document.getElementById('map-visual').innerHTML = `
+      <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:8px">Map entries (strong references)</div>
+      ${[1,2,3].map(i=>`<div style="background:#1a0a0a;border:1px solid #4b1c1c;border-radius:5px;padding:5px 8px;margin-bottom:4px;font-family:monospace;font-size:0.72rem">
+        <span style="color:#f59e0b">domNode${i}</span> → <span style="color:#ef4444">{meta: "component${i}", size: "2MB"}</span>
+      </div>`).join('')}`;
+    document.getElementById('map-gc-status').innerHTML = '❌ Even if domNode is removed from DOM, Map keeps it alive!';
+    weakLog('// const cache = new Map();', 'info');
+    weakLog('// cache.set(domNode, componentMeta); — strong key reference', 'warn');
+    weakLog('// domNode removed from DOM, but Map.key is GC root → NO collection', 'red');
+    weakLog('// cache.size = 3, can iterate — BUT prevents GC of all 3 nodes', 'warn');
+  }
+
+  function demoWeakMap() {
+    document.getElementById('wm-visual').innerHTML = `
+      <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:8px">WeakMap entries (weak key references)</div>
+      ${[1,2,3].map(i=>`<div style="background:#001a0e;border:1px solid #16a34a;border-radius:5px;padding:5px 8px;margin-bottom:4px;font-family:monospace;font-size:0.72rem">
+        <span style="color:#86efac">domNode${i}</span> → <span style="color:#34d399">{meta: "component${i}"}</span>
+      </div>`).join('')}
+      <div style="margin-top:8px;color:#86efac;font-size:0.7rem">↓ domNode2 removed from DOM...</div>
+      <div style="background:#001a0e;border:1px dashed #16a34a;border-radius:5px;padding:5px 8px;margin-top:4px;font-family:monospace;font-size:0.72rem;opacity:0.4;text-decoration:line-through">
+        <span style="color:#86efac">domNode2</span> → auto-removed after GC ✓
+      </div>`;
+    document.getElementById('wm-gc-status').innerHTML = '✅ domNode2 can be GC\'d — WeakMap entry disappears automatically!';
+    weakLog('// const cache = new WeakMap();', 'info');
+    weakLog('// cache.set(domNode, componentMeta); — weak key', 'green');
+    weakLog('// domNode2 removed from DOM — GC can collect it now', 'green');
+    weakLog('// WeakMap entry for domNode2 is auto-removed — no leak!', 'green');
+    weakLog('// Limitation: cannot iterate WeakMap, no .size property', 'warn');
+  }
+
+  function demoWeakRef() {
+    document.getElementById('wr-visual').innerHTML = `
+      <div style="font-size:0.75rem;color:#94a3b8;margin-bottom:8px">WeakRef — observe without owning</div>
+      <div style="background:#1a1030;border:1px solid #7c3aed;border-radius:5px;padding:8px;font-family:monospace;font-size:0.72rem;margin-bottom:8px">
+        <div style="color:#c4b5fd">let obj = { id: 1, name: 'widget' };</div>
+        <div style="color:#c4b5fd">const ref = new WeakRef(obj);</div>
+        <div style="color:#c4b5fd">obj = null; // drop strong reference</div>
+      </div>
+      <div style="background:#001a0e;border:1px solid #16a34a;border-radius:5px;padding:8px;font-family:monospace;font-size:0.72rem">
+        <div style="color:#86efac">const alive = ref.deref();</div>
+        <div style="color:#86efac">// → { id:1, name:'widget' } (if still alive)</div>
+        <div style="color:#86efac">// → undefined (if GC'd)</div>
+      </div>`;
+    document.getElementById('wr-gc-status').innerHTML = '⚠️ Always check deref() — may return undefined after GC';
+    weakLog('// WeakRef — hold reference without preventing GC', 'info');
+    weakLog('// const ref = new WeakRef(obj);', 'info');
+    weakLog('// ref.deref() → obj if alive, undefined if GC\'d', 'warn');
+    weakLog('// Use FinalizationRegistry for GC notifications (debugging only!)', 'warn');
+  }
+
+  function resetWeak() {
+    document.getElementById('map-visual').innerHTML = '<div style="color:#475569;font-size:0.75rem">Run Map demo</div>';
+    document.getElementById('wm-visual').innerHTML  = '<div style="color:#475569;font-size:0.75rem">Run WeakMap demo</div>';
+    document.getElementById('wr-visual').innerHTML  = '<div style="color:#475569;font-size:0.75rem">Run WeakRef demo</div>';
+    document.getElementById('map-gc-status').innerHTML = '';
+    document.getElementById('wm-gc-status').innerHTML  = '';
+    document.getElementById('wr-gc-status').innerHTML  = '';
+    document.getElementById('weak-log').innerHTML = '<div class="log-info">// Reset</div>';
+  }
+
+  // ═══ HEAP MONITOR ═══
+  let heapData = [], heapMonitorId = null, gcEvents = 0, heapSim = 20, leaking = false;
+
+  function startHeapMonitor() {
+    if (heapMonitorId) return;
+    heapData = [];
+    heapMonitorId = setInterval(() => {
+      if (leaking) heapSim = Math.min(heapSim + 1.5, 95);
+      else heapSim = Math.max(20, heapSim - 0.3);
+      heapData.push(heapSim);
+      if (heapData.length > 80) heapData.shift();
+      document.getElementById('stat-used').textContent  = heapSim.toFixed(1) + ' MB';
+      document.getElementById('stat-total').textContent = '128 MB';
+      document.getElementById('stat-gc').textContent    = gcEvents;
+      drawHeapChart();
+    }, 300);
+  }
+
+  function stopHeapMonitor() {
+    clearInterval(heapMonitorId); heapMonitorId = null;
+  }
+
+  function simulateGrow() { leaking = true; }
+
+  function triggerGC() {
+    gcEvents++;
+    heapSim = Math.max(20, heapSim * 0.6);
+    leaking = false;
+    document.getElementById('stat-gc').textContent = gcEvents;
+  }
+
+  function drawHeapChart() {
+    const canvas = document.getElementById('heap-chart');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.offsetWidth || 800, H = 200;
+    canvas.width = W; canvas.height = H;
+    ctx.clearRect(0, 0, W, H);
+    // Grid
+    ctx.strokeStyle = '#1e2130'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) { const y = H - (i / 4) * H; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    if (heapData.length < 2) return;
+    // Fill
+    const step = W / (heapData.length - 1);
+    ctx.beginPath();
+    heapData.forEach((v, i) => {
+      const x = i * step, y = H - (v / 100) * H;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo((heapData.length - 1) * step, H); ctx.lineTo(0, H); ctx.closePath();
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, 'rgba(96,165,250,0.4)'); grad.addColorStop(1, 'rgba(96,165,250,0.02)');
+    ctx.fillStyle = grad; ctx.fill();
+    // Line
+    ctx.beginPath(); ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 2;
+    heapData.forEach((v, i) => {
+      const x = i * step, y = H - (v / 100) * H;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    // Labels
+    ctx.fillStyle = '#475569'; ctx.font = '10px monospace';
+    for (let i = 0; i <= 4; i++) { const y = H - (i / 4) * H; ctx.fillText(i * 25 + 'MB', 4, y - 2); }
+  }
+
+  // Init
+  updateLeakHeap(); renderGen();
+</script>
+</body>
+</html>

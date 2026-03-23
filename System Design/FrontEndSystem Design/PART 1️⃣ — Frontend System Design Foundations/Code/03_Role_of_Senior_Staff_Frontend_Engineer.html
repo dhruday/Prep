@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Role of Senior/Staff Frontend Engineer</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px}
+    h1{text-align:center;color:#60a5fa;margin-bottom:4px;font-size:1.5rem}
+    .subtitle{text-align:center;color:#94a3b8;margin-bottom:20px;font-size:.88rem}
+    .ladder{display:flex;flex-direction:column;gap:0;margin-bottom:18px}
+    .rung{border-radius:8px;padding:14px 16px;border:2px solid;margin-bottom:3px;cursor:pointer;transition:all .2s;position:relative}
+    .rung::after{content:'▼';position:absolute;right:16px;top:50%;transform:translateY(-50%);color:#475569;transition:transform .2s}
+    .rung.active::after{transform:translateY(-50%) rotate(180deg);color:#60a5fa}
+    .rung:hover{transform:translateX(4px)}
+    .rung-title{font-size:.9rem;font-weight:bold;margin-bottom:2px}
+    .rung-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.68rem;margin-right:4px}
+    .rung-detail{display:none;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.1);font-size:.77rem;line-height:1.7}
+    .rung.active .rung-detail{display:block}
+    .r-mid{background:#1a1a2a;border-color:#3b82f6}
+    .r-senior{background:#1a2a1a;border-color:#16a34a}
+    .r-staff{background:#2a1a2a;border-color:#9333ea}
+    .r-principal{background:#2a2a1a;border-color:#d97706}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:16px}
+    .card h2{font-size:.85rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;color:#60a5fa}
+    .ownership{background:#0f1117;border-radius:8px;padding:12px}
+    .own-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #1e2130;font-size:.78rem}
+    .own-row:last-child{border-bottom:none}
+    .own-label{width:130px;color:#94a3b8}
+    .own-mid,.own-senior,.own-staff{flex:1;text-align:center;padding:3px 6px;border-radius:4px;font-size:.7rem}
+    .level-low{background:#1a1a1a;color:#475569}
+    .level-med{background:#1e3a5f;color:#93c5fd}
+    .level-high{background:#14532d;color:#86efac}
+    .level-own{background:#312e81;color:#c4b5fd}
+    .hruday-map{background:#0f1117;border-radius:8px;padding:12px;font-size:.77rem}
+    .story-row{padding:6px;border-bottom:1px solid #1e2130;display:flex;gap:8px;line-height:1.5}
+    .story-row:last-child{border-bottom:none}
+    .story-ev{color:#f59e0b;width:20px;flex-shrink:0}
+    .insight{background:#162032;border:1px solid #1e3a5f;border-radius:7px;padding:10px;font-size:.76rem;color:#93c5fd;margin-top:12px}
+    .insight strong{color:#fff}
+  </style>
+</head>
+<body>
+<h1>👑 Role of a Senior / Staff Frontend Engineer</h1>
+<p class="subtitle">What separates Senior from Staff — Interview expectations at each level</p>
+
+<div class="grid2" style="margin-bottom:14px">
+  <div>
+    <div class="ladder">
+      <div class="rung r-mid" onclick="toggleRung(this)">
+        <div class="rung-title" style="color:#93c5fd">L4 – Mid-Level Engineer</div>
+        <span class="rung-tag" style="background:#1e3a5f;color:#93c5fd">Execution</span>
+        <span class="rung-tag" style="background:#1e3a5f;color:#93c5fd">Feature scope</span>
+        <div class="rung-detail">Delivers features end-to-end within a well-defined scope. Writes tests, handles code reviews, raises blockers. Decisions are validated with senior engineer. Impact is at the individual feature level.</div>
+      </div>
+      <div class="rung r-senior active" onclick="toggleRung(this)">
+        <div class="rung-title" style="color:#86efac">L5 – Senior Engineer (7+ years) ← YOU ARE HERE</div>
+        <span class="rung-tag" style="background:#14532d;color:#86efac">Architecture</span>
+        <span class="rung-tag" style="background:#14532d;color:#86efac">Team impact</span>
+        <span class="rung-tag" style="background:#14532d;color:#86efac">Ownership</span>
+        <div class="rung-detail">Owns entire features or systems end-to-end. Makes architectural decisions with clear trade-off documentation. Unblocks others. Sets technical standards. Impact is at the team level — 3-5 engineers aligned to your design decisions. Raises problems before they become incidents. This is the minimum bar to pass FAANG senior interviews.</div>
+      </div>
+      <div class="rung r-staff" onclick="toggleRung(this)">
+        <div class="rung-title" style="color:#c4b5fd">L6 – Staff Engineer</div>
+        <span class="rung-tag" style="background:#312e81;color:#c4b5fd">Cross-team</span>
+        <span class="rung-tag" style="background:#312e81;color:#c4b5fd">Vision</span>
+        <span class="rung-tag" style="background:#312e81;color:#c4b5fd">Org impact</span>
+        <div class="rung-detail">Defines technical vision and direction for multiple teams. Architects systems that span team boundaries (design systems, micro-frontend platforms, shared libraries). Bridges business requirements and technical possibility. Impact is at the org/product level — decisions affect 10+ engineers and 12–18 month roadmaps.</div>
+      </div>
+      <div class="rung r-principal" onclick="toggleRung(this)">
+        <div class="rung-title" style="color:#fcd34d">L7/Distinguished – Principal Engineer</div>
+        <span class="rung-tag" style="background:#451a03;color:#fcd34d">Company-wide</span>
+        <span class="rung-tag" style="background:#451a03;color:#fcd34d">Industry influence</span>
+        <div class="rung-detail">Defines engineering strategy across the entire company. Identifies 3–5 year technical investments. Represents the company in external technical communities. Makes 2–3 major technical decisions per year that affect the entire engineering organisation.</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>📊 Ownership Scope by Level</h2>
+      <div class="ownership">
+        <div class="own-row"><span class="own-label">Area</span><span class="own-mid" style="font-weight:bold;color:#93c5fd">Senior</span><span class="own-senior" style="font-weight:bold;color:#86efac">Staff</span><span class="own-staff" style="font-weight:bold;color:#c4b5fd">Principal</span></div>
+        <div class="own-row"><span class="own-label">Architecture</span><span class="own-mid level-med">Feature</span><span class="own-senior level-high">System</span><span class="own-staff level-own">Platform</span></div>
+        <div class="own-row"><span class="own-label">Scope</span><span class="own-mid level-med">1 team</span><span class="own-senior level-high">Multi-team</span><span class="own-staff level-own">Org-wide</span></div>
+        <div class="own-row"><span class="own-label">Time horizon</span><span class="own-mid level-med">Weeks–months</span><span class="own-senior level-high">Mths–1yr</span><span class="own-staff level-own">1–3 years</span></div>
+        <div class="own-row"><span class="own-label">Technical vision</span><span class="own-mid level-low">Follows</span><span class="own-senior level-med">Contributes</span><span class="own-staff level-own">Defines</span></div>
+        <div class="own-row"><span class="own-label">Cross-team influence</span><span class="own-mid level-low">Low</span><span class="own-senior level-high">High</span><span class="own-staff level-own">Org-wide</span></div>
+        <div class="own-row"><span class="own-label">Mentorship</span><span class="own-mid level-med">1-on-1</span><span class="own-senior level-high">Team culture</span><span class="own-staff level-own">Org culture</span></div>
+        <div class="own-row"><span class="own-label">Ambiguity tolerance</span><span class="own-mid level-med">Medium</span><span class="own-senior level-high">High</span><span class="own-staff level-own">Very High</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <h2>🗺️ Hruday's Experience → Senior-Level Evidence</h2>
+    <div class="hruday-map">
+      <div class="story-row"><span class="story-ev">⚡</span><div><strong style="color:#86efac">Lighthouse 60→95:</strong> Architecture-level decision to adopt performance budgets, lazy-loading strategy, image pipeline. Team impact — set the standard for all subsequent feature work.</div></div>
+      <div class="story-row"><span class="story-ev">♿</span><div><strong style="color:#86efac">WCAG AA Certification:</strong> Cross-team ownership — defined accessible component patterns adopted by entire product team. Not just "fixed bugs" — redesigned how the team approaches accessibility.</div></div>
+      <div class="story-row"><span class="story-ev">🔐</span><div><strong style="color:#86efac">80% Security Reduction:</strong> Proactively identified OWASP vulnerabilities, presented risk to management, drove architectural changes. Ownership without authority.</div></div>
+      <div class="story-row"><span class="story-ev">🧩</span><div><strong style="color:#86efac">Micro-Frontend Architecture:</strong> System-level design decision. Multiple teams, module federation, shared state contracts. Textbook Staff-level thinking.</div></div>
+      <div class="story-row"><span class="story-ev">👥</span><div><strong style="color:#86efac">Mentored 4 Engineers:</strong> Team culture impact. Scaling yourself through others is a Staff indicator, not just Senior.</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>🎯 What FAANG Interviews Test at Senior Level</h2>
+    <div style="font-size:.78rem;line-height:1.8">
+      <div style="padding:5px 0;border-bottom:1px solid #2d3551;color:#e2e8f0">🔷 <strong>Ambiguity handling:</strong> Can you clarify requirements and make decisions without being told exactly what to build?</div>
+      <div style="padding:5px 0;border-bottom:1px solid #2d3551;color:#e2e8f0">🔷 <strong>Trade-off articulation:</strong> Do you understand WHY you chose a solution, not just WHAT you chose?</div>
+      <div style="padding:5px 0;border-bottom:1px solid #2d3551;color:#e2e8f0">🔷 <strong>Scale thinking:</strong> Does your design still work at 10× or 100× scale?</div>
+      <div style="padding:5px 0;border-bottom:1px solid #2d3551;color:#e2e8f0">🔷 <strong>Cross-cutting concerns:</strong> Do you consider security, accessibility, and observability by default?</div>
+      <div style="padding:5px 0;border-bottom:1px solid #2d3551;color:#e2e8f0">🔷 <strong>Production mindset:</strong> Error handling, monitoring, graceful degradation, rollback strategy.</div>
+      <div style="padding:5px 0;color:#e2e8f0">🔷 <strong>Collaboration signal:</strong> Do you ask good questions? Do you build on interviewer suggestions?</div>
+    </div>
+    <div class="insight">
+      <strong>The 60-second test:</strong> A senior engineer should be able to open any system design question with: "Before I dive in, let me clarify the requirements, then I'll walk through the high-level architecture, drill into the hardest parts, and address trade-offs." If you do this naturally, you're signalling senior-level thinking.
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleRung(el) {
+    const wasActive = el.classList.contains('active');
+    document.querySelectorAll('.rung').forEach(r => r.classList.remove('active'));
+    if (!wasActive) el.classList.add('active');
+  }
+</script>
+</body>
+</html>
