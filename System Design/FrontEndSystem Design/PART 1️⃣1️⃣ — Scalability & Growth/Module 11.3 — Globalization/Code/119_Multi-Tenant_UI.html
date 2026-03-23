@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 119 – Multi-Tenant UI</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+select{background:#1e2130;border:1px solid #60a5fa;color:#e2e8f0;padding:6px 12px;border-radius:6px;font-size:.83rem;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>🏢 Multi-Tenant UI</h1>
+<p class="sub">Topic 119 · Module 11.3 — Globalization · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Tenant Simulator</div>
+  <div class="tab" onclick="setTab(2)">Isolation Strategies</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Multi-tenant UI: one deployment, N customers — each with their own branding, features, data</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Multi-tenancy in the frontend means: (1) tenants cannot see each other's data (isolation), (2) each tenant can have different theming, feature sets, and routing configs, (3) all tenants share the same deployed bundle. The tenant is identified at boot time (subdomain, header, JWT claim) and governs everything. SAP BTP is fully multi-tenant — CustomerA.btp.cloud.sap runs the same code as CustomerB.btp.cloud.sap but sees personalized dashboards, features, and themes.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">What multi-tenant UI controls</div>
+        <div style="color:#94a3b8;line-height:2">Branding (logo, colors, fonts)<br>Feature gates (modules enabled per plan)<br>Navigation items<br>Data scoping (tenant ID in all API calls)<br>Locale defaults<br>Custom domain routing</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">Isolation requirements</div>
+        <div style="color:#94a3b8;line-height:2">No cross-tenant data in local/session storage<br>Auth token must contain tenant claim<br>API gateway enforces tenant scoping<br>No shared global state across tenant sessions<br>CSP headers per tenant</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Multi-tenant portal simulator</h3>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px"><label style="color:#94a3b8;font-size:.83rem">Select tenant:</label><select onchange="loadTenant(this.value)"><option value="acme">🏭 Acme Corp (Enterprise)</option><option value="startup">🚀 Spark Startup (Growth)</option><option value="bank">🏦 SecureBank (Finance)</option></select></div>
+    <div id="tenant-ui" style="border:1px solid #2d3551;border-radius:10px;overflow:hidden;font-size:.8rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Tenant isolation strategies</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Layer</th>
+        <th style="padding:8px;border:1px solid #2d3551">Strategy</th>
+        <th style="padding:8px;border:1px solid #2d3551">Implementation</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Routing</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Subdomain per tenant</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">tenant.app.com → identify at DNS level</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Auth</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Tenant claim in JWT</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">{ sub: userId, tid: 'acme-corp' }</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Storage</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Namespace keys</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">localStorage.setItem('acme:pref', value)</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">API calls</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">X-Tenant-ID header</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Axios interceptor injects tenant ID</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Features</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Plan-based flags</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Feature registry keyed by tenant tier</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Tenant context bootstrap + Axios interceptor</h3>
+    <pre><span class="cm">// ─── Tenant config type ───</span>
+<span class="kw">interface</span> TenantConfig {
+  id: <span class="kw">string</span>;
+  name: <span class="kw">string</span>;
+  theme: { primary: <span class="kw">string</span>; logo: <span class="kw">string</span> };
+  features: <span class="kw">string</span>[];
+  locale: <span class="kw">string</span>;
+}
+
+<span class="cm">// ─── Bootstrap on app start ───</span>
+<span class="kw">async function</span> <span class="fn">bootstrapTenant</span>(): Promise&lt;TenantConfig&gt; {
+  <span class="kw">const</span> subdomain = location.hostname.<span class="fn">split</span>(<span class="str">'.'</span>)[<span class="fn">0</span>];
+  <span class="kw">const</span> config = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`/api/tenant/${subdomain}`</span>).<span class="fn">then</span>(r =&gt; r.<span class="fn">json</span>());
+  <span class="fn">applyTheme</span>(config.theme);  <span class="cm">// inject CSS vars</span>
+  i18n.<span class="fn">changeLanguage</span>(config.locale);
+  <span class="kw">return</span> config;
+}
+
+<span class="cm">// ─── Axios interceptor adds tenant ID to every request ───</span>
+axios.interceptors.request.<span class="fn">use</span>(cfg =&gt; {
+  cfg.headers[<span class="str">'X-Tenant-ID'</span>] = tenantStore.<span class="fn">getState</span>().tenantId;
+  <span class="kw">return</span> cfg;
+});
+
+<span class="cm">// ─── Storage helper with namespace ───</span>
+<span class="kw">const</span> <span class="fn">tenantStorage</span> = (tenantId: <span class="kw">string</span>) =&gt; ({
+  <span class="fn">set</span>: (k: <span class="kw">string</span>, v: <span class="kw">string</span>) =&gt; localStorage.<span class="fn">setItem</span>(<span class="str">`${tenantId}:${k}`</span>, v),
+  <span class="fn">get</span>: (k: <span class="kw">string</span>) =&gt; localStorage.<span class="fn">getItem</span>(<span class="str">`${tenantId}:${k}`</span>),
+});</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const tenants={
+  acme:{name:'Acme Corp',plan:'Enterprise',primary:'#003087',bg:'#f0f4ff',nav:'#003087',logo:'🏭',locale:'en-US',features:['Dashboard','Analytics','Reports','Admin','AI Insights','Custom Workflows'],data:'Revenue: $12.4M | Users: 4,200 | Tickets: 143 open'},
+  startup:{name:'Spark Startup',plan:'Growth',primary:'#7c3aed',bg:'#f5f0ff',nav:'#7c3aed',logo:'🚀',locale:'en-US',features:['Dashboard','Analytics','Reports'],data:'Revenue: $85K | Users: 210 | Tickets: 8 open'},
+  bank:{name:'SecureBank',plan:'Finance',primary:'#065f46',bg:'#f0fdf4',nav:'#065f46',logo:'🏦',locale:'en-GB',features:['Dashboard','Transactions','Compliance','Audit Log','2FA Required'],data:'Accounts: 18,400 | Pending: 23 | Alerts: 2 critical'}
+};
+function loadTenant(k){const t=tenants[k];document.getElementById('tenant-ui').innerHTML=`<div style="background:${t.nav};padding:14px 20px;color:#fff;display:flex;align-items:center;gap:10px"><span style="font-size:1.4rem">${t.logo}</span><span style="font-weight:700;font-size:1rem">${t.name}</span><span style="background:rgba(255,255,255,.15);border-radius:10px;padding:2px 8px;font-size:.73rem;margin-left:auto">${t.plan}</span></div><div style="background:${t.bg};padding:14px 20px"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${t.features.map(f=>`<span style="background:white;border:1px solid ${t.primary}22;color:${t.primary};padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600">${f}</span>`).join('')}</div><div style="background:white;border:1px solid ${t.primary}33;border-radius:8px;padding:12px;font-size:.8rem;color:#374151">${t.data}</div><div style="font-size:.74rem;color:#6b7280;margin-top:8px">Locale: ${t.locale} · Tenant ID: ${k}-corp · Storage namespace: ${k}:</div></div>`;}
+loadTenant('acme');
+</script>
+</body>
+</html>

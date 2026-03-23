@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 127 – Authentication Flows</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}
+button.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🔑 Authentication Flows</h1>
+<p class="sub">Topic 127 · Part 12 / 12.2 Auth and Tokens · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Flow Diagrams</div>
+  <div class="tab" onclick="setTab(2)">Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Auth flows: choose based on app type, trust level, and user experience requirements</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Modern auth has standardized on OAuth 2.0 / OIDC as the protocol of choice. The "flow" determines HOW the token is obtained. Wrong choice = security risk: Authorization Code Flow (PKCE) is correct for SPAs; Implicit Flow is deprecated and vulnerable to token leakage in URL fragments. SAP BTP uses OIDC with Authorization Code + PKCE for all its Fiori app logins.</p>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px"><div style="color:#10b981;font-weight:700;margin-bottom:4px">Auth Code + PKCE</div><div style="color:#94a3b8">✅ SPA, mobile apps. No client secret needed. Code verifier prevents code injection.</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px"><div style="color:#60a5fa;font-weight:700;margin-bottom:4px">Client Credentials</div><div style="color:#94a3b8">✅ Server-to-server M2M. No user involved. Client ID + secret.</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px"><div style="color:#f59e0b;font-weight:700;margin-bottom:4px">Device Flow</div><div style="color:#94a3b8">✅ CLI tools, smart TVs. Device shows code, user auths on phone.</div></div>
+      <div style="background:#0f1117;border:1px solid #3a1e1e;border-radius:8px;padding:10px"><div style="color:#ef4444;font-weight:700;margin-bottom:4px">Implicit Flow ❌</div><div style="color:#94a3b8">Deprecated. Token in URL fragment — leaked in history, logs, referrer.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Auth flow step-by-step</h3>
+    <div id="flow-btns" style="margin-bottom:12px">
+      <button class="active" onclick="showFlow('pkce')">Auth Code + PKCE (SPA)</button>
+      <button onclick="showFlow('cc')">Client Credentials</button>
+      <button onclick="showFlow('session')">Session (Traditional)</button>
+    </div>
+    <div id="flow-content" style="font-size:.79rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Authentication flow comparison matrix</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Flow</th>
+        <th style="padding:8px;border:1px solid #2d3551">Suitable for</th>
+        <th style="padding:8px;border:1px solid #2d3551">Token delivery</th>
+        <th style="padding:8px;border:1px solid #2d3551">Refresh?</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Authorization Code + PKCE</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">SPA, Mobile</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Back-channel token exchange</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">✅ Yes</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#60a5fa">Client Credentials</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Server-to-server</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Direct token response</td><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">⚠️ N/A</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">Device Flow</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">CLI, IoT, Smart TV</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Poll until user auths on phone</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">✅ Yes</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Implicit (deprecated)</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">❌ Do not use</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Token in URL fragment</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">❌ No</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>PKCE flow implementation</h3>
+    <pre><span class="cm">// ─── Generate PKCE code verifier + challenge ───</span>
+<span class="kw">async function</span> <span class="fn">generatePKCE</span>() {
+  <span class="kw">const</span> verifier = <span class="fn">base64url</span>(crypto.<span class="fn">getRandomValues</span>(<span class="kw">new</span> <span class="fn">Uint8Array</span>(<span class="fn">32</span>)));
+  <span class="kw">const</span> hash = <span class="kw">await</span> crypto.subtle.<span class="fn">digest</span>(<span class="str">'SHA-256'</span>, <span class="kw">new</span> <span class="fn">TextEncoder</span>().<span class="fn">encode</span>(verifier));
+  <span class="kw">const</span> challenge = <span class="fn">base64url</span>(<span class="kw">new</span> <span class="fn">Uint8Array</span>(hash));
+  sessionStorage.<span class="fn">setItem</span>(<span class="str">'pkce_verifier'</span>, verifier); <span class="cm">// save for token exchange</span>
+  <span class="kw">return</span> { verifier, challenge };
+}
+
+<span class="cm">// ─── Step 1: redirect to IdP ───</span>
+<span class="kw">const</span> { challenge } = <span class="kw">await</span> <span class="fn">generatePKCE</span>();
+<span class="kw">const</span> authUrl = <span class="kw">new</span> <span class="fn">URL</span>(<span class="str">'https://idp.sap.com/authorize'</span>);
+authUrl.searchParams.<span class="fn">set</span>(<span class="str">'response_type'</span>, <span class="str">'code'</span>);
+authUrl.searchParams.<span class="fn">set</span>(<span class="str">'code_challenge'</span>, challenge);
+authUrl.searchParams.<span class="fn">set</span>(<span class="str">'code_challenge_method'</span>, <span class="str">'S256'</span>);
+location.<span class="fn">assign</span>(authUrl);
+
+<span class="cm">// ─── Step 2: exchange code for token (back-channel) ───</span>
+<span class="kw">const</span> tokens = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/auth/token'</span>, {
+  method: <span class="str">'POST'</span>,
+  body: <span class="kw">new</span> <span class="fn">URLSearchParams</span>({
+    code: callbackCode,
+    code_verifier: sessionStorage.<span class="fn">getItem</span>(<span class="str">'pkce_verifier'</span>)!,
+    grant_type: <span class="str">'authorization_code'</span>
+  })
+}).<span class="fn">then</span>(r =&gt; r.<span class="fn">json</span>());</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const flows={
+  pkce:{label:'Authorization Code + PKCE (SPA)',steps:['1. User clicks Login','2. App generates random code_verifier, hashes it → code_challenge','3. Redirect to IdP with code_challenge (S256)','4. User authenticates at IdP → IdP returns authorization code in redirect URL','5. App exchanges code + code_verifier → tokens (back-channel to /token endpoint)','6. App stores tokens, sets Authorization header for API calls'],note:'PKCE prevents code interception attacks. Even if code is stolen, attacker needs the verifier to exchange it.'},
+  cc:{label:'Client Credentials (M2M)',steps:['1. Backend service makes POST to /token','2. With client_id + client_secret + grant_type=client_credentials','3. IdP validates credentials','4. Returns access_token (no refresh token — just re-request)','5. Backend uses token for API calls'],note:'No user involved. Suitable for CI/CD pipelines, microservices, scheduled jobs. Never use in browser (secret would be exposed).'},
+  session:{label:'Session-based (Traditional Web)',steps:['1. User submits username + password form via POST','2. Server validates credentials','3. Server creates session record in DB / Redis','4. Sets HttpOnly+Secure session cookie in response','5. Browser auto-sends cookie on every subsequent request','6. Logout: server deletes session + clears cookie'],note:'Sessions stored server-side — easy to revoke. Vulnerable to CSRF (needs token). Works well for traditional server-rendered apps.'}
+};
+function showFlow(k){document.getElementById('flow-btns').querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active',['pkce','cc','session'][i]===k));const f=flows[k];document.getElementById('flow-content').innerHTML=`<div style="color:#60a5fa;font-weight:700;margin-bottom:8px">${f.label}</div><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">${f.steps.map((s,i)=>`<div style="background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:8px;display:flex;gap:10px;align-items:flex-start"><span style="color:#60a5fa;font-weight:700;min-width:22px;font-size:.77rem">${i+1}.</span><span style="color:#94a3b8;font-size:.79rem">${s}</span></div>`).join('')}</div><div style="background:#1a2332;border:1px solid #2d3551;border-radius:6px;padding:10px;color:#94a3b8;font-size:.78rem">${f.note}</div>`;}
+showFlow('pkce');
+</script>
+</body>
+</html>

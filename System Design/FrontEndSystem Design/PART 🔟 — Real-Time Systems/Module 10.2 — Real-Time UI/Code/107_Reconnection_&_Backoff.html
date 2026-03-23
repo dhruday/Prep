@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 107 – Reconnection & Backoff</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🔁 Reconnection & Exponential Backoff</h1>
+<p class="sub">Topic 107 · Module 10.2 — Real-Time UI · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Backoff Visualizer</div>
+  <div class="tab" onclick="setTab(2)">Strategy Guide</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Never hammer a struggling server — back off exponentially with jitter</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">When a WebSocket or SSE connection drops, naive immediate-retry floods the server at exactly the wrong time (when it's overloaded). Exponential backoff spaces retries geometrically: wait 1s, then 2s, then 4s, then 8s, up to a cap. Jitter (random variance) prevents the "thundering herd" problem where thousands of clients all retry at the same moment. At SAP, the Bosch WebSocket service used decorrelated jitter with max 30s delay.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#3d0808;border:1px solid #ef4444;border-radius:8px;padding:10px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">❌ Immediate retry</div>
+        <div style="color:#94a3b8">Retry instantly every disconnect → DDoS your own server during outage</div>
+      </div>
+      <div style="background:#3d2000;border:1px solid #f59e0b;border-radius:8px;padding:10px">
+        <div style="color:#f59e0b;font-weight:700;margin-bottom:6px">⚠️ Fixed delay retry</div>
+        <div style="color:#94a3b8">All clients retry at T+10s → synchronized thundering herd wave</div>
+      </div>
+      <div style="background:#052e16;border:1px solid #10b981;border-radius:8px;padding:10px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Exp backoff + jitter</div>
+        <div style="color:#94a3b8">Clients spread out retries randomly → server load smoothed</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Backoff delay calculator</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;font-size:.82rem">
+      <label style="color:#94a3b8">Base delay (ms): <input id="base" type="number" value="1000" min="100" max="5000" style="width:70px;background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:4px;border-radius:4px"/></label>
+      <label style="color:#94a3b8">Max delay (ms): <input id="maxd" type="number" value="30000" min="1000" max="120000" style="width:70px;background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:4px;border-radius:4px"/></label>
+      <label style="color:#94a3b8">Factor: <input id="factor" type="number" value="2" min="1.5" max="4" step="0.5" style="width:50px;background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:4px;border-radius:4px"/></label>
+      <button onclick="calcBackoff()" style="padding:6px 14px;background:#1e3a5f;border:1px solid #60a5fa;color:#60a5fa;border-radius:6px;cursor:pointer">Calculate</button>
+    </div>
+    <div id="backoff-bars" style="display:flex;flex-direction:column;gap:4px"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Reconnection strategies</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Strategy</th>
+        <th style="padding:8px;border:1px solid #2d3551">Formula</th>
+        <th style="padding:8px;border:1px solid #2d3551">Thundering herd</th>
+        <th style="padding:8px;border:1px solid #2d3551">Complexity</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Immediate</td><td style="padding:8px;border:1px solid #2d3551;font-size:.73rem">delay = 0</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#ef4444">Severe</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">None</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Fixed</td><td style="padding:8px;border:1px solid #2d3551;font-size:.73rem">delay = K</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Medium</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Trivial</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Exponential</td><td style="padding:8px;border:1px solid #2d3551;font-size:.73rem">min(cap, base × 2ⁿ)</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Medium</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Low</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Exp + full jitter</td><td style="padding:8px;border:1px solid #2d3551;font-size:.73rem">random(0, min(cap, base × 2ⁿ))</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Minimal</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Low</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Decorrelated jitter</td><td style="padding:8px;border:1px solid #2d3551;font-size:.73rem">random(base, prev × 3)</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Best</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Medium</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>WebSocket reconnect with exponential backoff + jitter</h3>
+    <pre><span class="cm">// ─── Resilient WebSocket manager ───</span>
+<span class="kw">class</span> ResilientWS {
+  <span class="kw">private</span> ws: WebSocket | <span class="kw">null</span> = <span class="kw">null</span>;
+  <span class="kw">private</span> attempt = <span class="fn">0</span>;
+  <span class="kw">private</span> <span class="kw">readonly</span> MAX_DELAY = <span class="fn">30_000</span>;
+  <span class="kw">private</span> <span class="kw">readonly</span> BASE     = <span class="fn">1_000</span>;
+  <span class="fn">connect</span>() {
+    <span class="kw">this</span>.ws = <span class="kw">new</span> <span class="fn">WebSocket</span>(<span class="kw">this</span>.url);
+    <span class="kw">this</span>.ws.onopen  = () =&gt; { <span class="kw">this</span>.attempt = <span class="fn">0</span>; <span class="kw">this</span>.<span class="fn">onOpen</span>?.(); };
+    <span class="kw">this</span>.ws.onclose = () =&gt; <span class="kw">this</span>.<span class="fn">scheduleReconnect</span>();
+    <span class="kw">this</span>.ws.onerror = () =&gt; <span class="kw">this</span>.ws?.<span class="fn">close</span>();
+  }
+  <span class="kw">private</span> <span class="fn">scheduleReconnect</span>() {
+    <span class="kw">const</span> exp   = <span class="kw">this</span>.BASE * Math.<span class="fn">pow</span>(<span class="fn">2</span>, <span class="kw">this</span>.attempt);
+    <span class="kw">const</span> delay = Math.<span class="fn">min</span>(<span class="kw">this</span>.MAX_DELAY, Math.<span class="fn">random</span>() * exp); <span class="cm">// full jitter</span>
+    <span class="kw">this</span>.attempt++;
+    setTimeout(() =&gt; <span class="kw">this</span>.<span class="fn">connect</span>(), delay);
+  }
+}
+
+<span class="cm">// ─── SSE auto-reconnects natively, but you can control delay: ───</span>
+<span class="kw">const</span> es = <span class="kw">new</span> <span class="fn">EventSource</span>(<span class="str">'/stream'</span>);
+<span class="cm">// Server sends "retry: 5000" line to tell client to wait 5s before reconnecting</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+function calcBackoff(){const base=parseInt(document.getElementById('base').value);const maxd=parseInt(document.getElementById('maxd').value);const fac=parseFloat(document.getElementById('factor').value);const el=document.getElementById('backoff-bars');el.innerHTML='';for(let i=0;i<8;i++){const exp=Math.min(maxd,base*Math.pow(fac,i));const jitter=Math.random()*exp;const pct=Math.round(exp/maxd*100);const jpct=Math.round(jitter/maxd*100);const div=document.createElement('div');div.style.cssText='display:grid;grid-template-columns:80px 1fr 80px;gap:8px;align-items:center;font-size:.76rem';div.innerHTML=`<span style="color:#475569">Attempt ${i+1}</span><div style="background:#0f1117;border-radius:4px;height:12px;position:relative;overflow:hidden"><div style="position:absolute;top:0;left:0;height:100%;background:#1e3a5f;width:${pct}%"></div><div style="position:absolute;top:0;left:0;height:100%;background:#60a5fa;width:${jpct}%"></div></div><span style="color:#60a5fa;text-align:right">${Math.round(jitter/1000*10)/10}s</span>`;el.appendChild(div);}const leg=document.createElement('div');leg.style.cssText='display:flex;gap:12px;font-size:.72rem;margin-top:8px;color:#475569';leg.innerHTML='<span><span style="display:inline-block;width:12px;height:8px;background:#1e3a5f;border-radius:2px"></span> Max</span><span><span style="display:inline-block;width:12px;height:8px;background:#60a5fa;border-radius:2px"></span> With jitter</span>';el.appendChild(leg);}
+calcBackoff();
+</script>
+</body>
+</html>

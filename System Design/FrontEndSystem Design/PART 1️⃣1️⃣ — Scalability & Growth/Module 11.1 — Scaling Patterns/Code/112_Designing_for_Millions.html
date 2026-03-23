@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 112 – Designing for Millions</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🌐 Designing for Millions of Users</h1>
+<p class="sub">Topic 112 · Module 11.1 — Scaling Patterns · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Scale Calculator</div>
+  <div class="tab" onclick="setTab(2)">Architecture Tiers</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Frontend scales differently from backend — network, CDN, and browser are your infrastructure</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">When serving millions of users, a single server is never the bottleneck — your frontend is. Key levers: (1) CDN distribution near every user, (2) static asset delivery (no server compute), (3) lazy loading so each user only downloads what they see, (4) edge rendering for personalized pages without origin hits. SAP's Fiori Launchpad serves 300K+ enterprise users globally — it uses content delivery networks and aggressively caches the shell.</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:.75rem;text-align:center">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="font-size:1.4rem">📦</div>
+        <div style="color:#60a5fa;font-weight:700;margin:4px 0">Static assets</div>
+        <div style="color:#94a3b8">Through CDN. No server hit.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="font-size:1.4rem">✂️</div>
+        <div style="color:#10b981;font-weight:700;margin:4px 0">Code splitting</div>
+        <div style="color:#94a3b8">Only load what user visits.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="font-size:1.4rem">🌐</div>
+        <div style="color:#a78bfa;font-weight:700;margin:4px 0">Edge rendering</div>
+        <div style="color:#94a3b8">Personalized HTML at edge.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="font-size:1.4rem">⚡</div>
+        <div style="color:#f59e0b;font-weight:700;margin:4px 0">Cache-first</div>
+        <div style="color:#94a3b8">SW + HTTP cache reduce origin load.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Bandwidth cost calculator (per deployment)</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;font-size:.82rem">
+      <label style="color:#94a3b8">Daily active users: <input id="dau" type="number" value="1000000" style="width:100%;margin-top:4px;background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:6px;border-radius:4px"/></label>
+      <label style="color:#94a3b8">Bundle size (KB): <input id="bundle" type="number" value="300" style="width:100%;margin-top:4px;background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:6px;border-radius:4px"/></label>
+      <label style="color:#94a3b8">Cache hit rate (%): <input id="cache" type="number" value="80" min="0" max="100" style="width:100%;margin-top:4px;background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:6px;border-radius:4px"/></label>
+      <label style="color:#94a3b8">CDN cost ($/GB): <input id="cdncost" type="number" value="0.09" step="0.01" style="width:100%;margin-top:4px;background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:6px;border-radius:4px"/></label>
+    </div>
+    <button onclick="calcScale()" style="padding:7px 16px;background:#1e3a5f;border:1px solid #60a5fa;color:#60a5fa;border-radius:6px;cursor:pointer;font-size:.82rem;margin-bottom:10px">Calculate</button>
+    <div id="scale-result" style="font-size:.8rem;background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;color:#94a3b8"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Frontend architecture tiers by scale</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Scale</th>
+        <th style="padding:8px;border:1px solid #2d3551">Architecture</th>
+        <th style="padding:8px;border:1px solid #2d3551">Key decisions</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#10b981">1K – 100K</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">SPA + basic CDN</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Route-based code splitting, gzip</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">100K – 5M</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">SSR/SSG + global CDN</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">ISR, SW caching, immutable hashes</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">5M – 100M</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Edge rendering + micro-frontends</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">A/B at edge, feature flags, regional delivery</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#a78bfa">100M+</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Distributed edge + regional stacks</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Geo-routing, regional failover, CRDT sync</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Next.js ISR + CDN headers for scale</h3>
+    <pre><span class="cm">// ─── ISR — regenerate static pages on demand ───</span>
+<span class="kw">export async function</span> <span class="fn">generateStaticParams</span>() {
+  <span class="kw">const</span> topProducts = <span class="kw">await</span> <span class="fn">fetchTop1000</span>();
+  <span class="kw">return</span> topProducts.<span class="fn">map</span>(p =&gt; ({ id: p.id })); <span class="cm">// pre-render popular pages</span>
+}
+<span class="kw">export const</span> revalidate = <span class="fn">3600</span>; <span class="cm">// regenerate every hour</span>
+
+<span class="cm">// ─── Cloudflare Workers edge personalization ───</span>
+<span class="kw">export default</span> {
+  <span class="kw">async</span> <span class="fn">fetch</span>(req: Request): Promise&lt;Response&gt; {
+    <span class="kw">const</span> country = req.cf?.country ?? <span class="str">'US'</span>;
+    <span class="kw">const</span> cached = <span class="kw">await</span> caches.default.<span class="fn">match</span>(<span class="str">`${req.url}:${country}`</span>);
+    <span class="kw">if</span> (cached) <span class="kw">return</span> cached;
+    <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(req); <span class="cm">// origin hit only on cache miss</span>
+    caches.default.<span class="fn">put</span>(<span class="str">`${req.url}:${country}`</span>, res.<span class="fn">clone</span>());
+    <span class="kw">return</span> res;
+  }
+};</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+function calcScale(){const dau=parseInt(document.getElementById('dau').value);const bundle=parseInt(document.getElementById('bundle').value);const cacheHit=parseInt(document.getElementById('cache').value)/100;const cdnCost=parseFloat(document.getElementById('cdncost').value);const missRate=1-cacheHit;const dailyGB=dau*missRate*(bundle/1024/1024);const monthlyCost=dailyGB*30*cdnCost;const originReqs=dau*missRate;document.getElementById('scale-result').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div style="color:#60a5fa">Daily origin requests</div><div style="color:#e2e8f0;text-align:right">${Math.round(originReqs).toLocaleString()}</div>
+<div style="color:#60a5fa">Daily CDN bandwidth</div><div style="color:#e2e8f0;text-align:right">${dailyGB.toFixed(1)} GB</div>
+<div style="color:#60a5fa">Monthly CDN cost</div><div style="color:${monthlyCost<500?'#10b981':monthlyCost<5000?'#f59e0b':'#ef4444'};text-align:right;font-weight:700">$${monthlyCost.toFixed(0)}</div>
+<div style="color:#60a5fa">Saved by cache (${Math.round(cacheHit*100)}%)</div><div style="color:#10b981;text-align:right">$${(dailyGB*30*cdnCost/(missRate||.001)*(cacheHit)).toFixed(0)} saved/month</div>
+</div>`;}
+calcScale();
+</script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 138 – Error Tracking</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#ef4444;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#2a0f0f;border-color:#ef4444;color:#ef4444}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#ef4444;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #ef4444;background:#2a0f0f;color:#ef4444;cursor:pointer;font-size:.82rem;margin:4px}
+</style>
+</head>
+<body>
+<h1>🐛 Error Tracking</h1>
+<p class="sub">Topic 138 · Part 13 / 13.1 Monitoring · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Error Simulator</div>
+  <div class="tab" onclick="setTab(2)">Tool Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Error tracking turns production crashes into actionable GitHub issues</h3>
+    <p style="color:#94a3b8;font-size:.83rem;margin-bottom:14px">Without error tracking, production bugs are invisible until users report them. Error tracking tools (Sentry, Datadog RUM, Rollbar) automatically: (1) capture unhandled exceptions and promise rejections, (2) attach source maps to show real line numbers instead of minified code, (3) group similar errors into "issues", (4) add breadcrumbs (recent user actions), (5) alert via Slack/PagerDuty. SAP uses Dynatrace across its BTP frontend fleet.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#ef4444;font-weight:700;margin-bottom:6px">JS Exception</div><div style="color:#94a3b8">TypeError, ReferenceError, SyntaxError — caught by window.onerror or window.addEventListener('error')</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#f59e0b;font-weight:700;margin-bottom:6px">Promise Rejection</div><div style="color:#94a3b8">Uncaught promise rejections — caught by unhandledrejection event. Common for async/await without try/catch</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#a78bfa;font-weight:700;margin-bottom:6px">React Error Boundary</div><div style="color:#94a3b8">Catches errors in render tree. componentDidCatch reports to Sentry. Without boundaries — entire tree unmounts.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Error event simulator — see what Sentry would capture</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+      <button onclick="simError('TypeError: Cannot read properties of null (reading \'map\')',['CheckoutPage → ProductList → render','Array.prototype.map (native)'])">TypeError</button>
+      <button onclick="simError('NetworkError: Failed to fetch /api/orders (503)',['OrdersController.loadOrders','useEffect hook'])">Network Error</button>
+      <button onclick="simError('ChunkLoadError: Loading chunk 47 failed (CORS)',['webpack require','LazyComponent import'])">Chunk Load</button>
+      <button onclick="simError('ReferenceError: analytics is not defined',['TrackingPlugin.init','App.useEffect'])">ReferenceError</button>
+    </div>
+    <div id="err-panel" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;font-size:.78rem;min-height:80px">
+      <div style="color:#475569">Click a button to simulate an error capture...</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Error tracking tools comparison</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#ef4444">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Tool</th>
+        <th style="padding:8px;border:1px solid #2d3551">Best for</th>
+        <th style="padding:8px;border:1px solid #2d3551">Key differentiator</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">Sentry</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Most popular open-source option</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Source maps, release tracking, issue owner assignment, performance spans</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#60a5fa">Datadog RUM</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Teams already on Datadog infra</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Unified logs + APM + RUM + alerts in one platform</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#a78bfa">Rollbar</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">High volume, custom workflows</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Telemetry + custom grouping rules + deploy hooks</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Dynatrace</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Enterprise, SAP environments</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">AI-powered root cause analysis. Correlates FE errors to BE traces automatically.</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Sentry setup + React Error Boundary + source maps</h3>
+    <pre><span class="cm">// ─── Sentry initialization ───</span>
+Sentry.<span class="fn">init</span>({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV,
+  release: <span class="str">`myapp@${process.env.COMMIT_SHA}`</span>,
+  tracesSampleRate: 0.1,     <span class="cm">// 10% of sessions traced</span>
+  integrations: [<span class="kw">new</span> Sentry.<span class="fn">BrowserTracing</span>()],
+  beforeSend: (event) =&gt; {
+    <span class="cm">// Strip PII from captured data</span>
+    <span class="kw">delete</span> event.user?.email;
+    <span class="kw">return</span> event;
+  }
+});
+
+<span class="cm">// ─── React Error Boundary ───</span>
+<span class="kw">class</span> ErrorBoundary <span class="kw">extends</span> React.Component {
+  <span class="fn">componentDidCatch</span>(error: Error, info: React.ErrorInfo) {
+    Sentry.<span class="fn">captureException</span>(error, {
+      contexts: { react: { componentStack: info.componentStack } }
+    });
+  }
+  <span class="fn">render</span>() {
+    <span class="kw">return</span> this.state.hasError
+      ? &lt;ErrorFallback /&gt; : this.props.children;
+  }
+}
+
+<span class="cm">// ─── source maps: vite.config.ts ───</span>
+<span class="kw">import</span> { sentryVitePlugin } <span class="kw">from</span> <span class="str">'@sentry/vite-plugin'</span>;
+<span class="kw">export default</span> {
+  build: { sourcemap: <span class="kw">true</span> },  <span class="cm">// generate source maps</span>
+  plugins: [<span class="fn">sentryVitePlugin</span>({ org: <span class="str">'my-org'</span>, project: <span class="str">'frontend'</span> })]
+  <span class="cm">// Plugin uploads maps to Sentry & deletes from deploy artifact</span>
+};</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+function simError(msg, stack){
+  const now=new Date().toISOString().replace('T',' ').slice(0,23);
+  document.getElementById('err-panel').innerHTML=`
+    <div style="color:#ef4444;font-weight:700;margin-bottom:8px">⚠ ${msg}</div>
+    <div style="color:#94a3b8;margin-bottom:10px;font-size:.75rem">Captured at: ${now}</div>
+    <div style="color:#f59e0b;font-size:.75rem;margin-bottom:6px">Stack trace:</div>
+    ${stack.map((s,i)=>`<div style="color:#94a3b8;font-family:monospace;font-size:.74rem;margin-bottom:2px">${' '.repeat(i*2)}at ${s}</div>`).join('')}
+    <div style="margin-top:10px;font-size:.75rem">
+      <span style="color:#10b981;margin-right:12px">✓ Fingerprint generated</span>
+      <span style="color:#60a5fa;margin-right:12px">✓ Source map applied</span>
+      <span style="color:#a78bfa">✓ Assigned to: checkout-squad</span>
+    </div>`;
+}
+</script>
+</body>
+</html>

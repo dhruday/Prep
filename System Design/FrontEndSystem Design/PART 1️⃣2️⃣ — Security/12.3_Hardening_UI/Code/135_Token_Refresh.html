@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 135 – Token Refresh Strategies</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #60a5fa;background:#1e3a5f;color:#60a5fa;cursor:pointer;font-size:.82rem;margin:4px}
+.step{background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:10px 14px;margin-bottom:8px;font-size:.8rem;display:flex;gap:12px;align-items:flex-start}
+.sn{background:#1e3a5f;color:#60a5fa;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;margin-top:2px}
+</style>
+</head>
+<body>
+<h1>🔄 Token Refresh Strategies</h1>
+<p class="sub">Topic 135 · Part 12 / 12.3 Hardening UI · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Refresh Flow</div>
+  <div class="tab" onclick="setTab(2)">Strategy Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Why token refresh matters for security</h3>
+    <p style="color:#94a3b8;font-size:.83rem;margin-bottom:14px">Short-lived access tokens (15-60 min) reduce the blast radius of token theft. When expired, a refresh token (longer-lived) silently obtains a new access token. The challenge: multiple concurrent requests all 401 → only one refresh, others queue and retry. At SAP BTP, XSUAA tokens expire every 12 hours; the UI SDK uses a proactive refresh 5 minutes before expiry.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Proactive refresh</div><div style="color:#94a3b8">Refresh X seconds before expiry. No user-visible latency; requires watching token exp claim. ✅ Best UX</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#f59e0b;font-weight:700;margin-bottom:6px">Reactive refresh (401)</div><div style="color:#94a3b8">Wait for 401, then refresh, then replay. Simple but causes latency spikes under concurrent calls. Queue all waiters.</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#10b981;font-weight:700;margin-bottom:6px">Silent iframe refresh</div><div style="color:#94a3b8">Legacy SPA approach (auth0 checkSession). Hidden iframe does redirect. Blocked by 3rd-party cookie restrictions in modern browsers.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Reactive token refresh flow — single refresh with request queue</h3>
+    <div id="rf-steps">
+      <div class="step"><div class="sn">1</div><div><div style="color:#e2e8f0;font-weight:600">API call with access token</div><div style="color:#94a3b8">3 concurrent requests fired: GET /user, GET /orders, GET /products — all include Access-Token: Bearer eyJ...</div></div></div>
+      <div class="step"><div class="sn">2</div><div><div style="color:#e2e8f0;font-weight:600">401 Unauthorized — token expired</div><div style="color:#94a3b8">All three requests return 401. Axios interceptor catches first 401 and sets isRefreshing = true. Others see flag and queue their resolve.</div></div></div>
+      <div class="step"><div class="sn">3</div><div><div style="color:#e2e8f0;font-weight:600">Single refresh call</div><div style="color:#94a3b8">POST /auth/token with refresh_token → returns new Access-Token. Only one refresh fired, even for N concurrent 401s.</div></div></div>
+      <div class="step"><div class="sn">4</div><div><div style="color:#e2e8f0;font-weight:600">Drain the queue</div><div style="color:#94a3b8">New token stored in memory. All queued request promises resolve with new token and are retried automatically.</div></div></div>
+      <div class="step"><div class="sn">5</div><div><div style="color:#e2e8f0;font-weight:600">All requests retry — succeed</div><div style="color:#94a3b8">GET /user, /orders, /products all succeed. User sees no error. isRefreshing = false for future calls.</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Token refresh strategy comparison</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Strategy</th>
+        <th style="padding:8px;border:1px solid #2d3551">When to refresh</th>
+        <th style="padding:8px;border:1px solid #2d3551">UX</th>
+        <th style="padding:8px;border:1px solid #2d3551">Complexity</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Proactive timer</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">setTimeout at (exp - 60s)</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Zero latency</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Medium</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">Reactive 401 + queue</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">On 401 response</td><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">Slight delay on expiry</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Low-medium</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#a78bfa">Sliding window</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Every request extends RT expiry</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Seamless</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Server complexity</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">No refresh (long AT)</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Never — token is days/weeks</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Simple</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">⚠ High blast radius if stolen</td></tr>
+    </table>
+    <div style="margin-top:12px;font-size:.78rem;color:#94a3b8;background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+      <div style="color:#f59e0b;font-weight:700;margin-bottom:6px">Refresh token rotation (security must-have)</div>
+      Every refresh consumes the RT and issues a new RT + AT. If a leaked RT is used, the legit RT is invalidated too — triggering a "token reuse" alert. OAuth 2.1 requires this.
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Axios 401 interceptor with request queue + proactive timer</h3>
+    <pre><span class="cm">// ─── Reactive: Axios 401 interceptor with queue ───</span>
+<span class="kw">let</span> isRefreshing = <span class="kw">false</span>;
+<span class="kw">let</span> waiters: ((token: <span class="kw">string</span>) =&gt; <span class="kw">void</span>)[] = [];
+
+api.interceptors.response.<span class="fn">use</span>(
+  res =&gt; res,
+  <span class="kw">async</span> err =&gt; {
+    <span class="kw">const</span> orig = err.config;
+    <span class="kw">if</span> (err.response?.status !== 401 || orig._retried) <span class="kw">throw</span> err;
+    orig._retried = <span class="kw">true</span>;
+
+    <span class="kw">if</span> (isRefreshing) {
+      <span class="cm">// Queue this request until refresh completes</span>
+      <span class="kw">return new</span> <span class="fn">Promise</span>(resolve =&gt; {
+        waiters.<span class="fn">push</span>(token =&gt; {
+          orig.headers[<span class="str">'Authorization'</span>] = <span class="str">`Bearer ${token}`</span>;
+          <span class="fn">resolve</span>(api(orig));
+        });
+      });
+    }
+
+    isRefreshing = <span class="kw">true</span>;
+    <span class="kw">const</span> { token } = <span class="kw">await</span> <span class="fn">refreshTokens</span>();
+    tokenStore.<span class="fn">set</span>(token);
+    waiters.<span class="fn">forEach</span>(cb =&gt; <span class="fn">cb</span>(token));
+    waiters = [];
+    isRefreshing = <span class="kw">false</span>;
+    orig.headers[<span class="str">'Authorization'</span>] = <span class="str">`Bearer ${token}`</span>;
+    <span class="kw">return</span> <span class="fn">api</span>(orig);
+  }
+);
+
+<span class="cm">// ─── Proactive: schedule refresh before expiry ───</span>
+<span class="kw">function</span> <span class="fn">scheduleRefresh</span>(accessToken: <span class="kw">string</span>) {
+  <span class="kw">const</span> { exp } = <span class="fn">parseJwt</span>(accessToken);
+  <span class="kw">const</span> msLeft = exp * 1000 - Date.<span class="fn">now</span>() - 60_000; <span class="cm">// 60s before expiry</span>
+  setTimeout(<span class="kw">async</span> () =&gt; {
+    <span class="kw">const</span> { token } = <span class="kw">await</span> <span class="fn">refreshTokens</span>();
+    tokenStore.<span class="fn">set</span>(token);
+    <span class="fn">scheduleRefresh</span>(token); <span class="cm">// reschedule for new token</span>
+  }, <span class="fn">Math.max</span>(msLeft, 0));
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+</script>
+</body>
+</html>

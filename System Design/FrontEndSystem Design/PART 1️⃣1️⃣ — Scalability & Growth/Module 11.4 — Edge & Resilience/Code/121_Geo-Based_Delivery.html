@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 121 – Geo-Based Delivery</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+select{background:#1e2130;border:1px solid #60a5fa;color:#e2e8f0;padding:6px 12px;border-radius:6px;font-size:.83rem;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>🌐 Geo-Based Delivery</h1>
+<p class="sub">Topic 121 · Module 11.4 — Edge & Resilience · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Region Simulator</div>
+  <div class="tab" onclick="setTab(2)">DNS Strategies</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Geo-based delivery: route users to the closest data center — reduce latency, comply with data residency laws</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Geo delivery has two goals: (1) performance — closest PoP serves assets faster, (2) compliance — GDPR requires EU user data stays in EU. Implemented via GeoDNS (route DNS response to nearest region) or CDN edge rules (Cloudflare Route / AWS CloudFront Geo Restriction). In the frontend, geo context can also drive: locale detection, currency display, region-specific compliance text, and which features are available (e.g., some features legally cannot be shown in certain countries).</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:.76rem;text-align:center">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px"><div style="font-size:1.2rem;margin-bottom:4px">🌏</div><div style="color:#60a5fa;font-weight:700">Performance</div><div style="color:#94a3b8;margin-top:4px">20–60ms saved when user hits nearest PoP</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px"><div style="font-size:1.2rem;margin-bottom:4px">⚖️</div><div style="color:#10b981;font-weight:700">Compliance</div><div style="color:#94a3b8;margin-top:4px">GDPR (EU), CCPA (CA), PIPL (China)</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px"><div style="font-size:1.2rem;margin-bottom:4px">💱</div><div style="color:#a78bfa;font-weight:700">Localization</div><div style="color:#94a3b8;margin-top:4px">Currency, language, legal text per country</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px"><div style="font-size:1.2rem;margin-bottom:4px">🛡️</div><div style="color:#f59e0b;font-weight:700">Feature gating</div><div style="color:#94a3b8;margin-top:4px">Block features unavailable in certain regions</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Region-based content simulator</h3>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <label style="color:#94a3b8;font-size:.83rem">Simulated user region:</label>
+      <select onchange="showRegion(this.value)">
+        <option value="us">🇺🇸 United States</option>
+        <option value="eu">🇪🇺 Germany (EU)</option>
+        <option value="gb">🇬🇧 United Kingdom</option>
+        <option value="jp">🇯🇵 Japan</option>
+        <option value="cn">🇨🇳 China</option>
+      </select>
+    </div>
+    <div id="region-result" style="font-size:.8rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>GeoDNS routing strategies</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Strategy</th>
+        <th style="padding:8px;border:1px solid #2d3551">Mechanism</th>
+        <th style="padding:8px;border:1px solid #2d3551">Best for</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">GeoDNS latency routing</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">DNS returns IP of lowest-latency origin</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Performance optimization</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">CDN geo restriction</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">CDN blocks/allows by country code</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Compliance / legal blocking</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Edge Worker geo header</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">CF-IPCountry injects country in Worker</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Personalization without DB</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Cookie + accept-language</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">User preference overrides geo</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">User-controlled locale</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Cloudflare geo header + Next.js geo routing</h3>
+    <pre><span class="cm">// ─── Cloudflare Worker: read geo ───</span>
+<span class="kw">export default</span> {
+  <span class="kw">async</span> <span class="fn">fetch</span>(req: Request, env: Env) {
+    <span class="kw">const</span> country = (req <span class="kw">as any</span>).cf?.country ?? <span class="str">'US'</span>;
+    <span class="kw">const</span> euCountries = [<span class="str">'DE'</span>, <span class="str">'FR'</span>, <span class="str">'IT'</span>, <span class="str">'ES'</span>, <span class="str">'NL'</span>];
+    
+    <span class="kw">if</span> (euCountries.<span class="fn">includes</span>(country)) {
+      <span class="cm">// rewrite to EU origin to ensure data residency</span>
+      <span class="kw">return</span> <span class="fn">fetch</span>(<span class="str">`https://eu.api.app.com${new URL(req.url).pathname}`</span>);
+    }
+    <span class="kw">return</span> <span class="fn">fetch</span>(req);
+  }
+};
+
+<span class="cm">// ─── Next.js: locale from geo, user pref overrides ───</span>
+<span class="kw">export function</span> <span class="fn">middleware</span>(req: NextRequest) {
+  <span class="kw">const</span> country = req.geo?.country ?? <span class="str">'US'</span>;
+  <span class="kw">const</span> preferredLocale = req.cookies.<span class="fn">get</span>(<span class="str">'NEXT_LOCALE'</span>)?.value;
+  <span class="kw">const</span> locale = preferredLocale ?? geoToLocale[country] ?? <span class="str">'en'</span>;
+  <span class="kw">return</span> NextResponse.<span class="fn">rewrite</span>(<span class="kw">new</span> <span class="fn">URL</span>(<span class="str">`/${locale}${req.nextUrl.pathname}`</span>, req.url));
+}
+
+<span class="kw">const</span> geoToLocale: Record&lt;<span class="kw">string</span>, <span class="kw">string</span>&gt; = {
+  DE: <span class="str">'de'</span>, JP: <span class="str">'ja'</span>, FR: <span class="str">'fr'</span>, SA: <span class="str">'ar'</span>
+};</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const regions={
+  us:{flag:'🇺🇸',label:'United States',pop:'us-east-1 (Virginia)',ttfb:'12ms',currency:'USD $',locale:'en-US',legal:'CCPA compliance — "Do Not Sell" link required',features:['All features available'],blocked:[]},
+  eu:{flag:'🇩🇪',label:'Germany (EU)',pop:'eu-central-1 (Frankfurt)',ttfb:'18ms',currency:'EUR €',locale:'de-DE',legal:'GDPR — consent banner required, data stays in EU',features:['All features','Cookie consent manager'],blocked:['US data center access']},
+  gb:{flag:'🇬🇧',label:'United Kingdom',pop:'eu-west-2 (London)',ttfb:'14ms',currency:'GBP £',locale:'en-GB',legal:'UK GDPR — consent banner + ICO registration',features:['All features'],blocked:[]},
+  jp:{flag:'🇯🇵',label:'Japan',pop:'ap-northeast-1 (Tokyo)',ttfb:'9ms',currency:'JPY ¥',locale:'ja-JP',legal:'APPI compliance — explicit purpose disclosure required',features:['All features'],blocked:[]},
+  cn:{flag:'🇨🇳',label:'China',pop:'cn-north-1 (Beijing)',ttfb:'11ms',currency:'CNY ¥',locale:'zh-CN',legal:'PIPL compliance — data localization required, ICP license needed',features:['Limited feature set'],blocked:['Google fonts','YouTube embed','reCAPTCHA','Facebook SDKs']}
+};
+function showRegion(k){const r=regions[k];document.getElementById('region-result').innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="font-size:1.4rem;margin-bottom:6px">${r.flag} ${r.label}</div><div style="color:#94a3b8;line-height:2"><span style="color:#60a5fa">Nearest PoP:</span> ${r.pop}<br><span style="color:#60a5fa">TTFB:</span> ~${r.ttfb}<br><span style="color:#60a5fa">Currency:</span> ${r.currency}<br><span style="color:#60a5fa">Locale:</span> ${r.locale}</div></div><div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#f59e0b;font-weight:700;margin-bottom:6px">⚖️ Legal requirements</div><div style="color:#94a3b8;font-size:.79rem;margin-bottom:8px">${r.legal}</div>${r.blocked.length?`<div style="color:#ef4444;font-size:.77rem;font-weight:700">🚫 Blocked in region:</div><div style="color:#ef4444;font-size:.76rem">${r.blocked.join(', ')}</div>`:'<div style="color:#10b981;font-size:.77rem">✅ No third-party blocks</div>'}</div></div>`;}
+showRegion('us');
+</script>
+</body>
+</html>

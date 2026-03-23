@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 111 – Idempotency in Frontend Events</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>♻️ Idempotency in Frontend Events</h1>
+<p class="sub">Topic 111 · Module 10.3 — Consistency · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Idempotency Demo</div>
+  <div class="tab" onclick="setTab(2)">Where to Apply</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>An operation is idempotent if applying it multiple times gives the same result as once</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Frontend idempotency matters because: (1) button clicks may fire twice due to double-click or laggy network delay, (2) offline queued mutations may be replayed on reconnect, (3) optimistic update + server confirmation can double-apply. At SAP, a "Submit Purchase Order" button that isn't idempotent could create two POs worth €50,000 each — critical defect. The fix: idempotency key (UUID per submission form load).</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Idempotent operations</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:1.9">
+          <li>SET status = "approved" (any n times → same)</li>
+          <li>PUT /orders/123 body (replace, not append)</li>
+          <li>Toggle with explicit target state (setTheme('dark'))</li>
+          <li>Cache invalidation (idempotent by nature)</li>
+        </ul>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">❌ Non-idempotent operations</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:1.9">
+          <li>POST /orders (each call creates a new order)</li>
+          <li>balance += 100 (increments with each call)</li>
+          <li>Toggle without state (toggleTheme → unknown result)</li>
+          <li>Append to list without dedup</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Idempotency key demo — prevent double submission</h3>
+    <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;margin-bottom:10px;font-size:.8rem">
+      <div style="color:#475569;margin-bottom:6px">Idempotency Key (generated once per page load):</div>
+      <div id="idem-key" style="font-family:monospace;color:#a78bfa;font-size:.85rem"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button onclick="idemSubmit()" style="padding:8px 20px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:8px;cursor:pointer;font-size:.85rem">Submit Order</button>
+      <button onclick="idemDouble()" style="padding:8px 20px;background:#3d0808;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.85rem">Double-click (bug)</button>
+      <button onclick="idemReset()" style="padding:8px 14px;background:#1e2130;border:1px solid #475569;color:#475569;border-radius:8px;cursor:pointer;font-size:.82rem">New order (new key)</button>
+    </div>
+    <div id="idem-log" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;font-size:.75rem;max-height:110px;overflow-y:auto;color:#475569"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Where to apply idempotency in frontend</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Scenario</th>
+        <th style="padding:8px;border:1px solid #2d3551">Risk without</th>
+        <th style="padding:8px;border:1px solid #2d3551">Fix</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Submit button</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Duplicate orders</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Disable on click + idempotency key</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Offline queue replay</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Double mutations</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">UUID per mutation, server dedup by key</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Optimistic + confirm</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Double UI state apply</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Cancel query on mutate + replace not merge</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Payment flow</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Double charge</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Stripe idempotency-key header</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">SW sync retry</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Repeated API calls</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Store mutation ID in queue, server checks</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Idempotency key pattern + button disable</h3>
+    <pre><span class="cm">// ─── Generate idempotency key once per form ───</span>
+<span class="kw">function</span> <span class="fn">useIdempotencyKey</span>() {
+  <span class="kw">const</span> [key] = <span class="fn">useState</span>(() =&gt; crypto.<span class="fn">randomUUID</span>());
+  <span class="kw">return</span> key;
+}
+<span class="kw">function</span> <span class="fn">SubmitOrder</span>() {
+  <span class="kw">const</span> idemKey = <span class="fn">useIdempotencyKey</span>();
+  <span class="kw">const</span> [submitting, setSubmitting] = <span class="fn">useState</span>(<span class="kw">false</span>);
+  <span class="kw">const</span> <span class="fn">submit</span> = <span class="kw">async</span> () =&gt; {
+    <span class="kw">if</span> (submitting) <span class="kw">return</span>; <span class="cm">// guard</span>
+    <span class="fn">setSubmitting</span>(<span class="kw">true</span>);
+    <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/api/orders'</span>, {
+      method: <span class="str">'POST'</span>,
+      headers: { <span class="str">'Idempotency-Key'</span>: idemKey }, <span class="cm">// server deduplicates</span>
+      body: <span class="fn">JSON</span>.<span class="fn">stringify</span>(orderData),
+    });
+    <span class="cm">// don't re-enable — force new form instance for new order</span>
+  };
+  <span class="kw">return</span> &lt;button disabled={submitting} onClick={submit}&gt;Submit Order&lt;/button&gt;;
+}
+
+<span class="cm">// ─── Server: check idempotency ───</span>
+app.<span class="fn">post</span>(<span class="str">'/api/orders'</span>, <span class="kw">async</span> (req, res) =&gt; {
+  <span class="kw">const</span> key = req.headers[<span class="str">'idempotency-key'</span>];
+  <span class="kw">const</span> existing = <span class="kw">await</span> redis.<span class="fn">get</span>(<span class="str">`idem:${key}`</span>);
+  <span class="kw">if</span> (existing) <span class="kw">return</span> res.<span class="fn">json</span>(<span class="fn">JSON</span>.<span class="fn">parse</span>(existing)); <span class="cm">// replay cached response</span>
+  <span class="kw">const</span> order = <span class="kw">await</span> <span class="fn">createOrder</span>(req.body);
+  <span class="kw">await</span> redis.<span class="fn">setex</span>(<span class="str">`idem:${key}`</span>, <span class="fn">86400</span>, <span class="fn">JSON</span>.<span class="fn">stringify</span>(order));
+  res.<span class="fn">json</span>(order);
+});</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+let idemKey=crypto.randomUUID();let submitted=false;document.getElementById('idem-key').textContent=idemKey;const logEl=document.getElementById('idem-log');
+function idemLog(msg,c){const d=document.createElement('div');d.style.color=c;d.textContent=new Date().toLocaleTimeString().slice(0,8)+' '+msg;logEl.prepend(d);}
+function idemSubmit(){if(submitted){idemLog(`BLOCKED — key ${idemKey.slice(0,8)}... already submitted`,'#f59e0b');return;}submitted=true;idemLog(`POST /api/orders  Idempotency-Key: ${idemKey.slice(0,12)}... → 201 Created`,'#10b981');}
+function idemDouble(){idemSubmit();setTimeout(idemSubmit,100);}
+function idemReset(){idemKey=crypto.randomUUID();submitted=false;document.getElementById('idem-key').textContent=idemKey;idemLog(`New order form — key: ${idemKey.slice(0,12)}...`,'#60a5fa');}
+</script>
+</body>
+</html>

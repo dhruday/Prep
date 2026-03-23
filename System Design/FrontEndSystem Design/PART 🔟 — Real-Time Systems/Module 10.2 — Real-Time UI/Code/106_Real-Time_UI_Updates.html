@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 106 – Real-Time UI Updates</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🖥️ Real-Time UI Updates</h1>
+<p class="sub">Topic 106 · Module 10.2 — Real-Time UI · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Live Dashboard Demo</div>
+  <div class="tab" onclick="setTab(2)">Update Patterns</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Real-time UI: show live server data without user action</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Real-time UI means the view updates automatically when backend state changes — without the user refreshing. Key challenges: (1) merging server deltas into local state without flickering, (2) throttling high-frequency updates to avoid thrashing the DOM, (3) showing stale indicators when disconnected. At SAP Bosch, the Angular machine monitoring dashboard throttled telemetry to 100ms render batches even though events arrived every 10ms.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Optimistic updates</div>
+        <div style="color:#94a3b8">Apply change to UI immediately before server confirms. Rollback on error. Best UX.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">Throttle / debounce</div>
+        <div style="color:#94a3b8">High-frequency events (telemetry, cursors) must be throttled before DOM updates.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:6px">Stale indicator</div>
+        <div style="color:#94a3b8">Show visual cue when WS/SSE is disconnected so users know data may be stale.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Live telemetry dashboard (batched updates)</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button onclick="rtStart()" style="padding:7px 14px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:8px;cursor:pointer;font-size:.82rem">▶ Start stream</button>
+      <button onclick="rtStop()" style="padding:7px 14px;background:#3d0808;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.82rem">⏹ Disconnect</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:.72rem;color:#475569;margin-bottom:4px">Temperature</div>
+        <div id="rt-temp" style="font-size:1.6rem;font-weight:700;color:#f59e0b">--</div>
+        <div style="font-size:.7rem;color:#475569">°C</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:.72rem;color:#475569;margin-bottom:4px">Pressure</div>
+        <div id="rt-pres" style="font-size:1.6rem;font-weight:700;color:#60a5fa">--</div>
+        <div style="font-size:.7rem;color:#475569">bar</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:.72rem;color:#475569;margin-bottom:4px">Events/s</div>
+        <div id="rt-eps" style="font-size:1.6rem;font-weight:700;color:#a78bfa">--</div>
+        <div style="font-size:.7rem;color:#475569">received</div>
+      </div>
+    </div>
+    <div style="font-size:.74rem;color:#475569">DOM renders: <span id="rt-renders" style="color:#10b981">0</span> (throttled to 100ms batches) | Events received: <span id="rt-evts" style="color:#f59e0b">0</span></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Real-time state update patterns</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Pattern</th>
+        <th style="padding:8px;border:1px solid #2d3551">How</th>
+        <th style="padding:8px;border:1px solid #2d3551">Use when</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Full replace</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Replace entire entity with server payload</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Small datasets, simple updates</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Delta / patch</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Apply JSON Patch RFC 6902 diff</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Large objects, bandwidth-sensitive</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Optimistic</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Update UI → confirm server → rollback on fail</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Mutations (likes, status change)</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Throttled batch</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Collect events, render once per frame</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">High-frequency telemetry, cursors</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Cursor presence</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Throttle mousemove to 50ms + interpolate</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Collaborative editing (Figma-style)</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Throttled batch updates in React + optimistic mutation</h3>
+    <pre><span class="cm">// ─── Throttled batch render ───</span>
+<span class="kw">const</span> [telemetry, setTelemetry] = <span class="fn">useState</span>(initial);
+<span class="kw">const</span> pendingRef = <span class="fn">useRef</span>([]);
+<span class="kw">const</span> frameRef   = <span class="fn">useRef</span>(<span class="kw">null</span>);
+ws.onmessage = (e) =&gt; {
+  pendingRef.current.<span class="fn">push</span>(<span class="fn">JSON</span>.<span class="fn">parse</span>(e.data));
+  <span class="kw">if</span> (!frameRef.current) {
+    frameRef.current = <span class="fn">requestAnimationFrame</span>(() =&gt; {
+      <span class="fn">setTelemetry</span>(prev =&gt; <span class="fn">mergeBatch</span>(prev, pendingRef.current));
+      pendingRef.current = [];
+      frameRef.current = <span class="kw">null</span>;
+    });
+  }
+};
+
+<span class="cm">// ─── Optimistic status update (React Query) ───</span>
+<span class="kw">const</span> mutation = <span class="fn">useMutation</span>({
+  mutationFn: (id) =&gt; <span class="fn">approveOrder</span>(id),
+  onMutate: <span class="kw">async</span> (id) =&gt; {
+    <span class="kw">await</span> queryClient.<span class="fn">cancelQueries</span>([<span class="str">'orders'</span>]);
+    <span class="kw">const</span> prev = queryClient.<span class="fn">getQueryData</span>([<span class="str">'orders'</span>]);
+    queryClient.<span class="fn">setQueryData</span>([<span class="str">'orders'</span>], old =&gt;
+      old.<span class="fn">map</span>(o =&gt; o.id === id ? {...o, status: <span class="str">'approved'</span>} : o)
+    );
+    <span class="kw">return</span> { prev };
+  },
+  onError: (_, __, ctx) =&gt; queryClient.<span class="fn">setQueryData</span>([<span class="str">'orders'</span>], ctx.prev),
+});</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+let rtInterval=null,rtBatch=null,rtEvts=0,rtRenders=0,temp=72,pres=4.2;
+const tempEl=document.getElementById('rt-temp'),presEl=document.getElementById('rt-pres'),epsEl=document.getElementById('rt-eps'),rendEl=document.getElementById('rt-renders'),evtEl=document.getElementById('rt-evts');
+function rtStop(){clearInterval(rtInterval);clearInterval(rtBatch);rtInterval=null;rtBatch=null;}
+function rtStart(){rtStop();rtEvts=0;rtRenders=0;
+  rtInterval=setInterval(()=>{temp+=(Math.random()-.5)*2;pres+=(Math.random()-.5)*.3;temp=Math.max(60,Math.min(90,temp));pres=Math.max(3,Math.min(6,pres));rtEvts++;evtEl.textContent=rtEvts;},50);
+  rtBatch=setInterval(()=>{tempEl.textContent=temp.toFixed(1);presEl.textContent=pres.toFixed(2);epsEl.textContent=rtEvts;rtRenders++;rendEl.textContent=rtRenders;},100);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 114 – Frontend Load Shedding</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #60a5fa;background:#1e3a5f;color:#60a5fa;cursor:pointer;font-size:.82rem;margin:4px}
+</style>
+</head>
+<body>
+<h1>🛡️ Frontend Load Shedding</h1>
+<p class="sub">Topic 114 · Module 11.1 — Scaling Patterns · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Load Simulator</div>
+  <div class="tab" onclick="setTab(2)">Techniques</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Load shedding: the frontend deliberately refuses or degrades work when the system is overloaded</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">A frontend that fans out 20 API calls per user visit will destroy your backend at 1M DAU. Load shedding means the client cooperates in protecting the system: rate-limiting its own requests, short-circuiting redundant calls, batching small requests, and gracefully degrading features instead of hammering a struggling API. This is distinct from backend rate-limiting — it happens before the request is ever sent.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.78rem;text-align:center">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="font-size:1.2rem;margin-bottom:4px">📋</div>
+        <div style="color:#60a5fa;font-weight:700">Request batching</div>
+        <div style="color:#94a3b8;margin-top:4px">Collect N calls in 50ms window, send one request</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="font-size:1.2rem;margin-bottom:4px">🚦</div>
+        <div style="color:#f59e0b;font-weight:700">Client circuit breaker</div>
+        <div style="color:#94a3b8;margin-top:4px">Stop calling after N consecutive failures</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="font-size:1.2rem;margin-bottom:4px">💧</div>
+        <div style="color:#10b981;font-weight:700">Client rate limiting</div>
+        <div style="color:#94a3b8;margin-top:4px">Token bucket: max N requests per second per user</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="font-size:1.2rem;margin-bottom:4px">⏳</div>
+        <div style="color:#a78bfa;font-weight:700">Priority queuing</div>
+        <div style="color:#94a3b8;margin-top:4px">Critical requests first; analytics last</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="font-size:1.2rem;margin-bottom:4px">📉</div>
+        <div style="color:#ef4444;font-weight:700">Graceful degradation</div>
+        <div style="color:#94a3b8;margin-top:4px">Show stale/cached data, hide non-critical widgets</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="font-size:1.2rem;margin-bottom:4px">🔀</div>
+        <div style="color:#60a5fa;font-weight:700">Deduplication</div>
+        <div style="color:#94a3b8;margin-top:4px">Identical in-flight requests share one Promise</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Client circuit breaker simulator</h3>
+    <div style="font-size:.8rem;color:#94a3b8;margin-bottom:10px">Simulates a circuit breaker that opens after 3 consecutive failures and half-opens after 5s.</div>
+    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <button onclick="makeRequest(true)">✅ Success request</button>
+      <button onclick="makeRequest(false)" style="border-color:#ef4444;background:#2d1a1a;color:#ef4444">❌ Failing request</button>
+      <button onclick="resetBreaker()" style="border-color:#94a3b8;background:#1e2130;color:#94a3b8">🔄 Reset</button>
+    </div>
+    <div id="breaker-state" style="margin-bottom:10px"></div>
+    <div id="breaker-log" style="font-size:.76rem;max-height:180px;overflow-y:auto;background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:10px"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Load shedding techniques comparison</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Technique</th>
+        <th style="padding:8px;border:1px solid #2d3551">What it prevents</th>
+        <th style="padding:8px;border:1px solid #2d3551">Trade-off</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Request batching</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">N×1 calls → 1 call</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Adds 50ms latency</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Circuit breaker</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Cascade failure</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">false positives, needs tuning</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Token bucket</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Request bursting</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Queue management complexity</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Deduplication</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Duplicate in-flight</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">State leak if not cleaned up</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Priority queue</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Low-priority requests blocking critical</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Analytics may be delayed</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Client circuit breaker + request deduplication</h3>
+    <pre><span class="cm">// ─── Client circuit breaker ───</span>
+<span class="kw">class</span> <span class="fn">CircuitBreaker</span> {
+  <span class="kw">private</span> failures = <span class="fn">0</span>;
+  <span class="kw">private</span> state: <span class="str">'closed'</span> | <span class="str">'open'</span> | <span class="str">'half-open'</span> = <span class="str">'closed'</span>;
+  <span class="kw">private</span> lastFailure = <span class="fn">0</span>;
+
+  <span class="kw">async</span> <span class="fn">call</span>&lt;T&gt;(fn: () =&gt; Promise&lt;T&gt;): Promise&lt;T&gt; {
+    <span class="kw">if</span> (this.state === <span class="str">'open'</span>) {
+      <span class="kw">if</span> (Date.<span class="fn">now</span>() - this.lastFailure &lt; <span class="fn">5000</span>) <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">'Circuit open'</span>);
+      this.state = <span class="str">'half-open'</span>;
+    }
+    <span class="kw">try</span> {
+      <span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">fn</span>();
+      this.failures = <span class="fn">0</span>; this.state = <span class="str">'closed'</span>;
+      <span class="kw">return</span> result;
+    } <span class="kw">catch</span> (err) {
+      this.failures++;
+      <span class="kw">if</span> (this.failures &gt;= <span class="fn">3</span>) { this.state = <span class="str">'open'</span>; this.lastFailure = Date.<span class="fn">now</span>(); }
+      <span class="kw">throw</span> err;
+    }
+  }
+}
+
+<span class="cm">// ─── Request deduplication ───</span>
+<span class="kw">const</span> inflight = <span class="kw">new</span> <span class="fn">Map</span>&lt;<span class="kw">string</span>, Promise&lt;<span class="kw">any</span>&gt;&gt;();
+<span class="kw">function</span> <span class="fn">deduplicatedFetch</span>(url: <span class="kw">string</span>) {
+  <span class="kw">if</span> (inflight.<span class="fn">has</span>(url)) <span class="kw">return</span> inflight.<span class="fn">get</span>(url)!;
+  <span class="kw">const</span> p = <span class="fn">fetch</span>(url).<span class="fn">finally</span>(() =&gt; inflight.<span class="fn">delete</span>(url));
+  inflight.<span class="fn">set</span>(url, p);
+  <span class="kw">return</span> p;
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+let failures=0,state='closed',halfOpenTimer=null;
+function renderState(){const colors={'closed':'#10b981','open':'#ef4444','half-open':'#f59e0b'};document.getElementById('breaker-state').innerHTML=`<div style="display:inline-flex;align-items:center;gap:8px;background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px 14px"><span style="font-size:1.1rem">${state==='closed'?'🟢':state==='open'?'🔴':'🟡'}</span><span style="color:${colors[state]};font-weight:700;font-size:.9rem">State: ${state.toUpperCase()}</span><span style="color:#94a3b8;font-size:.8rem">Failures: ${failures}/3</span></div>`;}
+function log(msg,color){const d=document.getElementById('breaker-log');const line=document.createElement('div');line.style.cssText=`color:${color};padding:2px 0;border-bottom:1px solid #1e2130`;line.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;d.insertBefore(line,d.firstChild);}
+function makeRequest(success){if(state==='open'){log('🚫 CIRCUIT OPEN — request blocked immediately','#ef4444');return;}if(success){failures=0;if(state==='half-open')state='closed';log('✅ Request succeeded','#10b981');}else{failures++;log(`❌ Request failed (${failures} consecutive)`,'#ef4444');if(failures>=3){state='open';log('⚡ CIRCUIT OPENED — blocking all requests for 5s','#f59e0b');clearTimeout(halfOpenTimer);halfOpenTimer=setTimeout(()=>{if(state==='open'){state='half-open';renderState();log('🟡 Circuit half-open — testing...','#f59e0b');}},5000);}}renderState();}
+function resetBreaker(){failures=0;state='closed';clearTimeout(halfOpenTimer);renderState();document.getElementById('breaker-log').innerHTML='';log('🔄 Circuit reset','#94a3b8');}
+renderState();
+</script>
+</body>
+</html>

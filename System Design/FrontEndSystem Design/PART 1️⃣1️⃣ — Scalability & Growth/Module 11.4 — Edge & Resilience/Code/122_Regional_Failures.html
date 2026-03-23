@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 122 – Regional Failures</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #60a5fa;background:#1e3a5f;color:#60a5fa;cursor:pointer;font-size:.82rem;margin:4px}
+</style>
+</head>
+<body>
+<h1>🔥 Regional Failures</h1>
+<p class="sub">Topic 122 · Module 11.4 — Edge & Resilience · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Failover Simulator</div>
+  <div class="tab" onclick="setTab(2)">Resilience Patterns</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Regional failures: when us-east-1 goes down, your frontend must survive — automatically</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Regional failures happen. AWS us-east-1 has had multiple major outages. The frontend must be designed to (1) detect regional API unavailability, (2) auto-failover to a secondary region, (3) show meaningful degraded UI rather than a blank screen, (4) recover gracefully as the primary region comes back. Key techniques: multi-region API endpoints, health checks at the client level, fallback manifests, and Service Worker offline-first caching as a last resort.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">Resilience layers</div>
+        <div style="color:#94a3b8;line-height:2">
+          Layer 1: Service Worker cache (offline)<br>
+          Layer 2: CDN edge cache (stale-while-revalidate)<br>
+          Layer 3: Multi-region API failover<br>
+          Layer 4: Degraded mode UI (show cached data)<br>
+          Layer 5: Status page + real-time incident
+        </div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">Common mistakes</div>
+        <div style="color:#94a3b8;line-height:2">
+          Single API endpoint hardcoded<br>
+          Crash on 5xx with no fallback<br>
+          Auth service in only one region<br>
+          No health check endpoint<br>
+          SPA serves 200 but loads nothing
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Multi-region failover simulator</h3>
+    <p style="font-size:.78rem;color:#94a3b8;margin-bottom:12px">Click "Trigger Failure" to simulate a regional outage and watch failover happen</p>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button onclick="triggerFailure()">⚡ Trigger us-east-1 failure</button>
+      <button onclick="recoverRegion()" style="border-color:#10b981;background:#0a2a1a;color:#10b981">✅ Recover region</button>
+      <button onclick="resetSimulator()" style="border-color:#94a3b8;background:#1e2130;color:#94a3b8">🔄 Reset</button>
+    </div>
+    <div id="region-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;font-size:.78rem"></div>
+    <div id="failover-log" style="font-size:.75rem;max-height:140px;overflow-y:auto;background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:10px"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Regional resilience patterns</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Pattern</th>
+        <th style="padding:8px;border:1px solid #2d3551">Description</th>
+        <th style="padding:8px;border:1px solid #2d3551">Recovery time</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Active-passive failover</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Primary handles all traffic; secondary on standby</td><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">30–120s (DNS TTL)</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Active-active multi-region</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">All regions serve traffic; auto-route away from failed</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">&lt;5s</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">CDN stale cache</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">CDN keeps serving stale content on origin errors</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Instant (no user impact)</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Service Worker fallback</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">SW returns cached responses when network fails</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Instant (offline mode)</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Multi-region API client with automatic failover</h3>
+    <pre><span class="cm">// ─── Multi-region fetch with failover ───</span>
+<span class="kw">const</span> ENDPOINTS = [
+  <span class="str">'https://us-east.api.app.com'</span>,
+  <span class="str">'https://eu-west.api.app.com'</span>,
+  <span class="str">'https://ap-south.api.app.com'</span>
+];
+
+<span class="kw">async function</span> <span class="fn">resilientFetch</span>(path: <span class="kw">string</span>, opts?: RequestInit) {
+  <span class="kw">for</span> (<span class="kw">const</span> base <span class="kw">of</span> ENDPOINTS) {
+    <span class="kw">try</span> {
+      <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${base}${path}`</span>, {
+        signal: AbortSignal.<span class="fn">timeout</span>(<span class="fn">3000</span>), <span class="cm">// 3s per region</span>
+        ...opts
+      });
+      <span class="kw">if</span> (res.ok) <span class="kw">return</span> res;
+    } <span class="kw">catch</span> { <span class="cm">/* next region */</span> }
+  }
+  <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">'All regions unavailable'</span>);
+}
+
+<span class="cm">// ─── React query with stale data fallback ───</span>
+<span class="kw">const</span> { data } = <span class="fn">useQuery</span>({
+  queryKey: [<span class="str">'dashboard'</span>],
+  queryFn: () =&gt; <span class="fn">resilientFetch</span>(<span class="str">'/api/dashboard'</span>),
+  staleTime: <span class="fn">60_000</span>,
+  <span class="cm">// Keep showing stale data if refetch fails</span>
+  placeholderData: (prev) =&gt; prev,
+  retry: <span class="fn">1</span>
+});</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const regions=[{id:'us-east-1',label:'US East (Virginia)',status:'healthy',latency:12},{id:'eu-west-1',label:'EU West (Ireland)',status:'healthy',latency:18},{id:'ap-south-1',label:'AP South (Singapore)',status:'healthy',latency:24}];
+let active=0;
+function renderGrid(){document.getElementById('region-grid').innerHTML=regions.map((r,i)=>`<div style="background:#0f1117;border:2px solid ${r.status==='healthy'?'#10b981':r.status==='failed'?'#ef4444':'#2d3551'};border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.1rem;margin-bottom:4px">${r.status==='healthy'?'🟢':r.status==='failed'?'🔴':'⚪'}</div><div style="color:${r.status==='healthy'?'#10b981':r.status==='failed'?'#ef4444':'#94a3b8'};font-weight:700;font-size:.8rem">${r.id}</div><div style="color:#94a3b8;font-size:.72rem">${r.label}</div><div style="color:#60a5fa;font-size:.77rem;margin-top:4px">${r.status==='failed'?'FAILED':'~'+r.latency+'ms'}</div>${i===active&&r.status!=='failed'?'<div style="color:#f59e0b;font-size:.7rem;margin-top:3px">⚡ ACTIVE</div>':''}</div>`).join('');}
+function log(msg,c){const d=document.getElementById('failover-log');const l=document.createElement('div');l.style.cssText=`color:${c};padding:1px 0;border-bottom:1px solid #1e2130`;l.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;d.insertBefore(l,d.firstChild);}
+function triggerFailure(){if(regions[0].status==='failed'){log('⚠️ us-east-1 already failed','#f59e0b');return;}regions[0].status='failed';log('⚡ us-east-1 health check failed — starting failover','#ef4444');setTimeout(()=>{active=1;log('↩️ Routing to eu-west-1 (latency: 18ms)','#f59e0b');setTimeout(()=>{log('✅ Failover complete — eu-west-1 serving all traffic','#10b981');renderGrid();},600);renderGrid();},800);}
+function recoverRegion(){regions[0].status='healthy';active=0;log('✅ us-east-1 recovered — routing back to primary','#10b981');renderGrid();}
+function resetSimulator(){regions.forEach(r=>r.status='healthy');active=0;document.getElementById('failover-log').innerHTML='';renderGrid();log('System reset','#94a3b8');}
+renderGrid();log('All regions healthy','#10b981');
+</script>
+</body>
+</html>

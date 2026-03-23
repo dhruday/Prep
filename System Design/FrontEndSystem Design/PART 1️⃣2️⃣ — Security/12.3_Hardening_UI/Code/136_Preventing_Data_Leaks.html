@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 136 – Preventing Data Leaks</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#ef4444;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#2a0f0f;border-color:#ef4444;color:#ef4444}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#ef4444;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #ef4444;background:#2a0f0f;color:#ef4444;cursor:pointer;font-size:.82rem;margin:4px}
+</style>
+</head>
+<body>
+<h1>🚫 Preventing Data Leaks</h1>
+<p class="sub">Topic 136 · Part 12 / 12.3 Hardening UI · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Leakage Vectors</div>
+  <div class="tab" onclick="setTab(2)">Detection Demo</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Data leaks from the frontend — more ways than you think</h3>
+    <p style="color:#94a3b8;font-size:.83rem;margin-bottom:14px">Frontend apps handle sensitive data constantly. Leaks occur through console logs, error tracking, analytics, URL parameters, clipboard, screenshot tools, browser extensions, autofill, and even CSS. Each vector is a side channel. GDPR fines apply even for unintentional leaks — SAP had dedicated data leakage assessment teams for all BTP products.</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.1rem">📋</div><div style="color:#ef4444;font-weight:700">console.log</div><div style="color:#94a3b8;margin-top:4px">Dev logs in production expose PII to anyone opening DevTools</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.1rem">📊</div><div style="color:#f59e0b;font-weight:700">Analytics</div><div style="color:#94a3b8;margin-top:4px">pageview events with PII in URL path / query (/user/SSN in GA events)</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.1rem">🐛</div><div style="color:#a78bfa;font-weight:700">Error tracking</div><div style="color:#94a3b8;margin-top:4px">Sentry / Datadog captures stack traces with sensitive variable values</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.1rem">🌐</div><div style="color:#60a5fa;font-weight:700">URL params</div><div style="color:#94a3b8;margin-top:4px">Tokens / PII in URL → browser history, server logs, Referer header</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Complete data leakage vector catalogue</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#ef4444">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Vector</th>
+        <th style="padding:8px;border:1px solid #2d3551">How data leaks</th>
+        <th style="padding:8px;border:1px solid #2d3551">Mitigation</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">console.log/warn/error</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Visible to anyone with DevTools open in prod browser</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Strip in production build; replace with no-op logger</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Error tracking (Sentry)</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Exception message / breadcrumbs contain sensitive values</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">beforeSend hook to strip PII fields</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">Analytics (GA/Mixpanel)</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Track pageview /order/{orderId} or /user/{email}</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Sanitize URLs before sending; hash PII identifiers</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">URL / query params</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Token in URL → server logs, history, Referer header</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">POST body for secrets; use history.replaceState to strip params</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#a78bfa">LocalStorage</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Any JS on the page can read it (XSS → data theft)</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Never store sensitive data; use HttpOnly cookies or in-memory</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#a78bfa">Clipboard</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Copy of sensitive value persists; other apps can read clipboard</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Clear clipboard after N seconds; warn user on copy</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#60a5fa">Form autocomplete</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Browser saves entered values; third party could access via extension</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">autocomplete="off" for sensitive fields (card, CVV, SSN)</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#60a5fa">CSS / font timing</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Timing attacks infer visible text via font load times or CSS :visited</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Timing-safe comparisons server-side; respect privacy standards</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Console leak detection — simulate production console stripping</h3>
+    <div style="font-size:.8rem;color:#94a3b8;margin-bottom:10px">Type something sensitive and "log" it — see how a production sanitizer would handle it:</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <input id="leak-input" type="text" placeholder="Enter sensitive value (e.g. token, email, card)" style="flex:1;padding:8px 12px;background:#0f1117;border:1px solid #2d3551;border-radius:6px;color:#e2e8f0;font-size:.82rem">
+      <button onclick="devLog()">DevLog (raw — DEV MODE)</button>
+      <button onclick="prodLog()" style="border-color:#10b981;background:#0f2318;color:#10b981">ProdLog (scrubbed — PROD MODE)</button>
+    </div>
+    <div id="log-out" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-size:.79rem;font-family:monospace;min-height:60px;color:#94a3b8">Logs will appear here...</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Production logger + Sentry scrubber + URL sanitizer</h3>
+    <pre><span class="cm">// ─── Production logger: no-op in prod ───</span>
+<span class="kw">const</span> logger = {
+  <span class="fn">log</span>: (...a: <span class="kw">any</span>[]) =&gt; { <span class="kw">if</span> (process.env.NODE_ENV !== <span class="str">'production'</span>) console.<span class="fn">log</span>(...a); },
+  <span class="fn">warn</span>: (...a: <span class="kw">any</span>[]) =&gt; { <span class="kw">if</span> (process.env.NODE_ENV !== <span class="str">'production'</span>) console.<span class="fn">warn</span>(...a); },
+  <span class="fn">error</span>: (...a: <span class="kw">any</span>[]) =&gt; console.<span class="fn">error</span>(...a) <span class="cm">// errors always logged but scrubbed</span>
+};
+
+<span class="cm">// ─── Sentry beforeSend: remove PII from error events ───</span>
+Sentry.<span class="fn">init</span>({
+  beforeSend(event) {
+    <span class="kw">const</span> sensitiveKeys = [<span class="str">'password'</span>,<span class="str">'token'</span>,<span class="str">'ssn'</span>,<span class="str">'creditCard'</span>,<span class="str">'email'</span>];
+    <span class="kw">function</span> <span class="fn">scrub</span>(obj: <span class="kw">any</span>): <span class="kw">any</span> {
+      <span class="kw">if</span> (<span class="kw">typeof</span> obj !== <span class="str">'object'</span> || !obj) <span class="kw">return</span> obj;
+      <span class="kw">return</span> <span class="fn">Object.fromEntries</span>(
+        <span class="fn">Object.entries</span>(obj).<span class="fn">map</span>(([k,v]) =&gt;
+          [k, sensitiveKeys.<span class="fn">includes</span>(k.<span class="fn">toLowerCase</span>()) ? <span class="str">'[REDACTED]'</span> : <span class="fn">scrub</span>(v)]
+        )
+      );
+    }
+    event.extra = <span class="fn">scrub</span>(event.extra);
+    <span class="kw">return</span> event;
+  }
+});
+
+<span class="cm">// ─── Analytics: sanitize URL before sending ───</span>
+<span class="kw">function</span> <span class="fn">sanitizeUrl</span>(url: <span class="kw">string</span>): <span class="kw">string</span> {
+  <span class="kw">const</span> u = <span class="kw">new</span> <span class="fn">URL</span>(url, window.location.origin);
+  [<span class="str">'token'</span>,<span class="str">'code'</span>,<span class="str">'state'</span>,<span class="str">'email'</span>].<span class="fn">forEach</span>(p =&gt; u.searchParams.<span class="fn">delete</span>(p));
+  <span class="kw">return</span> u.toString();
+}
+gtag(<span class="str">'event'</span>,<span class="str">'page_view'</span>,{page_location: <span class="fn">sanitizeUrl</span>(location.href)});
+
+<span class="cm">// ─── Strip auth code from URL after OAuth callback ───</span>
+<span class="kw">const</span> params = <span class="kw">new</span> <span class="fn">URLSearchParams</span>(location.search);
+<span class="kw">if</span> (params.<span class="fn">has</span>(<span class="str">'code'</span>)) {
+  history.<span class="fn">replaceState</span>({}, <span class="str">''</span>, location.pathname); <span class="cm">// remove ?code= from URL</span>
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const sensitivePatterns=[/\b\d{16}\b/,/\b\d{3}-\d{2}-\d{4}\b/,/@/,/^sk_/,/token/i,/password/i,/Bearer /i];
+function isSensitive(v){return sensitivePatterns.some(p=>p.test(v));}
+function devLog(){const v=document.getElementById('leak-input').value||'(empty)';const out=document.getElementById('log-out');out.innerHTML+=`<div style="color:#ef4444">⚠ DEV console.log: "${v}" — visible to anyone with DevTools</div>`;}
+function prodLog(){const v=document.getElementById('leak-input').value||'(empty)';const out=document.getElementById('log-out');if(isSensitive(v)){out.innerHTML+=`<div style="color:#10b981">✅ PROD: sensitive value detected → <span style="color:#f59e0b">[REDACTED]</span> (not logged)</div>`;}else{out.innerHTML+=`<div style="color:#94a3b8">ℹ PROD: "${v}" — not flagged as sensitive, logged normally</div>`;}}
+</script>
+</body>
+</html>

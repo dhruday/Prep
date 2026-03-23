@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 117 – Internationalization (i18n)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}
+button.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🌍 Internationalization (i18n)</h1>
+<p class="sub">Topic 117 · Module 11.3 — Globalization · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Live i18n Demo</div>
+  <div class="tab" onclick="setTab(2)">Pitfalls Table</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>i18n vs l10n: separate structure (i18n) from locale-specific content (l10n)</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Internationalization (i18n) = designing the app so it CAN be adapted. Localization (l10n) = providing the actual translations. Key areas: (1) string extraction to message catalogs, (2) date/number/currency formatting via Intl API, (3) plural rules (English: 1 item / N items; Arabic has 6 forms), (4) RTL layout support, (5) font and character set handling. SAP ships products in 40+ languages — i18n is foundational to every UI5/Fiori component.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.79rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">What to externalize</div>
+        <div style="color:#94a3b8;line-height:2">All UI strings<br>Date format (MM/DD vs DD/MM)<br>Number format (1,000.00 vs 1.000,00)<br>Currency symbol position<br>Plural forms<br>Sort order (collation)</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#f59e0b;font-weight:700;margin-bottom:6px">What changes per locale</div>
+        <div style="color:#94a3b8;line-height:2">Text direction (LTR ↔ RTL)<br>Layout mirroring (Arabic, Hebrew)<br>Image/icon localization<br>Legal text per country<br>Color meaning (red = danger in West; luck in China)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Live Intl API demo — switch locale</h3>
+    <div id="locale-btns" style="margin-bottom:14px">
+      <button class="active" onclick="setLocale('en-US')">🇺🇸 en-US</button>
+      <button onclick="setLocale('de-DE')">🇩🇪 de-DE</button>
+      <button onclick="setLocale('ar-SA')">🇸🇦 ar-SA</button>
+      <button onclick="setLocale('ja-JP')">🇯🇵 ja-JP</button>
+      <button onclick="setLocale('fr-FR')">🇫🇷 fr-FR</button>
+    </div>
+    <div id="locale-demo" style="font-size:.83rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Common i18n pitfalls</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Pitfall</th>
+        <th style="padding:8px;border:1px solid #2d3551">Example</th>
+        <th style="padding:8px;border:1px solid #2d3551">Fix</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">String concatenation</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">"Hello " + name</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">t('hello', {name}) → "Hola, {name}"</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Hardcoded plural</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">{n} item(s)</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Intl.PluralRules per locale</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Raw Date.toString()</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Mon Jan 06 2025</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">new Intl.DateTimeFormat(locale)</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Ignoring RTL</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">margin-left:20px</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">margin-inline-start:20px (logical)</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Locale in URL only</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">/de/products</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Accept-Language header + lang attribute</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>react-i18next + ICU plural + Intl.NumberFormat</h3>
+    <pre><span class="cm">// ─── i18n config (i18next) ───</span>
+<span class="fn">i18next</span>.<span class="fn">init</span>({
+  lng: <span class="str">'en'</span>, fallbackLng: <span class="str">'en'</span>,
+  resources: {
+    en: { translation: {
+      greeting: <span class="str">'Hello, {{name}}!'</span>,
+      items: <span class="str">'{{count}} item'</span>,
+      items_other: <span class="str">'{{count}} items'</span>,
+    }},
+    de: { translation: {
+      greeting: <span class="str">'Hallo, {{name}}!'</span>,
+      items: <span class="str">'{{count}} Artikel'</span>,
+      items_other: <span class="str">'{{count}} Artikel'</span>,
+    }}
+  }
+});
+
+<span class="cm">// ─── In React component ───</span>
+<span class="kw">const</span> { t } = <span class="fn">useTranslation</span>();
+<span class="cm">// Plural award resolution, variable interpolation</span>
+&lt;p&gt;{<span class="fn">t</span>(<span class="str">'items'</span>, { count: cart.length })}&lt;/p&gt;
+
+<span class="cm">// ─── Currency/Number with Intl ───</span>
+<span class="kw">const</span> <span class="fn">formatCurrency</span> = (amount: <span class="kw">number</span>, locale: <span class="kw">string</span>, currency: <span class="kw">string</span>) =&gt;
+  <span class="kw">new</span> Intl.<span class="fn">NumberFormat</span>(locale, { style: <span class="str">'currency'</span>, currency }).<span class="fn">format</span>(amount);
+
+<span class="fn">formatCurrency</span>(<span class="fn">1234.5</span>, <span class="str">'de-DE'</span>, <span class="str">'EUR'</span>); <span class="cm">// "1.234,50 €"</span>
+<span class="fn">formatCurrency</span>(<span class="fn">1234.5</span>, <span class="str">'en-US'</span>, <span class="str">'USD'</span>); <span class="cm">// "$1,234.50"</span>
+
+<span class="cm">// ─── RTL support (HTML + CSS) ───</span>
+document.documentElement.<span class="fn">setAttribute</span>(<span class="str">'dir'</span>, locale === <span class="str">'ar'</span> ? <span class="str">'rtl'</span> : <span class="str">'ltr'</span>);
+<span class="cm">/* CSS: use logical properties for layout-agnostic spacing */</span>
+<span class="cm">/* margin-inline-start instead of margin-left */</span>
+<span class="cm">/* padding-inline-end instead of padding-right */</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const msgs={'en-US':{greeting:'Hello, Hruday!',items_1:'1 item',items_5:'5 items',dir:'ltr'},'de-DE':{greeting:'Hallo, Hruday!',items_1:'1 Artikel',items_5:'5 Artikel',dir:'ltr'},'ar-SA':{greeting:'مرحبا، Hruday!',items_1:'عنصر واحد',items_5:'٥ عناصر',dir:'rtl'},'ja-JP':{greeting:'こんにちは、Hruday！',items_1:'1件',items_5:'5件',dir:'ltr'},'fr-FR':{greeting:'Bonjour, Hruday !',items_1:'1 article',items_5:'5 articles',dir:'ltr'}};
+function setLocale(l){document.getElementById('locale-btns').querySelectorAll('button').forEach(b=>b.classList.remove('active'));event.target.classList.add('active');const m=msgs[l];const date=new Intl.DateTimeFormat(l,{dateStyle:'long'}).format(new Date());const num=new Intl.NumberFormat(l,{style:'currency',currency:l.endsWith('DE')?'EUR':l.endsWith('SA')?'SAR':l.endsWith('JP')?'JPY':'USD'}).format(1234.56);document.getElementById('locale-demo').innerHTML=`<div dir="${m.dir}" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;text-align:${m.dir==='rtl'?'right':'left'}"><div style="color:#60a5fa;font-weight:700;margin-bottom:10px">${l} ${m.dir==='rtl'?'(RTL)':''}</div><div style="display:grid;gap:6px"><div style="color:#94a3b8">Greeting: <span style="color:#e2e8f0">${m.greeting}</span></div><div style="color:#94a3b8">Items singular: <span style="color:#e2e8f0">${m.items_1}</span></div><div style="color:#94a3b8">Items plural: <span style="color:#e2e8f0">${m.items_5}</span></div><div style="color:#94a3b8">Date: <span style="color:#e2e8f0">${date}</span></div><div style="color:#94a3b8">Currency: <span style="color:#10b981">${num}</span></div></div></div>`;}
+setLocale('en-US');
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 139 – Performance Monitoring</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#10b981;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#0f2318;border-color:#10b981;color:#10b981}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#10b981;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #10b981;background:#0f2318;color:#10b981;cursor:pointer;font-size:.82rem;margin:4px}
+</style>
+</head>
+<body>
+<h1>📊 Performance Monitoring</h1>
+<p class="sub">Topic 139 · Part 13 / 13.1 Monitoring · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Vitals Dashboard</div>
+  <div class="tab" onclick="setTab(2)">Metrics Reference</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Performance monitoring — from lab data to production signals</h3>
+    <p style="color:#94a3b8;font-size:.83rem;margin-bottom:14px">Lighthouse scores in CI tell you what could happen in ideal conditions. Production performance monitoring tells you what does happen for real users on real devices and networks. The key hierarchy: Core Web Vitals (LCP, CLS, INP) → Custom spans (API time, hydration, route transition) → Navigation Timing API → Long Task observer. At SAP, p75 LCP tracked weekly in Grafana dashboards per BTP product region.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#10b981;font-weight:700;margin-bottom:6px">Synthetic monitoring</div><div style="color:#94a3b8">Scheduled Lighthouse CI runs. Catches regressions before deploy. Consistent lab conditions. Tools: WebpageTest, SpeedCurve, Calibre</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Real User Monitoring (RUM)</div><div style="color:#94a3b8">JS snippet samples real users per percentile. Captures slow device/network edge cases. Tools: Datadog RUM, New Relic</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#a78bfa;font-weight:700;margin-bottom:6px">Custom spans</div><div class="color:#94a3b8">performance.mark() / measure() around your own operations: API calls, chart render, data processing</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Core Web Vitals dashboard — simulated production percentiles</h3>
+    <button onclick="genVitals()">🔄 Generate sample data</button>
+    <div id="vitals-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;font-size:.8rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Performance metrics reference</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#10b981">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Metric</th>
+        <th style="padding:8px;border:1px solid #2d3551">Good</th>
+        <th style="padding:8px;border:1px solid #2d3551">Needs Improvement</th>
+        <th style="padding:8px;border:1px solid #2d3551">Poor</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">LCP (Largest Contentful Paint)</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">≤ 2.5s</td><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">2.5–4s</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">> 4s</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">INP (Interaction to Next Paint)</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">≤ 200ms</td><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">200–500ms</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">> 500ms</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">CLS (Cumulative Layout Shift)</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">≤ 0.1</td><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">0.1–0.25</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">> 0.25</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">FCP (First Contentful Paint)</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">≤ 1.8s</td><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">1.8–3s</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">> 3s</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">TTFB (Time to First Byte)</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">≤ 800ms</td><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">800ms–1.8s</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">> 1.8s</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>web-vitals library + custom span instrumentation</h3>
+    <pre><span class="cm">// ─── Core Web Vitals collection ───</span>
+<span class="kw">import</span> { onLCP, onINP, onCLS, onFCP, onTTFB } <span class="kw">from</span> <span class="str">'web-vitals'</span>;
+
+<span class="kw">function</span> <span class="fn">sendVital</span>({ name, value, id }: Metric) {
+  navigator.<span class="fn">sendBeacon</span>(<span class="str">'/api/vitals'</span>, <span class="fn">JSON.stringify</span>({
+    metric: name, value: <span class="fn">Math.round</span>(value), id,
+    url: location.pathname, timestamp: Date.<span class="fn">now</span>()
+  }));
+}
+[onLCP, onINP, onCLS, onFCP, onTTFB].<span class="fn">forEach</span>(fn =&gt; <span class="fn">fn</span>(sendVital));
+
+<span class="cm">// ─── Custom span: measure API latency ───</span>
+<span class="kw">async function</span> <span class="fn">fetchOrders</span>() {
+  performance.<span class="fn">mark</span>(<span class="str">'orders-fetch-start'</span>);
+  <span class="kw">const</span> data = <span class="kw">await</span> api.<span class="fn">get</span>(<span class="str">'/orders'</span>);
+  performance.<span class="fn">mark</span>(<span class="str">'orders-fetch-end'</span>);
+  <span class="kw">const</span> measure = performance.<span class="fn">measure</span>(
+    <span class="str">'orders-fetch'</span>, <span class="str">'orders-fetch-start'</span>, <span class="str">'orders-fetch-end'</span>
+  );
+  logger.<span class="fn">info</span>(<span class="str">'API span'</span>, { name: <span class="str">'orders-fetch'</span>, duration: measure.duration });
+  <span class="kw">return</span> data;
+}
+
+<span class="cm">// ─── Long Tasks observer ───</span>
+<span class="kw">new</span> <span class="fn">PerformanceObserver</span>(list =&gt; {
+  list.<span class="fn">getEntries</span>().<span class="fn">forEach</span>(entry =&gt; {
+    <span class="kw">if</span> (entry.duration &gt; 50) <span class="cm">// >50ms = long task</span>
+      logger.<span class="fn">warn</span>(<span class="str">'Long task'</span>, { duration: entry.duration });
+  });
+}).<span class="fn">observe</span>({ entryTypes: [<span class="str">'longtask'</span>] });</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+function color(v,good,ni){return v<=good?'#10b981':v<=ni?'#f59e0b':'#ef4444';}
+function label(v,good,ni){return v<=good?'Good':v<=ni?'Needs Improvement':'Poor';}
+function rand(min,max){return Math.round(min+(Math.random()*(max-min)));}
+function genVitals(){
+  const lcp=rand(1200,5000),inp=rand(80,700),cls=(Math.random()*0.4).toFixed(3),fcp=rand(800,4000),ttfb=rand(200,2500);
+  const items=[
+    {name:'LCP',val:lcp+'ms',raw:lcp,good:2500,ni:4000,unit:'ms'},
+    {name:'INP',val:inp+'ms',raw:inp,good:200,ni:500,unit:'ms'},
+    {name:'CLS',val:cls,raw:parseFloat(cls),good:0.1,ni:0.25,unit:''},
+    {name:'FCP',val:fcp+'ms',raw:fcp,good:1800,ni:3000,unit:'ms'},
+    {name:'TTFB',val:ttfb+'ms',raw:ttfb,good:800,ni:1800,unit:'ms'}
+  ];
+  document.getElementById('vitals-grid').innerHTML=items.map(m=>{
+    const c=color(m.raw,m.good,m.ni);
+    const l=label(m.raw,m.good,m.ni);
+    return `<div style="background:#0f1117;border:1px solid ${c}33;border-radius:8px;padding:12px;text-align:center"><div style="color:#94a3b8;font-size:.72rem">${m.name}</div><div style="color:${c};font-size:1.4rem;font-weight:700;margin:4px 0">${m.val}</div><div style="color:${c};font-size:.72rem">${l}</div></div>`;
+  }).join('');
+}
+genVitals();
+</script>
+</body>
+</html>
