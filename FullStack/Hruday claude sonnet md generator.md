@@ -103,7 +103,158 @@ fullstack-interview-guide/
 ├── part19-system-design/
 ├── part20-behavioural/
 ├── part21-genai-rag-agents/
-└── part22-ai-integration-patterns/
+├── part22-ai-integration-patterns/
+└── part23-sap-project-deep-dive/
+```
+
+---
+
+## SPECIAL MODE — PART 23: SAP BI LAUNCHPAD PROJECT FILES
+
+If the Part is `Part 23 — SAP BI Launchpad Project Deep Dive`,
+use this special format instead of the standard 10-section format.
+
+Part 23 files are different. They are not about learning a concept.
+They are about practising how to EXPLAIN your real project in an interview.
+Every file in Part 23 must help Hruday do one of these things:
+- Draw the architecture live on a whiteboard
+- Answer "walk me through a project you built"
+- Defend a design decision under follow-up questions
+- Connect his project work to the topic being asked about
+
+**Part 23 filename format:** `part23-[topic-slug].md`
+Examples:
+- `part23-architecture-overview.md`
+- `part23-performance-lighthouse-story.md`
+- `part23-security-vulnerability-reduction.md`
+- `part23-module-federation-decisions.md`
+- `part23-accessibility-wcag-story.md`
+- `part23-defend-every-decision.md`
+- `part23-live-interview-practice.md`
+
+**Part 23 file format:**
+
+```markdown
+# [Topic — e.g. "Architecture Overview: SAP BI Launchpad"]
+> Part 23 — SAP BI Launchpad Project Deep Dive
+> Full Stack Interview Guide · Hruday D · 2026
+
+---
+
+## ⚡ Say This in the First 30 Seconds
+> This is the exact opening. Memorise it. Say it confidently.
+
+"[2–3 sentence intro — what the product is, what makes it complex,
+what your role was. Written in first person. Ready to say out loud.]"
+
+---
+
+## 1. The Architecture — Draw This Cold
+
+[ASCII diagram — complete, labelled, production-quality.
+Every box named. Every arrow explained.
+Hruday must be able to redraw this from memory.]
+
+```
+[Full ASCII diagram]
+```
+
+**While drawing, say this out loud:**
+[Narration — what to say as you draw each part.
+Written as bullet points. One bullet per component.
+"This box here is the Shell App — it owns the routing and auth state..."
+This is the script for the whiteboard moment.]
+
+---
+
+## 2. The Story — What Was Hard
+
+**The situation:**
+[2–3 sentences. What the system looked like before you worked on it.
+What was broken, slow, missing, or risky.]
+
+**What you did:**
+[Numbered steps — exactly what you changed and why.
+Include real numbers — before and after.
+"Before: Lighthouse score 60. After: 95+. Here is what changed..."]
+
+**The result:**
+[Business impact. Not just technical. Why did this matter to the company?
+"This unlocked enterprise customers in regulated industries..."
+"This reduced reported security vulnerabilities by 80%..."]
+
+---
+
+## 3. The Decisions — Defend Every One
+
+For each major decision, give:
+- **What you chose:** [the decision]
+- **Why you chose it:** [the reason in plain English]
+- **What you gave up:** [the trade-off — what you lost by making this choice]
+- **What you'd choose today:** [how your thinking has evolved]
+
+[Cover all major decisions relevant to this topic file]
+
+---
+
+## 4. Interview Questions — Practise These
+
+### Q1
+**Interviewer asks:** "[Most likely opening question on this topic]"
+**Say this:** > [Full answer in first person. 120–150 words. Natural speech.]
+
+### Q2
+**Interviewer asks:** "[Hard follow-up — why did you choose X over Y?]"
+**Say this:** > [Full answer showing judgement, not just knowledge. 120–150 words.]
+
+### Q3
+**Interviewer asks:** "[What would you do differently?]"
+**Say this:** > [Answer that shows growth mindset and forward thinking. 100 words.]
+
+### Q4
+**Interviewer asks:** "[How does this scale to 10x users?]"
+**Say this:** > [Answer connecting your project to distributed systems knowledge. 120 words.]
+
+---
+
+## 5. The Traps — What Candidates Get Wrong Here
+
+| Trap | What most candidates say | What Hruday says |
+|------|--------------------------|------------------|
+| [Trap 1] | [Vague or shallow answer] | [Specific, numbered, with real data] |
+| [Trap 2] | [Defensive about trade-offs] | [Honest about what was given up and why] |
+| [Trap 3] | [No growth mindset] | [Clear about what they'd do differently today] |
+
+---
+
+## 6. Connect to the Index — Where This Maps
+
+[Show how this Part 23 topic connects to other parts of the index.
+"When they ask about Module Federation, they are really testing your knowledge of
+Part 12 (Frontend Architecture) — specifically Micro-Frontend Architecture."
+Give 3–5 connections with part numbers.]
+
+- **Part [X] — [Topic]:** [How the interviewer will pivot from your project to this topic]
+- **Part [X] — [Topic]:** [How the interviewer will pivot from your project to this topic]
+
+---
+
+## 7. One-Week Practice Plan for This Topic
+
+[7 simple daily tasks. Each takes 10–15 minutes.
+Goal: by end of week, Hruday can answer every question cold.]
+
+- **Day 1:** [task]
+- **Day 2:** [task]
+- **Day 3:** [task]
+- **Day 4:** [task]
+- **Day 5:** [task]
+- **Day 6:** [task — draw the diagram from memory, no peeking]
+- **Day 7:** [task — answer all 4 questions out loud, record yourself]
+
+---
+
+*Part 23 · [Topic] · SAP BI Launchpad Project Deep Dive · Hruday D · 2026*
 ```
 
 ---
@@ -352,4 +503,23 @@ Be specific — not just "Google cares about scale".]
 **Topic:** `[PASTE TOPIC NAME HERE]`
 **Part:** `[PASTE PART HERE — e.g. Part 4 — Microservices Architecture]`
 
+> If Part is `Part 23 — SAP BI Launchpad Project Deep Dive` →
+> use the SPECIAL MODE format above, not the standard 10-section format.
+
 Output the filename on line 1. Then output the complete markdown.
+
+---
+
+## PART 23 QUICK REFERENCE — Topics to Generate
+
+Generate one file per topic below. Push each to `part23-sap-project-deep-dive/`
+
+| File | Topic |
+|------|-------|
+| `part23-architecture-overview.md` | Full system diagram + 30-second intro |
+| `part23-module-federation-decisions.md` | Why MFE, why Module Federation, SAP UI5 + React + Next.js coexistence |
+| `part23-performance-lighthouse-story.md` | Lighthouse 60→95, 45% load time cut, exact fixes |
+| `part23-security-vulnerability-reduction.md` | 80% reduction, CSP + XSS + headers + JWT, exact numbers |
+| `part23-accessibility-wcag-story.md` | WCAG AA, 30+ violations fixed, business impact |
+| `part23-defend-every-decision.md` | Why microservices, why MFE, why multiple frameworks |
+| `part23-live-interview-practice.md` | 10 questions + model answers + 7-day practice plan |
