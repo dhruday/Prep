@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>195 – Frontend Authorization Guards</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#f472b6}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover,.btn-active{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+.flow-step{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:.78rem;margin-bottom:6px;border:1px solid #2d3551}
+</style>
+</head>
+<body>
+<h1>🛡️ Frontend Authorization Guards</h1>
+<p class="sub">Topic 195 · Part 13 / Module 13.3 — Frontend Authorization Design · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Guard Simulator</div>
+  <div class="tab" onclick="setTab(2)">Angular vs React</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Guards are bouncers, not vaults</h3>
+    <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;font-size:.78rem;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="color:#60a5fa;font-weight:700">Angular Router Guard Order</div>
+      </div>
+      <div id="guardFlow"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:#0f1117;border:1px solid #ef444444;border-radius:8px;padding:10px;font-size:.75rem">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">❌ Anti-patterns</div>
+        <div style="color:#94a3b8;display:flex;flex-direction:column;gap:4px">
+          <div>• Async guard on every navigation</div>
+          <div>• Reading role from localStorage (XSS risk)</div>
+          <div>• Returning <code>false</code> instead of UrlTree</div>
+          <div>• CanActivate without CanLoad on lazy routes</div>
+          <div>• Trusting frontend guard as security</div>
+        </div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b98144;border-radius:8px;padding:10px;font-size:.75rem">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Best practices</div>
+        <div style="color:#94a3b8;display:flex;flex-direction:column;gap:4px">
+          <div>• Pre-load permissions at login into sync store</div>
+          <div>• Return UrlTree / &lt;Navigate replace&gt;</div>
+          <div>• CanLoad on sensitive lazy modules</div>
+          <div>• Always enforce on backend too</div>
+          <div>• Route data drives configuration</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Route navigation simulator</h3>
+    <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <span style="color:#94a3b8;font-size:.78rem;align-self:center">User role:</span>
+      <button id="rb-viewer" onclick="setRole('viewer')" class="btn-active">Viewer</button>
+      <button id="rb-editor" onclick="setRole('editor')">Editor</button>
+      <button id="rb-admin" onclick="setRole('admin')">Admin</button>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="color:#94a3b8;font-size:.78rem;margin-bottom:6px">Navigate to:</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="navigate('/dashboard','read','Dashboard')">🏠 /dashboard</button>
+        <button onclick="navigate('/invoices/approve','invoice:approve','Invoice Approval')">💰 /invoices/approve</button>
+        <button onclick="navigate('/admin','admin:access','Admin (lazy)')">⚙️ /admin (lazy)</button>
+        <button onclick="navigate('/profile','read','Profile')">👤 /profile</button>
+      </div>
+    </div>
+    <div id="navResult" style="font-size:.78rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Angular vs React guard patterns</h3>
+    <table>
+      <tr><th>Feature</th><th>Angular</th><th>React Router v6</th></tr>
+      <tr><td>Primary guard type</td><td>CanActivateFn</td><td>&lt;ProtectedRoute&gt;</td></tr>
+      <tr><td>Prevents bundle download</td><td>CanLoad / canMatch</td><td>React.lazy() + guard check</td></tr>
+      <tr><td>Async support</td><td>Observable/Promise</td><td>loader() function</td></tr>
+      <tr><td>Redirect</td><td>router.createUrlTree()</td><td>&lt;Navigate replace&gt;</td></tr>
+      <tr><td>Route config</td><td>canActivate: [guard]</td><td>element={&lt;Protected /&gt;}</td></tr>
+      <tr><td>Permission source</td><td>Inject AuthService</td><td>useAbility() hook</td></tr>
+      <tr><td>Testing</td><td>RouterTestingModule</td><td>MemoryRouter wrapper</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Angular CanActivate — synchronous permission guard</h3>
+    <pre><span class="kw">export const</span> <span class="fn">permissionGuard</span>: <span class="dec">CanActivateFn</span> = (route, state) => {
+  <span class="kw">const</span> auth = <span class="fn">inject</span>(<span class="dec">AuthService</span>);
+  <span class="kw">const</span> router = <span class="fn">inject</span>(<span class="dec">Router</span>);
+  <span class="kw">const</span> required: <span class="dec">string</span>[] = route.data[<span class="str">'permissions'</span>] ?? [];
+
+  <span class="kw">const</span> hasAccess = required.<span class="fn">every</span>(p => auth.<span class="fn">hasPermission</span>(p));
+  <span class="kw">return</span> hasAccess
+    ? <span class="kw">true</span>
+    : router.<span class="fn">createUrlTree</span>([<span class="str">'/forbidden'</span>], {
+        queryParams: { returnUrl: state.url }
+      });
+};
+
+<span class="cm">// Route config:</span>
+{ path: <span class="str">'invoices/approve'</span>,
+  component: <span class="dec">InvoiceApprovalComponent</span>,
+  canActivate: [<span class="fn">permissionGuard</span>],
+  data: { permissions: [<span class="str">'invoice:approve'</span>] } }</pre>
+  </div>
+  <div class="card">
+    <h3>React ProtectedRoute with CASL</h3>
+    <pre><span class="kw">const</span> <span class="dec">ProtectedRoute</span> = ({ action, subject, redirectTo=<span class="str">'/forbidden'</span> }) => {
+  <span class="kw">const</span> ability = <span class="fn">useAbility</span>(<span class="dec">AbilityContext</span>);
+  <span class="kw">return</span> ability.<span class="fn">can</span>(action, subject)
+    ? &lt;<span class="dec">Outlet</span> /&gt;
+    : &lt;<span class="dec">Navigate</span> to={redirectTo} replace /&gt;;
+};
+
+<span class="cm">// Usage in router:</span>
+&lt;<span class="dec">Route</span> element={&lt;<span class="dec">ProtectedRoute</span> action=<span class="str">"approve"</span> subject=<span class="str">"Invoice"</span> /&gt;}&gt;
+  &lt;<span class="dec">Route</span> path=<span class="str">"/invoices/approve"</span> element={&lt;<span class="dec">InvoiceApproval</span> /&gt;} /&gt;
+&lt;/<span class="dec">Route</span>&gt;</pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+const guardSteps = [
+  { label:'CanMatch[]', desc:'Filter route candidates', color:'#a78bfa' },
+  { label:'CanLoad[]', desc:'Prevent bundle download for unauthorized users', color:'#f59e0b' },
+  { label:'CanActivate[]', desc:'Permission check before component renders', color:'#60a5fa' },
+  { label:'CanActivateChild[]', desc:'Per-child permission check', color:'#10b981' },
+  { label:'Component renders', desc:'Guard chain complete — route activated', color:'#10b981' },
+];
+const el = document.getElementById('guardFlow');
+el.innerHTML = guardSteps.map((s,i) => `
+  <div class="flow-step" style="border-color:${s.color}33;background:#0f1117">
+    <div style="background:${s.color}22;border:1px solid ${s.color}44;border-radius:4px;padding:2px 6px;font-size:.68rem;color:${s.color};white-space:nowrap">${s.label}</div>
+    <div style="color:#94a3b8;font-size:.74rem">${s.desc}</div>
+    ${i<guardSteps.length-1 ? '<div style="margin-left:auto;color:#475569;font-size:.7rem">↓</div>' : '<div style="margin-left:auto;color:#10b981">✓</div>'}
+  </div>
+`).join('');
+
+const rolePerms = {
+  viewer: ['read'],
+  editor: ['read', 'invoice:read'],
+  admin: ['read', 'invoice:read', 'invoice:approve', 'admin:access'],
+};
+let currentRole = 'viewer';
+
+function setRole(role) {
+  currentRole = role;
+  ['viewer','editor','admin'].forEach(r => {
+    const b = document.getElementById(`rb-${r}`);
+    b.className = r === role ? 'btn-active' : '';
+  });
+  document.getElementById('navResult').innerHTML = '';
+}
+
+function navigate(path, permission, name) {
+  const perms = rolePerms[currentRole];
+  const isLazy = path.includes('admin');
+  const hasAccess = perms.includes(permission);
+
+  const steps = [
+    { label:'Router intercepts', pass:true },
+    isLazy ? { label:'CanLoad check — prevent bundle download', pass:hasAccess } : null,
+    { label:'CanActivate — permission check', pass:hasAccess },
+  ].filter(Boolean);
+
+  const blocked = steps.find(s => !s.pass);
+
+  const stepsHtml = steps.map(s => `
+    <div class="flow-step" style="border-color:${s.pass ? '#10b98144' : '#ef444444'}">
+      <div style="font-size:.7rem;color:${s.pass ? '#10b981' : '#ef4444'}">${s.pass ? '✅' : '⛔'} ${s.label}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('navResult').innerHTML = `
+    <div style="margin-bottom:8px;color:#94a3b8;font-size:.78rem">
+      <strong style="color:#e2e8f0">${currentRole}</strong> navigating to <strong style="color:#60a5fa">${path}</strong> (requires: <code>${permission}</code>)
+    </div>
+    ${stepsHtml}
+    <div style="padding:10px 14px;border-radius:8px;margin-top:8px;background:${hasAccess ? '#14532d22' : '#450a0a22'};border:1px solid ${hasAccess ? '#10b98155' : '#ef444455'}">
+      <div style="font-weight:700;color:${hasAccess ? '#10b981' : '#ef4444'};font-size:.85rem">
+        ${hasAccess ? `✅ Component rendered: ${name}` : `⛔ Redirected → /forbidden?returnUrl=${path}`}
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

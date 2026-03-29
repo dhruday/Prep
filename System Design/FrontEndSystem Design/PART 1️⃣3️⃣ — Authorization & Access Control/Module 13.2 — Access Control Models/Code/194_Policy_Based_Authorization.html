@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>194 – Policy-Based Authorization</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#f472b6}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.68rem;margin:2px}
+select{background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;border-radius:6px;padding:6px 10px;font-size:.8rem}
+label{color:#94a3b8;font-size:.78rem}
+</style>
+</head>
+<body>
+<h1>📋 Policy-Based Authorization</h1>
+<p class="sub">Topic 194 · Part 13 / Module 13.2 — Access Control Models · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Policy Playground</div>
+  <div class="tab" onclick="setTab(2)">OPA vs CASL vs Casbin</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Policy-Based Authorization: separate policy from code</h3>
+    <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;font-size:.78rem;margin-bottom:12px">
+      <div style="color:#a78bfa;font-weight:700;margin-bottom:10px;font-size:.85rem">Core principle: declare WHAT you want, not HOW to check it</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div style="color:#ef4444;font-size:.72rem;font-weight:700;margin-bottom:4px">❌ Authorization in business logic</div>
+          <pre style="font-size:.68rem;padding:8px;margin:0">if user.role === 'admin'
+  || (user.dept === doc.dept
+  && user.level >= 2)
+  && !doc.archived {
+  // allow
+}</pre>
+        </div>
+        <div>
+          <div style="color:#10b981;font-size:.72rem;font-weight:700;margin-bottom:4px">✅ Policy-based declaration</div>
+          <pre style="font-size:.68rem;padding:8px;margin:0">can(ability, 'update', 'Document',
+  { department: user.dept,
+    archived: false })</pre>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:#0f1117;border:1px solid #60a5fa44;border-radius:8px;padding:10px;font-size:.75rem">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">OPA (Open Policy Agent)</div>
+        <div style="color:#94a3b8">Sidecar/service model. Policies in Rego language. Language-agnostic. Netflix, Cloudflare, Kubernetes. Best for microservices mesh, infrastructure policy.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa44;border-radius:8px;padding:10px;font-size:.75rem">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:6px">CASL (JS)</div>
+        <div style="color:#94a3b8">Embedded library. Isomorphic — same policy rules run on both frontend and backend. Perfect for Angular/React + Node.js full-stack TypeScript projects.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>CASL-style policy playground</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <div style="color:#60a5fa;font-weight:700;font-size:.8rem;margin-bottom:6px">User</div>
+        <label>Role: <select id="pRole"><option>viewer</option><option>editor</option><option>manager</option><option>admin</option></select></label><br><br>
+        <label>Department: <select id="pDept"><option>engineering</option><option>finance</option><option>hr</option></select></label>
+      </div>
+      <div>
+        <div style="color:#10b981;font-weight:700;font-size:.8rem;margin-bottom:6px">Resource</div>
+        <label>Type: <select id="pRes"><option>Document</option><option>Invoice</option><option>Report</option></select></label><br><br>
+        <label>Owner dept: <select id="pResDept"><option>engineering</option><option>finance</option><option>hr</option></select></label>
+      </div>
+      <div>
+        <div style="color:#a78bfa;font-weight:700;font-size:.8rem;margin-bottom:6px">Action</div>
+        <label>Action: <select id="pAction"><option>read</option><option>update</option><option>delete</option><option>approve</option></select></label>
+      </div>
+    </div>
+    <button onclick="runPlayground()">Evaluate Policy</button>
+    <div id="playResult" style="margin-top:12px;font-size:.78rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Policy engine comparison</h3>
+    <table>
+      <tr><th>Aspect</th><th>OPA/Rego</th><th>CASL (JS)</th><th>Casbin</th></tr>
+      <tr><td>Language</td><td>Any (sidecar)</td><td>TypeScript / JS</td><td>Multiple SDKs</td></tr>
+      <tr><td>Policy language</td><td>Rego (Datalog)</td><td>JS ability builder</td><td>Model + CSV/DB</td></tr>
+      <tr><td>Frontend support</td><td style="color:#ef4444">No (sidecar only)</td><td style="color:#10b981">Yes (isomorphic)</td><td style="color:#ef4444">No</td></tr>
+      <tr><td>Policy hot-reload</td><td style="color:#10b981">Yes (bundle API)</td><td style="color:#f59e0b">Manual refetch</td><td style="color:#10b981">Yes (adapter)</td></tr>
+      <tr><td>Best for</td><td>Kubernetes/microservices</td><td>Full-stack JS apps</td><td>REST/ACL patterns</td></tr>
+      <tr><td>Maturity</td><td style="color:#10b981">CNCF Graduated</td><td style="color:#10b981">Production-proven</td><td style="color:#f59e0b">Widely used</td></tr>
+      <tr><td>Used at</td><td>Netflix, GitHub</td><td>Airbnb pattern</td><td>Numerous SaaS</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>CASL isomorphic policy — shared frontend + backend</h3>
+    <pre><span class="cm">// abilities.ts — shared between Angular/React and Node.js</span>
+<span class="kw">import</span> { <span class="dec">AbilityBuilder</span>, <span class="dec">PureAbility</span> } <span class="kw">from</span> <span class="str">'@casl/ability'</span>;
+
+<span class="kw">type</span> <span class="dec">Actions</span> = <span class="str">'read'</span> | <span class="str">'update'</span> | <span class="str">'delete'</span> | <span class="str">'approve'</span>;
+<span class="kw">type</span> <span class="dec">Subjects</span> = <span class="str">'Document'</span> | <span class="str">'Invoice'</span> | <span class="str">'all'</span>;
+<span class="kw">export type</span> <span class="dec">AppAbility</span> = <span class="dec">PureAbility</span>&lt;[<span class="dec">Actions</span>, <span class="dec">Subjects</span>]&gt;;
+
+<span class="kw">export function</span> <span class="fn">defineAbilitiesFor</span>(user: <span class="dec">User</span>): <span class="dec">AppAbility</span> {
+  <span class="kw">const</span> { can, cannot, build } = <span class="kw">new</span> <span class="fn">AbilityBuilder</span>&lt;<span class="dec">AppAbility</span>&gt;(<span class="dec">PureAbility</span>);
+
+  <span class="kw">if</span> (user.role === <span class="str">'admin'</span>) {
+    <span class="fn">can</span>(<span class="str">'manage'</span>, <span class="str">'all'</span>);
+  } <span class="kw">else if</span> (user.role === <span class="str">'manager'</span>) {
+    <span class="fn">can</span>(<span class="str">'read'</span>, <span class="str">'Document'</span>);
+    <span class="fn">can</span>(<span class="str">'update'</span>, <span class="str">'Document'</span>, { department: user.department });
+    <span class="fn">can</span>(<span class="str">'approve'</span>, <span class="str">'Invoice'</span>, { department: user.department, amount: { $lt: <span class="num">50000</span> } });
+  } <span class="kw">else</span> {
+    <span class="fn">can</span>(<span class="str">'read'</span>, <span class="str">'Document'</span>, { department: user.department });
+    <span class="fn">cannot</span>(<span class="str">'delete'</span>, <span class="str">'Document'</span>);
+  }
+  <span class="kw">return</span> <span class="fn">build</span>();
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+const policyRules = [
+  { role:'admin', action:'*', subject:'*', condition:() => true, effect:'allow' },
+  { role:'manager', action:'read', subject:'*', condition:() => true, effect:'allow' },
+  { role:'manager', action:'update', subject:'Document', condition:(u,r) => u.dept===r.dept, effect:'allow' },
+  { role:'manager', action:'approve', subject:'Invoice', condition:(u,r) => u.dept===r.dept, effect:'allow' },
+  { role:'editor', action:'read', subject:'*', condition:(u,r) => u.dept===r.dept, effect:'allow' },
+  { role:'editor', action:'update', subject:'Document', condition:(u,r) => u.dept===r.dept, effect:'allow' },
+  { role:'viewer', action:'read', subject:'*', condition:(u,r) => u.dept===r.dept, effect:'allow' },
+];
+
+function runPlayground() {
+  const user = { role: document.getElementById('pRole').value, dept: document.getElementById('pDept').value };
+  const res = { type: document.getElementById('pRes').value, dept: document.getElementById('pResDept').value };
+  const action = document.getElementById('pAction').value;
+
+  const applicable = policyRules.filter(p =>
+    (p.role === user.role || p.role === '*') &&
+    (p.action === action || p.action === '*') &&
+    (p.subject === res.type || p.subject === '*')
+  );
+
+  const matched = applicable.filter(p => p.condition(user, res));
+  const allowed = matched.some(p => p.effect === 'allow');
+
+  const matchHtml = applicable.length === 0
+    ? `<div style="color:#475569;padding:8px">No policy rules matched this role+action+subject combination</div>`
+    : applicable.map(p => {
+        const condMet = p.condition(user, res);
+        return `<div style="display:flex;justify-content:space-between;padding:6px 10px;border-radius:6px;margin-bottom:4px;background:#0f1117;border:1px solid ${condMet ? '#10b98166' : '#2d3551'}">
+          <span style="color:#94a3b8;font-size:.73rem">role:${p.role} → can:${p.action} → ${p.subject}</span>
+          <span style="color:${condMet ? '#10b981' : '#475569'};font-size:.72rem;font-weight:700">${condMet ? '✅ condition met' : '— condition failed'}</span>
+        </div>`;
+      }).join('');
+
+  document.getElementById('playResult').innerHTML = `
+    ${matchHtml}
+    <div style="margin-top:10px;padding:12px;border-radius:8px;text-align:center;background:${allowed ? '#14532d22' : '#450a0a22'};border:1px solid ${allowed ? '#10b98155' : '#ef444455'}">
+      <div style="font-size:1rem;font-weight:700;color:${allowed ? '#10b981' : '#ef4444'}">${allowed ? '✅ ALLOWED' : '⛔ DENIED'}</div>
+      <div style="color:#94a3b8;font-size:.7rem;margin-top:2px">${user.role} · ${action} · ${res.type} (dept:${res.dept})</div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

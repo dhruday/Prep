@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>192 – RBAC</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#f472b6}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>👥 Role-Based Access Control (RBAC)</h1>
+<p class="sub">Topic 192 · Part 13 / Module 13.2 — Access Control Models · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Role Hierarchy</div>
+  <div class="tab" onclick="setTab(2)">Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>RBAC core model</h3>
+    <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;font-size:.78rem;text-align:center;margin-bottom:12px">
+      <div style="display:flex;justify-content:center;align-items:center;gap:30px;flex-wrap:wrap">
+        <div style="text-align:center">
+          <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:8px;padding:10px 16px;color:#60a5fa;font-weight:700">Users</div>
+          <div style="color:#475569;font-size:.7rem;margin-top:4px">Alice, Bob, Carol</div>
+        </div>
+        <div style="color:#2d3551;font-size:1.5rem">→</div>
+        <div style="text-align:center">
+          <div style="background:#1b1f3a;border:1px solid #7c3aed;border-radius:8px;padding:10px 16px;color:#a78bfa;font-weight:700">Roles</div>
+          <div style="color:#475569;font-size:.7rem;margin-top:4px">Admin, Editor, Viewer</div>
+        </div>
+        <div style="color:#2d3551;font-size:1.5rem">→</div>
+        <div style="text-align:center">
+          <div style="background:#14532d44;border:1px solid #16a34a;border-radius:8px;padding:10px 16px;color:#10b981;font-weight:700">Permissions</div>
+          <div style="color:#475569;font-size:.7rem;margin-top:4px">doc:read, doc:write, doc:delete</div>
+        </div>
+      </div>
+      <div style="color:#475569;font-size:.7rem;margin-top:12px">Users get permissions via role membership — never assigned directly</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:4px">Why RBAC scales</div>
+        <div style="color:#94a3b8">Manage 20 roles vs 50,000 users. Role change propagates to all members instantly. Compliance audits check roles, not per-user permissions.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="color:#f59e0b;font-weight:700;margin-bottom:4px">RBAC limits</div>
+        <div style="color:#94a3b8">Can't express "edit only your own records" or "access only your department's data" — those need ABAC predicates.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Role hierarchy explorer — click a role to see inherited permissions</h3>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button onclick="showRole('admin')">Admin (inherits all)</button>
+      <button onclick="showRole('editor')">Editor (inherits viewer)</button>
+      <button onclick="showRole('viewer')">Viewer (base role)</button>
+      <button onclick="showRole('billing')">Billing (separate branch)</button>
+    </div>
+    <div id="hierOut" style="font-size:.78rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>RBAC levels comparison (NIST models)</h3>
+    <table>
+      <tr><th>Model</th><th>Feature</th><th>Use Case</th></tr>
+      <tr><td>RBAC0 (Core)</td><td>Users → Roles → Permissions</td><td>Most web apps</td></tr>
+      <tr><td>RBAC1 (Hierarchical)</td><td>Roles inherit from parent roles</td><td>Org-chart structures, reduces permission duplication</td></tr>
+      <tr><td>RBAC2 (Constrained)</td><td>Separation of Duty rules</td><td>Finance, compliance — can't be both Auditor and Finance</td></tr>
+      <tr><td>RBAC3 (Symmetric)</td><td>Hierarchy + SoD</td><td>Enterprise ERP (SAP, Oracle)</td></tr>
+    </table>
+    <div style="background:#0f1117;border:1px solid #f59e0b44;border-radius:8px;padding:10px;margin-top:10px;font-size:.78rem">
+      <div style="color:#f59e0b;font-weight:700;margin-bottom:4px">Role explosion warning sign:</div>
+      <div style="color:#94a3b8">When you see roles like <code>editor-europe</code>, <code>editor-usa</code>, <code>editor-apac</code> — you're fighting RBAC. Switch to scoped RBAC or ABAC for the regional dimension instead.</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Hierarchical RBAC in TypeScript</h3>
+    <pre><span class="kw">type</span> <span class="dec">Permission</span> = `${<span class="dec">string</span>}:${<span class="dec">string</span>}`;
+
+<span class="kw">const</span> ROLES: Record&lt;<span class="dec">string</span>, {perms:<span class="dec">Permission</span>[];inherits?:<span class="dec">string</span>}&gt; = {
+  viewer:  { perms: [<span class="str">'document:read'</span>, <span class="str">'user:read'</span>] },
+  editor:  { perms: [<span class="str">'document:write'</span>, <span class="str">'document:publish'</span>], inherits: <span class="str">'viewer'</span> },
+  admin:   { perms: [<span class="str">'user:invite'</span>, <span class="str">'user:delete'</span>], inherits: <span class="str">'editor'</span> },
+  billing: { perms: [<span class="str">'billing:manage'</span>], inherits: <span class="str">'viewer'</span> },
+};
+
+<span class="kw">function</span> <span class="fn">resolve</span>(role: <span class="dec">string</span>, seen = <span class="kw">new</span> Set&lt;<span class="dec">string</span>&gt;()): Set&lt;<span class="dec">Permission</span>&gt; {
+  <span class="kw">if</span> (seen.<span class="fn">has</span>(role)) <span class="kw">return new</span> Set();
+  seen.<span class="fn">add</span>(role);
+  <span class="kw">const</span> r = ROLES[role];
+  <span class="kw">const</span> perms = <span class="kw">new</span> Set&lt;<span class="dec">Permission</span>&gt;(r.perms);
+  <span class="kw">if</span> (r.inherits) <span class="fn">resolve</span>(r.inherits, seen).<span class="fn">forEach</span>(p => perms.<span class="fn">add</span>(p));
+  <span class="kw">return</span> perms;
+}
+
+<span class="cm">// admin inherits editor → viewer: resolve('admin') has ALL permissions</span>
+<span class="cm">// billing inherits viewer only: no document:write</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+const ROLES = {
+  viewer:  { perms: ['document:read', 'user:read'], inherits: null, color: '#94a3b8' },
+  editor:  { perms: ['document:write', 'document:publish'], inherits: 'viewer', color: '#60a5fa' },
+  admin:   { perms: ['user:invite', 'user:delete', 'billing:manage'], inherits: 'editor', color: '#10b981' },
+  billing: { perms: ['billing:manage', 'billing:view'], inherits: 'viewer', color: '#f59e0b' },
+};
+
+function resolveRole(roleName, visited = new Set()) {
+  if (visited.has(roleName)) return { perms: [], chain: [] };
+  visited.add(roleName);
+  const role = ROLES[roleName];
+  const chain = [{ name: roleName, perms: role.perms, color: role.color }];
+  if (role.inherits) {
+    const parent = resolveRole(role.inherits, visited);
+    chain.push(...parent.chain);
+  }
+  return { chain, perms: chain.flatMap(c => c.perms) };
+}
+
+function showRole(name) {
+  const { chain, perms } = resolveRole(name);
+  const out = document.getElementById('hierOut');
+  const chainHtml = chain.map((c, i) => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      ${i > 0 ? '<span style="color:#475569;font-size:.8rem;margin-left:20px">inherits ↓</span>' : ''}
+    </div>
+    <div style="background:#0f1117;border:1px solid ${c.color}44;border-radius:8px;padding:10px;margin-bottom:6px;margin-left:${i*20}px">
+      <div style="color:${c.color};font-weight:700;font-size:.82rem;margin-bottom:6px">${c.name.toUpperCase()} role — own permissions:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${c.perms.map(p => `<span style="background:#1e2130;color:${c.color};border:1px solid ${c.color}44;padding:2px 8px;border-radius:10px;font-size:.72rem;font-family:monospace">${p}</span>`).join('')}</div>
+    </div>
+  `).join('');
+  
+  out.innerHTML = `
+    <div style="margin-bottom:10px">${chainHtml}</div>
+    <div style="background:#14532d22;border:1px solid #16a34a55;border-radius:8px;padding:10px">
+      <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Effective permissions for <span style="color:#fff">${name}</span> user (all inherited):</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${[...new Set(perms)].map(p => `<span style="background:#14532d;color:#6ee7b7;border:1px solid #10b98144;padding:2px 8px;border-radius:10px;font-size:.72rem;font-family:monospace">${p}</span>`).join('')}</div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

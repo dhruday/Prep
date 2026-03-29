@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>199 – Multi-Tenant Authorization</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#f472b6}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover,.btn-act{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🏢 Multi-Tenant Authorization</h1>
+<p class="sub">Topic 199 · Part 13 / Module 13.4 — Enterprise & Multi-Tenant Design · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Isolation Simulator</div>
+  <div class="tab" onclick="setTab(2)">Models Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>tenantId must come from JWT, not client</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div style="background:#0f1117;border:1px solid #ef444444;border-radius:8px;padding:10px;font-size:.75rem">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">❌ Tenant ID from client (NEVER)</div>
+        <pre style="font-size:.68rem;padding:6px;margin:0">GET /api/invoices?tenantId=org_abc
+POST /api/data { tenantId: "org_abc" }
+<span style="color:#94a3b8">// Client can send ANY tenantId
+// → cross-tenant data access</span></pre>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b98144;border-radius:8px;padding:10px;font-size:.75rem">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Tenant ID from verified JWT</div>
+        <pre style="font-size:.68rem;padding:6px;margin:0">JWT: { sub: "user1",
+       tenantId: "org_abc",  ← from IdP
+       roles: ["admin"] }
+<span style="color:#94a3b8">// Server-verified, cryptographically signed
+// → tenant context is trusted</span></pre>
+      </div>
+    </div>
+    <div style="background:#0f1117;border:1px solid #a78bfa44;border-radius:8px;padding:10px;font-size:.78rem">
+      <div style="color:#a78bfa;font-weight:700;margin-bottom:6px">Propagation chain</div>
+      <div style="color:#94a3b8;font-size:.73rem">JWT → Middleware extracts tenantId → AsyncLocalStorage → Repository WHERE tenant_id=:tenantId → Cache key: <code>tenantId:resource:id</code> → Audit log: <code>{ tenantId, action }</code></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Cross-tenant isolation simulator</h3>
+    <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:.78rem;color:#94a3b8">Requesting user (JWT):</span>
+      <button class="btn-act" id="rb-alice" onclick="setTenantUser('alice','org_acme','admin')">Alice · ACME Corp (admin)</button>
+      <button id="rb-bob" onclick="setTenantUser('bob','org_contoso','viewer')">Bob · Contoso (viewer)</button>
+    </div>
+    <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:.78rem;color:#94a3b8">Access resource:</span>
+      <button onclick="accessResource('inv-001', 'org_acme', 'Invoice #001 — ACME')">ACME Invoice #001</button>
+      <button onclick="accessResource('inv-002', 'org_contoso', 'Invoice #002 — Contoso')">Contoso Invoice #002</button>
+      <button onclick="accessResource('rpt-001', 'org_acme', 'ACME Report Q4')">ACME Report Q4</button>
+    </div>
+    <div id="tenantResult" style="font-size:.78rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Isolation model comparison</h3>
+    <table>
+      <tr><th>Model</th><th>Isolation</th><th>DB cost</th><th>Engineering effort</th><th>Used at</th></tr>
+      <tr><td>Siloed (DB per tenant)</td><td style="color:#10b981">Perfect</td><td style="color:#ef4444">Very high</td><td style="color:#10b981">Low — no tenant logic</td><td>Enterprise, banking</td></tr>
+      <tr><td>Pooled (shared DB + RLS)</td><td style="color:#f59e0b">Good with RLS</td><td style="color:#10b981">Low</td><td style="color:#f59e0b">Medium</td><td>SMB SaaS startups</td></tr>
+      <tr><td>Schema per tenant</td><td style="color:#10b981">Good</td><td style="color:#f59e0b">Medium</td><td style="color:#f59e0b">Medium</td><td>Mid-market SaaS</td></tr>
+      <tr><td>Hybrid</td><td style="color:#10b981">Best of both</td><td style="color:#f59e0b">Medium</td><td style="color:#ef4444">High</td><td>Salesforce, M365</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Tenant context via AsyncLocalStorage</h3>
+    <pre><span class="kw">import</span> { <span class="dec">AsyncLocalStorage</span> } <span class="kw">from</span> <span class="str">'async_hooks'</span>;
+<span class="kw">export const</span> tenantCtx = <span class="kw">new</span> <span class="dec">AsyncLocalStorage</span>&lt;{ tenantId:<span class="dec">string</span> }&gt;();
+
+<span class="cm">// Middleware — extract from JWT</span>
+<span class="kw">export const</span> <span class="fn">tenantMiddleware</span> = (req, res, next) => {
+  <span class="kw">const</span> { tenantId } = req.jwtPayload; <span class="cm">// from verified JWT</span>
+  tenantCtx.<span class="fn">run</span>({ tenantId }, next);  <span class="cm">// available throughout request</span>
+};
+
+<span class="cm">// Repository auto-scopes every query</span>
+<span class="kw">class</span> <span class="dec">TenantRepository</span>&lt;T&gt; {
+  <span class="fn">findAll</span>(where = {}) {
+    <span class="kw">const</span> { tenantId } = tenantCtx.<span class="fn">getStore</span>()!;
+    <span class="kw">return</span> <span class="kw">this</span>.repo.<span class="fn">find</span>({ where: { ...where, tenantId } });
+  }
+}
+
+<span class="cm">// Cache — tenant-namespaced keys</span>
+<span class="kw">const</span> <span class="fn">cacheKey</span> = (resource, id) => {
+  <span class="kw">const</span> { tenantId } = tenantCtx.<span class="fn">getStore</span>()!;
+  <span class="kw">return</span> <span class="str">`${tenantId}:${resource}:${id}`</span>; <span class="cm">// never cross-tenant cache hit</span>
+};</pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+let claimUserId = 'alice', claimTenantId = 'org_acme', claimRole = 'admin';
+
+function setTenantUser(user, tenant, role) {
+  claimUserId = user; claimTenantId = tenant; claimRole = role;
+  ['alice','bob'].forEach(u => document.getElementById(`rb-${u}`).className = u === user ? 'btn-act' : '');
+  document.getElementById('tenantResult').innerHTML = '';
+}
+
+function accessResource(resourceId, resourceTenant, resourceName) {
+  const allowed = claimTenantId === resourceTenant;
+  const cacheKey = `${claimTenantId}:resource:${resourceId}`;
+
+  document.getElementById('tenantResult').innerHTML = `
+    <div style="margin-bottom:8px;font-size:.78rem;color:#94a3b8">
+      <strong style="color:#e2e8f0">${claimUserId}</strong> (JWT tenantId: <strong style="color:#60a5fa">${claimTenantId}</strong>, role: ${claimRole})<br>
+      accessing: <strong style="color:#a78bfa">${resourceName}</strong> (tenant: <strong style="color:${allowed ? '#10b981' : '#ef4444'}">${resourceTenant}</strong>)
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px">
+      <div style="padding:6px 10px;border-radius:6px;border:1px solid #10b98144;background:#0f1117;font-size:.73rem;color:#10b981">
+        ✅ JWT verified — tenantId: ${claimTenantId}
+      </div>
+      <div style="padding:6px 10px;border-radius:6px;border:1px solid ${allowed ? '#10b98144' : '#ef444444'};background:#0f1117;font-size:.73rem;color:${allowed ? '#10b981' : '#ef4444'}">
+        ${allowed ? '✅' : '⛔'} Resource tenant (${resourceTenant}) ${allowed ? '==' : '!='} JWT tenant (${claimTenantId})
+      </div>
+      ${allowed ? `<div style="padding:6px 10px;border-radius:6px;border:1px solid #a78bfa44;background:#0f1117;font-size:.73rem;color:#a78bfa">📦 Cache key: <code>${cacheKey}</code></div>` : ''}
+    </div>
+    <div style="padding:10px 14px;border-radius:8px;background:${allowed ? '#14532d22' : '#450a0a22'};border:1px solid ${allowed ? '#10b98155' : '#ef444455'}">
+      <div style="font-weight:700;color:${allowed ? '#10b981' : '#ef4444'};font-size:.85rem">
+        ${allowed ? `✅ 200 OK — ${resourceName} returned` : '⛔ 403 Forbidden — cross-tenant access blocked'}
+      </div>
+      ${!allowed ? '<div style="color:#94a3b8;font-size:.7rem;margin-top:2px">SQL: WHERE tenant_id=\''+claimTenantId+'\' AND id=\''+resourceId+'\' — returns 0 rows</div>' : ''}
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

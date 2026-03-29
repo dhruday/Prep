@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>188 – Subresource Integrity (SRI)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#f472b6}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+input,select{background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;border-radius:6px;padding:6px 10px;font-size:.8rem;width:100%;margin-bottom:8px}
+label{color:#94a3b8;font-size:.78rem;display:block;margin-bottom:4px}
+</style>
+</head>
+<body>
+<h1>🔒 Subresource Integrity (SRI)</h1>
+<p class="sub">Topic 188 · Part 12 / Module 12.3 — Hardening UI · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hash Generator</div>
+  <div class="tab" onclick="setTab(2)">Protection Matrix</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>How SRI protects against CDN compromise</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px">
+      <div style="background:#450a0a22;border:1px solid #ef444444;border-radius:8px;padding:12px;font-size:.79rem">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:8px">❌ Without SRI — Polyfill.io scenario</div>
+        <div style="color:#94a3b8;line-height:1.9">
+          1. You ship: <code style="color:#fca5a5">&lt;script src="https://cdn.polyfill.io/..."&gt;</code><br>
+          2. Attacker buys domain<br>
+          3. Serves malicious JS<br>
+          4. Every user's browser executes attacker code<br>
+          5. Auth tokens stolen ⛔
+        </div>
+      </div>
+      <div style="background:#14532d22;border:1px solid #16a34a55;border-radius:8px;padding:12px;font-size:.79rem">
+        <div style="color:#10b981;font-weight:700;margin-bottom:8px">✅ With SRI — attacker blocked</div>
+        <div style="color:#94a3b8;line-height:1.9">
+          1. You ship: <code style="color:#6ee7b7">integrity="sha384-abc123"</code><br>
+          2. Attacker swaps CDN file<br>
+          3. Browser hashes received bytes<br>
+          4. Hash mismatch → BLOCK ✓<br>
+          5. onerror fires → loads backup ✅
+        </div>
+      </div>
+    </div>
+    <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-size:.79rem">
+      <div style="color:#60a5fa;font-weight:700;margin-bottom:8px">Critical requirement: crossorigin="anonymous"</div>
+      <div style="color:#94a3b8">Without <code style="color:#f59e0b">crossorigin="anonymous"</code>, the browser uses <strong style="color:#ef4444">no-cors mode</strong> — it can't inspect the response bytes, so it silently skips the integrity check entirely. <strong>Always pair integrity + crossorigin together.</strong></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Hash algorithm comparison</h3>
+    <table>
+      <tr><th>Algorithm</th><th>Collision Resistance</th><th>Hash Length</th><th>Recommendation</th></tr>
+      <tr><td>sha256</td><td>2¹²⁸</td><td>44 base64 chars</td><td>Minimum; avoid for new code</td></tr>
+      <tr><td style="color:#10b981">sha384</td><td>2¹⁹²</td><td>64 base64 chars</td><td style="color:#10b981">✅ Recommended</td></tr>
+      <tr><td>sha512</td><td>2²⁵⁶</td><td>88 base64 chars</td><td>Use for highest-risk deps</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>SRI tag generator — build your integrity attribute</h3>
+    <label>Paste JavaScript or CSS content to hash:</label>
+    <textarea id="contentInput" rows="5" style="background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;border-radius:6px;padding:8px;font-family:monospace;font-size:.76rem;width:100%;resize:vertical" placeholder="Paste file content here (e.g., paste the contents of a CDN-hosted library)..."></textarea>
+    <div style="display:flex;gap:8px;align-items:center;margin:8px 0">
+      <select id="algoSelect" style="width:auto">
+        <option value="SHA-256">sha256</option>
+        <option value="SHA-384" selected>sha384 (recommended)</option>
+        <option value="SHA-512">sha512</option>
+      </select>
+      <button onclick="generateHash()">Generate Integrity Hash</button>
+      <button onclick="loadSampleContent()">Load sample JS</button>
+    </div>
+    <div id="hashOutput" style="font-size:.78rem;margin-top:10px"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>SRI coverage: what it protects and what it doesn't</h3>
+    <table>
+      <tr><th>Resource Type</th><th>SRI Support</th><th>Notes</th></tr>
+      <tr><td>&lt;script src&gt;</td><td style="color:#10b981">✅ Full support</td><td>Most critical — JS execution blocked on mismatch</td></tr>
+      <tr><td>&lt;link rel="stylesheet"&gt;</td><td style="color:#10b981">✅ Full support</td><td>Blocks CSS injection attacks (CSS keyloggers)</td></tr>
+      <tr><td>&lt;link rel="preload"&gt;</td><td style="color:#10b981">✅ Full support</td><td>Verify before execution, not just loading</td></tr>
+      <tr><td>&lt;img&gt;, &lt;video&gt;</td><td style="color:#ef4444">❌ Not supported</td><td>Too much format variance / srcset complexity</td></tr>
+      <tr><td>fetch() / XHR</td><td style="color:#ef4444">❌ Not supported</td><td>Use CSP or validate application-side</td></tr>
+      <tr><td>Service Worker importScripts</td><td style="color:#ef4444">❌ Not supported</td><td>Use Service Worker Content-Security-Policy header</td></tr>
+      <tr><td>Self-hosted resources</td><td style="color:#f59e0b">⚠️ Pointless</td><td>SRI only adds value for resources you don't control</td></tr>
+    </table>
+    <div style="background:#0f1117;border:1px solid #f59e0b44;border-radius:8px;padding:10px;margin-top:12px;font-size:.78rem">
+      <div style="color:#f59e0b;font-weight:700;margin-bottom:4px">CSP amplifier: require-sri-for</div>
+      <div style="color:#94a3b8"><code>Content-Security-Policy: require-sri-for script style</code> — enforces that ALL external scripts/styles must have an integrity attribute. Developers can't accidentally omit it.</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Production SRI patterns</h3>
+    <pre><span class="cm">&lt;!-- ✅ Complete SRI tag with fallback --&gt;</span>
+&lt;script
+  src=<span class="str">"https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"</span>
+  integrity=<span class="str">"sha384-Zug+QiDoJOrZ5t4lssLdxGhVrurbmBWoR1Km2zxZAim7zcEtdJYCiBQ4iE8wv/J"</span>
+  crossorigin=<span class="str">"anonymous"</span>
+  onerror=<span class="str">"loadFallback('react')"</span>
+&gt;&lt;/script&gt;
+
+<span class="cm">&lt;!-- ✅ Multiple algorithms for fallback (any match accepts) --&gt;</span>
+&lt;script
+  src=<span class="str">"https://cdn.example.com/lib.js"</span>
+  integrity=<span class="str">"sha256-oldHash sha384-newHash"</span>
+  crossorigin=<span class="str">"anonymous"</span>
+&gt;&lt;/script&gt;
+
+<span class="cm">// Webpack: automatic SRI on all output chunks</span>
+<span class="kw">import</span> SubresourceIntegrityPlugin <span class="kw">from</span> <span class="str">'webpack-subresource-integrity'</span>;
+
+<span class="kw">const</span> config = {
+  output: { crossOriginLoading: <span class="str">'anonymous'</span> },  <span class="cm">// required for chunk SRI</span>
+  plugins: [
+    <span class="kw">new</span> <span class="fn">SubresourceIntegrityPlugin</span>({
+      hashFuncNames: [<span class="str">'sha384'</span>],
+      enabled: process.env.NODE_ENV === <span class="str">'production'</span>,
+    }),
+  ],
+};
+
+<span class="cm">// Generate hash at build time (Node.js)</span>
+<span class="kw">import</span> { createHash } <span class="kw">from</span> <span class="str">'crypto'</span>;
+<span class="kw">import</span> { readFileSync } <span class="kw">from</span> <span class="str">'fs'</span>;
+
+<span class="kw">function</span> <span class="fn">computeSRI</span>(filepath: <span class="dec">string</span>, algo = <span class="str">'sha384'</span>): <span class="dec">string</span> {
+  <span class="kw">const</span> content = <span class="fn">readFileSync</span>(filepath);
+  <span class="kw">const</span> hash = <span class="fn">createHash</span>(algo).<span class="fn">update</span>(content).<span class="fn">digest</span>(<span class="str">'base64'</span>);
+  <span class="kw">return</span> <span class="str">`${algo}-${hash}`</span>;
+}
+<span class="cm">// Automate: run this in your dependency update CI step</span>
+<span class="cm">// → update sri-manifest.json → HTML template reads from manifest</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+function loadSampleContent() {
+  document.getElementById('contentInput').value = '/* React 18.2.0 production build sample */\n!function(){"use strict";var e={};e.version="18.2.0";}();';
+  generateHash();
+}
+
+async function generateHash() {
+  const content = document.getElementById('contentInput').value;
+  const algo = document.getElementById('algoSelect').value;
+  const out = document.getElementById('hashOutput');
+  
+  if (!content.trim()) {
+    out.innerHTML = '<div style="color:#ef4444">Paste some content first.</div>';
+    return;
+  }
+
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(content);
+    const hashBuffer = await crypto.subtle.digest(algo, data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const base64 = btoa(String.fromCharCode(...hashArray));
+    const algoShort = algo.toLowerCase().replace('-', '');
+    const integrity = `${algoShort}-${base64}`;
+
+    out.innerHTML = `
+      <div style="background:#14532d22;border:1px solid #16a34a55;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:8px">Generated integrity attribute</div>
+        <div style="font-family:monospace;font-size:.75rem;color:#6ee7b7;word-break:break-all;margin-bottom:10px">${integrity}</div>
+        <div style="color:#94a3b8;font-size:.75rem;margin-bottom:10px">Complete HTML tag (update URL):</div>
+        <pre style="border:1px solid #2d3551;border-radius:6px;padding:10px;font-size:.72rem;background:#0f1117;color:#e2e8f0;white-space:pre-wrap">&lt;script
+  src="https://your-cdn.com/lib.js"
+  integrity="${integrity}"
+  crossorigin="anonymous"
+  onerror="loadFallback()"
+&gt;&lt;/script&gt;</pre>
+        <div style="font-size:.72rem;color:#f59e0b;margin-top:6px">⚠️ Always compute hash from the actual minified CDN file, not your local version.</div>
+      </div>
+    `;
+  } catch (e) {
+    out.innerHTML = `<div style="color:#ef4444;font-size:.78rem">Hash generation failed: ${e.message}</div>`;
+  }
+}
+</script>
+</body>
+</html>
