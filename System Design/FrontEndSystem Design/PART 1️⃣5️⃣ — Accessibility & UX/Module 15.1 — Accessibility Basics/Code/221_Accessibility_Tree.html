@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>221 · Accessibility Tree · Hruday's Interview Prep</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.6;min-height:100vh}header{background:linear-gradient(135deg,#1e2130,#2d1f4e);padding:24px 32px;border-bottom:1px solid #2d3551}header h1{font-size:1.6rem;color:#a78bfa;font-weight:700}header p{color:#94a3b8;font-size:.9rem;margin-top:4px}.tabs{display:flex;gap:4px;padding:16px 24px 0;background:#12151e;border-bottom:1px solid #2d3551;flex-wrap:wrap}.tab-btn{padding:10px 20px;border:none;background:transparent;color:#94a3b8;cursor:pointer;border-bottom:3px solid transparent;font-size:.9rem;transition:all .2s;border-radius:4px 4px 0 0}.tab-btn.active{color:#a78bfa;border-bottom-color:#a78bfa;background:#1e2130}.tab{display:none;padding:28px 32px}.tab.active{display:block}h2{color:#a78bfa;font-size:1.2rem;margin-bottom:16px}h3{color:#60a5fa;font-size:1rem;margin:20px 0 10px}p,li{color:#cbd5e1;margin-bottom:8px;line-height:1.7;font-size:.88rem}ul{padding-left:20px;margin-bottom:16px}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:20px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:20px}.card h4{font-size:.85rem;margin-bottom:8px;color:#e2e8f0}.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.75rem;font-weight:600;margin-bottom:8px}.tag-purple{background:#3b1f6b;color:#c4b5fd}.tag-blue{background:#1a3a5c;color:#93c5fd}.tag-green{background:#064e3b;color:#6ee7b7}pre{background:#12151e;border:1px solid #2d3551;border-radius:8px;padding:20px;overflow-x:auto;font-size:.82rem;line-height:1.7;color:#e2e8f0}table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:.85rem}th{background:#2d3551;padding:10px 14px;text-align:left;color:#94a3b8}td{padding:10px 14px;border-bottom:1px solid #1e2130;color:#cbd5e1}tr:hover td{background:#1a1f30}.info-block{background:#1a1f30;border-left:3px solid #60a5fa;padding:12px 16px;border-radius:0 6px 6px 0;margin:12px 0;font-size:.85rem;color:#cbd5e1}.tree-node{padding:6px 12px;margin:2px 0;border-radius:4px;font-family:monospace;font-size:.82rem;cursor:pointer;transition:all .2s}.tree-node:hover{background:#2d1f4e}.tree-node .role{color:#a78bfa;font-weight:700}.tree-node .name{color:#10b981}.tree-node .state{color:#f59e0b}
+</style>
+</head>
+<body>
+<header>
+  <h1>Accessibility Tree</h1>
+  <p>Topic 221 · Part 15 / Module 15.1 — Accessibility Basics · Hruday's Interview Prep</p>
+</header>
+<div class="tabs">
+  <button class="tab-btn active" onclick="setTab(1)">Concept</button>
+  <button class="tab-btn" onclick="setTab(2)">Tree Explorer</button>
+  <button class="tab-btn" onclick="setTab(3)">Name Computation</button>
+</div>
+<div id="tab1" class="tab active">
+  <h2>What is the Accessibility Tree?</h2>
+  <p>A <strong>parallel data structure to the DOM</strong> that browsers build to expose content to assistive technologies. While the DOM contains every element, the accessibility tree contains only <strong>semantically meaningful nodes</strong>.</p>
+  <h3>Building Process</h3>
+  <div class="cards">
+    <div class="card"><span class="tag tag-purple">Step 1</span><h4>DOM Parsed</h4><p>Browser parses HTML into the full DOM tree with all elements.</p></div>
+    <div class="card"><span class="tag tag-blue">Step 2</span><h4>A11y Tree Built</h4><p>Browser filters DOM into semantic-only tree. Decorative elements excluded.</p></div>
+    <div class="card"><span class="tag tag-green">Step 3</span><h4>Exposed via API</h4><p>UIA (Windows), NSAccessibility (macOS) expose tree to screen readers.</p></div>
+  </div>
+  <h3>Node Properties</h3>
+  <table>
+    <tr><th>Property</th><th>Source</th><th>Example</th></tr>
+    <tr><td>Role</td><td>Element type / role attr</td><td>button, combobox, heading</td></tr>
+    <tr><td>Name</td><td>aria-label, label, text</td><td>"Submit Order"</td></tr>
+    <tr><td>State</td><td>HTML + ARIA states</td><td>disabled, expanded, checked</td></tr>
+    <tr><td>Value</td><td>Input value, aria-valuenow</td><td>"75" (slider)</td></tr>
+  </table>
+  <div class="info-block"><strong>Key insight:</strong> If an element isn't in the accessibility tree, it doesn't exist for screen reader users. A styled div with onclick but no role = <strong>invisible</strong>.</div>
+</div>
+<div id="tab2" class="tab">
+  <h2>Accessibility Tree Explorer</h2>
+  <p>See how DOM elements map to accessibility tree nodes. Click a tree node to see its properties.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>
+      <h3>DOM (Source)</h3>
+      <pre id="dom-view"></pre>
+    </div>
+    <div>
+      <h3>Accessibility Tree</h3>
+      <div id="a11y-tree" style="background:#12151e;border:1px solid #2d3551;border-radius:8px;padding:16px;min-height:200px"></div>
+    </div>
+  </div>
+  <div id="node-details" style="background:#1e2130;border:1px solid #2d3551;border-radius:8px;padding:16px;margin-top:16px;display:none">
+    <h3>Node Details</h3>
+    <div id="details-content" style="font-family:monospace;font-size:.85rem"></div>
+  </div>
+</div>
+<div id="tab3" class="tab">
+  <h2>Accessible Name Computation (AccName)</h2>
+  <p>Priority order for computing the accessible name:</p>
+  <table>
+    <tr><th>Priority</th><th>Source</th><th>Example</th></tr>
+    <tr><td style="color:#a78bfa;font-weight:700">1 (Highest)</td><td>aria-labelledby</td><td>&lt;span id="lbl"&gt;Save&lt;/span&gt; &lt;button aria-labelledby="lbl"&gt;</td></tr>
+    <tr><td style="color:#a78bfa;font-weight:700">2</td><td>aria-label</td><td>&lt;button aria-label="Close dialog"&gt;X&lt;/button&gt;</td></tr>
+    <tr><td style="color:#60a5fa;font-weight:700">3</td><td>&lt;label&gt; element</td><td>&lt;label for="email"&gt;Email&lt;/label&gt;</td></tr>
+    <tr><td style="color:#60a5fa;font-weight:700">4</td><td>Visible text</td><td>&lt;button&gt;Submit&lt;/button&gt;</td></tr>
+    <tr><td>5</td><td>alt attribute</td><td>&lt;img alt="Logo" /&gt;</td></tr>
+    <tr><td>6 (Lowest)</td><td>title attribute</td><td>&lt;button title="Close"&gt;X&lt;/button&gt;</td></tr>
+  </table>
+  <div class="info-block"><strong>⚠️ placeholder is NOT a reliable accessible name.</strong> It disappears when user types and support varies across screen readers.</div>
+</div>
+<script>
+function setTab(n){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab'+n).classList.add('active');document.querySelectorAll('.tab-btn')[n-1].classList.add('active')}
+const domHTML=`&lt;nav&gt;
+  &lt;a href="/"&gt;Home&lt;/a&gt;
+  &lt;a href="/about"&gt;About&lt;/a&gt;
+&lt;/nav&gt;
+&lt;main&gt;
+  &lt;h1&gt;Dashboard&lt;/h1&gt;
+  &lt;div class="decorative"&gt;&lt;/div&gt;
+  &lt;button&gt;Create Invoice&lt;/button&gt;
+  &lt;div onclick="submit()"&gt;Submit&lt;/div&gt;
+  &lt;img src="logo.png" alt="Company Logo"/&gt;
+  &lt;img src="bg.png" role="presentation"/&gt;
+&lt;/main&gt;`;
+document.getElementById('dom-view').innerHTML=domHTML;
+const treeNodes=[
+  {indent:0,role:'navigation',name:'',state:''},
+  {indent:1,role:'link',name:'Home',state:''},
+  {indent:1,role:'link',name:'About',state:''},
+  {indent:0,role:'main',name:'',state:''},
+  {indent:1,role:'heading',name:'Dashboard',state:'level 1'},
+  {indent:1,role:'button',name:'Create Invoice',state:'focusable'},
+  {indent:1,role:'text',name:'Submit',state:'NOT interactive ⚠️'},
+  {indent:1,role:'img',name:'Company Logo',state:''},
+];
+const tree=document.getElementById('a11y-tree');
+treeNodes.forEach((n,i)=>{
+  const div=document.createElement('div');
+  div.className='tree-node';
+  div.style.paddingLeft=(n.indent*20+12)+'px';
+  div.innerHTML=`<span class="role">${n.role}</span> ${n.name?`"<span class="name">${n.name}</span>"`:''}${n.state?` <span class="state">[${n.state}]</span>`:''}`;
+  div.onclick=()=>{
+    document.getElementById('node-details').style.display='block';
+    document.getElementById('details-content').innerHTML=`Role: <span class="role">${n.role}</span><br>Name: <span class="name">${n.name||'(none)'}</span><br>State: <span class="state">${n.state||'(none)'}</span>`;
+  };
+  tree.appendChild(div);
+});
+</script>
+</body>
+</html>

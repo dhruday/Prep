@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>229 · Accessibility Auditing Tools · Hruday's Interview Prep</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.6;min-height:100vh}header{background:linear-gradient(135deg,#1e2130,#2d1f4e);padding:24px 32px;border-bottom:1px solid #2d3551}header h1{font-size:1.6rem;color:#a78bfa;font-weight:700}header p{color:#94a3b8;font-size:.9rem;margin-top:4px}.tabs{display:flex;gap:4px;padding:16px 24px 0;background:#12151e;border-bottom:1px solid #2d3551;flex-wrap:wrap}.tab-btn{padding:10px 20px;border:none;background:transparent;color:#94a3b8;cursor:pointer;border-bottom:3px solid transparent;font-size:.9rem;transition:all .2s;border-radius:4px 4px 0 0}.tab-btn.active{color:#a78bfa;border-bottom-color:#a78bfa;background:#1e2130}.tab{display:none;padding:28px 32px}.tab.active{display:block}h2{color:#a78bfa;font-size:1.2rem;margin-bottom:16px}h3{color:#60a5fa;font-size:1rem;margin:20px 0 10px}p,li{color:#cbd5e1;margin-bottom:8px;line-height:1.7;font-size:.88rem}ul{padding-left:20px;margin-bottom:16px}pre{background:#12151e;border:1px solid #2d3551;border-radius:8px;padding:20px;overflow-x:auto;font-size:.82rem;line-height:1.7;color:#e2e8f0}table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:.85rem}th{background:#2d3551;padding:10px 14px;text-align:left;color:#94a3b8}td{padding:10px 14px;border-bottom:1px solid #1e2130;color:#cbd5e1}tr:hover td{background:#1a1f30}.info-block{background:#1a1f30;border-left:3px solid #60a5fa;padding:12px 16px;border-radius:0 6px 6px 0;margin:12px 0;font-size:.85rem;color:#cbd5e1}.warn-block{background:#1a1500;border-left:3px solid #f59e0b;padding:12px 16px;border-radius:0 6px 6px 0;margin:12px 0;font-size:.85rem;color:#fef3c7}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:20px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:20px}.card h4{font-size:.85rem;margin-bottom:8px;color:#e2e8f0}.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.75rem;font-weight:600;margin-bottom:8px}.tag-purple{background:#3b1f6b;color:#c4b5fd}.tag-blue{background:#1a3a5c;color:#93c5fd}.tag-green{background:#064e3b;color:#6ee7b7}
+</style>
+</head>
+<body>
+<header>
+  <h1>Accessibility Auditing Tools</h1>
+  <p>Topic 229 · Part 15 / Module 15.3 — UX Trade-offs · Hruday's Interview Prep</p>
+</header>
+<div class="tabs">
+  <button class="tab-btn active" onclick="setTab(1)">Tools Overview</button>
+  <button class="tab-btn" onclick="setTab(2)">CI/CD Integration</button>
+  <button class="tab-btn" onclick="setTab(3)">Workflow</button>
+</div>
+<div id="tab1" class="tab active">
+  <h2>The Big Three</h2>
+  <div class="cards">
+    <div class="card"><span class="tag tag-purple">axe-core</span><h4>Engine by Deque</h4><p>Most accurate rule engine. ~0% false positives. 100+ rules. CI-ready with Playwright/Cypress. Open-source.</p></div>
+    <div class="card"><span class="tag tag-blue">Lighthouse</span><h4>Google Chrome</h4><p>Uses axe-core internally. Scores 0-100. Built into Chrome DevTools. Lighthouse CI for pipelines.</p></div>
+    <div class="card"><span class="tag tag-green">Arc Toolkit</span><h4>TPGi</h4><p>Manual + automated. Detailed WCAG mapping. Best for compliance documentation.</p></div>
+  </div>
+  <h3>Comparison</h3>
+  <table>
+    <tr><th>Feature</th><th>axe-core</th><th>Lighthouse</th><th>Arc Toolkit</th></tr>
+    <tr><td>False positive rate</td><td style="color:#6ee7b7">~0%</td><td style="color:#6ee7b7">Low</td><td style="color:#6ee7b7">Low</td></tr>
+    <tr><td>CI integration</td><td style="color:#6ee7b7">Excellent</td><td style="color:#6ee7b7">Good</td><td style="color:#fcd34d">Limited</td></tr>
+    <tr><td>WCAG coverage</td><td>A, AA, AAA</td><td>A, AA</td><td>A, AA + manual</td></tr>
+    <tr><td>Best for</td><td>Dev + CI/CD</td><td>Quick audits</td><td>Compliance docs</td></tr>
+  </table>
+  <div class="warn-block"><strong>⚠️ Score of 100 ≠ Accessible.</strong> Automated tools catch 30-40% of issues. The remaining 60-70% require manual screen reader + keyboard testing.</div>
+</div>
+<div id="tab2" class="tab">
+  <h2>axe-core + Playwright in CI</h2>
+  <pre>
+<span style="color:#60a5fa">import</span> { test, expect } <span style="color:#60a5fa">from</span> <span style="color:#10b981">'@playwright/test'</span>;
+<span style="color:#60a5fa">import</span> AxeBuilder <span style="color:#60a5fa">from</span> <span style="color:#10b981">'@axe-core/playwright'</span>;
+
+<span style="color:#60a5fa">const</span> PAGES = [<span style="color:#10b981">'/'</span>, <span style="color:#10b981">'/dashboard'</span>, <span style="color:#10b981">'/invoices'</span>];
+
+<span style="color:#60a5fa">for</span> (<span style="color:#60a5fa">const</span> route <span style="color:#60a5fa">of</span> PAGES) {
+  test(<span style="color:#10b981">`a11y: ${route}`</span>, <span style="color:#60a5fa">async</span> ({ page }) => {
+    <span style="color:#60a5fa">await</span> page.goto(route);
+    <span style="color:#60a5fa">const</span> results = <span style="color:#60a5fa">await new</span> <span style="color:#a78bfa">AxeBuilder</span>({ page })
+      .withTags([<span style="color:#10b981">'wcag2a'</span>, <span style="color:#10b981">'wcag2aa'</span>])
+      .analyze();
+    expect(results.violations).toHaveLength(<span style="color:#f59e0b">0</span>);
+  });
+}
+  </pre>
+</div>
+<div id="tab3" class="tab">
+  <h2>Layered Auditing Workflow</h2>
+  <table>
+    <tr><th>Stage</th><th>Tool</th><th>Coverage</th></tr>
+    <tr><td>Design</td><td>Stark / axe for Figma</td><td>Contrast + structure</td></tr>
+    <tr><td>Development</td><td>axe DevTools extension</td><td>Live feedback</td></tr>
+    <tr><td>PR / CI</td><td>axe-core + Playwright</td><td>Regression prevention</td></tr>
+    <tr><td>QA</td><td>NVDA + VoiceOver + keyboard</td><td>The 60-70% tools miss</td></tr>
+    <tr><td>Release</td><td>Lighthouse CI</td><td>Score tracking</td></tr>
+    <tr><td>Compliance</td><td>Arc Toolkit + Deque audit</td><td>WCAG AA certification</td></tr>
+  </table>
+  <div class="info-block"><strong>The key phrase:</strong> "I use automated axe checks in CI for regression prevention, complemented by manual screen reader testing for the issues tools can't programmatically detect."</div>
+</div>
+<script>
+function setTab(n){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab'+n).classList.add('active');document.querySelectorAll('.tab-btn')[n-1].classList.add('active')}
+</script>
+</body>
+</html>
