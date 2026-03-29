@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>107 – React DevTools Profiler</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;color:#60a5fa;border-color:#3b82f6}
+button.active,button.btn-primary{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+.flame-block{display:flex;align-items:center;padding:0 6px;border-radius:3px;cursor:pointer;font-size:.72rem;font-weight:600;overflow:hidden;white-space:nowrap;transition:opacity .2s}
+.flame-block:hover{opacity:.8}
+</style>
+</head>
+<body>
+<h1>🔬 React DevTools Profiler — Flame Graphs</h1>
+<p class="sub">Topic 107 · Part 7 / Module 7.3 — Rendering Performance · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Flame Graph Simulator</div>
+  <div class="tab" onclick="setTab(2)">Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Reading profiler flame graphs — the mental model</h3>
+    <p style="color:#94a3b8;font-size:.85rem;margin-bottom:16px">The React DevTools Profiler records every render during a "commit". The flame graph shows the component tree where <strong style="color:#ef4444">width = render time</strong> and <strong style="color:#f59e0b">color intensity = how much it slowed down</strong>. Grey = didn't render this commit. Yellow/orange = rendered and was slow. The key insight: a narrow yellow bar deep in the tree is fine; a wide yellow bar at the top means that subtree has a systemic re-render problem.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-size:.82rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Width</div>
+        <div style="color:#94a3b8">Time spent rendering. Wide = expensive. The total width of a branch = total cost of that subtree.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#f59e0b;font-weight:700;margin-bottom:6px">Color</div>
+        <div style="color:#94a3b8">Orange/red = slow relative to sibling commits. Grey = skipped render (good! React.memo or PureComponent worked).</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">Depth</div>
+        <div style="color:#94a3b8">Deep nesting of same-colored blocks = cascading re-renders. Fix: memoize intermediate components or lift state.</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>5 things to look for in every flame graph</h3>
+    <div style="font-size:.82rem;color:#94a3b8;line-height:2">
+      1. <strong style="color:#ef4444">Wide top-level yellow bar</strong> — root re-rendering everything; global state change<br>
+      2. <strong style="color:#f59e0b">Tall orange stack in one branch</strong> — one component subtree is expensive; candidate for memoization<br>
+      3. <strong style="color:#10b981">Grey blocks</strong> — React.memo/useMemo is working, skipping render successfully<br>
+      4. <strong style="color:#a78bfa">Repeated identical renders in the "commits" bar</strong> — same data re-rendering unnecessarily; check useEffect deps<br>
+      5. <strong style="color:#60a5fa">"Why did this render?"</strong> — DevTools shows the prop/state that changed; 99% of over-renders are due to new object/array references
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Flame graph simulator — before & after optimization</h3>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn-primary" onclick="showFlame('before')" id="btnB">Before memo</button>
+      <button onclick="showFlame('after')" id="btnA">After React.memo</button>
+    </div>
+    <div id="flameGraph" style="background:#0f1117;border-radius:8px;padding:12px;min-height:200px"></div>
+    <div id="flameInfo" style="margin-top:8px;font-size:.8rem;color:#94a3b8;min-height:30px"></div>
+  </div>
+  <div class="card">
+    <h3>"Why did this render?" — top offenders</h3>
+    <div id="whyRender" style="font-size:.82rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Profiler findings → fix strategy</h3>
+    <table>
+      <tr><th>What you see in profiler</th><th>Root cause</th><th>Fix</th></tr>
+      <tr><td>Every component re-renders on any action</td><td>State too high in tree; no memoization</td><td>Split Context, add React.memo, use Zustand slice</td></tr>
+      <tr><td>List items all re-render when one changes</td><td>Parent passes new array ref on each render</td><td>React.memo on list item + stable key</td></tr>
+      <tr><td>Expensive computation runs every render</td><td>No useMemo</td><td>useMemo with correct dependencies</td></tr>
+      <tr><td>Callback props trigger child re-render</td><td>New function reference each render</td><td>useCallback for stable reference</td></tr>
+      <tr><td>Context consumer re-renders always</td><td>Context value is new object each render</td><td>useMemo the context value object</td></tr>
+      <tr><td>Rapid commits in the commit bar</td><td>setState in useEffect causing loop</td><td>Fix useEffect dependencies array</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>React.memo + useCallback — correct pattern</h3>
+    <pre><span class="cm">// PROBLEM: List re-renders every item when any item changes</span>
+<span class="kw">function</span> <span class="fn">TaskList</span>({ tasks }: { tasks: Task[] }) {
+  <span class="kw">const</span> [filter, setFilter] = useState(<span class="str">''</span>);
+  
+  <span class="cm">// ❌ New function reference every render → children always re-render</span>
+  <span class="kw">const</span> handleDelete = (id: <span class="kw">string</span>) =&gt; deleteTask(id);
+  
+  <span class="kw">return</span> tasks.<span class="fn">map</span>(task =&gt;
+    &lt;<span class="fn">TaskItem</span> key={task.id} task={task} onDelete={handleDelete} /&gt;
+  );
+}
+
+<span class="cm">// ✅ FIXED: Stable callback + memoized child</span>
+<span class="kw">function</span> <span class="fn">TaskList</span>({ tasks }: { tasks: Task[] }) {
+  <span class="kw">const</span> [filter, setFilter] = useState(<span class="str">''</span>);
+  
+  <span class="cm">// useCallback = stable function reference across renders</span>
+  <span class="kw">const</span> handleDelete = <span class="fn">useCallback</span>((id: <span class="kw">string</span>) =&gt;
+    <span class="fn">deleteTask</span>(id), []   <span class="cm">// Empty deps: function never changes</span>
+  );
+  
+  <span class="kw">return</span> tasks.<span class="fn">map</span>(task =&gt;
+    &lt;<span class="fn">TaskItem</span> key={task.id} task={task} onDelete={handleDelete} /&gt;
+  );
+}
+
+<span class="cm">// React.memo prevents re-render if props are shallowly equal</span>
+<span class="kw">const</span> TaskItem = React.<span class="fn">memo</span>(<span class="kw">function</span> <span class="fn">TaskItem</span>({ task, onDelete }) {
+  <span class="cm">// Only re-renders if task object reference OR onDelete reference changes</span>
+  <span class="cm">// With useCallback above: only re-renders when task itself changes ✅</span>
+  <span class="kw">return</span> &lt;li&gt;{task.title} &lt;button onClick={() =&gt; <span class="fn">onDelete</span>(task.id)}&gt;Delete&lt;/button&gt;&lt;/li&gt;;
+});</pre>
+  </div>
+</div>
+
+<script>
+function setTab(n) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===n));
+  document.querySelectorAll('.panel').forEach((p,i) => p.classList.toggle('active', i===n));
+}
+
+const flames = {
+  before: [
+    {name:'App',ms:45,color:'#ef4444',depth:0,width:100},
+    {name:'Header',ms:8,color:'#f59e0b',depth:1,width:18},
+    {name:'TaskList',ms:37,color:'#ef4444',depth:1,width:82},
+    {name:'TaskItem[0]',ms:8,color:'#f59e0b',depth:2,width:18},
+    {name:'TaskItem[1]',ms:7,color:'#f59e0b',depth:2,width:16},
+    {name:'TaskItem[2]',ms:9,color:'#ef4444',depth:2,width:20},
+    {name:'TaskItem[3]',ms:6,color:'#f59e0b',depth:2,width:13},
+    {name:'TaskItem[4]',ms:7,color:'#f59e0b',depth:2,width:15},
+  ],
+  after: [
+    {name:'App',ms:12,color:'#10b981',depth:0,width:100},
+    {name:'Header',ms:8,color:'#f59e0b',depth:1,width:67},
+    {name:'TaskList',ms:4,color:'#10b981',depth:1,width:33},
+    {name:'TaskItem[0] (skipped)',ms:0,color:'#374151',depth:2,width:18},
+    {name:'TaskItem[1] (skipped)',ms:0,color:'#374151',depth:2,width:16},
+    {name:'TaskItem[2] (changed)',ms:4,color:'#10b981',depth:2,width:20},
+    {name:'TaskItem[3] (skipped)',ms:0,color:'#374151',depth:2,width:13},
+    {name:'TaskItem[4] (skipped)',ms:0,color:'#374151',depth:2,width:15},
+  ]
+};
+
+function showFlame(type) {
+  document.getElementById('btnB').classList.toggle('active', type==='before');
+  document.getElementById('btnA').classList.toggle('active', type==='after');
+  
+  const blocks = flames[type];
+  const fg = document.getElementById('flameGraph');
+  
+  const rows = {};
+  blocks.forEach(b => {
+    if (!rows[b.depth]) rows[b.depth] = [];
+    rows[b.depth].push(b);
+  });
+  
+  let html = '';
+  for (const depth of Object.keys(rows).sort()) {
+    html += `<div style="display:flex;gap:2px;margin-bottom:2px;padding-left:${depth*16}px">`;
+    rows[depth].forEach(b => {
+      const title = b.ms > 0 ? `${b.name} — ${b.ms}ms` : `${b.name} — skipped (React.memo) ✅`;
+      html += `<div class="flame-block" style="width:${b.width}%;height:28px;background:${b.color}33;border:1px solid ${b.color}88;color:${b.color}" title="${title}" onclick="document.getElementById('flameInfo').textContent='${title}'">${b.name.substring(0,20)} ${b.ms?b.ms+'ms':'⊘'}</div>`;
+    });
+    html += '</div>';
+  }
+  
+  const total = blocks.reduce((s,b)=>s+b.ms,0);
+  const beforeTotal = flames.before.reduce((s,b)=>s+b.ms,0);
+  const saving = beforeTotal - total;
+  
+  fg.innerHTML = html;
+  document.getElementById('flameInfo').innerHTML = `Total commit time: <strong style="color:${type==='after'?'#10b981':'#ef4444'}">${total}ms</strong>${type==='after'?` — <strong style="color:#10b981">saved ${saving}ms (${Math.round(saving/beforeTotal*100)}%)</strong> via React.memo`:' — all 5 TaskItems re-rendered even though only 1 changed'}`;
+  
+  const reasons = type === 'before' ? [
+    ['TaskItem[0-4]', 'onDelete prop — new function reference every render (no useCallback)', '#ef4444'],
+    ['TaskList', 'Parent re-rendered → children re-render without React.memo', '#f59e0b'],
+    ['App', 'filter state change triggers full tree', '#ef4444'],
+  ] : [
+    ['TaskItem[2]', 'task.title prop changed — correct targeted re-render', '#10b981'],
+    ['TaskItem[0,1,3,4]', 'Skipped — React.memo detected no prop changes', '#10b981'],
+    ['TaskList', 'Filter state changed but React.memo on TaskItems prevented cascade', '#60a5fa'],
+  ];
+  
+  let html2 = '<table><tr><th>Component</th><th>Reason</th></tr>';
+  reasons.forEach(([c,r,col]) => {
+    html2 += `<tr><td style="color:${col}">${c}</td><td style="color:#94a3b8">${r}</td></tr>`;
+  });
+  html2 += '</table>';
+  document.getElementById('whyRender').innerHTML = html2;
+}
+
+showFlame('before');
+</script>
+</body>
+</html>

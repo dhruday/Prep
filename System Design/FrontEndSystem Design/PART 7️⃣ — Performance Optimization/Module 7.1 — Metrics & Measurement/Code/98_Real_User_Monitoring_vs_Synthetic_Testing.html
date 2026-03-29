@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>98 – RUM vs Synthetic Testing</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.75rem;font-weight:600}
+.good{background:#14532d;color:#86efac;border:1px solid #16a34a}
+.warn{background:#451a03;color:#fcd34d;border:1px solid #d97706}
+.bad{background:#450a0a;color:#fca5a5;border:1px solid #dc2626}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8;vertical-align:top}
+tr:nth-child(even){background:#1a2332}
+.metric-box{background:#0f1117;border-radius:8px;padding:12px;text-align:center}
+.metric-val{font-size:1.8rem;font-weight:700;color:#60a5fa}
+.metric-label{font-size:.75rem;color:#64748b;margin-top:4px}
+.flow-step{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;margin-bottom:6px;font-size:.82rem;display:flex;align-items:center;gap:10px}
+.step-num{background:#1e3a5f;border:1px solid #3b82f6;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:#60a5fa;flex-shrink:0}
+.rum-log{background:#060a0e;border-radius:8px;padding:12px;font-family:'Courier New',monospace;font-size:.78rem;height:180px;overflow-y:auto;border:1px solid #1e3a5f}
+.log-entry{margin-bottom:4px;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.lcp{color:#10b981}.cls{color:#f59e0b}.inp{color:#a78bfa}.ttfb{color:#60a5fa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;color:#60a5fa;border-color:#3b82f6}
+.btn-primary{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>📊 Real User Monitoring vs Synthetic Testing</h1>
+<p class="sub">Topic 98 · Part 7 / Module 7.1 — Metrics & Measurement · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">RUM Simulator</div>
+  <div class="tab" onclick="setTab(2)">Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<!-- CONCEPT -->
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Two complementary lenses on performance</h3>
+    <p style="color:#94a3b8;font-size:.85rem;margin-bottom:16px">Synthetic tests run on controlled machines — perfect for CI regression gates. RUM captures what real users experience on their devices and networks. Both are required. One without the other creates dangerous blind spots.</p>
+    <div class="grid2">
+      <div style="background:#0f1117;border:1px solid #14532d;border-radius:8px;padding:14px">
+        <div style="color:#10b981;font-weight:700;font-size:.9rem;margin-bottom:8px">🔬 Synthetic (Lab)</div>
+        <div style="font-size:.8rem;color:#94a3b8;line-height:1.8">
+          ✅ Deterministic, reproducible<br>
+          ✅ Pre-ship regression gate in CI<br>
+          ✅ No real users needed<br>
+          ⚠️ Simulated throttling, not real device<br>
+          ⚠️ Misses regional CDN issues<br>
+          ⚠️ Zero SEO signal (not CrUX)<br>
+          <strong style="color:#10b981">Tools: Lighthouse CI, WebPageTest</strong>
+        </div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #1e3a5f;border-radius:8px;padding:14px">
+        <div style="color:#60a5fa;font-weight:700;font-size:.9rem;margin-bottom:8px">👥 RUM (Field)</div>
+        <div style="font-size:.8rem;color:#94a3b8;line-height:1.8">
+          ✅ Real devices, real networks<br>
+          ✅ Catches regional CDN failures<br>
+          ✅ Google CrUX = SEO ranking signal<br>
+          ⚠️ Needs traffic volume for reliability<br>
+          ⚠️ Post-ship only<br>
+          ⚠️ Noisy — use percentiles not averages<br>
+          <strong style="color:#60a5fa">Tools: web-vitals.js, AppInsights, Datadog</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Key insight: Google Search uses CrUX (RUM), not Lighthouse</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div class="metric-box" style="flex:1;min-width:120px"><div class="metric-val" style="color:#10b981">p75</div><div class="metric-label">Percentile Google uses for CWV pass/fail</div></div>
+      <div class="metric-box" style="flex:1;min-width:120px"><div class="metric-val" style="color:#60a5fa">28d</div><div class="metric-label">Rolling window of CrUX field data</div></div>
+      <div class="metric-box" style="flex:1;min-width:120px"><div class="metric-val" style="color:#a78bfa">10%</div><div class="metric-label">Recommended RUM sampling rate at scale</div></div>
+      <div class="metric-box" style="flex:1;min-width:120px"><div class="metric-val" style="color:#f59e0b">0</div><div class="metric-label">SEO impact from Lighthouse score alone</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- RUM SIMULATOR -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>RUM beacon simulator — see what web-vitals sends</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn-primary" onclick="simulateUser('mobile-3g')">📱 Mobile 3G India</button>
+      <button onclick="simulateUser('desktop-us')">🖥️ Desktop US (Fast)</button>
+      <button onclick="simulateUser('desktop-vpn')">🔒 Desktop + VPN</button>
+      <button onclick="simulateUser('ios-safari')">🍎 iOS Safari</button>
+      <button onclick="clearLog()" style="margin-left:auto;color:#ef4444;border-color:#ef4444">Clear</button>
+    </div>
+    <div class="rum-log" id="rumLog"><div style="color:#475569">← Click a user profile to simulate a RUM beacon</div></div>
+  </div>
+  <div class="card">
+    <h3>The percentile trap — why averages lie</h3>
+    <div id="percentileViz" style="background:#0f1117;border-radius:8px;padding:16px">
+      <button onclick="showPercentile()">Generate LCP Distribution (100 users)</button>
+      <div id="pChart" style="margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARISON -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Feature comparison matrix</h3>
+    <table>
+      <tr><th>Dimension</th><th>Synthetic (Lighthouse CI)</th><th>RUM (web-vitals)</th></tr>
+      <tr><td>Data source</td><td>Scripted lab run</td><td>Real users in production</td></tr>
+      <tr><td>Timing</td><td>Pre-ship (CI pipeline)</td><td>Post-ship (production)</td></tr>
+      <tr><td>Consistency</td><td style="color:#10b981">Deterministic ✅</td><td>Variable (real conditions)</td></tr>
+      <tr><td>Coverage</td><td>Pre-defined URLs only</td><td>All pages, all users</td></tr>
+      <tr><td>Google ranking</td><td style="color:#ef4444">No ❌</td><td style="color:#10b981">Yes (CrUX) ✅</td></tr>
+      <tr><td>Catches regional issues</td><td style="color:#ef4444">No ❌</td><td style="color:#10b981">Yes ✅</td></tr>
+      <tr><td>Insight latency</td><td style="color:#10b981">Immediate (per PR)</td><td>Needs traffic volume</td></tr>
+      <tr><td>Device fragmentation</td><td style="color:#ef4444">Single simulated device</td><td style="color:#10b981">All real devices ✅</td></tr>
+      <tr><td>Best for</td><td>Regression prevention</td><td>Real-world truth</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3>What RUM reveals that synthetic never will</h3>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:.82rem">
+      <div style="background:#0f1117;border-radius:6px;padding:10px;border-left:3px solid #ef4444"><strong style="color:#ef4444">Regional CDN failure</strong><br><span style="color:#94a3b8">São Paulo edge node down → users there see 8s LCP. Synthetic (fixed location) scores 1.2s.</span></div>
+      <div style="background:#0f1117;border-radius:6px;padding:10px;border-left:3px solid #f59e0b"><strong style="color:#f59e0b">iOS Safari quirk</strong><br><span style="color:#94a3b8">Synthetic runs Chrome/Linux. iOS Safari users hit CLS bug invisible in CI.</span></div>
+      <div style="background:#0f1117;border-radius:6px;padding:10px;border-left:3px solid #a78bfa"><strong style="color:#a78bfa">Third-party timeout</strong><strong></strong><br><span style="color:#94a3b8">Analytics/chat widget 3s timeout hurts p95 TTFB. Excluded from synthetic but present for all real users.</span></div>
+      <div style="background:#0f1117;border-radius:6px;padding:10px;border-left:3px solid #60a5fa"><strong style="color:#60a5fa">Memory-constrained device</strong><br><span style="color:#94a3b8">Android with 2GB RAM + 15 tabs: INP 800ms. Clean synthetic machine: 120ms.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- CODE PATTERNS -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Production RUM implementation</h3>
+    <pre><span class="cm">// src/monitoring/rum.ts — production-grade with sampling + build version</span>
+<span class="kw">import</span> { onCLS, onINP, onLCP, onTTFB, <span class="kw">type</span> Metric } <span class="kw">from</span> <span class="str">'web-vitals'</span>;
+
+<span class="kw">const</span> SAMPLE_RATE = <span class="num">0.1</span>;  <span class="cm">// 10% of sessions</span>
+<span class="kw">const</span> isSampled = Math.random() &lt; SAMPLE_RATE;
+<span class="kw">const</span> sessionId = crypto.randomUUID();
+<span class="kw">const</span> buildVersion = window.__BUILD_VERSION__ ?? <span class="str">'unknown'</span>;
+
+<span class="kw">function</span> <span class="fn">sendMetric</span>(metric: Metric): <span class="kw">void</span> {
+  <span class="kw">if</span> (!isSampled) <span class="kw">return</span>;  <span class="cm">// Sampling gate</span>
+
+  <span class="kw">const</span> payload = {
+    name: metric.name, value: Math.round(metric.value),
+    rating: metric.rating,  <span class="cm">// 'good' | 'needs-improvement' | 'poor'</span>
+    url: location.pathname,
+    sessionId, buildVersion,  <span class="cm">// Enables deploy correlation</span>
+    connection: navigator.connection?.effectiveType,
+    deviceMemory: navigator.deviceMemory,
+    timestamp: Date.now(),
+  };
+
+  <span class="cm">// sendBeacon: non-blocking, survives page unload, off main thread</span>
+  <span class="kw">try</span> { navigator.sendBeacon?.(<span class="str">'/api/rum'</span>, JSON.stringify(payload)); }
+  <span class="kw">catch</span> {}  <span class="cm">// Never crash the page for analytics</span>
+}
+
+<span class="kw">export function</span> <span class="fn">initRUM</span>(): <span class="kw">void</span> {
+  <span class="kw">if</span> (<span class="kw">typeof</span> window === <span class="str">'undefined'</span>) <span class="kw">return</span>;  <span class="cm">// SSR guard</span>
+  onCLS(sendMetric); onINP(sendMetric);
+  onLCP(sendMetric); onTTFB(sendMetric);
+}
+
+<span class="cm">// Always use percentiles, never averages:</span>
+<span class="kw">function</span> <span class="fn">p75</span>(arr: number[]): number {
+  <span class="kw">const</span> sorted = [...arr].sort((a, b) =&gt; a - b);
+  <span class="kw">return</span> sorted[Math.ceil(<span class="num">0.75</span> * sorted.length) - <span class="num">1</span>];
+}</pre>
+  </div>
+  <div class="card" style="background:#0a1628;border-color:#1e3a5f">
+    <h3 style="color:#60a5fa">SAP Context</h3>
+    <p style="font-size:.82rem;color:#94a3b8">After the Lighthouse 60→95 improvement, synthetic said "done". RUM would have revealed users in India on 4G saw p75 LCP of 4200ms — the CDN wasn't caching API responses for the Indian edge node. Synthetic, running from a local server, never caught it. This is why both are required.</p>
+  </div>
+</div>
+
+<script>
+function setTab(n) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===n));
+  document.querySelectorAll('.panel').forEach((p,i) => p.classList.toggle('active', i===n));
+}
+
+const profiles = {
+  'mobile-3g': { device:'mobile', conn:'3g', lcp:[3200,4100,5800,2900], cls:[0.12,0.08,0.22,0.15], inp:[280,420,180,350], ttfb:[890,1200,760,1050] },
+  'desktop-us': { device:'desktop', conn:'4g', lcp:[800,650,920,710], cls:[0.01,0.02,0,0.01], inp:[45,78,32,55], ttfb:[120,95,140,105] },
+  'desktop-vpn': { device:'desktop', conn:'4g', lcp:[2100,1800,2600,1950], cls:[0.03,0.01,0.05,0.02], inp:[180,240,155,210], ttfb:[580,420,710,490] },
+  'ios-safari': { device:'mobile', conn:'wifi', lcp:[1200,1050,1400,1100], cls:[0.18,0.24,0.12,0.31], inp:[120,95,145,110], ttfb:[180,150,210,165] }
+};
+
+function getRating(name, val) {
+  const thresholds = { lcp:[2500,4000], cls:[0.1,0.25], inp:[200,500], ttfb:[800,1800] };
+  const [good,poor] = thresholds[name.toLowerCase()] || [100,300];
+  return val <= good ? 'good' : val <= poor ? 'needs-improvement' : 'poor';
+}
+
+function ratingColor(r) { return r==='good'?'#10b981':r==='needs-improvement'?'#f59e0b':'#ef4444'; }
+
+function simulateUser(profile) {
+  const p = profiles[profile];
+  const i = Math.floor(Math.random() * 4);
+  const metrics = {
+    LCP: p.lcp[i], CLS: p.cls[i], INP: p.inp[i], TTFB: p.ttfb[i]
+  };
+  const log = document.getElementById('rumLog');
+  const ts = new Date().toLocaleTimeString();
+  
+  const beacon = {
+    sessionId: crypto.randomUUID().slice(0,8),
+    device: p.device, conn: p.conn,
+    buildVersion: 'v2.14.1',
+    url: '/dashboard',
+    timestamp: Date.now(),
+    metrics
+  };
+  
+  let html = `<div style="color:#475569;font-size:.72rem;margin-bottom:6px">[${ts}] — ${profile}</div>`;
+  for (const [name, val] of Object.entries(metrics)) {
+    const r = getRating(name, val);
+    const unit = name === 'CLS' ? '' : 'ms';
+    html += `<div class="${name.toLowerCase()}" style="margin-bottom:2px">  ${name}: <strong style="color:${ratingColor(r)}">${val}${unit}</strong> <span style="color:${ratingColor(r)};font-size:.7rem">[${r}]</span></div>`;
+  }
+  html += `<div style="color:#64748b;font-size:.72rem">  payload: ${JSON.stringify(beacon).length} bytes via sendBeacon</div>`;
+  html += `<div style="border-top:1px solid #1e2130;margin:6px 0"></div>`;
+  
+  log.innerHTML = html + log.innerHTML;
+}
+
+function clearLog() { document.getElementById('rumLog').innerHTML = '<div style="color:#475569">← Click a user profile to simulate a RUM beacon</div>'; }
+
+function showPercentile() {
+  const values = Array.from({length:100}, () => {
+    const dice = Math.random();
+    if(dice < 0.5) return Math.round(800 + Math.random()*700);
+    if(dice < 0.8) return Math.round(1500 + Math.random()*1500);
+    if(dice < 0.95) return Math.round(3000 + Math.random()*2000);
+    return Math.round(5000 + Math.random()*5000);
+  }).sort((a,b)=>a-b);
+  
+  const avg = Math.round(values.reduce((s,v)=>s+v,0)/values.length);
+  const p50 = values[49]; const p75a = values[74]; const p95 = values[94];
+  
+  const buckets = Array(10).fill(0);
+  values.forEach(v => { const b = Math.min(9, Math.floor(v/1000)); buckets[b]++; });
+  const max = Math.max(...buckets);
+  
+  let chart = `<div style="font-size:.78rem;color:#94a3b8;margin-bottom:8px">LCP distribution for 100 simulated users:</div>`;
+  chart += `<div style="display:flex;align-items:flex-end;gap:3px;height:80px;margin-bottom:8px">`;
+  buckets.forEach((c, i) => {
+    const h = Math.round((c/max)*70);
+    const label = `${i}-${i+1}s`;
+    const color = i<2?'#10b981':i<4?'#f59e0b':'#ef4444';
+    chart += `<div style="display:flex;flex-direction:column;align-items:center;flex:1">
+      <div style="height:${h}px;background:${color};width:100%;border-radius:3px 3px 0 0;min-height:2px"></div>
+      <div style="font-size:.6rem;color:#475569;margin-top:2px">${label}</div>
+    </div>`;
+  });
+  chart += `</div>`;
+  chart += `<div style="display:flex;gap:16px;font-size:.78rem">`;
+  chart += `<span>Average: <strong style="color:#f59e0b">${avg}ms</strong></span>`;
+  chart += `<span>p50: <strong style="color:#10b981">${p50}ms</strong></span>`;
+  chart += `<span>p75: <strong style="color:#f59e0b">${p75a}ms</strong></span>`;
+  chart += `<span>p95: <strong style="color:#ef4444">${p95}ms</strong></span>`;
+  chart += `</div>`;
+  chart += `<div style="font-size:.75rem;color:#64748b;margin-top:6px">↑ Average (${avg}ms) lies about user experience. Google uses p75 (${p75a}ms) for CWV pass/fail assessment.</div>`;
+  
+  document.getElementById('pChart').innerHTML = chart;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>150 – Presence & Typing Indicators</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+.avatar{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;flex-shrink:0}
+.presence-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-left:-8px;margin-bottom:-3px;border:2px solid #0f1117}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.typing-dots span{display:inline-block;animation:blink 1.4s infinite;font-size:1.2rem}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+</style>
+</head>
+<body>
+<h1>👥 Presence & Typing Indicators</h1>
+<p class="sub">Topic 150 · Part 10 / Module 10.2 — Real-Time UI · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Live Demo</div>
+  <div class="tab" onclick="setTab(2)">Implementation Patterns</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Presence system architecture</h3>
+    <p style="color:#94a3b8;font-size:.84rem;margin-bottom:14px">Presence (online/offline/away) and typing indicators require a different design from regular data sync. They are: ephemeral (don't persist to DB permanently), high-frequency (typing events fire every keystroke), and fan-out intensive (your typing must propagate to all other collaborators in the room). These properties make them expensive at scale.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #60a5fa;border-radius:8px;padding:10px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:4px">Heartbeat / Ping</div>
+        <div style="color:#94a3b8">Client sends heartbeat every 15-30s. Server marks user offline if heartbeat misses 2×. Low frequency, reliable presence tracking.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;border-radius:8px;padding:10px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:4px">Typing — throttle + debounce</div>
+        <div style="color:#94a3b8">Emit "typing" on first keypress, then throttle (max 1/sec). Auto-stop after 3s no-keystroke debounce. Prevents thousands of events/min.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;border-radius:8px;padding:10px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:4px">Scale: Pub/Sub</div>
+        <div style="color:#94a3b8">With multiple server instances, presence must use Redis Pub/Sub or Ably/Pusher channels. Single server won't see all users.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Collaborative chat — presence + typing indicators demo</h3>
+    <div style="display:grid;grid-template-columns:200px 1fr;gap:16px">
+      <div>
+        <div style="font-size:.72rem;color:#64748b;margin-bottom:8px;text-transform:uppercase">Online users</div>
+        <div id="presenceList"></div>
+        <div style="margin-top:12px">
+          <button onclick="addUser()" style="width:100%;font-size:.75rem">+ User joins</button>
+          <button onclick="dropUser()" style="width:100%;font-size:.75rem;margin-top:4px">- User leaves</button>
+        </div>
+      </div>
+      <div>
+        <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;height:200px;overflow-y:auto;margin-bottom:8px" id="chatBox">
+          <div style="color:#475569;font-size:.75rem">Chat started. Start typing below...</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <input id="chatInput" type="text" placeholder="Type a message..." oninput="onTyping()" onblur="stopTyping()"
+            style="flex:1;background:#1e2130;border:1px solid #2d3551;border-radius:6px;padding:8px;color:#e2e8f0;font-size:.82rem;outline:none">
+          <button onclick="sendMsg()">Send</button>
+        </div>
+        <div id="typingIndicator" style="height:20px;margin-top:6px;font-size:.75rem;color:#94a3b8"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Typing indicator implementation patterns</h3>
+    <table>
+      <tr><th>Pattern</th><th>Events sent/min (typing user)</th><th>Server load</th><th>Best Practice</th></tr>
+      <tr><td>Naïve: emit on every keystroke</td><td style="color:#ef4444">~300 events/min</td><td style="color:#ef4444">High</td><td>❌ Never</td></tr>
+      <tr><td>Throttle to 1/sec</td><td style="color:#f59e0b">~60 events/min</td><td style="color:#f59e0b">Medium</td><td>Better but still wasteful</td></tr>
+      <tr><td>Emit only state change (bool)</td><td style="color:#10b981">2 events max</td><td style="color:#10b981">Minimal</td><td>✅ Start typing + stop typing</td></tr>
+      <tr><td>Debounced stop (3s no-key)</td><td style="color:#10b981">2 events max</td><td style="color:#10b981">Minimal</td><td>✅ Combined with state change</td></tr>
+      <tr><td>Server TTL (auto-expire)</td><td>N/A</td><td style="color:#10b981">Minimal</td><td>✅ Server removes "typing" after 4s anyway</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Typing indicator — throttle + debounce pattern</h3>
+    <pre><span class="kw">class</span> TypingIndicator {
+  <span class="kw">private</span> isTyping = <span class="kw">false</span>;
+  <span class="kw">private</span> stopTimer: ReturnType&lt;<span class="kw">typeof</span> setTimeout&gt; | <span class="kw">null</span> = <span class="kw">null</span>;
+  
+  <span class="kw">constructor</span>(<span class="kw">private</span> socket: Socket, <span class="kw">private</span> roomId: string, <span class="kw">private</span> userId: string) {}
+  
+  <span class="fn">onKeystroke</span>() {
+    <span class="cm">// Only emit once when typing STARTS (state change pattern)</span>
+    <span class="kw">if</span> (!<span class="kw">this</span>.isTyping) {
+      <span class="kw">this</span>.isTyping = <span class="kw">true</span>;
+      <span class="kw">this</span>.socket.<span class="fn">emit</span>(<span class="str">'typing:start'</span>, { roomId: <span class="kw">this</span>.roomId, userId: <span class="kw">this</span>.userId });
+    }
+    
+    <span class="cm">// Debounce stop: reset timer on each keystroke</span>
+    <span class="kw">if</span> (<span class="kw">this</span>.stopTimer) <span class="fn">clearTimeout</span>(<span class="kw">this</span>.stopTimer);
+    <span class="kw">this</span>.stopTimer = <span class="fn">setTimeout</span>(() => <span class="kw">this</span>.<span class="fn">stopTyping</span>(), <span class="num">3000</span>);
+  }
+  
+  <span class="fn">stopTyping</span>() {
+    <span class="kw">if</span> (<span class="kw">this</span>.isTyping) {
+      <span class="kw">this</span>.isTyping = <span class="kw">false</span>;
+      <span class="kw">this</span>.socket.<span class="fn">emit</span>(<span class="str">'typing:stop'</span>, { roomId: <span class="kw">this</span>.roomId, userId: <span class="kw">this</span>.userId });
+    }
+    <span class="kw">if</span> (<span class="kw">this</span>.stopTimer) { <span class="fn">clearTimeout</span>(<span class="kw">this</span>.stopTimer); <span class="kw">this</span>.stopTimer = <span class="kw">null</span>; }
+  }
+}
+
+<span class="cm">// Presence heartbeat (server-side connection tracking)</span>
+<span class="cm">// socket.on('connect') → set user:${userId} online in Redis with TTL 35s</span>
+<span class="cm">// Every 30s: client emits 'ping', server refreshes TTL</span>
+<span class="cm">// On 'disconnect': delete key + broadcast offline event</span>
+
+<span class="cm">// Scale: Redis Pub/Sub for multi-server presence</span>
+<span class="kw">const</span> redisPub = <span class="fn">createClient</span>();
+<span class="kw">const</span> redisSub = <span class="fn">createClient</span>();
+io.<span class="fn">adapter</span>(<span class="fn">createAdapter</span>(redisPub, redisSub));  <span class="cm">// socket.io-redis</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+const colors = ['#60a5fa','#10b981','#a78bfa','#f59e0b','#ef4444','#e879f9'];
+let users = [
+  {id:1, name:'Hruday', status:'online', bg:'#1e3a5f', color:'#60a5fa'},
+  {id:2, name:'Alice', status:'online', bg:'#14532d', color:'#10b981'},
+  {id:3, name:'Bob', status:'away', bg:'#44403c', color:'#f59e0b'},
+];
+let typingTimeout = null;
+let nextUid = 4;
+
+function renderPresence() {
+  document.getElementById('presenceList').innerHTML = users.map(u => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="position:relative;display:inline-block">
+        <div class="avatar" style="background:${u.bg};color:${u.color}">${u.name[0]}</div>
+        <div class="presence-dot" style="background:${u.status==='online'?'#10b981':u.status==='away'?'#f59e0b':'#64748b'}"></div>
+      </div>
+      <div>
+        <div style="font-size:.78rem;color:#e2e8f0">${u.name}</div>
+        <div style="font-size:.67rem;color:#64748b">${u.status}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addUser() {
+  const names = ['Carol','Dave','Eva','Frank','Grace'];
+  const name = names[(nextUid-4)%names.length];
+  const c = colors[(nextUid-1)%colors.length];
+  users.push({id:nextUid, name, status:'online', bg:c+'22', color:c});
+  addChatMsg('system', `${name} joined the room`);
+  nextUid++;
+  renderPresence();
+}
+
+function dropUser() {
+  if (users.length<=1) return;
+  const leaving = users.pop();
+  addChatMsg('system', `${leaving.name} left the room`);
+  renderPresence();
+}
+
+function addChatMsg(type, text) {
+  const box = document.getElementById('chatBox');
+  const div = document.createElement('div');
+  div.style.cssText = `margin-bottom:6px;font-size:.78rem;${type==='system'?'color:#475569;font-style:italic':'color:#e2e8f0'}`;
+  if (type==='me') {
+    div.innerHTML = `<span style="color:#60a5fa;font-weight:600">Hruday: </span>${text}`;
+  } else {
+    div.textContent = text;
+  }
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function sendMsg() {
+  const inp = document.getElementById('chatInput');
+  if (!inp.value.trim()) return;
+  addChatMsg('me', inp.value);
+  inp.value = '';
+  stopTyping();
+  
+  // Simulate another user responding
+  setTimeout(() => {
+    const other = users.find(u=>u.name!=='Hruday');
+    if (other) {
+      document.getElementById('typingIndicator').innerHTML = `<div class="typing-dots" style="color:${other.color}">${other.name} is typing <span>•</span><span>•</span><span>•</span></div>`;
+      setTimeout(() => {
+        document.getElementById('typingIndicator').innerHTML = '';
+        addChatMsg('other', `${other.name}: Got it! 👍`);
+      }, 2000);
+    }
+  }, 800);
+}
+
+let typingTimer = null;
+function onTyping() {
+  if (!document.getElementById('chatInput').value) return stopTyping();
+  if (!typingTimer) { /* emit typing:start */ }
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(stopTyping, 3000);
+}
+
+function stopTyping() {
+  clearTimeout(typingTimer);
+  typingTimer = null;
+}
+
+renderPresence();
+</script>
+</body>
+</html>

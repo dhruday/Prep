@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>145 – WebTransport API</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🚀 WebTransport API</h1>
+<p class="sub">Topic 145 · Part 10 / Module 10.1 — Transport Mechanisms · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Transport Simulator</div>
+  <div class="tab" onclick="setTab(2)">Protocol Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>WebTransport — HTTP/3's multiplexed streams for the browser</h3>
+    <p style="color:#94a3b8;font-size:.84rem;margin-bottom:14px">WebTransport is a browser API built on HTTP/3 (QUIC protocol). It gives you bidirectional streams and datagrams from a web page — capabilities that previously required WebSocket or WebRTC. The key advantage: QUIC eliminates head-of-line blocking (a WebSocket problem) and allows multiplexed streams that fail independently.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.82rem">
+      <div style="background:#0f1117;border:1px solid #60a5fa;border-radius:8px;padding:12px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Unidirectional/Bidirectional Streams</div>
+        <div style="color:#94a3b8;line-height:1.8">Reliable, ordered — like WebSocket but multiplexed. Stream A failure doesn't block Stream B. Perfect for: separate chat + notifications + telemetry channels in one QUIC connection.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;border-radius:8px;padding:12px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:6px">Datagrams</div>
+        <div style="color:#94a3b8;line-height:1.8">Unreliable, unordered — like UDP. Lower latency, no HOL blocking. Perfect for: game position updates, live sensor data, video frames where stale data should be discarded.</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-size:.82rem">
+      <div style="color:#f59e0b;font-weight:700;margin-bottom:4px">WebSocket vs WebTransport head-of-line blocking</div>
+      <div style="color:#94a3b8">WebSocket = single TCP stream. One large message blocks all subsequent messages (HOL blocking). WebTransport over QUIC = multiple independent streams. Drop one packet from stream A, stream B is unaffected. Critical for real-time applications under packet loss (mobile networks).</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Simulate stream independence — HOL blocking comparison</h3>
+    <p style="color:#94a3b8;font-size:.8rem;margin-bottom:12px">Send messages on both protocols and observe how packet loss on one message affects others.</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="runSim('ws')">Simulate WebSocket (TCP)</button>
+      <button onclick="runSim('wt')">Simulate WebTransport (QUIC)</button>
+    </div>
+    <div id="simOutput"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Real-time transport protocol comparison</h3>
+    <table>
+      <tr><th>Protocol</th><th>Transport</th><th>Reliability</th><th>HOL Blocking</th><th>Browser Support</th><th>Best For</th></tr>
+      <tr><td>WebSocket</td><td>TCP</td><td>Guaranteed</td><td style="color:#ef4444">Yes</td><td style="color:#10b981">Universal</td><td>Chat, standard real-time</td></tr>
+      <tr><td>WebTransport (streams)</td><td>QUIC/HTTP3</td><td>Guaranteed</td><td style="color:#10b981">No (per stream)</td><td style="color:#f59e0b">Chrome/Edge 97+</td><td>Multi-stream real-time</td></tr>
+      <tr><td>WebTransport (datagrams)</td><td>QUIC/HTTP3</td><td>Unreliable</td><td style="color:#10b981">No</td><td style="color:#f59e0b">Chrome/Edge 97+</td><td>Games, live sensor data</td></tr>
+      <tr><td>WebRTC DataChannel</td><td>DTLS/SCTP</td><td>Optional</td><td style="color:#f59e0b">Optional</td><td style="color:#10b981">Universal</td><td>P2P, video calls</td></tr>
+      <tr><td>SSE</td><td>HTTP/1.1-3</td><td>Guaranteed</td><td style="color:#ef4444">Yes (single)</td><td style="color:#10b981">Universal</td><td>Server push, unidirectional</td></tr>
+      <tr><td>HTTP/2 Push</td><td>HTTP/2</td><td>Guaranteed</td><td style="color:#f59e0b">Stream-level</td><td style="color:#f59e0b">Deprecated</td><td>Avoid — removed from browsers</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>WebTransport client (Chrome 97+)</h3>
+    <pre><span class="kw">class</span> GameTransport {
+  <span class="kw">private</span> transport: WebTransport | <span class="kw">null</span> = <span class="kw">null</span>;
+  <span class="kw">private</span> writerStream: WritableStreamDefaultWriter | <span class="kw">null</span> = <span class="kw">null</span>;
+  
+  <span class="kw">async</span> <span class="fn">connect</span>(url: string) {
+    <span class="kw">this</span>.transport = <span class="kw">new</span> <span class="fn">WebTransport</span>(url);
+    <span class="kw">await</span> <span class="kw">this</span>.transport.ready;
+    <span class="fn">console</span>.<span class="fn">log</span>(<span class="str">'WebTransport connected via HTTP/3'</span>);
+  }
+  
+  <span class="cm">// Datagrams — fast, unreliable (game player positions)</span>
+  <span class="kw">async</span> <span class="fn">sendPosition</span>(x: number, y: number) {
+    <span class="kw">const</span> writer = <span class="kw">this</span>.transport!.datagrams.writable.<span class="fn">getWriter</span>();
+    <span class="kw">const</span> data = <span class="kw">new</span> <span class="fn">Float32Array</span>([x, y]);
+    <span class="kw">await</span> writer.<span class="fn">write</span>(data);
+    writer.<span class="fn">releaseLock</span>();  <span class="cm">// datagrams are fire-and-forget</span>
+  }
+  
+  <span class="cm">// Bidirectional stream — reliable ordered (chat messages)</span>
+  <span class="kw">async</span> <span class="fn">openChatStream</span>() {
+    <span class="kw">const</span> stream = <span class="kw">await</span> <span class="kw">this</span>.transport!.<span class="fn">createBidirectionalStream</span>();
+    <span class="kw">const</span> encoder = <span class="kw">new</span> TextEncoderStream();
+    encoder.readable.<span class="fn">pipeTo</span>(stream.writable);
+    
+    <span class="cm">// Read incoming messages on this stream</span>
+    <span class="kw">const</span> decoder = <span class="kw">new</span> TextDecoderStream();
+    stream.readable.<span class="fn">pipeTo</span>(decoder.writable);
+    <span class="kw">const</span> reader = decoder.readable.<span class="fn">getReader</span>();
+    
+    <span class="kw">while</span> (<span class="kw">true</span>) {
+      <span class="kw">const</span> { value, done } = <span class="kw">await</span> reader.<span class="fn">read</span>();
+      <span class="kw">if</span> (done) <span class="kw">break</span>;
+      <span class="fn">handleChatMessage</span>(value);
+    }
+  }
+  
+  <span class="kw">async</span> <span class="fn">close</span>() { <span class="kw">await</span> <span class="kw">this</span>.transport?.<span class="fn">close</span>(); }
+}
+
+<span class="cm">// Feature detect + fallback to WebSocket</span>
+<span class="kw">const</span> transport = <span class="str">'WebTransport'</span> <span class="kw">in</span> window
+  ? <span class="kw">new</span> <span class="fn">GameTransport</span>()
+  : <span class="kw">new</span> <span class="fn">WebSocketTransport</span>();  <span class="cm">// your WS implementation</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+function runSim(proto) {
+  const isWt = proto === 'wt';
+  const messages = [
+    {id:1, stream:'chat', payload:'Hello team! (42B)', size:42, drop:false},
+    {id:2, stream:'telemetry', payload:'sensor: 78.3°C (16B)', size:16, drop:false},
+    {id:3, stream:'telemetry', payload:'⚠ LARGE telemetry blob (4096B) — packet loss!', size:4096, drop:true},
+    {id:4, stream:'chat', payload:'Another chat message (35B)', size:35, drop:false},
+    {id:5, stream:'telemetry', payload:'sensor: 78.5°C (16B)', size:16, drop:false},
+  ];
+  
+  let html = `<div style="font-size:.78rem;margin-bottom:6px;color:#64748b">${isWt?'WebTransport — QUIC independent streams':'WebSocket — single TCP stream'}</div>`;
+  let blocked = false;
+  
+  messages.forEach(m => {
+    const isDropped = m.drop;
+    const isBlocked = !isWt && blocked;
+    const status = isDropped ? 'PACKET LOSS' : isBlocked ? 'BLOCKED' : 'OK';
+    const color = isDropped ? '#ef4444' : isBlocked ? '#f59e0b' : '#10b981';
+    
+    if (isDropped && !isWt) blocked = false; // QUIC retransmits independently
+    if (isDropped && !isWt) blocked = true;  // TCP blocks everything after
+    if (isDropped && isWt)  blocked = false; // QUIC isolates to this stream
+    
+    const note = isDropped
+      ? isWt ? 'QUIC retransmits stream B only — stream A unaffected ✅' : 'TCP must retransmit — ALL subsequent msgs wait ⛔'  
+      : isBlocked ? '⏳ Waiting for retransmit of msg #3...' : '';
+    
+    html += `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;background:#0f1117;border:1px solid ${color}33;border-radius:6px;padding:8px;font-size:.75rem">
+        <div style="min-width:60px;color:#64748b">${isWt?'Stream':'TCP'} ${m.stream}</div>
+        <div style="flex:1;color:#e2e8f0">${m.payload}</div>
+        <div style="padding:2px 8px;border-radius:4px;background:${color}22;color:${color};font-weight:700;font-size:.7rem">${status}</div>
+        <div style="color:#64748b;font-size:.7rem;min-width:180px">${note}</div>
+      </div>`;
+  });
+  
+  document.getElementById('simOutput').innerHTML = html;
+}
+runSim('ws');
+</script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>122 – CSS-in-JS Performance</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+.metric{background:#0f1117;border-radius:8px;padding:10px;text-align:center}
+.metric-val{font-size:1.5rem;font-weight:700}
+</style>
+</head>
+<body>
+<h1>🎨 CSS-in-JS Performance</h1>
+<p class="sub">Topic 122 · Part 8 / Module 8.2 — CSS & JS Assets · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Runtime Cost Demo</div>
+  <div class="tab" onclick="setTab(2)">Library Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>The CSS-in-JS performance tradeoff</h3>
+    <p style="color:#94a3b8;font-size:.84rem;margin-bottom:14px">CSS-in-JS libraries like styled-components or Emotion generate CSS at runtime: hash → serialize → inject into &lt;style&gt; tag. This work happens on the main thread during component render. At small scale: negligible. At scale: 1000 components × 0.1ms = 100ms of style recalculation on every re-render. This is why the React team's StyleX and CSS Modules exist — they eliminate runtime cost.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.82rem">
+      <div style="background:#0f1117;border:1px solid #ef4444;border-radius:8px;padding:12px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">Runtime CSS-in-JS (styled-components, Emotion)</div>
+        <div style="color:#94a3b8;line-height:1.9">
+          ① Component renders<br>
+          ② Library hashes and serializes styles<br>
+          ③ Injects &lt;style&gt; element to &lt;head&gt;<br>
+          ④ Browser recalculates styles<br>
+          ⑤ Repeat on every prop change<br>
+          <strong style="color:#ef4444">= Runtime CPU + blocking</strong>
+        </div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">Static extraction (CSS Modules, Linaria, StyleX)</div>
+        <div style="color:#94a3b8;line-height:1.9">
+          ① Build tool extracts CSS at compile time<br>
+          ② Generates static .css file + class map<br>
+          ③ Component uses static className<br>
+          ④ Browser parses CSS once (cached)<br>
+          ⑤ Zero runtime style work<br>
+          <strong style="color:#10b981">= Zero runtime CPU ✅</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>SSR problem — styled-components doubles JS work</h3>
+    <p style="color:#94a3b8;font-size:.82rem">Styled-components on SSR: (1) server serializes styles, injects &lt;style&gt; tag into HTML, (2) client hydrates, re-runs same serialization to match, (3) twice the style work per component. With RSCs + static extraction this goes to zero — styles are in the CSS bundle, not computed</p>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Runtime cost per render — increase component count</h3>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <button onclick="runBench(100)">100 components</button>
+      <button onclick="runBench(500)">500 components</button>
+      <button onclick="runBench(1000)">1000 components</button>
+      <button onclick="runBench(5000)">5000 components</button>
+    </div>
+    <div id="benchResults" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px"></div>
+    <div id="benchNote" style="margin-top:12px;font-size:.8rem;color:#94a3b8"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>CSS-in-JS library comparison 2024</h3>
+    <table>
+      <tr><th>Library</th><th>Runtime</th><th>Bundle Size</th><th>SSR</th><th>Type Safety</th><th>Recommendation</th></tr>
+      <tr><td>styled-components</td><td style="color:#ef4444">Yes (heavy)</td><td>~13KB gzip</td><td>⚠️ Double work</td><td style="color:#10b981">✅</td><td>Avoid for perf-critical</td></tr>
+      <tr><td>Emotion</td><td style="color:#f59e0b">Yes (lighter)</td><td>~7KB gzip</td><td>⚠️ Double work</td><td style="color:#10b981">✅</td><td>Ok for smaller apps</td></tr>
+      <tr><td>CSS Modules</td><td style="color:#10b981">Zero</td><td>0KB runtime</td><td style="color:#10b981">✅ Static</td><td style="color:#f59e0b">Partial</td><td>✅ Default choice</td></tr>
+      <tr><td>Vanilla Extract</td><td style="color:#10b981">Zero</td><td>~0KB runtime</td><td style="color:#10b981">✅ Static</td><td style="color:#10b981">✅ Full</td><td>✅ Best TS support</td></tr>
+      <tr><td>Linaria</td><td style="color:#10b981">Zero</td><td>~0KB runtime</td><td style="color:#10b981">✅ Static</td><td style="color:#10b981">✅</td><td>✅ styled syntax, zero runtime</td></tr>
+      <tr><td>StyleX (Meta)</td><td style="color:#10b981">Zero</td><td>~2KB runtime</td><td style="color:#10b981">✅ Static</td><td style="color:#10b981">✅ Strict</td><td>✅ React 19 / RSC optimized</td></tr>
+      <tr><td>Tailwind</td><td style="color:#10b981">Zero</td><td>~6KB (purged)</td><td style="color:#10b981">✅ Static</td><td style="color:#f59e0b">Via plugins</td><td>✅ Utility-first, fast dev</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Migration: styled-components → CSS Modules</h3>
+    <pre><span class="cm">// ❌ Before: styled-components — runtime serialization every render</span>
+<span class="kw">const</span> Button = styled.button&lt;{ variant: <span class="str">'primary'</span> | <span class="str">'ghost'</span> }&gt;<span class="str">`
+  padding: 8px 16px;
+  background: ${p => p.variant === 'primary' ? '#3b82f6' : 'transparent'};
+  border-radius: 6px;
+`</span>;
+
+<span class="cm">// ✅ After: CSS Modules — zero runtime, static class lookup</span>
+<span class="cm">/* Button.module.css */</span>
+.<span class="fn">btn</span> { padding: <span class="num">8px 16px</span>; border-radius: <span class="num">6px</span>; }
+.<span class="fn">primary</span> { background: <span class="str">#3b82f6</span>; color: white; }
+.<span class="fn">ghost</span> { background: transparent; border: <span class="num">1px</span> solid <span class="str">#3b82f6</span>; }
+
+<span class="cm">/* Button.tsx */</span>
+<span class="kw">import</span> styles <span class="kw">from</span> <span class="str">'./Button.module.css'</span>;
+<span class="kw">const</span> Button = ({ variant, children }: Props) =&gt; (
+  &lt;button className={<span class="str">`</span>${styles.btn} ${styles[variant]}<span class="str">`</span>}&gt;{children}&lt;/button&gt;
+);
+
+<span class="cm">// ✅ Vanilla Extract — full TypeScript, static extraction</span>
+<span class="cm">/* button.css.ts */</span>
+<span class="kw">import</span> { styleVariants, style } <span class="kw">from</span> <span class="str">'@vanilla-extract/css'</span>;
+<span class="kw">export const</span> base = <span class="fn">style</span>({ padding: <span class="str">'8px 16px'</span>, borderRadius: <span class="str">'6px'</span> });
+<span class="kw">export const</span> variant = <span class="fn">styleVariants</span>({
+  primary: { background: <span class="str">'#3b82f6'</span> },
+  ghost:   { background: <span class="str">'transparent'</span> },
+});</pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+function runBench(n) {
+  // Simulate cost differences (using realistic relative timings, not actual measurements)
+  const runtimeCost = n * 0.08;  // ~0.08ms per component for styled-components
+  const emotionCost = n * 0.04;
+  const staticCost  = n * 0.001; // just class lookup
+
+  document.getElementById('benchResults').innerHTML = [
+    {label:'styled-components', cost: runtimeCost.toFixed(1), color:'#ef4444'},
+    {label:'Emotion', cost: emotionCost.toFixed(1), color:'#f59e0b'},
+    {label:'CSS Modules / Static', cost: staticCost.toFixed(1), color:'#10b981'},
+  ].map(m => `
+    <div class="metric" style="border:1px solid ${m.color}33">
+      <div style="font-size:.7rem;color:#64748b;margin-bottom:4px">${m.label}</div>
+      <div class="metric-val" style="color:${m.color}">${m.cost} ms</div>
+      <div style="font-size:.7rem;color:#64748b">per re-render</div>
+    </div>
+  `).join('');
+  
+  document.getElementById('benchNote').textContent =
+    `At ${n} components: styled-components adds ~${runtimeCost.toFixed(0)}ms of style serialization vs essentially zero for static extraction. At 60fps budget (16ms/frame), ${n} dynamic styled components = ${runtimeCost>16?'⚠️ frame drop risk':' manageable but wasteful'}.`;
+}
+</script>
+</body>
+</html>

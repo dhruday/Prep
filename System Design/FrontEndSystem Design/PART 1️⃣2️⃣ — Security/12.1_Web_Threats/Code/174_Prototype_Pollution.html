@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>174 – Prototype Pollution</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>☠️ Prototype Pollution</h1>
+<p class="sub">Topic 174 · Part 12 / Module 12.1 — Web Threats · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Attack Demo</div>
+  <div class="tab" onclick="setTab(2)">Detection & Fixes</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>What is prototype pollution?</h3>
+    <p style="color:#94a3b8;font-size:.84rem;margin-bottom:14px">In JavaScript, every object inherits from Object.prototype. Prototype pollution is an attack where an attacker manipulates Object.prototype (or another shared prototype) by injecting malicious properties. Because ALL objects inherit these properties, every object in the application suddenly has attacker-injected properties — bypassing security checks that expect properties to be undefined.</p>
+    <div style="background:#0f1117;border:1px solid #ef4444;border-radius:8px;padding:12px;margin-bottom:12px;font-size:.82rem">
+      <div style="color:#ef4444;font-weight:700;margin-bottom:6px">Classic attack vector</div>
+      <pre style="border:none;padding:0;margin:0;background:transparent">// Attacker controls JSON input like: {"__proto__": {"isAdmin": true}}
+// Deep merge function naively assigns properties:
+function merge(target, source) {
+  for (const key in source) {
+    target[key] = source[key];  // ← "__proto__" key pollutes prototype
+  }
+}
+merge({}, JSON.parse('{"__proto__": {"isAdmin": true}}'));
+
+// NOW: every plain object in the app has isAdmin = true!
+const user = {};
+console.log(user.isAdmin);  // true ← ATTACK SUCCEEDED</pre>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #f59e0b;border-radius:8px;padding:10px">
+        <div style="color:#f59e0b;font-weight:700;margin-bottom:4px">Common vulnerable patterns</div>
+        <div style="color:#94a3b8">Object.assign() with untrusted input, recursive merge (lodash &lt; 4.17.19), jQuery $.extend deep, express query string parsing, JSON.parse without validation</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;border-radius:8px;padding:10px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:4px">Consequences</div>
+        <div style="color:#94a3b8">Authorization bypass (isAdmin=true), RCE in Node.js (child_process.spawn options), app crashes, DoS, XSS via injected attributes</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Safe vs unsafe merge — see prototype pollution in action</h3>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="runAttack('unsafe')">Unsafe merge (vulnerable)</button>
+      <button onclick="runAttack('safe')">Safe merge (fixed)</button>
+      <button onclick="resetDemo()">Reset</button>
+    </div>
+    <div id="attackOutput" style="font-size:.8rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Detection and prevention matrix</h3>
+    <table>
+      <tr><th>Attack Vector</th><th>Prevention</th><th>Detection</th></tr>
+      <tr><td>__proto__ in key</td><td>Block key explicitly; use Object.create(null)</td><td>Audit key === '__proto__' checks in merge fns</td></tr>
+      <tr><td>constructor.prototype</td><td>Block key traversal through constructor</td><td>Static analysis (eslint-plugin-security)</td></tr>
+      <tr><td>Lodash &lt; 4.17.19</td><td>Update to latest lodash</td><td>npm audit, Snyk scan</td></tr>
+      <tr><td>Deep JSON merge</td><td>Use JSON Schema validation (Zod) before merging</td><td>Input fuzz testing with payloads</td></tr>
+      <tr><td>Express query string</td><td>qs v6.7.4+ or set allowPrototypes:false</td><td>npm audit</td></tr>
+      <tr><td>jquery $.extend deep</td><td>Update jQuery or use structuredClone</td><td>npm audit</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Safe object merge implementations</html>
+    <pre><span class="cm">// ❌ Vulnerable: naive recursive merge</span>
+<span class="kw">function</span> <span class="fn">unsafeMerge</span>(target: <span class="kw">any</span>, source: <span class="kw">any</span>) {
+  Object.<span class="fn">keys</span>(source).<span class="fn">forEach</span>(key => {
+    target[key] = source[key];  <span class="cm">// __proto__ pollutes!!</span>
+  });
+  <span class="kw">return</span> target;
+}
+
+<span class="cm">// ✅ Fix 1: Check for dangerous keys</span>
+<span class="kw">function</span> <span class="fn">safeMerge</span>(target: Record&lt;string, <span class="kw">unknown</span>&gt;, source: Record&lt;string, <span class="kw">unknown</span>&gt;) {
+  <span class="kw">for</span> (<span class="kw">const</span> key <span class="kw">of</span> Object.<span class="fn">keys</span>(source)) {
+    <span class="kw">if</span> (key === <span class="str">'__proto__'</span> || key === <span class="str">'constructor'</span> || key === <span class="str">'prototype'</span>) <span class="kw">continue</span>;
+    target[key] = source[key];
+  }
+  <span class="kw">return</span> target;
+}
+
+<span class="cm">// ✅ Fix 2: Object.create(null) — no prototype to pollute</span>
+<span class="kw">const</span> safeObj = Object.<span class="fn">create</span>(<span class="kw">null</span>) <span class="kw">as</span> Record&lt;string, <span class="kw">unknown</span>&gt;;
+<span class="cm">// safeObj has NO prototype chain — __proto__ assignment does nothing</span>
+
+<span class="cm">// ✅ Fix 3: structuredClone for deep copy without pollution risk</span>
+<span class="kw">const</span> safe = <span class="fn">structuredClone</span>(untrustedInput);
+
+<span class="cm">// ✅ Fix 4: Validate with Zod BEFORE merging</span>
+<span class="kw">const</span> UserSchema = z.object({
+  name: z.string().max(<span class="num">100</span>),
+  email: z.string().email(),
+  <span class="cm">// __proto__ not in schema → stripped by z.strict()</span>
+}).<span class="fn">strict</span>();  <span class="cm">// rejects any extra keys</span>
+<span class="kw">const</span> user = UserSchema.<span class="fn">parse</span>(body);  <span class="cm">// throws if __proto__ present</span>
+
+<span class="cm">// ✅ Fix 5: Object.freeze(Object.prototype) at app startup</span>
+Object.<span class="fn">freeze</span>(Object.prototype);  <span class="cm">// prevents mutation at runtime</span>
+<span class="cm">// Risky: some libraries may rely on prototype extension</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+function resetDemo() {
+  // Clean up any previous pollution simulation
+  document.getElementById('attackOutput').innerHTML = '<div style="color:#475569;font-size:.78rem">Click a button to run the simulation.</div>';
+}
+
+function runAttack(type) {
+  const out = document.getElementById('attackOutput');
+  const maliciousPayload = '{"__proto__": {"isAdmin": true, "debugMode": true}}';
+  
+  if (type === 'unsafe') {
+    out.innerHTML = `
+      <div style="background:#450a0a;border:1px solid #ef444466;border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">⚠️ Vulnerable merge — attacker payload:</div>
+        <div style="font-family:monospace;color:#fca5a5;font-size:.78rem;margin-bottom:8px">${maliciousPayload}</div>
+        <div style="color:#94a3b8;font-size:.78rem;line-height:1.8">
+          Step 1: merge({}, JSON.parse(maliciousPayload))<br>
+          Step 2: key "__proto__" → target["__proto__"] = {isAdmin: true}<br>
+          Step 3: This assigns to Object.prototype!<br>
+          Step 4: const victim = {}; victim.isAdmin → <strong style="color:#ef4444">true !! (ATTACK SUCCEEDED)</strong><br>
+          Step 5: Your isAdmin check passes for ANY object now ⛔
+        </div>
+      </div>
+      <div style="font-size:.78rem;color:#94a3b8">Real-world impact: CVE-2019-10744 (lodash merge), CVE-2020-28500 (lodash), many express.js apps</div>
+    `;
+  } else {
+    out.innerHTML = `
+      <div style="background:#14532d22;border:1px solid #16a34a66;border-radius:8px;padding:12px;margin-bottom:10px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Safe merge — same payload, blocked:</div>
+        <div style="font-family:monospace;color:#6ee7b7;font-size:.78rem;margin-bottom:8px">${maliciousPayload}</div>
+        <div style="color:#94a3b8;font-size:.78rem;line-height:1.8">
+          Step 1: Parse JSON → {__proto__: {isAdmin: true}}<br>
+          Step 2: Iterate keys with Object.keys() → ["__proto__"]<br>  
+          Step 3: Key check: "__proto__" → <strong style="color:#10b981">SKIP (blocked)</strong><br>
+          Step 4: Merge completes with no prototype mutation<br>
+          Step 5: const victim = {}; victim.isAdmin → <strong style="color:#10b981">undefined (safe)</strong>
+        </div>
+      </div>
+      <div style="font-size:.78rem;color:#94a3b8">Prevention: Object.keys() (not for..in), key denylist, Object.create(null), Zod schema validation</div>
+    `;
+  }
+}
+
+resetDemo();
+</script>
+</body>
+</html>

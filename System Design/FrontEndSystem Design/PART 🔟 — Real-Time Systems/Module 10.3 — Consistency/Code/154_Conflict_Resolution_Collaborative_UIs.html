@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>154 – Conflict Resolution in Collaborative UIs</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>⚔️ Conflict Resolution in Collaborative UIs</h1>
+<p class="sub">Topic 154 · Part 10 / Module 10.3 — Consistency · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Conflict Simulator</div>
+  <div class="tab" onclick="setTab(2)">Algorithm Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>The problem: two users editing the same data simultaneously</h3>
+    <p style="color:#94a3b8;font-size:.84rem;margin-bottom:14px">In collaborative apps (Google Docs, Figma, Notion), multiple users can edit the same document concurrently. If both make changes offline or simultaneously, the server receives conflicting operations. How do we merge them without losing data or asking users to manually resolve conflicts?</p>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:.82rem">
+      <div style="background:#0f1117;border:1px solid #ef4444;border-radius:8px;padding:10px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:4px">Last-Write-Wins (LWW)</div>
+        <div style="color:#94a3b8">Whoever writes last overwrites. Simple but lossy. The "Alice's work got deleted!" problem. Acceptable only for non-text fields (user status, color choice).</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #f59e0b;border-radius:8px;padding:10px">
+        <div style="color:#f59e0b;font-weight:700;margin-bottom:4px">Operational Transformation (OT)</div>
+        <div style="color:#94a3b8">Transform operations relative to concurrent ops. Used by Google Docs. Mathematically complex, requires central server to sequence ops. Hard to implement correctly.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;border-radius:8px;padding:10px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:4px">CRDTs (Conflict-free Replicated Data Types)</div>
+        <div style="color:#94a3b8">Data structures that can be merged automatically in any order. No coordination needed. Used by Figma, Liveblocks. Yjs, Automerge are JS implementations. Best for rich text, lists, maps.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;border-radius:8px;padding:10px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:4px">Version Vectors / Vector Clocks</div>
+        <div style="color:#94a3b8">Each node tracks causality with a vector clock [userA: 3, userB: 2]. Detects true concurrency vs causal order. Needed for detecting when OT/CRDT merge should be applied.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>LWW vs CRDT merge simulation</h3>
+    <p style="color:#94a3b8;font-size:.78rem;margin-bottom:12px">Both users start with "Hello". Alice adds " World", Bob adds " There". They both submit offline.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;font-size:.82rem">
+      <div>
+        <div style="color:#64748b;font-size:.72rem;margin-bottom:6px">ALICE's version</div>
+        <div style="background:#0f1117;border:1px solid #60a5fa;border-radius:6px;padding:8px">
+          <input id="aliceText" value="Hello World" style="width:100%;background:transparent;border:none;color:#e2e8f0;font-size:.9rem;outline:none">
+        </div>
+      </div>
+      <div>
+        <div style="color:#64748b;font-size:.72rem;margin-bottom:6px">BOB's version</div>
+        <div style="background:#0f1117;border:1px solid #10b981;border-radius:6px;padding:8px">
+          <input id="bobText" value="Hello There" style="width:100%;background:transparent;border:none;color:#e2e8f0;font-size:.9rem;outline:none">
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button onclick="mergeSim('lww')">Last-Write-Wins (Alice wins)</button>
+      <button onclick="mergeSim('manual')">Manual conflict resolution</button>
+      <button onclick="mergeSim('crdt')">CRDT auto-merge</button>
+    </div>
+    <div id="mergeResult" style="margin-top:12px;font-size:.82rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Conflict resolution algorithm comparison</h3>
+    <table>
+      <tr><th>Algorithm</th><th>Complexity</th><th>Needs Server</th><th>Offline Support</th><th>Use Case</th></tr>
+      <tr><td>Last-Write-Wins</td><td style="color:#10b981">Simple</td><td style="color:#10b981">No</td><td style="color:#10b981">Yes</td><td>Non-text: color, status, position</td></tr>
+      <tr><td>Manual Resolution</td><td style="color:#10b981">Simple</td><td style="color:#f59e0b">Detect server-side</td><td style="color:#ef4444">Requires UI</td><td>Critical: git merge, legal docs</td></tr>
+      <tr><td>OT (Google Docs)</td><td style="color:#ef4444">Very complex</td><td style="color:#ef4444">Yes (sequencer)</td><td style="color:#f59e0b">Limited</td><td>Rich text, code editors</td></tr>
+      <tr><td>CRDT (Yjs, Automerge)</td><td style="color:#f59e0b">Medium (library)</td><td style="color:#10b981">No</td><td style="color:#10b981">Full</td><td>Figma, collaborative docs</td></tr>
+      <tr><td>CRDT + Yjs + WebRTC</td><td style="color:#f59e0b">Medium</td><td style="color:#10b981">No (P2P)</td><td style="color:#10b981">Full</td><td>Real-time collab (Liveblocks)</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Yjs CRDT implementation</h3>
+    <pre><span class="cm">// npm install yjs y-websocket</span>
+<span class="kw">import</span> * <span class="kw">as</span> Y <span class="kw">from</span> <span class="str">'yjs'</span>;
+<span class="kw">import</span> { WebsocketProvider } <span class="kw">from</span> <span class="str">'y-websocket'</span>;
+
+<span class="cm">// Create shared document (CRDT)</span>
+<span class="kw">const</span> ydoc = <span class="kw">new</span> Y.Doc();
+<span class="kw">const</span> ytext = ydoc.<span class="fn">getText</span>(<span class="str">'content'</span>);       <span class="cm">// Shared text type</span>
+<span class="kw">const</span> ymap  = ydoc.<span class="fn">getMap</span>(<span class="str">'metadata'</span>);       <span class="cm">// Shared map</span>
+
+<span class="cm">// Connect to Y-WebSocket server (sync + awareness)</span>
+<span class="kw">const</span> provider = <span class="kw">new</span> <span class="fn">WebsocketProvider</span>(
+  <span class="str">'wss://my-yjs-server.com'</span>,
+  <span class="str">'my-doc-id'</span>,
+  ydoc
+);
+
+<span class="cm">// Bind to Quill editor</span>
+<span class="kw">import</span> { QuillBinding } <span class="kw">from</span> <span class="str">'y-quill'</span>;
+<span class="kw">const</span> binding = <span class="kw">new</span> <span class="fn">QuillBinding</span>(ytext, quillEditor, provider.awareness);
+
+<span class="cm">// Awareness: presence + cursors (ephemeral state)</span>
+provider.awareness.<span class="fn">setLocalStateField</span>(<span class="str">'user'</span>, {
+  name: <span class="str">'Hruday'</span>,
+  color: <span class="str">'#60a5fa'</span>,
+  cursor: { anchor: <span class="num">42</span>, head: <span class="num">48</span> }
+});
+
+provider.awareness.<span class="fn">on</span>(<span class="str">'change'</span>, () => {
+  <span class="kw">const</span> states = [...provider.awareness.getStates().values()];
+  <span class="fn">renderCursors</span>(states);
+});
+
+<span class="cm">// Transactions — batch multiple changes</span>
+ydoc.<span class="fn">transact</span>(() => {
+  ytext.<span class="fn">insert</span>(<span class="num">0</span>, <span class="str">'Hello '</span>);
+  ymap.<span class="fn">set</span>(<span class="str">'title'</span>, <span class="str">'My Document'</span>);
+}, <span class="str">'local'</span>);  <span class="cm">// origin = 'local' for undo manager</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+function mergeSim(type) {
+  const alice = document.getElementById('aliceText').value;
+  const bob = document.getElementById('bobText').value;
+  let result = '', color='', note='';
+  
+  if (type === 'lww') {
+    result = alice;
+    color = '#ef4444';
+    note = `❌ Last-Write-Wins: Alice's version kept. Bob's changes ("${bob}") were silently discarded. Bob's work is LOST. This is why LWW is dangerous for text.`;
+  } else if (type === 'manual') {
+    result = `CONFLICT:\n  ALICE: "${alice}"\n  BOB:   "${bob}"\n  [Show diff UI — user must choose]`;
+    color = '#f59e0b';
+    note = '⚠️ Show both versions in a diff view. User picks which to keep, or manually merges. Works but breaks flow.';
+  } else {
+    // Simulate CRDT merge: find common prefix, merge unique suffixes
+    let common = '';
+    for (let i=0; i<Math.min(alice.length, bob.length); i++) {
+      if (alice[i]===bob[i]) common+=alice[i]; else break;
+    }
+    const aliceUniq = alice.slice(common.length);
+    const bobUniq = bob.slice(common.length);
+    result = common + aliceUniq + bobUniq;
+    color = '#10b981';
+    note = `✅ CRDT auto-merge: "${common}" (common) + "${aliceUniq}" (Alice's insert) + "${bobUniq}" (Bob's insert) = "${result}". Both users' changes preserved automatically, no user intervention.`;
+  }
+  
+  document.getElementById('mergeResult').innerHTML = `
+    <div style="background:#0f1117;border:1px solid ${color};border-radius:8px;padding:12px">
+      <div style="color:${color};font-weight:700;margin-bottom:6px">Merged result: "${result}"</div>
+      <div style="color:#94a3b8">${note}</div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

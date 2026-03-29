@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>179 – JWT Deep Dive</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#f472b6}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+input,textarea{background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;border-radius:6px;padding:8px;font-family:monospace;font-size:.78rem;width:100%}
+.jwt-part{cursor:pointer;padding:2px 4px;border-radius:3px;font-family:monospace;font-size:.78rem;word-break:break-all}
+.jwt-header{color:#f59e0b;background:#451a0a44}
+.jwt-payload{color:#10b981;background:#14532d44}
+.jwt-sig{color:#a78bfa;background:#1e1b4b44}
+</style>
+</head>
+<body>
+<h1>🔐 JWT Deep Dive</h1>
+<p class="sub">Topic 179 · Part 12 / Module 12.2 — Auth & Tokens · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">JWT Decoder</div>
+  <div class="tab" onclick="setTab(2)">Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>JWT anatomy</h3>
+    <p style="color:#94a3b8;font-size:.83rem;margin-bottom:12px">A JWT is 3 base64url-encoded parts separated by dots. It is <strong style="color:#e2e8f0">signed</strong> (tamper-proof) but <strong style="color:#ef4444">NOT encrypted</strong> — anyone can read the payload.</p>
+    <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;margin-bottom:12px;word-break:break-all;font-size:.78rem;line-height:2">
+      <span class="jwt-part jwt-header">eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9</span>
+      <span style="color:#475569">.</span>
+      <span class="jwt-part jwt-payload">eyJzdWIiOiJ1c2VyXzEyMyIsImVtYWlsIjoiaHJ1ZGF5QGV4YW1wbGUuY29tIiwicm9sZXMiOlsiYWRtaW4iXSwiZXhwIjoxNjk5OTk5OTk5fQ</span>
+      <span style="color:#475569">.</span>
+      <span class="jwt-part jwt-sig">SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#451a0a44;border:1px solid #f59e0b44;border-radius:8px;padding:10px">
+        <div style="color:#f59e0b;font-weight:700;margin-bottom:4px">Header</div>
+        <div style="color:#94a3b8">Algorithm (RS256) + Token type (JWT)</div>
+      </div>
+      <div style="background:#14532d44;border:1px solid #10b98144;border-radius:8px;padding:10px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:4px">Payload</div>
+        <div style="color:#94a3b8">Claims: sub, email, roles, exp, iat — NOT encrypted!</div>
+      </div>
+      <div style="background:#1e1b4b44;border:1px solid #a78bfa44;border-radius:8px;padding:10px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:4px">Signature</div>
+        <div style="color:#94a3b8">RSASHA256(header+payload, privateKey) — tamper detection</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Access token vs Refresh token</h3>
+    <table>
+      <tr><th>Property</th><th>Access Token</th><th>Refresh Token</th></tr>
+      <tr><td>Lifetime</td><td>5–15 minutes</td><td>7–30 days</td></tr>
+      <tr><td>Storage</td><td>JS memory (NOT localStorage)</td><td>HttpOnly cookie</td></tr>
+      <tr><td>Sent on</td><td>Every API request (Authorization header)</td><td>Only to /auth/refresh endpoint</td></tr>
+      <tr><td>Revocable</td><td>Via expiry only</td><td>Yes — server-side blacklist</td></tr>
+      <tr><td>XSS risk</td><td>Low (in-memory)</td><td>None (HttpOnly)</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Live JWT decoder — paste any JWT to decode</h3>
+    <div style="margin-bottom:10px">
+      <textarea id="jwtInput" rows="3" placeholder="Paste a JWT here..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button onclick="decodeJWT()">Decode JWT</button>
+      <button onclick="loadSample()">Load sample JWT</button>
+      <button onclick="clearDecoder()">Clear</button>
+    </div>
+    <div id="decoderOutput"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>HS256 vs RS256 for microservices</h3>
+    <table>
+      <tr><th>Property</th><th>HS256 (HMAC)</th><th>RS256 (RSA)</th></tr>
+      <tr><td>Key type</td><td>Shared secret</td><td>Public/private key pair</td></tr>
+      <tr><td>Sign</td><td>Shared key</td><td>Private key (auth server only)</td></tr>
+      <tr><td>Verify</td><td>Shared key</td><td>Public key (any service)</td></tr>
+      <tr><td>Token forgery risk</td><td>Any service with key can forge</td><td>Only auth server can forge</td></tr>
+      <tr><td>Best for</td><td>Single service / monolith</td><td>Microservices</td></tr>
+      <tr><td>Key rotation</td><td>All services need new key</td><td>Publish new public key via JWKS endpoint</td></tr>
+    </table>
+    <div style="background:#0f1117;border:1px solid #60a5fa44;border-radius:8px;padding:12px;margin-top:12px;font-size:.78rem">
+      <div style="color:#60a5fa;font-weight:700;margin-bottom:4px">JWKS endpoint pattern</div>
+      <div style="color:#94a3b8">Auth server exposes: <code style="color:#10b981">GET /.well-known/jwks.json</code><br>API services fetch public keys at startup and cache them. When auth server rotates keys (new private key), services re-fetch from JWKS — zero downtime rotation.</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Silent refresh with concurrent request queue</h3>
+    <pre><span class="cm">// accessToken lives ONLY in memory — cleared on page close</span>
+<span class="kw">let</span> accessToken: <span class="dec">string</span> | <span class="kw">null</span> = <span class="kw">null</span>;
+<span class="kw">let</span> refreshing = <span class="kw">false</span>;
+<span class="kw">let</span> queue: <span class="dec">Array</span>&lt;{resolve:<span class="dec">Function</span>; reject:<span class="dec">Function</span>}&gt; = [];
+
+axiosInstance.interceptors.response.<span class="fn">use</span>(
+  r => r,
+  <span class="kw">async</span> (err: <span class="dec">AxiosError</span>) => {
+    <span class="kw">const</span> req = err.config <span class="kw">as</span> <span class="dec">AxiosRequestConfig</span> & {_retry?: <span class="dec">boolean</span>};
+    <span class="kw">if</span> (err.response?.status !== <span class="num">401</span> || req._retry) <span class="kw">return</span> Promise.<span class="fn">reject</span>(err);
+
+    <span class="kw">if</span> (refreshing) {
+      <span class="cm">// Queue concurrent requests while refresh in-flight</span>
+      <span class="kw">return new</span> <span class="fn">Promise</span>((resolve, reject) => queue.<span class="fn">push</span>({resolve, reject}))
+        .<span class="fn">then</span>(token => {
+          req.headers![<span class="str">'Authorization'</span>] = <span class="str">`Bearer ${token}`</span>;
+          <span class="kw">return</span> <span class="fn">axiosInstance</span>(req);
+        });
+    }
+
+    req._retry = <span class="kw">true</span>; refreshing = <span class="kw">true</span>;
+    <span class="kw">try</span> {
+      <span class="kw">const</span> { data } = <span class="kw">await</span> axiosInstance.<span class="fn">post</span>(<span class="str">'/auth/refresh'</span>);
+      accessToken = data.accessToken;
+      axiosInstance.defaults.headers.common[<span class="str">'Authorization'</span>] = <span class="str">`Bearer ${accessToken}`</span>;
+      queue.<span class="fn">forEach</span>(p => p.<span class="fn">resolve</span>(accessToken));
+      <span class="kw">return</span> <span class="fn">axiosInstance</span>(req);
+    } <span class="kw">catch</span> {
+      queue.<span class="fn">forEach</span>(p => p.<span class="fn">reject</span>(<span class="str">'Session expired'</span>));
+      <span class="fn">logout</span>();
+      <span class="kw">return</span> Promise.<span class="fn">reject</span>(<span class="str">'Session expired'</span>);
+    } <span class="kw">finally</span> {
+      refreshing = <span class="kw">false</span>; queue = [];
+    }
+  }
+);</pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+const SAMPLE_JWT = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzEyMyIsImVtYWlsIjoiaHJ1ZGF5QGV4YW1wbGUuY29tIiwicm9sZXMiOlsiYWRtaW4iLCJlZGl0b3IiXSwiaWF0IjoxNzAzMDAwMDAwLCJleHAiOjE3MDMwMDA5MDB9.signature_here';
+
+function loadSample() {
+  document.getElementById('jwtInput').value = SAMPLE_JWT;
+  decodeJWT();
+}
+
+function clearDecoder() {
+  document.getElementById('jwtInput').value = '';
+  document.getElementById('decoderOutput').innerHTML = '';
+}
+
+function decodeJWT() {
+  const raw = document.getElementById('jwtInput').value.trim();
+  const out = document.getElementById('decoderOutput');
+  if (!raw) { out.innerHTML = '<div style="color:#ef4444;font-size:.78rem">Enter a JWT token above.</div>'; return; }
+  
+  const parts = raw.split('.');
+  if (parts.length !== 3) {
+    out.innerHTML = '<div style="color:#ef4444;font-size:.78rem">Invalid JWT — must have 3 parts separated by dots.</div>';
+    return;
+  }
+
+  function base64urlDecode(str) {
+    try {
+      const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = base64.length % 4 === 0 ? '' : '='.repeat(4 - base64.length % 4);
+      return JSON.parse(atob(base64 + pad));
+    } catch { return null; }
+  }
+
+  const header = base64urlDecode(parts[0]);
+  const payload = base64urlDecode(parts[1]);
+
+  let payloadHtml = '';
+  if (payload) {
+    const now = Math.floor(Date.now() / 1000);
+    const expired = payload.exp && payload.exp < now;
+    const expDisplay = payload.exp ? new Date(payload.exp * 1000).toLocaleString() : 'n/a';
+    const iatDisplay = payload.iat ? new Date(payload.iat * 1000).toLocaleString() : 'n/a';
+    
+    payloadHtml = `
+      <div style="background:#14532d22;border:1px solid #10b98144;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:8px">Payload (decoded claims)</div>
+        <div style="font-family:monospace;font-size:.76rem;color:#e2e8f0">${JSON.stringify(payload, null, 2)}</div>
+        ${payload.exp ? `<div style="margin-top:8px;font-size:.76rem;color:${expired ? '#ef4444' : '#10b981'}">${expired ? '⚠️ Token EXPIRED at' : '✅ Expires at'}: ${expDisplay}</div>` : ''}
+        ${payload.iat ? `<div style="font-size:.76rem;color:#94a3b8">Issued at: ${iatDisplay}</div>` : ''}
+        <div style="margin-top:6px;font-size:.72rem;color:#f59e0b">⚠️ Payload is base64 encoded only — NOT encrypted. Anyone can read this!</div>
+      </div>
+    `;
+  }
+
+  out.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${header ? `<div style="background:#451a0a44;border:1px solid #f59e0b44;border-radius:8px;padding:12px">
+        <div style="color:#f59e0b;font-weight:700;margin-bottom:8px">Header (algorithm & type)</div>
+        <div style="font-family:monospace;font-size:.76rem;color:#e2e8f0">${JSON.stringify(header, null, 2)}</div>
+        ${header.alg === 'none' ? '<div style="color:#ef4444;font-size:.72rem;margin-top:6px">⚠️ DANGER: alg=none! This token has no signature verification!</div>' : ''}
+      </div>` : ''}
+      ${payloadHtml}
+      <div style="background:#1e1b4b44;border:1px solid #a78bfa44;border-radius:8px;padding:12px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:4px">Signature</div>
+        <div style="font-family:monospace;font-size:.72rem;color:#94a3b8;word-break:break-all">${parts[2] || '(empty)'}</div>
+        <div style="font-size:.72rem;color:#94a3b8;margin-top:6px">Verifiable only with the server's public key — cannot be validated client-side securely.</div>
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
