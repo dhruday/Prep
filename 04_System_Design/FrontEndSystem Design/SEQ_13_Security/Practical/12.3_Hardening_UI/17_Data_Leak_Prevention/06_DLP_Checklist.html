@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 06 — DLP Checklist</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ec4899;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1a2a;border-color:#ec4899;color:#ec4899}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ec4899;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ec4899;color:#ec4899}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🩷 Lab 06 — Data Leak Prevention Checklist</h1>
+<p class="sub">Module 12.3 · Complete DLP audit for frontend applications</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Full Checklist</div>
+  <div class="tab" onclick="setTab(1)">Leak Vectors</div>
+  <div class="tab" onclick="setTab(2)">Monitoring</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Frontend Data Leak Prevention Checklist</h3>
+    <pre><span class="cm">// ═══ URL & REFERRER ═══</span>
+<span class="cm">☐ No sensitive data in URLs (tokens, PII, API keys)</span>
+<span class="cm">☐ Referrer-Policy: strict-origin-when-cross-origin</span>
+<span class="cm">☐ no-referrer on password reset and sensitive pages</span>
+<span class="cm">☐ history.replaceState to clean URLs after token consumption</span>
+<span class="cm">☐ rel="noreferrer noopener" on external links</span>
+
+<span class="cm">// ═══ STORAGE ═══</span>
+<span class="cm">☐ No tokens in localStorage (use memory or HttpOnly cookies)</span>
+<span class="cm">☐ Logout clears: localStorage, sessionStorage, IndexedDB</span>
+<span class="cm">☐ Logout clears: Service Worker caches, cookies</span>
+<span class="cm">☐ No PII in console.log in production</span>
+<span class="cm">☐ Blob URLs revoked after use</span>
+
+<span class="cm">// ═══ NETWORK ═══</span>
+<span class="cm">☐ HTTPS everywhere (no mixed content)</span>
+<span class="cm">☐ Cache-Control: no-store on authenticated responses</span>
+<span class="cm">☐ No sensitive data in GET request parameters</span>
+<span class="cm">☐ postMessage: validate origin, specific target</span>
+<span class="cm">☐ fetch: credentials:'same-origin' by default</span>
+
+<span class="cm">// ═══ UI ═══</span>
+<span class="cm">☐ Input type="password" for sensitive fields</span>
+<span class="cm">☐ autocomplete="off" where appropriate</span>
+<span class="cm">☐ Data masking for SSN, credit cards in UI</span>
+<span class="cm">☐ Copy protection on sensitive data (user.select disabled)</span>
+
+<span class="cm">// ═══ ERRORS ═══</span>
+<span class="cm">☐ No stack traces in production error responses</span>
+<span class="cm">☐ No DB queries or internal IPs in error messages</span>
+<span class="cm">☐ Generic error messages for auth failures</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Complete Leak Vector Map</h3>
+    <pre><span class="cm">// Every way data can leak from a browser:</span>
+
+<span class="cm">NETWORK</span>
+├── Referer header
+├── Fetch/XHR requests
+├── WebSocket connections
+├── DNS requests (prefetch)
+├── CSS background-image URLs
+├── Image/script/link tags
+├── Form submissions
+├── WebRTC (IP leak)
+└── Beacon API
+
+<span class="cm">STORAGE</span>
+├── localStorage
+├── sessionStorage
+├── IndexedDB
+├── Cookie jar
+├── Cache API (Service Worker)
+├── HTTP cache (disk/memory)
+└── Blob URL registry
+
+<span class="cm">BROWSER FEATURES</span>
+├── Browser history
+├── Autofill/autocomplete
+├── Password manager
+├── Clipboard
+├── Screenshots
+├── DevTools console
+├── Extensions
+├── Crash reports
+├── Bookmarks
+└── Tab sharing / cast
+
+<span class="cm">SIDE CHANNELS</span>
+├── Timing differences
+├── Cache timing
+├── CSS selectors
+└── Error messages</pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Monitoring for Data Leaks</h3>
+    <pre><span class="cm">// Proactive leak monitoring:</span>
+
+<span class="cm">// 1. CSP violation reports</span>
+<span class="cm">//    Detect unauthorized data exfiltration attempts</span>
+Content-Security-Policy: connect-src <span class="str">'self'</span>; report-uri /csp-report
+
+<span class="cm">// 2. Audit logging</span>
+<span class="cm">//    Log all data access on the server</span>
+<span class="cm">//    Detect: unusual volumes, off-hours access, bulk exports</span>
+
+<span class="cm">// 3. Network monitoring</span>
+<span class="cm">//    Performance Observer API to monitor requests:</span>
+<span class="kw">const</span> observer = <span class="kw">new</span> PerformanceObserver((list) =&gt; {
+  list.getEntries().forEach(entry =&gt; {
+    <span class="kw">if</span> (!isTrustedDomain(entry.name)) {
+      reportSuspiciousRequest(entry);
+    }
+  });
+});
+observer.observe({ type: <span class="str">'resource'</span>, buffered: <span class="kw">true</span> });
+
+<span class="cm">// 4. Mutation Observer for DOM injection</span>
+<span class="cm">//    Detect script/iframe injection (XSS monitoring)</span>
+
+<span class="cm">// 5. Regular security audits</span>
+<span class="cm">//    Automated scanning with tools like:</span>
+<span class="cm">//    - securityheaders.com</span>
+<span class="cm">//    - observatory.mozilla.org</span>
+<span class="cm">//    - Lighthouse security audit</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Data Leak Prevention</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Design a comprehensive data leak prevention strategy for a healthcare app.</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Healthcare (HIPAA compliance) requires strictest DLP: (1) Data classification: Tag all data as PHI, PII, or public. Different handling per classification. (2) Transport: HTTPS only. HSTS preloaded. Certificate pinning for mobile. No data in URLs. (3) Storage: No PHI in localStorage/sessionStorage. In-memory only for display. IndexedDB encrypted (via Web Crypto) if offline mode needed. (4) Display: Data masking on patient lists (only initials). Full detail behind explicit click (audit logged). Auto-lock screen after 2 min inactivity. (5) Printing/Export: Watermark with logged-in user's ID. Export generates audit trail. Screenshot detection (Page Visibility API overlay). (6) Logout: Aggressive cleanup — all storage, all caches, replace history entries with blank. (7) Access control: Role-based — nurse vs doctor vs admin see different fields. Column-level encryption in database. (8) Monitoring: All data access logged. Anomaly detection: doctor accessing 100 patient records in an hour. Real-time alerts.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+</script>
+</body></html>

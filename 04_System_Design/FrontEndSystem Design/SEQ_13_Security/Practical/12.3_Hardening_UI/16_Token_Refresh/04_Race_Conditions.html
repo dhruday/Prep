@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 04 — Race Conditions in Refresh</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟠 Lab 04 — Race Conditions in Token Refresh</h1>
+<p class="sub">Module 12.3 · Concurrent refresh, request queuing, mutex patterns</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">The Problem</div>
+  <div class="tab" onclick="setTab(1)">Queue Pattern</div>
+  <div class="tab" onclick="setTab(2)">Live Race Demo</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Concurrent Refresh Race Conditions</h3>
+    <pre><span class="cm">// Scenario: Token expires, 5 requests fail with 401</span>
+
+<span class="cm">// ❌ Naive approach: Each 401 triggers its own refresh</span>
+<span class="cm">// Request A: 401 → refresh() → new_token_1</span>
+<span class="cm">// Request B: 401 → refresh() → new_token_2 (token_1 invalidated!)</span>
+<span class="cm">// Request C: 401 → refresh() → new_token_3</span>
+<span class="cm">// Request D: 401 → refresh() → fails! (previous token already used)</span>
+<span class="cm">// Request E: 401 → refresh() → fails!</span>
+
+<span class="cm">// Problems:</span>
+<span class="cm">// 1. Multiple refresh calls waste tokens (rotation = single use)</span>
+<span class="cm">// 2. Later refreshes may fail (previous token invalidated)</span>
+<span class="cm">// 3. Reuse detection triggers → ALL tokens revoked</span>
+<span class="cm">// 4. User gets logged out unexpectedly</span>
+
+<span class="cm">// ✅ Correct approach: Single refresh, queue all waiting requests</span>
+<span class="cm">// Request A: 401 → starts refresh, others queue</span>
+<span class="cm">// Request B: 401 → sees refresh in progress, queues</span>
+<span class="cm">// Request C: 401 → queues</span>
+<span class="cm">// Refresh completes → all queued requests retry with same new token</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Request Queue Implementation</h3>
+    <pre><span class="cm">// Axios interceptor with refresh queue</span>
+<span class="kw">let</span> isRefreshing = <span class="kw">false</span>;
+<span class="kw">let</span> failedQueue = [];
+
+<span class="kw">function</span> <span class="fn">processQueue</span>(error, token) {
+  failedQueue.forEach(({ resolve, reject }) =&gt; {
+    error ? reject(error) : resolve(token);
+  });
+  failedQueue = [];
+}
+
+axios.interceptors.response.use(
+  response =&gt; response,
+  <span class="kw">async</span> error =&gt; {
+    <span class="kw">const</span> originalRequest = error.config;
+    
+    <span class="kw">if</span> (error.response?.status === 401 &amp;&amp; !originalRequest._retry) {
+      <span class="kw">if</span> (isRefreshing) {
+        <span class="cm">// Queue this request — it'll retry when refresh completes</span>
+        <span class="kw">return new</span> Promise((resolve, reject) =&gt; {
+          failedQueue.push({ resolve, reject });
+        }).then(token =&gt; {
+          originalRequest.headers[<span class="str">'Authorization'</span>] = <span class="str">`Bearer \${token}`</span>;
+          <span class="kw">return</span> axios(originalRequest);
+        });
+      }
+
+      originalRequest._retry = <span class="kw">true</span>;
+      isRefreshing = <span class="kw">true</span>;
+
+      <span class="kw">try</span> {
+        <span class="kw">const</span> { accessToken } = <span class="kw">await</span> refreshTokens();
+        processQueue(<span class="kw">null</span>, accessToken);
+        originalRequest.headers[<span class="str">'Authorization'</span>] = <span class="str">`Bearer \${accessToken}`</span>;
+        <span class="kw">return</span> axios(originalRequest);
+      } <span class="kw">catch</span> (err) {
+        processQueue(err, <span class="kw">null</span>);
+        logout();
+        <span class="kw">return</span> Promise.reject(err);
+      } <span class="kw">finally</span> {
+        isRefreshing = <span class="kw">false</span>;
+      }
+    }
+    <span class="kw">return</span> Promise.reject(error);
+  }
+);</pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🧪 Concurrent Refresh Demo</h3>
+    <button onclick="demoRace()">🏁 Fire 5 Concurrent Requests</button>
+    <div class="output" id="race-result">Click to simulate concurrent 401 handling</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Race Conditions</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How do you handle multi-tab token refresh?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Problem: User has 3 tabs open. All need to refresh simultaneously. With rotation: first tab refreshes → invalidates token → other tabs' refreshes fail → users get logged out in 2 of 3 tabs. Solutions: (1) BroadcastChannel API: Tab that refreshes broadcasts new token to all tabs. Other tabs listen and update without calling refresh themselves. const bc = new BroadcastChannel('auth'); bc.onmessage = (e) => setToken(e.data.token). (2) localStorage event: Storage events fire cross-tab. localStorage.setItem('token', newToken) → other tabs get 'storage' event. (3) SharedWorker: Single SharedWorker manages all token refresh logic. All tabs connect to same worker. Worker deduplicates refreshes. (4) Leader election: Use Web Locks API or a library like tab-leader to elect one tab as the "auth leader." Only the leader refreshes; others follow. Google uses BroadcastChannel + leader election.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function demoRace(){
+  const el=document.getElementById('race-result');
+  el.textContent='Concurrent Request Race Condition Demo:\n'+('='.repeat(50))+'\n\n';
+  
+  let refreshPromise=null;
+  let refreshCount=0;
+  
+  async function smartFetch(name){
+    try{
+      const resp=await fetch('http://localhost:3001/api/sensitive/data',{headers:{Authorization:'Bearer expired_token'}});
+      if(resp.status===401){
+        el.textContent+=`${name}: Got 401 — `;
+        if(!refreshPromise){
+          refreshCount++;
+          el.textContent+=`starting refresh #${refreshCount}\n`;
+          refreshPromise=(async()=>{
+            const r=await fetch('http://localhost:3001/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'alice',password:'Password123!'})});
+            return(await r.json()).accessToken;
+          })();
+        }else{
+          el.textContent+=`queuing (waiting for existing refresh)\n`;
+        }
+        const token=await refreshPromise;
+        const retry=await fetch('http://localhost:3001/api/sensitive/data',{headers:{Authorization:`Bearer ${token}`}});
+        el.textContent+=`${name}: Retry → ${retry.status} ${retry.status===200?'✅':'❌'}\n`;
+      }
+    }catch(e){el.textContent+=`${name}: Error — ${e.message}\n`}
+  }
+  
+  await Promise.all([smartFetch('Req-A'),smartFetch('Req-B'),smartFetch('Req-C'),smartFetch('Req-D'),smartFetch('Req-E')]);
+  refreshPromise=null;
+  el.textContent+=`\nTotal refresh calls: ${refreshCount} (should be 1)\n`;
+  el.textContent+=refreshCount===1?'✅ Perfect! Only 1 refresh for 5 requests.':'⚠️ Multiple refreshes detected — needs deduplication.';
+}
+</script>
+</body></html>

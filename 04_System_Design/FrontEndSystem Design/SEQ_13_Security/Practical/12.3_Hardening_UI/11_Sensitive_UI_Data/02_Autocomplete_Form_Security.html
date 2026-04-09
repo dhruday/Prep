@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — Autocomplete & Form Security</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}input,select{padding:8px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-size:.82rem;margin:3px;width:250px}label{font-size:.82rem;color:#94a3b8;display:block;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟠 Lab 02 — Autocomplete & Form Security</h1>
+<p class="sub">Module 12.3 · Controlling browser autocomplete for sensitive fields</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Autocomplete Risks</div>
+  <div class="tab" onclick="setTab(1)">Form Lab</div>
+  <div class="tab" onclick="setTab(2)">Best Practices</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Autocomplete Attack Vectors</h3>
+    <pre><span class="cm">// 1. HIDDEN FIELD AUTOFILL</span>
+<span class="cm">// Attacker creates hidden fields with autocomplete names:</span>
+&lt;input type=<span class="str">"hidden"</span> autocomplete=<span class="str">"cc-number"</span>&gt;
+&lt;input type=<span class="str">"hidden"</span> autocomplete=<span class="str">"cc-exp"</span>&gt;
+<span class="cm">// Browser may fill these with saved credit card data!</span>
+<span class="cm">// Attacker submits form → steals card info</span>
+
+<span class="cm">// 2. SHARED COMPUTER LEAKAGE</span>
+<span class="cm">// User fills sensitive form on shared computer</span>
+<span class="cm">// Browser saves: name, email, address, CC number</span>
+<span class="cm">// Next user sees previous user's data in autocomplete</span>
+
+<span class="cm">// 3. BROWSER EXTENSION AUTOFILL</span>
+<span class="cm">// Password managers may aggressively fill forms</span>
+<span class="cm">// Could fill credentials into wrong forms</span>
+<span class="cm">// Or phishing pages that mimic real forms</span>
+
+<span class="cm">// autocomplete attribute values:</span>
+<span class="cm">// "off" — request browser NOT to autocomplete (not always honored)</span>
+<span class="cm">// "new-password" — password managers show generator, not autofill</span>
+<span class="cm">// "one-time-code" — for OTP fields</span>
+<span class="cm">// "cc-number" — credit card number</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Secure vs Insecure Forms</h3>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <div>
+        <h4 style="color:#ef4444;font-size:.82rem">❌ Insecure Form</h4>
+        <form>
+          <label>Credit Card</label>
+          <input type="text" name="cc-number" autocomplete="cc-number" placeholder="Card number">
+          <label>Expiry</label>
+          <input type="text" name="cc-exp" autocomplete="cc-exp" placeholder="MM/YY">
+          <label>CVV</label>
+          <input type="text" name="cc-csc" autocomplete="cc-csc" placeholder="CVV">
+          <label>Password</label>
+          <input type="password" name="password" autocomplete="current-password" placeholder="Password">
+        </form>
+      </div>
+      <div>
+        <h4 style="color:#10b981;font-size:.82rem">✅ Secure Form</h4>
+        <form>
+          <label>Credit Card</label>
+          <input type="text" autocomplete="off" placeholder="Card number" inputmode="numeric">
+          <label>Expiry</label>
+          <input type="text" autocomplete="off" placeholder="MM/YY">
+          <label>CVV</label>
+          <input type="password" autocomplete="off" placeholder="CVV" inputmode="numeric" maxlength="4">
+          <label>New Password</label>
+          <input type="password" autocomplete="new-password" placeholder="New password">
+        </form>
+      </div>
+    </div>
+    <button onclick="analyzeforms()" style="margin-top:12px">🔍 Analyze Forms</button>
+    <div class="output" id="form-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Form Security Checklist</h3>
+    <pre><span class="cm">// ✅ Sensitive financial fields: autocomplete="off"</span>
+<span class="cm">// ✅ New passwords: autocomplete="new-password"</span>
+<span class="cm">// ✅ OTP fields: autocomplete="one-time-code"</span>
+<span class="cm">// ✅ Use type="password" for CVV and sensitive numbers</span>
+<span class="cm">// ✅ Clear sensitive fields on page unload</span>
+window.addEventListener(<span class="str">'beforeunload'</span>, () =&gt; {
+  document.querySelectorAll(<span class="str">'input[type="password"]'</span>)
+    .forEach(i =&gt; i.value = <span class="str">''</span>);
+});
+
+<span class="cm">// ✅ Use inputmode for mobile keyboards</span>
+<span class="cm">// inputmode="numeric" for card numbers</span>
+<span class="cm">// inputmode="tel" for phone numbers</span>
+
+<span class="cm">// ✅ Prevent copy/paste on CVV</span>
+input.addEventListener(<span class="str">'copy'</span>, e =&gt; e.preventDefault());
+input.addEventListener(<span class="str">'cut'</span>, e =&gt; e.preventDefault());
+
+<span class="cm">// ⚠️ autocomplete="off" is a REQUEST, not a command</span>
+<span class="cm">// Chrome may still autofill if it recognizes the field</span>
+<span class="cm">// Workaround: use random name attributes</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Form Security</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Chrome ignores autocomplete="off" on some fields. How do you prevent autofill?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Chrome intentionally ignores autocomplete="off" for login forms (they believe password managers improve security). Workarounds: (1) Use autocomplete="new-password" for password fields you don't want filled. (2) For non-password fields: use a random/non-standard autocomplete value like autocomplete="nope" or autocomplete="do-not-autofill". (3) Use readonly + onfocus to delay: the field starts readonly, onfocus removes readonly. Chrome won't autofill readonly fields. (4) For credit card fields in PCI-compliant apps: use an iframe from the payment processor (Stripe Elements). The iframe is cross-origin, so the parent page's autofill doesn't reach it. This is also why payment iframes exist — browser autofill isolation.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function analyzeforms(){
+  const el=document.getElementById('form-result');
+  el.textContent='Form Autocomplete Analysis:\n'+'-'.repeat(40)+'\n\n';
+  document.querySelectorAll('form').forEach((form,i)=>{
+    el.textContent+=`Form ${i+1}:\n`;
+    form.querySelectorAll('input').forEach(input=>{
+      const ac=input.autocomplete||'(not set)';
+      const type=input.type;
+      const name=input.name||'(no name)';
+      let risk='🟢 Safe';
+      if(ac.includes('cc-')||ac.includes('credit'))risk='🔴 Card data autofilled';
+      else if(ac==='current-password')risk='🟡 Password managers will fill';
+      else if(ac==='off'||ac==='new-password')risk='🟢 Autocomplete controlled';
+      else if(ac==='(not set)')risk='🟡 Browser may guess and autofill';
+      el.textContent+=`  ${risk} <input type="${type}" name="${name}" autocomplete="${ac}">\n`;
+    });
+    el.textContent+='\n';
+  });
+}
+</script>
+</body></html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 05 — CSP for SPAs</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1a3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 05 — CSP for SPAs</h1>
+<p class="sub">Module 12.3 · React, Angular, Vue CSP challenges and solutions</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">SPA Challenges</div>
+  <div class="tab" onclick="setTab(1)">React CSP</div>
+  <div class="tab" onclick="setTab(2)">Angular & Vue CSP</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>CSP Challenges in SPAs</h3>
+    <pre><span class="cm">// SPAs have unique CSP challenges:</span>
+
+<span class="cm">// 1. CSS-in-JS (styled-components, emotion)</span>
+<span class="cm">//    Injects &lt;style&gt; tags at runtime → needs 'unsafe-inline' for styles</span>
+<span class="cm">//    Or: configure library to use nonces</span>
+
+<span class="cm">// 2. Dynamic script loading</span>
+<span class="cm">//    Webpack code splitting: creates &lt;script&gt; tags dynamically</span>
+<span class="cm">//    Solution: 'strict-dynamic' propagates trust</span>
+
+<span class="cm">// 3. eval() usage</span>
+<span class="cm">//    Some libraries use eval() or new Function()</span>
+<span class="cm">//    Source maps, template compilers, JSON parsing</span>
+<span class="cm">//    Solution: Use production builds (no eval), audit deps</span>
+
+<span class="cm">// 4. Inline event handlers</span>
+<span class="cm">//    &lt;div onclick="handler()"&gt; blocked by CSP</span>
+<span class="cm">//    React: Uses synthetic events (addEventListener) → OK</span>
+<span class="cm">//    Angular: Uses template binding → needs compilation mode</span>
+
+<span class="cm">// 5. Web Workers & Service Workers</span>
+<span class="cm">//    worker-src directive needed</span>
+<span class="cm">//    Blob URLs for inline workers need blob: in worker-src</span>
+
+<span class="cm">// 6. Hot Module Replacement (HMR)</span>
+<span class="cm">//    Dev server uses eval/inline scripts</span>
+<span class="cm">//    CSP must be relaxed in development</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>React CSP Configuration</h3>
+    <pre><span class="cm">// ═══ Next.js with CSP ═══</span>
+<span class="cm">// next.config.js</span>
+<span class="kw">const</span> cspHeader = `
+  default-src 'self';
+  script-src 'self' 'nonce-\${nonce}' 'strict-dynamic';
+  style-src 'self' 'nonce-\${nonce}';
+  img-src 'self' blob: data:;
+  font-src 'self';
+  connect-src 'self' https://api.example.com;
+  frame-ancestors 'none';
+  base-uri 'self';
+  form-action 'self';
+  object-src 'none';
+`;
+
+<span class="cm">// middleware.ts (Next.js)</span>
+<span class="kw">export function</span> <span class="fn">middleware</span>(request) {
+  <span class="kw">const</span> nonce = Buffer.from(crypto.randomUUID()).toString(<span class="str">'base64'</span>);
+  <span class="kw">const</span> csp = cspHeader.replace(/\$\{nonce\}/g, nonce);
+  
+  <span class="kw">const</span> headers = <span class="kw">new</span> Headers(request.headers);
+  headers.set(<span class="str">'Content-Security-Policy'</span>, csp);
+  headers.set(<span class="str">'x-nonce'</span>, nonce);
+  
+  <span class="kw">return</span> NextResponse.next({ request: { headers } });
+}
+
+<span class="cm">// In _document.tsx — pass nonce to scripts:</span>
+&lt;script nonce={nonce} src=<span class="str">"/_next/static/chunks/main.js"</span> /&gt;
+
+<span class="cm">// styled-components with nonce:</span>
+&lt;StyleSheetManager nonce={nonce}&gt;
+  &lt;App /&gt;
+&lt;/StyleSheetManager&gt;</pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Angular & Vue CSP</h3>
+    <pre><span class="cm">// ═══ Angular CSP ═══</span>
+<span class="cm">// Angular AOT compilation is CSP-compatible</span>
+<span class="cm">// JIT compilation uses eval() → NOT CSP-safe</span>
+
+<span class="cm">// Always use AOT in production:</span>
+ng build --configuration=production
+<span class="cm">// This compiles templates ahead of time</span>
+
+<span class="cm">// Angular CSP nonce support (v16+):</span>
+<span class="cm">// In index.html:</span>
+&lt;app-root ngCspNonce=<span class="str">"random-nonce-value"</span>&gt;&lt;/app-root&gt;
+
+<span class="cm">// Or via environment:</span>
+<span class="kw">import</span> { CSP_NONCE } <span class="kw">from</span> <span class="str">'@angular/core'</span>;
+providers: [{ provide: CSP_NONCE, useValue: <span class="str">'your-nonce'</span> }]
+
+<span class="cm">// ═══ Vue.js CSP ═══</span>
+<span class="cm">// Vue compiler uses new Function() in runtime build</span>
+<span class="cm">// Solution: Use pre-compiled templates (vue-loader)</span>
+
+<span class="cm">// vue.config.js</span>
+module.exports = {
+  runtimeCompiler: <span class="kw">false</span>  <span class="cm">// ensures no eval()</span>
+}
+
+<span class="cm">// Nuxt.js CSP:</span>
+<span class="cm">// nuxt.config.ts</span>
+<span class="kw">export default</span> defineNuxtConfig({
+  nitro: {
+    routeRules: {
+      <span class="str">'/**'</span>: {
+        headers: {
+          <span class="str">'Content-Security-Policy'</span>: <span class="str">"script-src 'self' 'nonce-{{nonce}}'"</span>
+        }
+      }
+    }
+  }
+})</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — SPA CSP</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How do you handle CSS-in-JS libraries with CSP?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">CSS-in-JS (styled-components, emotion, MUI) inject &lt;style&gt; tags at runtime, which CSP's style-src blocks without 'unsafe-inline'. Solutions ranked by security: (1) Nonce injection: Pass nonce to the CSS-in-JS provider. styled-components: &lt;StyleSheetManager nonce={nonce}&gt;. Emotion: &lt;CacheProvider value={createCache({key:'css',nonce})}&gt;. MUI: createCache({key:'css',nonce}). Best option — no unsafe-inline needed. (2) Static extraction: Use compile-time CSS extraction (Linaria, vanilla-extract, Tailwind). No runtime &lt;style&gt; injection — generates .css files at build time. Most CSP-friendly but less dynamic. (3) 'unsafe-inline' for styles only: style-src 'self' 'unsafe-inline'. While not ideal, style injection XSS is much harder to exploit than script injection. Acceptable tradeoff for some apps. (4) Hash-based: Pre-compute hashes of critical styles. Impractical for CSS-in-JS (styles are dynamic). At Google: Closure Stylesheets (static extraction) + nonces for SSR-injected styles.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+</script>
+</body></html>

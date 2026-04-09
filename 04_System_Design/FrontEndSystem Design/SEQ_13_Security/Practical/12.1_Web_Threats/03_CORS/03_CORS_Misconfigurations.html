@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 03 — CORS Misconfigurations</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2d1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 03 — CORS Misconfigurations</h1>
+<p class="sub">Module 12.1 · Web Threats · Origin reflection, null origin, regex bypass</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Vulnerabilities</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Secure Patterns</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Top CORS Misconfigurations</h3>
+    <table>
+      <tr><th>Misconfiguration</th><th>What Happens</th><th>Risk</th></tr>
+      <tr>
+        <td style="color:#ef4444">Origin reflection (echo back)</td>
+        <td>Server sets ACAO to whatever Origin is in the request</td>
+        <td>Any site can read responses with credentials</td>
+      </tr>
+      <tr>
+        <td style="color:#ef4444">null origin allowed</td>
+        <td>Server allows Origin: null</td>
+        <td>Sandboxed iframes and data: URIs send null origin</td>
+      </tr>
+      <tr>
+        <td style="color:#ef4444">Regex bypass</td>
+        <td>Regex /example\.com/ matches evil-example.com</td>
+        <td>Attacker registers domain matching the regex</td>
+      </tr>
+      <tr>
+        <td style="color:#ef4444">Wildcard + credentials</td>
+        <td>ACAO: * with credentials: true</td>
+        <td>Browser blocks this — but shows the dev's intent was wrong</td>
+      </tr>
+      <tr>
+        <td style="color:#f59e0b">Subdomain wildcard</td>
+        <td>*.example.com allowed</td>
+        <td>XSS on ANY subdomain → full access to main API</td>
+      </tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3>Origin Reflection Attack</h3>
+    <pre><span class="cm">// VULNERABLE server code:</span>
+app.use((req, res, next) => {
+  <span class="danger">res.setHeader('Access-Control-Allow-Origin', req.headers.origin);</span>
+  res.setHeader(<span class="str">'Access-Control-Allow-Credentials'</span>, <span class="str">'true'</span>);
+  next();
+});
+
+<span class="cm">// Attacker on evil.com:</span>
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'https://api.bank.com/account'</span>, {
+  credentials: <span class="str">'include'</span>  <span class="cm">// sends victim's cookies</span>
+});
+<span class="kw">const</span> data = <span class="kw">await</span> res.json(); <span class="cm">// ← CAN read response because ACAO matches!</span>
+<span class="cm">// Sends victim's account data to attacker's server</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Test CORS Misconfigurations on Server</h3>
+    <button onclick="testMisconfig('reflect')">⚠️ Origin Reflection</button>
+    <button onclick="testMisconfig('null')">⚠️ Null Origin</button>
+    <button onclick="testMisconfig('regex-bypass')">⚠️ Regex Bypass</button>
+    <button onclick="testMisconfig('secure')">✅ Proper Allowlist</button>
+    <div class="output" id="misconfig-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 Your Origin vs Server's ACAO</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Current page origin: <code id="my-origin"></code></p>
+    <button onclick="checkOrigin()">Check what ACAO the server returns for my origin</button>
+    <div class="output" id="origin-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3 class="safe">Secure CORS Configuration</h3>
+    <pre><span class="cm">// CORRECT: Explicit allowlist with exact match</span>
+<span class="kw">const</span> ALLOWED_ORIGINS = <span class="kw">new</span> Set([
+  <span class="str">'https://app.example.com'</span>,
+  <span class="str">'https://admin.example.com'</span>,
+  <span class="str">'https://staging.example.com'</span>
+]);
+
+app.use((req, res, next) => {
+  <span class="kw">const</span> origin = req.headers.origin;
+  <span class="kw">if</span> (ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader(<span class="str">'Access-Control-Allow-Origin'</span>, origin);
+    res.setHeader(<span class="str">'Access-Control-Allow-Credentials'</span>, <span class="str">'true'</span>);
+    res.setHeader(<span class="str">'Vary'</span>, <span class="str">'Origin'</span>); <span class="cm">// CRITICAL for CDN caching</span>
+  }
+  <span class="cm">// If origin not in allowlist → no ACAO header → browser blocks</span>
+  next();
+});
+
+<span class="cm">// IMPORTANT: Always set Vary: Origin when ACAO changes per request</span>
+<span class="cm">// Without it, CDNs may cache one origin's ACAO and serve it to others</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CORS Misconfig</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: During a security review, you find a service echoing the Origin header. How do you escalate?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Severity: Critical if credentials are used. Demonstrate the attack: create an HTML page on any domain that fetches the API with credentials:include and reads the response. Show that any attacker-controlled domain can steal user data. Fix: replace origin reflection with an explicit allowlist. Interim mitigation: remove Access-Control-Allow-Credentials. Permanent: add CORS validation at the API gateway layer.</p>
+      <p><strong style="color:#60a5fa">Q: Why must you set "Vary: Origin" with dynamic ACAO?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Without Vary: Origin, a CDN may cache the response with ACAO: https://app.com and serve that cached response to a request from https://other.com. Other.com would then be able to read the response (the cached ACAO doesn't match their origin, so the browser would actually block it — but worse: a request from app2.com might get a cached response with the wrong ACAO). The Vary header tells caches to store separate entries per Origin value.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+document.getElementById('my-origin').textContent=location.origin;
+
+async function testMisconfig(type){
+  const el=document.getElementById('misconfig-result');
+  const url=`${API}/api/cors/misconfig/${type}`;
+  el.textContent=`Testing: ${type}\n→ GET ${url}\n\n`;
+  try{
+    const res=await fetch(url,{credentials:'include'});
+    const acao=res.headers.get('access-control-allow-origin');
+    const acac=res.headers.get('access-control-allow-credentials');
+    const vary=res.headers.get('vary');
+    const d=await res.json();
+    el.textContent+=`Status: ${res.status}\nAccess-Control-Allow-Origin: ${acao||'(not set)'}\nAccess-Control-Allow-Credentials: ${acac||'(not set)'}\nVary: ${vary||'(not set)'}\n\nResponse: ${JSON.stringify(d,null,2)}\n\n`;
+    if(type==='reflect') el.textContent+=`⚠️ VULNERABLE: Server echoed your origin "${location.origin}" as ACAO.\nAny site can read responses!`;
+    else if(type==='null') el.textContent+=`⚠️ VULNERABLE: Server allows Origin: null.\nSandboxed iframes and data: URIs can exploit this.`;
+    else if(type==='regex-bypass') el.textContent+=`⚠️ VULNERABLE: Regex-based origin check.\nAttacker can register a domain matching the pattern.`;
+    else el.textContent+=`✅ SECURE: Server uses explicit allowlist.`;
+  }catch(e){el.textContent+=`Error: ${e.message}`}
+}
+
+async function checkOrigin(){
+  const el=document.getElementById('origin-result');
+  try{
+    const res=await fetch(`${API}/api/cors/public`);
+    const acao=res.headers.get('access-control-allow-origin');
+    el.textContent=`Your origin: ${location.origin}\nServer's ACAO: ${acao||'(not set)'}\n\n${acao===location.origin||acao==='*'?'✅ Your origin is allowed':'❌ Your origin is blocked'}`;
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+</script>
+</body></html>

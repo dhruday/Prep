@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 05 — Clipboard & Screenshot Protection</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟠 Lab 05 — Clipboard & Screenshot Protection</h1>
+<p class="sub">Module 12.3 · Controlling copy, paste, and screen capture of sensitive data</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Protection Techniques</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Limitations</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Clipboard & Visual Protection</h3>
+    <pre><span class="cm">// 1. PREVENT COPY of sensitive fields</span>
+element.addEventListener(<span class="str">'copy'</span>, e =&gt; {
+  e.preventDefault();
+  <span class="cm">// Optionally: set sanitized clipboard data</span>
+  e.clipboardData.setData(<span class="str">'text/plain'</span>, <span class="str">'[PROTECTED]'</span>);
+});
+
+<span class="cm">// 2. CSS-BASED PROTECTION</span>
+.sensitive {
+  -webkit-user-select: none;  <span class="cm">/* prevent text selection */</span>
+  user-select: none;
+}
+
+<span class="cm">// 3. VISIBILITY-BASED REVEAL</span>
+<span class="cm">// Show data only on hover/focus, blur otherwise</span>
+.sensitive-blur {
+  filter: blur(5px);
+  transition: filter 0.2s;
+}
+.sensitive-blur:hover { filter: none; }
+
+<span class="cm">// 4. CLIPBOARD SANITIZATION on paste</span>
+input.addEventListener(<span class="str">'paste'</span>, e =&gt; {
+  e.preventDefault();
+  <span class="kw">const</span> text = e.clipboardData.getData(<span class="str">'text/plain'</span>);
+  <span class="kw">const</span> sanitized = DOMPurify.sanitize(text, {ALLOWED_TAGS: []});
+  document.execCommand(<span class="str">'insertText'</span>, <span class="kw">false</span>, sanitized);
+});
+
+<span class="cm">// 5. PRINT PROTECTION</span>
+@media print { .sensitive { display: none !important; } }</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Copy Protection Demo</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:8px">Try to select and copy this sensitive data:</p>
+    <div id="protected-data" style="font-family:monospace;font-size:1rem;padding:12px;background:#0f1117;border-radius:8px;border:1px solid #f59e0b;user-select:none;-webkit-user-select:none">
+      SSN: 123-45-6789 | CC: 4111-1111-1111-1111
+    </div>
+    <br>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:8px">Blur-on-idle protection (hover to reveal):</p>
+    <div id="blur-data" style="font-family:monospace;font-size:1rem;padding:12px;background:#0f1117;border-radius:8px;border:1px solid #2d3551;filter:blur(5px);transition:filter 0.3s;cursor:pointer" onmouseenter="this.style.filter='none'" onmouseleave="this.style.filter='blur(5px)'">
+      Bank Account: 9876543210 | Routing: 021000021
+    </div>
+    <br>
+    <button onclick="testCopy()">📋 Test Copy Protection</button>
+    <button onclick="testPrint()">🖨️ Show Print CSS</button>
+    <div class="output" id="clip-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Honest Limitations</h3>
+    <pre><span class="cm">// ⚠️ Client-side protection is COSMETIC, not security</span>
+
+<span class="cm">// Can be bypassed:</span>
+<span class="cm">// 1. DevTools → Elements → read innerHTML directly</span>
+<span class="cm">// 2. DevTools → Console → getComputedStyle() or textContent</span>
+<span class="cm">// 3. Browser extensions can override event listeners</span>
+<span class="cm">// 4. Screenshots can't be prevented by web APIs</span>
+<span class="cm">// 5. Print-to-PDF bypasses @media print on some browsers</span>
+<span class="cm">// 6. Accessibility tools (screen readers) read the text</span>
+<span class="cm">// 7. User can just disable JavaScript</span>
+
+<span class="cm">// What client-side protection DOES accomplish:</span>
+<span class="cm">// ✅ Prevents casual copying (non-technical users)</span>
+<span class="cm">// ✅ Reduces accidental exposure (shoulder surfing)</span>
+<span class="cm">// ✅ Shows compliance effort (auditors like it)</span>
+<span class="cm">// ✅ Log/audit copy attempts (for monitoring)</span>
+
+<span class="cm">// Real security = server-side:</span>
+<span class="cm">// Don't send the full data to the browser in the first place</span>
+<span class="cm">// Use DRM for truly sensitive documents (but DRM has its own issues)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Clipboard Security</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: The compliance team wants to prevent users from copying sensitive data from your web app. What's your approach?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Be honest about limitations while implementing defense-in-depth: (1) Server-side: Don't send full sensitive data. Return masked values by default. Reveal via authenticated endpoint with audit logging. (2) Client UX: Use blur filters for at-rest display (reduce shoulder surfing). Disable user-select on sensitive elements. Intercept copy events to sanitize clipboard content. (3) Monitoring: Log all copy/paste events on sensitive fields. Alert on bulk data extraction patterns. (4) Print: Use @media print to hide sensitive sections. Add watermark with username when printing. (5) Be transparent with compliance: "We can make casual copying difficult and detect/audit extraction attempts, but a determined user with DevTools access can always read what's on their screen. The real control is not sending the data in the first place." This is the mature engineering answer.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+document.getElementById('protected-data').addEventListener('copy',e=>{e.preventDefault();e.clipboardData.setData('text/plain','[COPY PROTECTED — This data cannot be copied]');document.getElementById('clip-result').textContent='⚠️ Copy intercepted! Clipboard contains: [COPY PROTECTED]'});
+
+function testCopy(){
+  const el=document.getElementById('clip-result');
+  el.textContent='Copy Protection Tests:\n'+'-'.repeat(40)+'\n\n';
+  el.textContent+='1. Try selecting the SSN/CC above — user-select: none prevents it\n';
+  el.textContent+='2. If you force-copy via DevTools, the copy event is intercepted\n';
+  el.textContent+='3. Clipboard gets "[COPY PROTECTED]" instead of actual data\n\n';
+  el.textContent+='Bypass check — open Console and run:\n';
+  el.textContent+='  document.getElementById("protected-data").textContent\n';
+  el.textContent+='  → You\'ll see the actual data!\n\n';
+  el.textContent+='This proves: client-side protection is cosmetic.\n';
+  el.textContent+='Real protection: don\'t send full data to the browser.';
+}
+
+function testPrint(){
+  const el=document.getElementById('clip-result');
+  el.textContent='Print Protection CSS:\n'+'-'.repeat(40)+'\n\n';
+  el.textContent+='@media print {\n  .sensitive { display: none !important; }\n  .sensitive::after {\n    content: "[REDACTED FOR PRINT]";\n    display: block;\n  }\n  body::after {\n    content: "Printed by: user@company.com";\n    position: fixed;\n    bottom: 10px;\n    opacity: 0.3;\n  }\n}\n\n';
+  el.textContent+='Try Ctrl+P (Cmd+P) to see print preview.\nSensitive data should be hidden or watermarked.';
+}
+</script>
+</body></html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 03 — DOM-Based XSS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.render-box{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;min-height:60px;margin-top:8px;font-size:.82rem}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}tr:nth-child(even){background:#0f1117}
+</style>
+</head>
+<body>
+<h1>🔴 Lab 03 — DOM-Based XSS</h1>
+<p class="sub">Module 12.1 · Web Threats · Pure client-side — no server involved</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>What is DOM-Based XSS?</h3>
+    <p style="font-size:.83rem;color:#94a3b8">DOM-based XSS occurs entirely in the <strong>client-side JavaScript</strong>. The payload never reaches the server — instead, JavaScript reads user input from <strong>sources</strong> (URL hash, query params, document.referrer) and writes it to <strong>sinks</strong> (innerHTML, document.write, eval) without sanitization.</p>
+  </div>
+  <div class="card">
+    <h3>Sources → Sinks Model</h3>
+    <table>
+      <tr><th>Dangerous Sources (user-controlled)</th><th>Dangerous Sinks (execute HTML/JS)</th></tr>
+      <tr><td style="color:#f59e0b">location.hash</td><td style="color:#ef4444">element.innerHTML</td></tr>
+      <tr><td style="color:#f59e0b">location.search</td><td style="color:#ef4444">document.write()</td></tr>
+      <tr><td style="color:#f59e0b">location.href</td><td style="color:#ef4444">eval()</td></tr>
+      <tr><td style="color:#f59e0b">document.referrer</td><td style="color:#ef4444">setTimeout(string)</td></tr>
+      <tr><td style="color:#f59e0b">document.cookie</td><td style="color:#ef4444">element.outerHTML</td></tr>
+      <tr><td style="color:#f59e0b">window.name</td><td style="color:#ef4444">element.insertAdjacentHTML()</td></tr>
+      <tr><th>Safe Sinks (escape automatically)</th><th></th></tr>
+      <tr><td style="color:#10b981">element.textContent</td><td style="color:#10b981">element.setAttribute() (for data-*)</td></tr>
+      <tr><td style="color:#10b981">element.innerText</td><td style="color:#10b981">element.classList.add()</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 DOM-Based XSS — Interactive Demo</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:8px">Type a payload and see how different DOM APIs handle it:</p>
+    <input id="payload" value='<img src=x onerror="alert(document.domain)">'>
+    <div style="margin:6px 0">
+      <button onclick="setP('<script>alert(1)</script>')">&lt;script&gt;</button>
+      <button onclick="setP('<img src=x onerror=alert(1)>')">&lt;img onerror&gt;</button>
+      <button onclick="setP('<svg onload=alert(1)>')">&lt;svg onload&gt;</button>
+      <button onclick="setP('<a href=javascript:alert(1)>Click me</a>')">javascript: href</button>
+    </div>
+    <button style="background:#3a1e1e;border-color:#ef4444;color:#ef4444" onclick="renderAll()">⚡ Render with ALL methods</button>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3>⚠️ innerHTML (DANGEROUS SINK)</h3>
+      <p style="font-size:.78rem;color:#94a3b8">`element.innerHTML = userInput`</p>
+      <div id="sink-innerHTML" class="render-box" style="border-color:#ef4444"></div>
+    </div>
+    <div class="card">
+      <h3 class="safe">✅ textContent (SAFE SINK)</h3>
+      <p style="font-size:.78rem;color:#94a3b8">`element.textContent = userInput`</p>
+      <div id="sink-textContent" class="render-box" style="border-color:#10b981"></div>
+    </div>
+    <div class="card">
+      <h3>⚠️ document.write (DANGEROUS)</h3>
+      <p style="font-size:.78rem;color:#94a3b8">`document.write(userInput)` — shown as text for safety</p>
+      <div id="sink-docwrite" class="render-box" style="border-color:#ef4444"></div>
+    </div>
+    <div class="card">
+      <h3 class="safe">✅ DOMPurify + innerHTML</h3>
+      <p style="font-size:.78rem;color:#94a3b8">`element.innerHTML = DOMPurify.sanitize(userInput)`</p>
+      <div id="sink-purified" class="render-box" style="border-color:#10b981"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>URL Hash Source Demo</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Current URL hash: <code id="current-hash" style="color:#f59e0b"></code></p>
+    <input id="hash-input" placeholder="Type something and press Enter to update hash">
+    <div class="grid2" style="margin-top:8px">
+      <div><strong style="color:#ef4444;font-size:.82rem">Vulnerable read:</strong><div id="hash-vuln" class="render-box" style="border-color:#ef4444"></div></div>
+      <div><strong style="color:#10b981;font-size:.82rem">Safe read:</strong><div id="hash-safe" class="render-box" style="border-color:#10b981"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🔬 V8 & DOM Parser Behavior</h3>
+    <div style="font-size:.82rem;color:#94a3b8">
+      <p><strong style="color:#60a5fa">innerHTML assignment:</strong> When you set innerHTML, the browser invokes the HTML fragment parsing algorithm. This creates a new DocumentFragment, parses the HTML, and replaces the element's children. &lt;script&gt; tags in fragments are NOT executed (per HTML5 spec), but &lt;img onerror&gt;, &lt;svg onload&gt;, and other event handlers ARE.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">textContent assignment:</strong> This creates a single Text node. No parsing occurs — the browser treats the string as literal text. Even valid HTML becomes visible text on screen.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">document.write():</strong> Invokes the HTML parser directly. Unlike innerHTML, &lt;script&gt; tags inserted via document.write() ARE executed because they go through the main parser, not the fragment parser.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">Why &lt;script&gt; via innerHTML doesn't execute:</strong> The HTML5 spec (§8.4) explicitly states that script elements inserted via innerHTML must not be executed. This is a security mitigation — but it's NOT sufficient because event handlers still work.</p>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — DOM XSS Questions</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How would you detect DOM-based XSS in a large codebase?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Static analysis: ESLint rules (no-innerHTML, no-document-write). Grep for dangerous sinks: innerHTML, outerHTML, document.write, eval, document.querySelector().src. Dynamic: use Chrome's Trusted Types (enforcement mode) to catch all sink violations at runtime. At Google, Trusted Types are deployed as a CSP directive: require-trusted-types-for 'script'.</p>
+      <p><strong style="color:#60a5fa">Q: What are Trusted Types and how do they prevent DOM XSS?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Trusted Types is a browser API that prevents strings from being assigned to DOM sinks. You must create a policy that wraps strings into typed objects (TrustedHTML, TrustedScript, TrustedScriptURL). If any code tries to assign a raw string to innerHTML, the browser throws an error. Google originated this spec and uses it across Google Search, YouTube, etc.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+function setP(v){document.getElementById('payload').value=v}
+
+function renderAll(){
+  const input=document.getElementById('payload').value;
+  // Dangerous: innerHTML
+  document.getElementById('sink-innerHTML').innerHTML=input;
+  // Safe: textContent
+  document.getElementById('sink-textContent').textContent=input;
+  // document.write (show as text for safety)
+  document.getElementById('sink-docwrite').textContent=`document.write() would output: ${input}`;
+  // DOMPurify + innerHTML
+  document.getElementById('sink-purified').innerHTML=typeof DOMPurify!=='undefined'?DOMPurify.sanitize(input):input;
+}
+
+// Hash source demo
+function updateHash(){
+  const h=document.getElementById('hash-input').value;
+  location.hash=encodeURIComponent(h);
+  readHash();
+}
+function readHash(){
+  const raw=decodeURIComponent(location.hash.slice(1));
+  document.getElementById('current-hash').textContent=raw||'(empty)';
+  document.getElementById('hash-vuln').innerHTML=raw; // VULNERABLE
+  document.getElementById('hash-safe').textContent=raw; // SAFE
+}
+document.getElementById('hash-input').addEventListener('keydown',e=>{if(e.key==='Enter')updateHash()});
+window.addEventListener('hashchange',readHash);
+readHash();
+</script>
+</body></html>

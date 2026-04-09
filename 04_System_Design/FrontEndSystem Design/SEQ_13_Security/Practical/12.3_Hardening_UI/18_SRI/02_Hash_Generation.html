@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — Hash Generation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a2a1a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}textarea{width:100%;background:#0f1117;color:#e2e8f0;border:1px solid #2d3551;border-radius:8px;padding:10px;font-family:monospace;font-size:.78rem;resize:vertical}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>💚 Lab 02 — SRI Hash Generation</h1>
+<p class="sub">Module 12.3 · Generating hashes via CLI, Node.js, Web Crypto, and tools</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Generation Methods</div>
+  <div class="tab" onclick="setTab(1)">Hash Calculator</div>
+  <div class="tab" onclick="setTab(2)">Node.js Script</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>All Hash Generation Methods</h3>
+    <pre><span class="cm">// ═══ Method 1: OpenSSL (CLI) ═══</span>
+<span class="cm"># SHA-384 (recommended):</span>
+cat script.js | openssl dgst -sha384 -binary | openssl base64 -A
+<span class="cm"># Output: vtXRMe3mGCbOkNs0S4pZwRLNUfTp...</span>
+
+<span class="cm"># Full integrity attribute:</span>
+echo -n <span class="str">"sha384-$(cat script.js | openssl dgst -sha384 -binary | openssl base64 -A)"</span>
+
+<span class="cm">// ═══ Method 2: shasum (CLI) ═══</span>
+shasum -b -a 384 script.js | xxd -r -p | base64
+
+<span class="cm">// ═══ Method 3: Node.js ═══</span>
+<span class="kw">const</span> crypto = require(<span class="str">'crypto'</span>);
+<span class="kw">const</span> fs = require(<span class="str">'fs'</span>);
+<span class="kw">const</span> content = fs.readFileSync(<span class="str">'script.js'</span>);
+<span class="kw">const</span> hash = crypto.createHash(<span class="str">'sha384'</span>).update(content).digest(<span class="str">'base64'</span>);
+console.log(<span class="str">`sha384-</span><span class="fn">\${hash}</span><span class="str">`</span>);
+
+<span class="cm">// ═══ Method 4: Web Crypto API (browser) ═══</span>
+<span class="kw">async function</span> <span class="fn">computeSRI</span>(text, algo = <span class="str">'SHA-384'</span>) {
+  <span class="kw">const</span> bytes = <span class="kw">new</span> TextEncoder().encode(text);
+  <span class="kw">const</span> hash = <span class="kw">await</span> crypto.subtle.digest(algo, bytes);
+  <span class="kw">const</span> b64 = btoa(String.fromCharCode(...<span class="kw">new</span> Uint8Array(hash)));
+  <span class="kw">return</span> <span class="str">`</span><span class="fn">\${algo.toLowerCase().replace('-','')}</span><span class="str">-</span><span class="fn">\${b64}</span><span class="str">`</span>;
+}
+
+<span class="cm">// ═══ Method 5: srihash.org ═══</span>
+<span class="cm">// Paste a CDN URL → get the integrity attribute</span>
+
+<span class="cm">// ═══ Method 6: Webpack/Vite plugin ═══</span>
+<span class="cm">// Automatic SRI in HTML-Webpack-Plugin or Vite build</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Interactive Hash Calculator</h3>
+    <textarea id="hash-input" rows="5" placeholder="Paste script/CSS content here to compute SRI hash...">console.log("Hello World");</textarea>
+    <div style="margin-top:8px">
+      <button onclick="computeHash('SHA-256')">SHA-256</button>
+      <button onclick="computeHash('SHA-384')">SHA-384 (recommended)</button>
+      <button onclick="computeHash('SHA-512')">SHA-512</button>
+      <button onclick="computeAllHashes()">All Algorithms</button>
+    </div>
+    <div class="output" id="hash-result">Enter content above and click an algorithm</div>
+  </div>
+  <div class="card">
+    <h3>🧪 URL Hash Fetcher</h3>
+    <input id="url-input" type="text" placeholder="https://cdn.jsdelivr.net/..." style="width:100%;background:#0f1117;color:#e2e8f0;border:1px solid #2d3551;border-radius:8px;padding:10px;font-size:.82rem">
+    <button onclick="fetchAndHash()" style="margin-top:8px">🔗 Fetch & Compute Hash</button>
+    <div class="output" id="url-result">Enter a CDN URL above</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Build Integration Script</h3>
+    <pre><span class="cm">// generate-sri.js — Node.js script for CI/CD</span>
+<span class="kw">const</span> crypto = require(<span class="str">'crypto'</span>);
+<span class="kw">const</span> fs = require(<span class="str">'fs'</span>);
+<span class="kw">const</span> path = require(<span class="str">'path'</span>);
+
+<span class="kw">function</span> <span class="fn">generateSRI</span>(filePath, algorithm = <span class="str">'sha384'</span>) {
+  <span class="kw">const</span> content = fs.readFileSync(filePath);
+  <span class="kw">const</span> hash = crypto.createHash(algorithm).update(content).digest(<span class="str">'base64'</span>);
+  <span class="kw">return</span> <span class="str">`</span><span class="fn">\${algorithm}</span><span class="str">-</span><span class="fn">\${hash}</span><span class="str">`</span>;
+}
+
+<span class="cm">// Process all JS/CSS files in dist/</span>
+<span class="kw">const</span> distDir = path.join(__dirname, <span class="str">'dist'</span>);
+<span class="kw">const</span> manifest = {};
+
+fs.readdirSync(distDir)
+  .filter(f =&gt; /\.(js|css)$/.test(f))
+  .forEach(file =&gt; {
+    manifest[file] = generateSRI(path.join(distDir, file));
+  });
+
+<span class="cm">// Write SRI manifest</span>
+fs.writeFileSync(
+  path.join(distDir, <span class="str">'sri-manifest.json'</span>),
+  JSON.stringify(manifest, <span class="kw">null</span>, 2)
+);
+
+console.log(<span class="str">'SRI manifest generated:'</span>, manifest);</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — SRI Hashes</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Why SHA-384 and not SHA-256 for SRI?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">SHA-384 is the recommended algorithm for SRI. Why not SHA-256? (1) Security margin: SHA-384 is a truncated SHA-512, running on 64-bit words. On 64-bit CPUs (all modern machines), SHA-512/384 is actually faster than SHA-256. More security for free performance. (2) Length extension attacks: SHA-256 is vulnerable to length extension attacks. SHA-384 (being truncated) is not. While not directly exploitable in SRI context, it's defense-in-depth. (3) Collision resistance: SHA-384 provides 192-bit collision resistance vs SHA-256's 128-bit. For a security-critical feature like SRI, extra margin matters. (4) Why not SHA-512? SHA-384 is slightly shorter hash string (less HTML bloat), while providing more than sufficient security. Diminishing returns. (5) Browser support: All major browsers support SHA-256, SHA-384, and SHA-512 for SRI. SHA-384 balances security and practicality.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function computeHash(algo){
+  const el=document.getElementById('hash-result');
+  const content=document.getElementById('hash-input').value;
+  if(!content){el.textContent='Please enter content first';return}
+  const bytes=new TextEncoder().encode(content);
+  const hash=await crypto.subtle.digest(algo,bytes);
+  const b64=btoa(String.fromCharCode(...new Uint8Array(hash)));
+  const prefix=algo.toLowerCase().replace('-','');
+  el.textContent=`Algorithm: ${algo}\n`;
+  el.textContent+=`Hash: ${prefix}-${b64}\n\n`;
+  el.textContent+=`HTML usage:\n`;
+  el.textContent+=`<script src="..." integrity="${prefix}-${b64}" crossorigin="anonymous"><\/script>\n\n`;
+  el.textContent+=`<link rel="stylesheet" href="..." integrity="${prefix}-${b64}" crossorigin="anonymous">`;
+}
+
+async function computeAllHashes(){
+  const el=document.getElementById('hash-result');
+  const content=document.getElementById('hash-input').value;
+  if(!content){el.textContent='Please enter content first';return}
+  const bytes=new TextEncoder().encode(content);
+  el.textContent=`Content length: ${content.length} bytes\n\n`;
+  for(const algo of['SHA-256','SHA-384','SHA-512']){
+    const hash=await crypto.subtle.digest(algo,bytes);
+    const b64=btoa(String.fromCharCode(...new Uint8Array(hash)));
+    const prefix=algo.toLowerCase().replace('-','');
+    el.textContent+=`${algo}: ${prefix}-${b64}\n`;
+  }
+}
+
+async function fetchAndHash(){
+  const el=document.getElementById('url-result');
+  const url=document.getElementById('url-input').value;
+  if(!url){el.textContent='Please enter a URL';return}
+  el.textContent='Fetching...';
+  try{
+    const resp=await fetch(url);
+    const text=await resp.text();
+    const bytes=new TextEncoder().encode(text);
+    el.textContent=`Fetched: ${url}\nSize: ${text.length} bytes\n\n`;
+    for(const algo of['SHA-256','SHA-384','SHA-512']){
+      const hash=await crypto.subtle.digest(algo,bytes);
+      const b64=btoa(String.fromCharCode(...new Uint8Array(hash)));
+      const prefix=algo.toLowerCase().replace('-','');
+      el.textContent+=`${algo}:\n  integrity="${prefix}-${b64}"\n\n`;
+    }
+  }catch(e){
+    el.textContent=`Error: ${e.message}\n\nNote: Many CDNs block direct fetch from file:// pages.\nTry serving this page via localhost:3001.`;
+  }
+}
+</script>
+</body></html>

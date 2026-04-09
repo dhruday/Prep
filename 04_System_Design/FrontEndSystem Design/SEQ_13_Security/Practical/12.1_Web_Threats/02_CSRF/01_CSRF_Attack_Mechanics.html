@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — CSRF Attack Mechanics</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}button.atk{background:#3a1e1e;border-color:#ef4444;color:#ef4444}button.safe{background:#1a3a2a;border-color:#10b981;color:#10b981}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.78rem;margin:12px 0}.flow span{background:#1e2130;border:1px solid #2d3551;padding:6px 10px;border-radius:6px}.flow .arrow{background:none;border:none;color:#f59e0b;font-weight:bold}
+</style>
+</head>
+<body>
+<h1>🟡 Lab 01 — CSRF Attack Mechanics</h1>
+<p class="sub">Module 12.1 · Web Threats · Cross-Site Request Forgery fundamentals</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>What is CSRF?</h3>
+    <p style="font-size:.83rem;color:#94a3b8">CSRF (Cross-Site Request Forgery) tricks a victim's browser into making an <strong>authenticated request</strong> to a target site. The browser automatically attaches cookies for the target domain — including auth session cookies. The attacker doesn't see the response; they just trigger the action (transfer money, change email, etc.).</p>
+    <div class="flow">
+      <span>1. Victim logged into bank.com</span>
+      <span class="arrow">→</span>
+      <span>2. Victim visits evil.com</span>
+      <span class="arrow">→</span>
+      <span>3. evil.com auto-submits form to bank.com/transfer</span>
+      <span class="arrow">→</span>
+      <span>4. Browser sends bank.com cookies</span>
+      <span class="arrow">→</span>
+      <span style="border-color:#ef4444">5. Bank processes transfer!</span>
+    </div>
+  </div>
+  <div class="card">
+    <h3>CSRF Attack HTML</h3>
+    <pre><span class="cm">&lt;!-- Hosted on evil.com — auto-submits when visited --&gt;</span>
+&lt;form <span class="str">action="https://bank.com/transfer"</span> <span class="str">method="POST"</span> id="csrf-form"&gt;
+  &lt;input type="hidden" name="to" value="<span class="danger">attacker_account</span>"&gt;
+  &lt;input type="hidden" name="amount" value="<span class="danger">10000</span>"&gt;
+&lt;/form&gt;
+&lt;script&gt;document.getElementById(<span class="str">'csrf-form'</span>).submit();&lt;/script&gt;
+
+<span class="cm">&lt;!-- Or via image tag (GET-based CSRF): --&gt;</span>
+&lt;img src="<span class="danger">https://bank.com/transfer?to=attacker&amp;amount=10000</span>" style="display:none"&gt;</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Step 1: Log In (establishes session cookie)</h3>
+    <div class="grid2">
+      <div>
+        <label style="font-size:.82rem;color:#94a3b8">Username:</label>
+        <input id="user" value="alice" style="width:100%;padding:8px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;margin:4px 0">
+        <label style="font-size:.82rem;color:#94a3b8">Password:</label>
+        <input id="pass" type="password" value="Password123!" style="width:100%;padding:8px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;margin:4px 0">
+        <button onclick="login()">🔑 Login</button>
+      </div>
+      <div>
+        <p style="font-size:.82rem;color:#94a3b8">Session status:</p>
+        <div id="session-status" class="output" style="min-height:40px">Not logged in</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🧪 Step 2: Simulate CSRF Attack</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Below simulates what happens when evil.com auto-submits a form to your server:</p>
+    <div class="grid2">
+      <div>
+        <h4 style="color:#ef4444;font-size:.85rem;margin-bottom:6px">⚠️ Attack: No CSRF Token</h4>
+        <button class="atk" onclick="csrfAttack('vulnerable')">🔴 Simulate CSRF (no token)</button>
+        <div class="output" id="vuln-result"></div>
+      </div>
+      <div>
+        <h4 style="color:#10b981;font-size:.85rem;margin-bottom:6px">✅ Attack: With CSRF Protection</h4>
+        <button class="safe" onclick="csrfAttack('protected')">🟢 Simulate CSRF (with token check)</button>
+        <div class="output" id="safe-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🧪 Step 3: Legitimate Request (with CSRF token)</h3>
+    <button onclick="legitimateRequest()">✅ Send Legitimate Request (fetches & includes CSRF token)</button>
+    <div class="output" id="legit-result"></div>
+  </div>
+
+  <div class="card">
+    <h3>📡 Network Log</h3>
+    <div class="output" id="netlog">Requests will appear here...</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🔬 Why Browsers Send Cookies Cross-Origin</h3>
+    <div style="font-size:.82rem;color:#94a3b8">
+      <p><strong style="color:#60a5fa">Cookie Origin Model:</strong> Cookies are sent based on the <strong>destination domain</strong>, not the source page. When evil.com submits a form to bank.com, the browser attaches bank.com's cookies because the REQUEST goes to bank.com.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">SameSite Cookie Attribute:</strong> Modern defense. <code>SameSite=Strict</code> blocks cookies on all cross-site requests. <code>SameSite=Lax</code> (Chrome default since 2020) allows cookies on top-level GET navigations but blocks them on POST from cross-origin forms.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">CORS doesn't help:</strong> CORS only applies to fetch/XHR. Form submissions and image loads bypass CORS entirely — the browser just sends the request with cookies attached.</p>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CSRF Questions</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Is CSRF still relevant with SameSite=Lax default?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Mostly mitigated for POST-based CSRF, but still relevant: (1) GET-based state changes are still vulnerable with Lax, (2) Some browsers don't default to Lax, (3) Subdomains with SameSite=None can be exploited, (4) Within 2 minutes of cookie creation, Chrome temporarily sends Lax cookies on POST for compatibility ("Lax+POST"). Defense-in-depth with CSRF tokens is still recommended.</p>
+      <p><strong style="color:#60a5fa">Q: Synchronizer token vs double-submit cookie — which is better?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Synchronizer pattern (server stores token in session, client sends in form) is more secure because the server validates against its session state. Double-submit cookie (token in cookie + header) is stateless and easier to scale, but vulnerable if attacker can set cookies (via subdomain XSS). At Google: use synchronizer tokens for critical actions, double-submit for APIs behind auth.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+let sessionToken=null;
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+function log(msg){const el=document.getElementById('netlog');el.textContent+='\n'+new Date().toLocaleTimeString()+' '+msg;el.scrollTop=el.scrollHeight}
+
+async function login(){
+  const user=document.getElementById('user').value,pass=document.getElementById('pass').value;
+  log(`→ POST ${API}/api/auth/login`);
+  try{
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pass}),credentials:'include'});
+    const data=await res.json();
+    log(`← ${res.status} ${JSON.stringify(data)}`);
+    if(data.token){sessionToken=data.token;document.getElementById('session-status').textContent='✅ Logged in as '+user+'\nToken: '+data.token.substring(0,20)+'...'}
+    else{document.getElementById('session-status').textContent='❌ Login failed: '+JSON.stringify(data)}
+  }catch(e){log(`✗ ${e.message}`)}
+}
+
+async function csrfAttack(type){
+  const url=`${API}/api/csrf/${type}/transfer`;
+  log(`→ POST ${url} (simulated cross-origin — NO CSRF token)`);
+  try{
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionToken}`},body:JSON.stringify({to:'attacker_account',amount:10000})});
+    const data=await res.json();
+    const resultId=type==='vulnerable'?'vuln-result':'safe-result';
+    document.getElementById(resultId).textContent=`Status: ${res.status}\n${JSON.stringify(data,null,2)}`;
+    log(`← ${res.status} ${JSON.stringify(data)}`);
+  }catch(e){document.getElementById(type==='vulnerable'?'vuln-result':'safe-result').textContent=`Error: ${e.message}`}
+}
+
+async function legitimateRequest(){
+  log(`→ GET ${API}/api/csrf/token (fetching CSRF token)`);
+  try{
+    const tokenRes=await fetch(`${API}/api/csrf/token`,{headers:{'Authorization':`Bearer ${sessionToken}`}});
+    const tokenData=await tokenRes.json();
+    log(`← CSRF token: ${tokenData.csrfToken}`);
+    const url=`${API}/api/csrf/protected/transfer`;
+    log(`→ POST ${url} (with CSRF token)`);
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${sessionToken}`,'X-CSRF-Token':tokenData.csrfToken},body:JSON.stringify({to:'friend_account',amount:50})});
+    const data=await res.json();
+    document.getElementById('legit-result').textContent=`Status: ${res.status}\n${JSON.stringify(data,null,2)}`;
+    log(`← ${res.status} ${JSON.stringify(data)}`);
+  }catch(e){document.getElementById('legit-result').textContent=`Error: ${e.message}`}
+}
+</script>
+</body></html>

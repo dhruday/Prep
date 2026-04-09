@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — npm Supply Chain Attacks</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟡 Lab 01 — npm Supply Chain Attacks</h1>
+<p class="sub">Module 12.1 · Attack vectors: typosquatting, dependency confusion, install scripts</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Attack Vectors</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Real Incidents</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Supply Chain Attack Taxonomy</h3>
+    <table>
+      <tr><th>Vector</th><th>How It Works</th><th>Example</th></tr>
+      <tr><td><strong>Typosquatting</strong></td><td>Publish malicious package with similar name</td><td>crossenv (malicious) vs cross-env (legit)</td></tr>
+      <tr><td><strong>Dependency Confusion</strong></td><td>Internal package name registered on public npm</td><td>Alex Birsan's 2021 research — hit Apple, Microsoft</td></tr>
+      <tr><td><strong>Install Scripts</strong></td><td>postinstall script runs malicious code</td><td>event-stream (2018) — crypto wallet theft</td></tr>
+      <tr><td><strong>Maintainer Takeover</strong></td><td>Compromised maintainer account</td><td>ua-parser-js (2021) — crypto miner injection</td></tr>
+      <tr><td><strong>Protestware</strong></td><td>Maintainer adds malicious code intentionally</td><td>colors.js/faker.js (2022) — infinite loop</td></tr>
+      <tr><td><strong>Phantom Dependencies</strong></td><td>Using packages not in your package.json</td><td>Hoisting makes undeclared deps work until they break</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Typosquatting Detector</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Enter a package name to check for common typosquatting vectors:</p>
+    <input id="pkg-name" type="text" value="express" style="width:60%;padding:8px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace">
+    <button onclick="checkTyposquat()">🔍 Generate Typosquat Variants</button>
+    <div class="output" id="typo-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 package.json Risk Analyzer</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Paste a package.json to analyze risk factors:</p>
+    <textarea id="pkg-json" rows="6" style="width:100%;padding:8px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem">{
+  "dependencies": {
+    "express": "^4.18.0",
+    "lodash": "*",
+    "my-internal-utils": "^1.0.0",
+    "event-stream": "3.3.6"
+  },
+  "scripts": {
+    "postinstall": "node setup.js"
+  }
+}</textarea>
+    <button onclick="analyzePackageJson()">⚡ Analyze Risks</button>
+    <div class="output" id="pkg-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Real-World Incidents</h3>
+    <pre><span class="cm">// 1. event-stream (2018) — CVE-2018-16492</span>
+<span class="cm">// New maintainer added flatmap-stream dep with encrypted payload</span>
+<span class="cm">// Target: Copay Bitcoin wallet — stole private keys</span>
+<span class="cm">// 7.5M weekly downloads at the time</span>
+
+<span class="cm">// 2. ua-parser-js (2021) — Account hijacking</span>
+<span class="cm">// Versions 0.7.29, 0.8.0, 1.0.0 contained crypto miner</span>
+<span class="cm">// 7M weekly downloads, used by Facebook, Amazon, Google</span>
+
+<span class="cm">// 3. colors.js / faker.js (2022) — Protestware</span>
+<span class="cm">// Maintainer added infinite loop to protest open-source usage</span>
+<span class="cm">// Broke thousands of CI/CD pipelines globally</span>
+
+<span class="cm">// 4. Dependency Confusion (2021)</span>
+<span class="cm">// Researcher Alex Birsan: registered internal package names on npm</span>
+<span class="cm">// npm auto-installed the public (malicious) version</span>
+<span class="cm">// Hit Apple, Microsoft, PayPal, Shopify, Netflix, Yelp</span>
+
+<span class="cm">// 5. eslint-scope (2018)</span>
+<span class="cm">// Compromised maintainer published version with npm token stealer</span>
+<span class="cm">// eslint-scope was a dependency of babel, webpack, etc.</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Supply Chain Security</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How would you design a supply chain security strategy for a frontend monorepo?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Layer 1 — Lock: Use lockfiles (package-lock.json) with integrity hashes. Pin exact versions, no ranges. Layer 2 — Audit: npm audit in CI, Snyk/Dependabot for automated PRs. Layer 3 — Registry: Use a private registry (Artifactory/Verdaccio) as a proxy — whitelist approved packages. Layer 4 — Install scripts: Use --ignore-scripts by default, allowlist specific packages. Layer 5 — Monitoring: Socket.dev for real-time package change alerts. Layer 6 — Vendoring: For critical deps, vendor the source into your repo. Google uses a curated third-party directory with manual security review for every dependency.</p>
+      <p><strong style="color:#60a5fa">Q: A dependency you use has been compromised. What's the incident response?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Immediate (0-1h): Pin to last known good version in lockfile, deploy. Check CI logs for postinstall script execution. Scan build artifacts for injected code. Short-term (1-24h): Check if your builds/deployments used the compromised version. Rotate any secrets that may have been exfiltrated. File security advisory. Medium-term: Evaluate alternatives, add package to monitoring watchlist, implement the layered strategy above.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function checkTyposquat(){
+  const name=document.getElementById('pkg-name').value.trim();
+  const el=document.getElementById('typo-result');
+  if(!name){el.textContent='Enter a package name';return}
+  const variants=[];
+  // Character swap
+  for(let i=0;i<name.length-1;i++){variants.push(name.slice(0,i)+name[i+1]+name[i]+name.slice(i+2))}
+  // Missing character
+  for(let i=0;i<name.length;i++){variants.push(name.slice(0,i)+name.slice(i+1))}
+  // Extra character
+  'abcdefghijklmnopqrstuvwxyz-_'.split('').forEach(c=>{variants.push(name+c);variants.push(c+name)});
+  // Separator confusion
+  if(name.includes('-')){variants.push(name.replace(/-/g,'_'));variants.push(name.replace(/-/g,''))}
+  if(name.includes('_')){variants.push(name.replace(/_/g,'-'));variants.push(name.replace(/_/g,''))}
+  // Scoped confusions
+  variants.push(`@${name}/${name}`);
+  const unique=[...new Set(variants.filter(v=>v!==name&&v.length>0))];
+  el.textContent=`Typosquatting variants for "${name}":\n\n${unique.slice(0,30).join('\n')}\n\n... ${unique.length} total variants generated\n\n🛡️ Defense: Use npm install with --dry-run first\n   npm pack <package> to inspect before install\n   Socket.dev browser extension shows package metadata`;
+}
+
+function analyzePackageJson(){
+  const el=document.getElementById('pkg-result');
+  try{
+    const pkg=JSON.parse(document.getElementById('pkg-json').value);
+    const risks=[];
+    // Check for wildcard versions
+    const deps={...pkg.dependencies,...pkg.devDependencies};
+    for(const[name,ver]of Object.entries(deps||{})){
+      if(ver==='*'||ver==='latest')risks.push({severity:'🔴 HIGH',msg:`${name}: "${ver}" — wildcard version allows any version including compromised`});
+      else if(ver.startsWith('^'))risks.push({severity:'🟡 MEDIUM',msg:`${name}: "${ver}" — caret allows minor+patch updates (use exact pinning)`});
+      else if(ver.startsWith('~'))risks.push({severity:'🟢 LOW',msg:`${name}: "${ver}" — tilde allows patch updates`});
+      if(name.includes('internal')||name.includes('private'))risks.push({severity:'🔴 HIGH',msg:`${name}: possible internal package — check dependency confusion risk`});
+    }
+    // Check for install scripts
+    if(pkg.scripts){
+      ['preinstall','postinstall','prepare'].forEach(s=>{
+        if(pkg.scripts[s])risks.push({severity:'🟡 MEDIUM',msg:`scripts.${s}: "${pkg.scripts[s]}" — install scripts can execute arbitrary code`});
+      });
+    }
+    el.textContent=`Package.json Risk Analysis:\n${'='.repeat(40)}\n\n${risks.map(r=>`${r.severity} ${r.msg}`).join('\n\n')}\n\n${'='.repeat(40)}\nTotal risks found: ${risks.length}`;
+  }catch(e){el.textContent=`JSON parse error: ${e.message}`}
+}
+</script>
+</body></html>

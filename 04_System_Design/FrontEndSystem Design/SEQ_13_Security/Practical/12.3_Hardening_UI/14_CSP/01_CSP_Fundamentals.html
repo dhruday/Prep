@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — CSP Fundamentals</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1a3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 01 — CSP Fundamentals</h1>
+<p class="sub">Module 12.3 · Content Security Policy directives and sources</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">What is CSP</div>
+  <div class="tab" onclick="setTab(1)">Directives</div>
+  <div class="tab" onclick="setTab(2)">Source Values</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Content Security Policy</h3>
+    <pre><span class="cm">// CSP = Allowlist of trusted content sources</span>
+<span class="cm">// Tells the browser: "Only load resources from THESE origins"</span>
+
+<span class="cm">// Delivered as HTTP header:</span>
+Content-Security-Policy: default-src <span class="str">'self'</span>; script-src <span class="str">'self'</span> https://cdn.example.com
+
+<span class="cm">// Or as meta tag (limited — no frame-ancestors, report-uri):</span>
+&lt;meta http-equiv=<span class="str">"Content-Security-Policy"</span>
+  content=<span class="str">"default-src 'self'; img-src *"</span>&gt;
+
+<span class="cm">// What CSP protects against:</span>
+<span class="cm">// ✅ XSS — blocks inline scripts, eval(), unauthorized script sources</span>
+<span class="cm">// ✅ Data exfiltration — blocks fetch/XHR to unauthorized origins</span>
+<span class="cm">// ✅ Clickjacking — frame-ancestors directive</span>
+<span class="cm">// ✅ Mixed content — block-all-mixed-content</span>
+<span class="cm">// ✅ Protocol downgrade — upgrade-insecure-requests</span>
+
+<span class="cm">// How it works:</span>
+<span class="cm">// 1. Server sends CSP header with response</span>
+<span class="cm">// 2. Browser parses the policy</span>
+<span class="cm">// 3. For every resource load, browser checks: "Is this allowed?"</span>
+<span class="cm">// 4. Blocked resources → console error + optional violation report</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>CSP Directives</h3>
+    <pre><span class="cm">// ═══ Fetch Directives (what resources to load) ═══</span>
+<span class="kw">default-src</span>   <span class="cm">Fallback for all other directives</span>
+<span class="kw">script-src</span>    <span class="cm">JavaScript sources</span>
+<span class="kw">style-src</span>     <span class="cm">CSS sources</span>
+<span class="kw">img-src</span>       <span class="cm">Image sources</span>
+<span class="kw">font-src</span>      <span class="cm">Font file sources</span>
+<span class="kw">connect-src</span>   <span class="cm">fetch, XHR, WebSocket, EventSource targets</span>
+<span class="kw">media-src</span>     <span class="cm">Audio/video sources</span>
+<span class="kw">object-src</span>    <span class="cm">Plugin sources (Flash, Java — always set to 'none')</span>
+<span class="kw">frame-src</span>     <span class="cm">Sources for iframes I embed</span>
+<span class="kw">worker-src</span>    <span class="cm">Web Worker, SharedWorker, ServiceWorker scripts</span>
+<span class="kw">manifest-src</span>  <span class="cm">Web manifest sources</span>
+
+<span class="cm">// ═══ Document Directives ═══</span>
+<span class="kw">base-uri</span>      <span class="cm">Restricts &lt;base&gt; element URLs</span>
+<span class="kw">sandbox</span>       <span class="cm">Applies sandbox restrictions (like iframe sandbox)</span>
+
+<span class="cm">// ═══ Navigation Directives ═══</span>
+<span class="kw">frame-ancestors</span>  <span class="cm">WHO can embed this page (clickjacking defense)</span>
+<span class="kw">form-action</span>      <span class="cm">Where forms can submit to</span>
+<span class="kw">navigate-to</span>      <span class="cm">Where page can navigate (experimental)</span>
+
+<span class="cm">// ═══ Reporting ═══</span>
+<span class="kw">report-uri</span>    <span class="cm">URL to send violation reports (deprecated)</span>
+<span class="kw">report-to</span>     <span class="cm">Reporting API group name (modern)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Source Values</h3>
+    <pre><span class="cm">// Source keywords (must be quoted!):</span>
+<span class="str">'none'</span>              <span class="cm">Block everything</span>
+<span class="str">'self'</span>              <span class="cm">Same origin only</span>
+<span class="str">'unsafe-inline'</span>     <span class="cm">Allow inline scripts/styles (defeats CSP!)</span>
+<span class="str">'unsafe-eval'</span>       <span class="cm">Allow eval(), Function(), setTimeout("code")</span>
+<span class="str">'strict-dynamic'</span>    <span class="cm">Trust scripts loaded by trusted scripts</span>
+<span class="str">'unsafe-hashes'</span>     <span class="cm">Allow specific inline event handlers</span>
+
+<span class="cm">// Source URLs:</span>
+https://cdn.example.com     <span class="cm">Specific origin</span>
+*.example.com               <span class="cm">Wildcard subdomain</span>
+https:                      <span class="cm">Any HTTPS origin</span>
+data:                       <span class="cm">data: URLs (images)</span>
+blob:                       <span class="cm">blob: URLs</span>
+
+<span class="cm">// Nonces and hashes:</span>
+<span class="str">'nonce-abc123'</span>      <span class="cm">Allow script with matching nonce attribute</span>
+<span class="str">'sha256-...'</span>        <span class="cm">Allow script matching this hash</span>
+
+<span class="cm">// Example policies:</span>
+<span class="cm">// Strict (recommended):</span>
+Content-Security-Policy:
+  default-src <span class="str">'none'</span>;
+  script-src <span class="str">'self'</span>;
+  style-src <span class="str">'self'</span>;
+  img-src <span class="str">'self'</span>;
+  connect-src <span class="str">'self'</span>;
+  font-src <span class="str">'self'</span>;
+  frame-ancestors <span class="str">'none'</span>;
+  base-uri <span class="str">'self'</span>;
+  form-action <span class="str">'self'</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CSP</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Walk through implementing CSP for a production React app.</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Step 1: Start with Report-Only mode. Content-Security-Policy-Report-Only: default-src 'self'; report-uri /csp-reports. Monitor what breaks. Step 2: Identify all sources — your CDN, analytics (Google Analytics), fonts (Google Fonts), API endpoints. Step 3: Build policy: default-src 'none'; script-src 'self' 'nonce-{random}'; style-src 'self' 'unsafe-inline' (React CSS-in-JS may need this); img-src 'self' data: https://images.yourcdn.com; connect-src 'self' https://api.yourapp.com; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'. Step 4: Handle inline scripts — use nonces. Server generates random nonce per request, injects into CSP header and script tags. React SSR: pass nonce to __NEXT_DATA__ script. Step 5: Enforce after monitoring shows no false positives. Step 6: Iterate — add strict-dynamic for dynamically loaded scripts.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+</script>
+</body></html>

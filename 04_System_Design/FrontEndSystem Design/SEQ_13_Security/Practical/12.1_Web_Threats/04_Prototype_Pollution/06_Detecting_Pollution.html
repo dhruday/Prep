@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 06 — Detecting Prototype Pollution</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ec4899;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e3a;border-color:#ec4899;color:#ec4899}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ec4899;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ec4899;color:#ec4899}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🩷 Lab 06 — Detecting Prototype Pollution</h1>
+<p class="sub">Module 12.1 · Static analysis, runtime monitoring, CI/CD checks</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Detection Methods</div>
+  <div class="tab" onclick="setTab(1)">Runtime Monitor</div>
+  <div class="tab" onclick="setTab(2)">ESLint Rules</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Detection Strategy</h3>
+    <pre><span class="cm">// 1. STATIC ANALYSIS — Catch before deployment</span>
+<span class="cm">//    ESLint: no-proto, no-extend-native</span>
+<span class="cm">//    Custom rule: ban for...in without hasOwnProperty</span>
+<span class="cm">//    Semgrep: detect unsafe merge patterns</span>
+
+<span class="cm">// 2. RUNTIME MONITORING — Catch in production</span>
+<span class="cm">//    Monitor Object.prototype for unexpected properties</span>
+<span class="cm">//    Use Proxy on Object.prototype (development only)</span>
+
+<span class="cm">// 3. DEPENDENCY SCANNING — Catch via supply chain</span>
+<span class="cm">//    npm audit / Snyk / GitHub Dependabot</span>
+<span class="cm">//    Check for CVEs with "prototype pollution" keyword</span>
+
+<span class="cm">// 4. TESTING — Verify defenses</span>
+<span class="cm">//    Unit tests that inject __proto__ and verify no pollution</span>
+<span class="cm">//    Fuzz testing with PP payloads in all input fields</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Runtime Pollution Monitor</h3>
+    <p style="font-size:.82rem;color:#94a3b8">This tool scans Object.prototype for unexpected properties:</p>
+    <button onclick="scanPrototype()">🔍 Scan Object.prototype</button>
+    <button onclick="polluteThenScan()" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Pollute Then Scan</button>
+    <button onclick="cleanup()" style="background:#1a3a2a;border-color:#10b981;color:#10b981">🧹 Clean Up</button>
+    <div class="output" id="scan-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 Automated Canary Check</h3>
+    <p style="font-size:.82rem;color:#94a3b8">This function runs periodically to detect pollution:</p>
+    <button onclick="startCanary()">▶️ Start Canary (checks every 2s)</button>
+    <button onclick="stopCanary()">⏹️ Stop</button>
+    <button onclick="sneakyPollute()" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Sneak Pollution In</button>
+    <div class="output" id="canary-result">Canary not started</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>ESLint Rules for Prototype Pollution</h3>
+    <pre><span class="cm">// .eslintrc.json</span>
+{
+  <span class="str">"rules"</span>: {
+    <span class="str">"no-proto"</span>: <span class="str">"error"</span>,                   <span class="cm">// ban __proto__</span>
+    <span class="str">"no-extend-native"</span>: <span class="str">"error"</span>,          <span class="cm">// ban Array.prototype.x = ...</span>
+    <span class="str">"guard-for-in"</span>: <span class="str">"error"</span>,              <span class="cm">// require hasOwnProperty in for-in</span>
+    <span class="str">"no-restricted-syntax"</span>: [
+      <span class="str">"error"</span>,
+      {
+        <span class="str">"selector"</span>: <span class="str">"MemberExpression[property.name='__proto__']"</span>,
+        <span class="str">"message"</span>: <span class="str">"Don't use __proto__. Use Object.getPrototypeOf."</span>
+      },
+      {
+        <span class="str">"selector"</span>: <span class="str">"ForInStatement"</span>,
+        <span class="str">"message"</span>: <span class="str">"Use Object.keys/entries instead of for...in"</span>
+      }
+    ]
+  }
+}
+
+<span class="cm">// Semgrep rule (for CI/CD):</span>
+<span class="cm">// rules:</span>
+<span class="cm">//   - id: unsafe-merge</span>
+<span class="cm">//     pattern: |</span>
+<span class="cm">//       function $FUNC($TARGET, $SOURCE) {</span>
+<span class="cm">//         for (let $KEY in $SOURCE) { ... }</span>
+<span class="cm">//       }</span>
+<span class="cm">//     message: Potential prototype pollution via unsafe merge</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Detection</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Design a prototype pollution detection system for a large monorepo.</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Pre-commit: ESLint rules (no-proto, guard-for-in, no-restricted-syntax for __proto__ access). PR review: Semgrep/CodeQL rules that detect merge/extend patterns with user input flowing to them (taint analysis). CI: npm audit with --audit-level=critical for every build. Runtime: Lightweight canary in the health check endpoint — create {}, check for unexpected properties. Monitoring: Datadog/Prometheus metric for "prototype pollution detected" — alert on first trigger. Google's approach: Presubmit checks in Critique (code review system) flag any for...in without hasOwnProperty, similar to their Tricorder static analysis tool.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+// Known safe properties on Object.prototype
+const KNOWN_PROPS=new Set(['constructor','__defineGetter__','__defineSetter__','hasOwnProperty','__lookupGetter__','__lookupSetter__','isPrototypeOf','propertyIsEnumerable','toString','valueOf','__proto__','toLocaleString']);
+
+function scanPrototype(){
+  const el=document.getElementById('scan-result');
+  const props=Object.getOwnPropertyNames(Object.prototype);
+  const unknown=props.filter(p=>!KNOWN_PROPS.has(p));
+  el.textContent=`Object.prototype has ${props.length} properties.\nKnown safe: ${props.length-unknown.length}\n`;
+  if(unknown.length>0){
+    el.textContent+=`\n🔴 UNKNOWN PROPERTIES DETECTED (possible pollution):\n`;
+    unknown.forEach(p=>{
+      el.textContent+=`  • ${p} = ${JSON.stringify(Object.prototype[p])}\n`;
+    });
+  }else{
+    el.textContent+=`\n✅ No unknown properties — prototype is clean.`;
+  }
+}
+
+function polluteThenScan(){
+  Object.prototype.polluted=true;
+  Object.prototype.secret='stolen';
+  Object.prototype.isAdmin=true;
+  scanPrototype();
+}
+
+function cleanup(){
+  ['polluted','secret','isAdmin','sneaky'].forEach(k=>delete Object.prototype[k]);
+  document.getElementById('scan-result').textContent='🧹 Cleaned up';
+}
+
+let canaryInterval=null;
+function startCanary(){
+  const el=document.getElementById('canary-result');
+  el.textContent='Canary started — checking every 2 seconds...\n';
+  canaryInterval=setInterval(()=>{
+    const test={};
+    const unexpected=[];
+    for(let key in test){unexpected.push(key)}
+    const now=new Date().toLocaleTimeString();
+    if(unexpected.length>0){
+      el.textContent+=`${now} 🔴 POLLUTION DETECTED: ${unexpected.join(', ')}\n`;
+    }else{
+      el.textContent+=`${now} ✅ Clean\n`;
+    }
+    el.scrollTop=el.scrollHeight;
+  },2000);
+}
+function stopCanary(){if(canaryInterval){clearInterval(canaryInterval);canaryInterval=null}document.getElementById('canary-result').textContent+='Canary stopped.\n'}
+
+function sneakyPollute(){
+  Object.prototype.sneaky='gotcha';
+  document.getElementById('canary-result').textContent+='(Injected "sneaky" property — wait for next canary check...)\n';
+}
+</script>
+</body></html>

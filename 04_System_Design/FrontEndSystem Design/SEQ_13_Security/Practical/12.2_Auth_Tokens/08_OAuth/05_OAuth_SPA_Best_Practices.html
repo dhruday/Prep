@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 05 — OAuth for SPAs Best Practices</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 05 — OAuth for SPAs: Best Practices</h1>
+<p class="sub">Module 12.2 · BFF vs public client, token handling, session management</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">SPA OAuth Patterns</div>
+  <div class="tab" onclick="setTab(1)">Pattern Comparison</div>
+  <div class="tab" onclick="setTab(2)">Implementation</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Three Patterns for SPA OAuth</h3>
+    <table>
+      <tr><th>Pattern</th><th>Token Location</th><th>Security</th><th>Complexity</th></tr>
+      <tr><td><strong>1. BFF Proxy</strong></td><td>Server-side only</td><td>🟢 Best</td><td>High</td></tr>
+      <tr><td><strong>2. Auth Code + PKCE</strong></td><td>In-memory</td><td>🟢 Good</td><td>Medium</td></tr>
+      <tr><td><strong>3. Implicit (deprecated)</strong></td><td>URL fragment</td><td>🔴 Poor</td><td>Low</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3>Recommended: BFF Pattern</h3>
+    <pre><span class="cm">// BFF (Backend-For-Frontend) for OAuth:</span>
+<span class="cm">// The SPA never touches OAuth tokens directly</span>
+
+<span class="cm">// 1. SPA → GET /bff/login</span>
+<span class="cm">//    BFF generates state + PKCE, redirects to IdP</span>
+
+<span class="cm">// 2. User authenticates with IdP</span>
+
+<span class="cm">// 3. IdP → GET /bff/callback?code=xxx&state=yyy</span>
+<span class="cm">//    BFF exchanges code for tokens (server-to-server)</span>
+<span class="cm">//    BFF stores tokens in session store (Redis)</span>
+<span class="cm">//    BFF sets HttpOnly session cookie</span>
+<span class="cm">//    BFF redirects to SPA</span>
+
+<span class="cm">// 4. SPA → GET /bff/api/userinfo (cookie auto-sent)</span>
+<span class="cm">//    BFF reads session, attaches access_token, proxies to API</span>
+
+<span class="cm">// 5. Token refresh: BFF handles automatically</span>
+<span class="cm">//    On upstream 401 → use refresh_token → update session</span>
+
+<span class="cm">// SPA code is JUST:</span>
+fetch(<span class="str">'/bff/api/userinfo'</span>, { credentials: <span class="str">'include'</span> });</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Security Scorecard</h3>
+    <button onclick="showScorecard()">⚡ Generate Security Scorecard</button>
+    <div class="output" id="score-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>BFF Implementation (Next.js/Express)</h3>
+    <pre><span class="cm">// Next.js API Route as BFF</span>
+<span class="cm">// pages/api/auth/login.ts</span>
+<span class="kw">export default async function</span> handler(req, res) {
+  <span class="kw">const</span> state = crypto.randomUUID();
+  <span class="kw">const</span> verifier = generateCodeVerifier();
+  <span class="kw">const</span> challenge = <span class="kw">await</span> generateCodeChallenge(verifier);
+
+  <span class="cm">// Store in server-side session</span>
+  req.session.oauthState = state;
+  req.session.codeVerifier = verifier;
+
+  <span class="kw">const</span> authUrl = <span class="kw">new</span> URL(<span class="str">'https://accounts.google.com/o/oauth2/v2/auth'</span>);
+  authUrl.searchParams.set(<span class="str">'client_id'</span>, process.env.GOOGLE_CLIENT_ID);
+  authUrl.searchParams.set(<span class="str">'redirect_uri'</span>, <span class="str">'https://myapp.com/api/auth/callback'</span>);
+  authUrl.searchParams.set(<span class="str">'response_type'</span>, <span class="str">'code'</span>);
+  authUrl.searchParams.set(<span class="str">'scope'</span>, <span class="str">'openid profile email'</span>);
+  authUrl.searchParams.set(<span class="str">'state'</span>, state);
+  authUrl.searchParams.set(<span class="str">'code_challenge'</span>, challenge);
+  authUrl.searchParams.set(<span class="str">'code_challenge_method'</span>, <span class="str">'S256'</span>);
+
+  res.redirect(authUrl.toString());
+}
+
+<span class="cm">// pages/api/auth/callback.ts</span>
+<span class="kw">export default async function</span> handler(req, res) {
+  <span class="kw">if</span> (req.query.state !== req.session.oauthState) {
+    <span class="kw">return</span> res.status(403).json({ error: <span class="str">'CSRF detected'</span> });
+  }
+  <span class="kw">const</span> tokens = <span class="kw">await</span> exchangeCodeForTokens({
+    code: req.query.code,
+    codeVerifier: req.session.codeVerifier,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  });
+  req.session.accessToken = tokens.access_token;
+  req.session.refreshToken = tokens.refresh_token;
+  res.redirect(<span class="str">'/'</span>); <span class="cm">// back to SPA</span>
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — OAuth for SPAs</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Your SPA uses Auth0 with PKCE and stores tokens in memory. The product team wants to add "remember me." How?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Option 1 (Preferred): Use Auth0's silent authentication. On page load, make a hidden iframe request to Auth0 with prompt=none. If the user has an active Auth0 session (SSO cookie), they get a new token without login. This is "remember me" without storing tokens. Option 2: Use refresh token rotation. Store the refresh token in an HttpOnly cookie. On page load, call /token with the refresh cookie. Each refresh issues a new refresh token and invalidates the old one. Option 3: Migrate to BFF pattern — the BFF handles the session with a long-lived HttpOnly cookie, refresh is transparent. Never: Store tokens in localStorage with SameSite cookies disabled.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function showScorecard(){
+  const el=document.getElementById('score-result');
+  const patterns=[
+    {name:'BFF Proxy',xss:5,csrf:5,token:5,refresh:5,mobile:2,complexity:2,total:0},
+    {name:'Auth Code + PKCE (Memory)',xss:4,csrf:5,token:3,refresh:4,mobile:4,complexity:4,total:0},
+    {name:'Auth Code + PKCE (localStorage)',xss:1,csrf:5,token:1,refresh:3,mobile:4,complexity:4,total:0},
+    {name:'Implicit (Deprecated)',xss:1,csrf:2,token:1,refresh:1,mobile:3,complexity:5,total:0},
+  ];
+  patterns.forEach(p=>p.total=p.xss+p.csrf+p.token+p.refresh+p.mobile+p.complexity);
+  el.textContent=`OAuth SPA Security Scorecard (1-5, higher = better):\n${'='.repeat(60)}\n\n`;
+  el.textContent+=`${'Pattern'.padEnd(35)} XSS CSRF Token Refresh Mobile Simple Total\n`;
+  el.textContent+=`${'─'.repeat(75)}\n`;
+  patterns.forEach(p=>{
+    const bar='█'.repeat(p.total)+'░'.repeat(30-p.total);
+    el.textContent+=`${p.name.padEnd(35)} ${p.xss}    ${p.csrf}    ${p.token}     ${p.refresh}      ${p.mobile}     ${p.complexity}     ${p.total}/30\n`;
+    el.textContent+=`${''.padEnd(35)} ${bar}\n\n`;
+  });
+  el.textContent+=`Recommendation:\n`;
+  el.textContent+=`  SSR app (Next.js, Nuxt): BFF Proxy ← best security\n`;
+  el.textContent+=`  SPA without backend: Auth Code + PKCE with in-memory tokens\n`;
+  el.textContent+=`  Never: Implicit flow or localStorage tokens`;
+}
+</script>
+</body></html>

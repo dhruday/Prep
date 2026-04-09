@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — Token Storage Comparison</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 01 — Token Storage: Where to Store Auth Tokens?</h1>
+<p class="sub">Module 12.2 · localStorage vs sessionStorage vs cookies vs memory</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Comparison</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Best Practice</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Storage Options Comparison</h3>
+    <table>
+      <tr><th>Storage</th><th>XSS Safe?</th><th>CSRF Safe?</th><th>Persists?</th><th>Capacity</th></tr>
+      <tr><td><strong>localStorage</strong></td><td style="color:#ef4444">❌ Any JS can read</td><td style="color:#10b981">✅ Not auto-sent</td><td>Until cleared</td><td>~5-10MB</td></tr>
+      <tr><td><strong>sessionStorage</strong></td><td style="color:#ef4444">❌ Any JS can read</td><td style="color:#10b981">✅ Not auto-sent</td><td>Tab only</td><td>~5-10MB</td></tr>
+      <tr><td><strong>HttpOnly Cookie</strong></td><td style="color:#10b981">✅ JS can't read</td><td style="color:#ef4444">❌ Auto-sent</td><td>Until expiry</td><td>~4KB</td></tr>
+      <tr><td><strong>JS Memory (closure)</strong></td><td style="color:#10b981">✅ XSS can't persist</td><td style="color:#10b981">✅ Not auto-sent</td><td>Page only</td><td>No limit</td></tr>
+      <tr><td><strong>Service Worker</strong></td><td style="color:#10b981">✅ Isolated context</td><td style="color:#10b981">✅ Not auto-sent</td><td>Until unregister</td><td>~50MB+</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Storage Security Lab</h3>
+    <button onclick="storeInLocalStorage()">📦 Store in localStorage</button>
+    <button onclick="storeInSessionStorage()">📦 Store in sessionStorage</button>
+    <button onclick="storeInMemory()">🧠 Store in Memory</button>
+    <button onclick="storeInCookie()">🍪 Store in Cookie (via server)</button>
+    <div class="output" id="store-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 XSS Attack Simulation</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Simulate what an XSS attacker could steal:</p>
+    <button onclick="simulateXSSTheft()" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Simulate XSS Token Theft</button>
+    <div class="output" id="xss-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Best Practice: Memory + HttpOnly Cookie</h3>
+    <pre><span class="cm">// THE RECOMMENDED PATTERN for SPAs:</span>
+<span class="cm">// Access token → JavaScript memory (module-scoped variable)</span>
+<span class="cm">// Refresh token → HttpOnly Secure SameSite=Strict cookie</span>
+
+<span class="cm">// auth.js — token stored in closure (not accessible from console/XSS)</span>
+<span class="kw">const</span> <span class="fn">createAuthManager</span> = () => {
+  <span class="kw">let</span> accessToken = <span class="str">null</span>; <span class="cm">// ← private, not on window/globalThis</span>
+
+  <span class="kw">return</span> {
+    setToken: (token) => { accessToken = token; },
+    getToken: () => accessToken,
+    clearToken: () => { accessToken = <span class="str">null</span>; },
+    <span class="fn">fetchWithAuth</span>: <span class="kw">async</span> (url, options = {}) => {
+      <span class="kw">if</span> (!accessToken) <span class="kw">await</span> refreshAccessToken(); <span class="cm">// use refresh cookie</span>
+      <span class="kw">return</span> fetch(url, {
+        ...options,
+        headers: { ...options.headers, Authorization: <span class="str">`Bearer ${accessToken}`</span> }
+      });
+    }
+  };
+};
+
+<span class="kw">const</span> auth = <span class="fn">createAuthManager</span>();
+<span class="cm">// auth.getToken() works, but window.accessToken is undefined</span>
+<span class="cm">// XSS can call auth.getToken() — but only during script execution</span>
+<span class="cm">// On page reload, token is gone (must re-authenticate via refresh cookie)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Token Storage</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Your team stores JWT in localStorage. The security team flags it. What do you recommend?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Migration plan: Move access token to JavaScript memory (closure/module scope). Move refresh token to HttpOnly + Secure + SameSite=Strict cookie. Add a /api/refresh endpoint that reads the cookie and returns a new access token. On app load: call /api/refresh to get initial access token. On 401: automatically call /api/refresh and retry. Benefits: XSS can't steal persistent tokens (memory cleared on reload). CSRF can't hijack refresh (SameSite=Strict). Short-lived access token (15min) limits damage from memory-reading XSS. Trade-off: Slight complexity increase, but large security improvement.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+const FAKE_TOKEN='eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjoiYWxpY2UiLCJyb2xlIjoiYWRtaW4ifQ.fake_signature_demo';
+let memoryToken=null;
+
+function storeInLocalStorage(){
+  const el=document.getElementById('store-result');
+  localStorage.setItem('auth_token',FAKE_TOKEN);
+  el.textContent=`✅ Token stored in localStorage\n\nlocalStorage.getItem('auth_token'):\n"${localStorage.getItem('auth_token')}"\n\n⚠️ Risks:\n  • Any JavaScript on this page can read it\n  • Persists after browser close\n  • XSS can steal it and exfiltrate\n  • Extensions can read it\n\nDevTools: Application → Local Storage`;
+}
+
+function storeInSessionStorage(){
+  const el=document.getElementById('store-result');
+  sessionStorage.setItem('auth_token',FAKE_TOKEN);
+  el.textContent=`✅ Token stored in sessionStorage\n\nsessionStorage.getItem('auth_token'):\n"${sessionStorage.getItem('auth_token')}"\n\n⚠️ Risks:\n  • Any JavaScript on this page can read it\n  • Cleared when TAB closes (not window)\n  • XSS can still steal it while tab is open\n  • Duplicated if user opens new tab (Ctrl+click)\n\nDevTools: Application → Session Storage`;
+}
+
+function storeInMemory(){
+  const el=document.getElementById('store-result');
+  memoryToken=FAKE_TOKEN;
+  el.textContent=`✅ Token stored in JavaScript memory variable\n\nwindow.memoryToken? ${typeof window.memoryToken !== 'undefined'}\n(In production, use a closure — not a global variable)\n\n✅ Benefits:\n  • Cleared on page reload (no persistence)\n  • XSS can only read during current execution\n  • Not visible in DevTools storage panels\n\n⚠️ Risks:\n  • Lost on refresh/navigation (need refresh token to recover)\n  • Sophisticated XSS can still read during execution`;
+}
+
+async function storeInCookie(){
+  const el=document.getElementById('store-result');
+  try{
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({username:'alice',password:'Password123!'})});
+    const d=await res.json();
+    el.textContent=`✅ Token stored in HttpOnly cookie (set by server)\n\nServer response: ${JSON.stringify(d,null,2)}\n\ndocument.cookie: "${document.cookie}"\n(HttpOnly cookies NOT visible to JavaScript!)\n\n✅ Benefits:\n  • XSS cannot read or steal the cookie\n  • Automatically sent with requests (credentials: 'include')\n  • Secure flag ensures HTTPS only\n\n⚠️ Risks:\n  • Auto-sent = CSRF risk (mitigate with SameSite)\n  • 4KB size limit\n  • Sent with every request (bandwidth)`;
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+
+function simulateXSSTheft(){
+  const el=document.getElementById('xss-result');
+  el.textContent=`🔴 XSS Attack Simulation — What can be stolen:\n${'='.repeat(50)}\n\n`;
+  // localStorage
+  const ls=localStorage.getItem('auth_token');
+  el.textContent+=`localStorage.auth_token: ${ls?'🔴 STOLEN: '+ls.slice(0,30)+'...':'✅ Not found'}\n\n`;
+  // sessionStorage
+  const ss=sessionStorage.getItem('auth_token');
+  el.textContent+=`sessionStorage.auth_token: ${ss?'🔴 STOLEN: '+ss.slice(0,30)+'...':'✅ Not found'}\n\n`;
+  // Memory (global)
+  el.textContent+=`window.memoryToken: ${memoryToken?'🔴 STOLEN (global var): '+memoryToken.slice(0,30)+'...':'✅ Not accessible'}\n`;
+  el.textContent+=`(In closure: ✅ Not directly accessible from injected script)\n\n`;
+  // Cookies
+  el.textContent+=`document.cookie: "${document.cookie}"\n`;
+  el.textContent+=`(HttpOnly cookies: ✅ NOT visible — protected from XSS)\n\n`;
+  el.textContent+=`${'='.repeat(50)}\nConclusion:\n  localStorage/sessionStorage → ❌ Fully stolen by XSS\n  Global variable → ❌ Stolen by XSS\n  Closure variable → ⚠️ Harder but possible during execution\n  HttpOnly cookie → ✅ Cannot be stolen by XSS`;
+}
+</script>
+</body></html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 04 — XSS Sanitization with DOMPurify</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.render-box{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;min-height:60px;margin-top:8px;font-size:.82rem;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🧹 Lab 04 — XSS Sanitization with DOMPurify</h1>
+<p class="sub">Module 12.1 · Web Threats · Output sanitization vs encoding</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">DOMPurify Config</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3 class="safe">Why DOMPurify?</h3>
+    <p style="font-size:.83rem;color:#94a3b8">DOMPurify is the gold-standard HTML sanitization library. It uses the browser's own DOM parser to parse the input, then walks the resulting DOM tree and removes dangerous elements/attributes while keeping safe HTML formatting. It's used by Google, Mozilla, and Wikipedia.</p>
+    <div class="grid2" style="margin-top:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #3a1e1e;padding:10px;border-radius:8px">
+        <div style="color:#ef4444;font-weight:bold;margin-bottom:4px">HTML Encoding (escaping)</div>
+        <div style="color:#94a3b8">Converts ALL HTML to text: &lt; → &amp;lt;<br>Result: no HTML renders. Safe but loses ALL formatting.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #1a3a2a;padding:10px;border-radius:8px">
+        <div style="color:#10b981;font-weight:bold;margin-bottom:4px">Sanitization (DOMPurify)</div>
+        <div style="color:#94a3b8">Removes DANGEROUS tags/attrs, keeps SAFE ones.<br>Result: &lt;b&gt;bold&lt;/b&gt; renders, &lt;script&gt; is stripped.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Sanitization Comparison</h3>
+    <label style="font-size:.82rem;color:#94a3b8">Input HTML (try malicious payloads):</label>
+    <textarea id="input" rows="4"><b>Hello</b> <img src=x onerror=alert(1)> <a href="javascript:alert(1)">click</a> <script>alert('xss')</script> <p style="color:red">styled</p></textarea>
+    <div style="margin:8px 0">
+      <button onclick="setInput('<img src=x onerror=alert(1)> <b>bold</b> <i>italic</i>')">Mixed safe+unsafe</button>
+      <button onclick="setInput('<svg><animate onbegin=alert(1) attributeName=x dur=1s>')">SVG animate</button>
+      <button onclick="setInput('<math><mtext><table><mglyph><style><!--</style><img src onerror=alert(1)>')">MathML bypass</button>
+      <button onclick="setInput('<form><button formaction=javascript:alert(1)>Submit</button></form>')">Form action</button>
+    </div>
+    <button style="background:#3a1e1e;border-color:#ef4444;color:#ef4444" onclick="renderAll()">⚡ Compare All Methods</button>
+  </div>
+  <div class="grid3">
+    <div class="card">
+      <h3>⚠️ Raw innerHTML</h3>
+      <div id="r-raw" class="render-box" style="border-color:#ef4444"></div>
+      <pre id="c-raw" style="margin-top:6px;font-size:.72rem"></pre>
+    </div>
+    <div class="card">
+      <h3 class="safe">DOMPurify Sanitized</h3>
+      <div id="r-pure" class="render-box" style="border-color:#10b981"></div>
+      <pre id="c-pure" style="margin-top:6px;font-size:.72rem"></pre>
+    </div>
+    <div class="card">
+      <h3 class="safe">HTML Encoded</h3>
+      <div id="r-enc" class="render-box" style="border-color:#60a5fa"></div>
+      <pre id="c-enc" style="margin-top:6px;font-size:.72rem"></pre>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>DOMPurify Configuration Options</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:10px">Try different configs and see how they affect sanitization output:</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <label style="font-size:.78rem;color:#94a3b8"><input type="checkbox" id="cfg-text-only"> ALLOWED_TAGS: [] (text only)</label>
+      <label style="font-size:.78rem;color:#94a3b8"><input type="checkbox" id="cfg-no-style"> FORBID_ATTR: ['style']</label>
+      <label style="font-size:.78rem;color:#94a3b8"><input type="checkbox" id="cfg-no-href"> FORBID_ATTR: ['href'] + FORBID_TAGS: ['a']</label>
+      <label style="font-size:.78rem;color:#94a3b8"><input type="checkbox" id="cfg-allow-target"> ADD_ATTR: ['target']</label>
+    </div>
+    <button onclick="testConfig()">Test Config</button>
+    <pre id="config-output" style="margin-top:8px;min-height:80px"></pre>
+    <div id="config-render" class="render-box" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
+    <h3>Common DOMPurify Configurations</h3>
+    <table>
+      <tr><th>Use Case</th><th>Config</th><th>Effect</th></tr>
+      <tr><td>Rich text editor</td><td>Default (no config)</td><td>Strips scripts, keeps formatting tags</td></tr>
+      <tr><td>Plain text field (name, email)</td><td>{ ALLOWED_TAGS: [] }</td><td>Strips ALL HTML, returns text only</td></tr>
+      <tr><td>Markdown preview</td><td>{ ALLOWED_TAGS: ['p','b','i','a','img','code','pre','ul','ol','li'] }</td><td>Whitelist specific safe tags</td></tr>
+      <tr><td>No external links</td><td>{ FORBID_TAGS: ['a'], FORBID_ATTR: ['href'] }</td><td>Removes all links</td></tr>
+      <tr><td>Strict (Google Docs style)</td><td>{ USE_PROFILES: { html: true } }</td><td>Only standard HTML, no MathML/SVG</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Interview Q&A — Sanitization at Google Scale</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: When should you use sanitization vs encoding?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Encoding when you want to display text (user names, labels) — use textContent or template auto-escaping. Sanitization when you need to render user-supplied HTML (rich text editor, markdown preview, CMS content). Never roll your own sanitizer — use DOMPurify or the browser's Sanitizer API.</p>
+      <p><strong style="color:#60a5fa">Q: Can DOMPurify be bypassed?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">DOMPurify has very few CVEs given its widespread use. Bypasses are discovered occasionally (mXSS / mutation XSS) where the parser interprets HTML differently during sanitization vs rendering. DOMPurify mitigates this by sanitizing twice internally. Keep it updated — npm audit.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+function setInput(v){document.getElementById('input').value=v}
+function htmlEncode(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function renderAll(){
+  const input=document.getElementById('input').value;
+  // Raw
+  document.getElementById('r-raw').innerHTML=input;
+  document.getElementById('c-raw').textContent='Output HTML:\n'+input;
+  // DOMPurify
+  const clean=DOMPurify.sanitize(input);
+  document.getElementById('r-pure').innerHTML=clean;
+  document.getElementById('c-pure').textContent='Sanitized HTML:\n'+clean+'\n\nRemoved:\n'+diff(input,clean);
+  // Encoded
+  const enc=htmlEncode(input);
+  document.getElementById('r-enc').innerHTML=enc;
+  document.getElementById('c-enc').textContent='Encoded output:\n'+enc;
+}
+function diff(a,b){const removed=[];if(a.includes('<script')&&!b.includes('<script'))removed.push('<script> tags');if(a.includes('onerror')&&!b.includes('onerror'))removed.push('onerror attributes');if(a.includes('javascript:')&&!b.includes('javascript:'))removed.push('javascript: URLs');return removed.join(', ')||'nothing removed'}
+
+function testConfig(){
+  const input=document.getElementById('input').value;
+  const config={};
+  if(document.getElementById('cfg-text-only').checked)config.ALLOWED_TAGS=[];
+  if(document.getElementById('cfg-no-style').checked)config.FORBID_ATTR=['style'];
+  if(document.getElementById('cfg-no-href').checked){config.FORBID_ATTR=[...(config.FORBID_ATTR||[]),'href'];config.FORBID_TAGS=['a']}
+  if(document.getElementById('cfg-allow-target').checked)config.ADD_ATTR=['target'];
+  const result=DOMPurify.sanitize(input,config);
+  document.getElementById('config-output').textContent='Config: '+JSON.stringify(config,null,2)+'\n\nInput:\n'+input+'\n\nOutput:\n'+result;
+  document.getElementById('config-render').innerHTML=result;
+}
+</script>
+</body></html>

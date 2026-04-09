@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 03 — OAuth Security Vulnerabilities</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 03 — OAuth Security Vulnerabilities</h1>
+<p class="sub">Module 12.2 · Open redirect, CSRF, token theft, misconfiguration attacks</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Vulnerability Catalog</div>
+  <div class="tab" onclick="setTab(1)">Attack Simulations</div>
+  <div class="tab" onclick="setTab(2)">Defenses</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>OAuth Attack Surface</h3>
+    <pre><span class="cm">// 1. OPEN REDIRECT via redirect_uri</span>
+<span class="cm">// If auth server doesn't strictly validate redirect_uri:</span>
+/authorize?redirect_uri=https://evil.com/steal <span class="danger">// ← token sent to attacker</span>
+<span class="cm">// Fix: Exact match of pre-registered redirect URIs. No wildcards.</span>
+
+<span class="cm">// 2. CSRF on OAuth Callback</span>
+<span class="cm">// Attacker initiates OAuth with THEIR account</span>
+<span class="cm">// Tricks victim into completing the callback</span>
+<span class="cm">// Victim's app is now linked to attacker's account!</span>
+<span class="cm">// Fix: State parameter. Always verify state on callback.</span>
+
+<span class="cm">// 3. Authorization Code Injection</span>
+<span class="cm">// Attacker steals a code and replays it in their own session</span>
+<span class="cm">// Fix: PKCE binds code to the original requester.</span>
+
+<span class="cm">// 4. Token Leakage via Referrer</span>
+<span class="cm">// Implicit flow: token in URL fragment</span>
+<span class="cm">// If page has external links/images → token leaks in Referer header</span>
+<span class="cm">// Fix: Use Auth Code flow. Set Referrer-Policy: no-referrer.</span>
+
+<span class="cm">// 5. Insufficient Scope Validation</span>
+<span class="cm">// App requests 'read' scope but server grants 'read write'</span>
+<span class="cm">// Fix: Validate returned scope against requested scope.</span>
+
+<span class="cm">// 6. Token Substitution (Confused Deputy)</span>
+<span class="cm">// Attacker gets access_token from one resource</span>
+<span class="cm">// Uses it on another resource that accepts the same token</span>
+<span class="cm">// Fix: Validate token audience (aud claim).</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 CSRF Attack on OAuth</h3>
+    <button onclick="demoCSRF('no-state')" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Without State Parameter</button>
+    <button onclick="demoCSRF('with-state')" style="background:#1a3a2a;border-color:#10b981;color:#10b981">✅ With State Parameter</button>
+    <div class="output" id="csrf-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 Open Redirect via redirect_uri</h3>
+    <button onclick="demoOpenRedirect('strict')" style="background:#1a3a2a;border-color:#10b981;color:#10b981">✅ Strict Validation</button>
+    <button onclick="demoOpenRedirect('loose')" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Loose Validation</button>
+    <div class="output" id="redirect-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Defense Checklist</h3>
+    <pre><span class="cm">// OAuth Implementation Security Checklist:</span>
+
+<span class="cm">✅ 1. Exact redirect_uri validation (no wildcards, no substrings)</span>
+<span class="cm">✅ 2. State parameter for CSRF protection</span>
+<span class="cm">✅ 3. PKCE for code exchange protection</span>
+<span class="cm">✅ 4. Short-lived authorization codes (10 min, single-use)</span>
+<span class="cm">✅ 5. Token exchange server-side (client_secret never in browser)</span>
+<span class="cm">✅ 6. Validate id_token: iss, aud, exp, nonce</span>
+<span class="cm">✅ 7. Minimum necessary scopes</span>
+<span class="cm">✅ 8. Referrer-Policy: no-referrer (prevent token leakage)</span>
+<span class="cm">✅ 9. Token audience validation</span>
+<span class="cm">✅ 10. Secure token storage (in-memory or HttpOnly cookie)</span>
+<span class="cm">✅ 11. Token revocation on logout</span>
+<span class="cm">✅ 12. Rate limit token endpoint</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — OAuth Vulnerabilities</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: You're reviewing an OAuth integration that uses redirect_uri=https://app.com/*. What's the risk?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Critical risk: Any path on app.com can receive the authorization code. If there's an open redirect on any endpoint (e.g., /redirect?url=evil.com), an attacker chains: (1) Start OAuth with redirect_uri=https://app.com/redirect?url=https://evil.com, (2) Auth server allows it (matches wildcard), (3) Code is sent to app.com/redirect which forwards to evil.com with the code in the URL. Fix: Register exact redirect URIs only (https://app.com/oauth/callback). Even path-prefix matching (/oauth/*) is risky — a single unrelated endpoint under that path could be exploited.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function demoCSRF(mode){
+  const el=document.getElementById('csrf-result');
+  if(mode==='no-state'){
+    el.textContent=`OAuth CSRF Attack (No State Parameter):\n${'='.repeat(50)}\n\n`;
+    el.textContent+=`1. Attacker starts OAuth flow with THEIR Google account\n`;
+    el.textContent+=`   GET /authorize?client_id=app&redirect_uri=https://app.com/callback\n\n`;
+    el.textContent+=`2. Attacker gets authorization code for THEIR account:\n`;
+    el.textContent+=`   https://app.com/callback?code=ATTACKER_CODE\n\n`;
+    el.textContent+=`3. Attacker crafts a page with:\n`;
+    el.textContent+=`   <img src="https://app.com/callback?code=ATTACKER_CODE">\n\n`;
+    el.textContent+=`4. Victim visits attacker's page → browser loads the img URL\n`;
+    el.textContent+=`   app.com/callback processes the code in victim's session\n\n`;
+    el.textContent+=`5. Result: Victim's app account is now linked to ATTACKER's Google!\n`;
+    el.textContent+=`   Attacker can login as victim using their own Google account.\n\n`;
+    el.textContent+=`⚠️ Without state parameter, the server can't tell this apart from a legitimate callback.`;
+  }else{
+    el.textContent=`OAuth CSRF Defense (With State Parameter):\n${'='.repeat(50)}\n\n`;
+    const state=crypto.randomUUID();
+    el.textContent+=`1. App generates unique state: ${state}\n`;
+    el.textContent+=`   Stored in session: sessionStorage.setItem('oauth_state', '${state}')\n\n`;
+    el.textContent+=`2. Auth URL includes state:\n`;
+    el.textContent+=`   GET /authorize?...&state=${state}\n\n`;
+    el.textContent+=`3. Callback receives: /callback?code=xxx&state=${state}\n\n`;
+    el.textContent+=`4. App verifies: callback.state === sessionStorage.oauth_state\n`;
+    el.textContent+=`   ✅ Match: proceed with token exchange\n`;
+    el.textContent+=`   ❌ Mismatch: reject (possible CSRF attack!)\n\n`;
+    el.textContent+=`5. Attacker's forged callback: /callback?code=ATTACKER_CODE&state=UNKNOWN\n`;
+    el.textContent+=`   State doesn't match victim's session → REJECTED ✅`;
+  }
+}
+
+function demoOpenRedirect(mode){
+  const el=document.getElementById('redirect-result');
+  const registered=['https://app.com/oauth/callback'];
+  const tests=[
+    'https://app.com/oauth/callback',
+    'https://evil.com/steal',
+    'https://app.com.evil.com/callback',
+    'https://app.com/oauth/callback/../../../evil',
+    'https://app.com/oauth/callback?next=https://evil.com',
+  ];
+  if(mode==='strict'){
+    el.textContent=`Strict redirect_uri Validation (Exact Match):\n${'='.repeat(50)}\nRegistered: ${registered[0]}\n\n`;
+    tests.forEach(uri=>{
+      const match=registered.includes(uri);
+      el.textContent+=`${match?'✅':'❌'} ${uri}\n   ${match?'Allowed (exact match)':'Rejected — not an exact match'}\n\n`;
+    });
+    el.textContent+='\n✅ Only the exact pre-registered URI is accepted.';
+  }else{
+    el.textContent=`Loose redirect_uri Validation (Substring/Prefix):\n${'='.repeat(50)}\nPattern: starts with "https://app.com/"\n\n`;
+    tests.forEach(uri=>{
+      const match=uri.startsWith('https://app.com/');
+      el.textContent+=`${match?'⚠️ ALLOWED':'❌ Blocked'} ${uri}\n   ${match?'Matches prefix — but may be vulnerable!':'Doesn\'t match prefix'}\n\n`;
+    });
+    el.textContent+='\n⚠️ Prefix matching allows:\n  - Path traversal: /oauth/callback/../../../evil\n  - Query parameter injection: ?next=https://evil.com\n  - Any endpoint under app.com/';
+  }
+}
+</script>
+</body></html>

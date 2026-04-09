@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — Cookie Security Attributes</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 02 — Cookie Security Attributes</h1>
+<p class="sub">Module 12.2 · HttpOnly, Secure, SameSite, Domain, Path, __Host-</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">All Attributes</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Cookie Prefixes</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Cookie Security Attributes Reference</h3>
+    <table>
+      <tr><th>Attribute</th><th>Purpose</th><th>Threat Mitigated</th></tr>
+      <tr><td><strong>HttpOnly</strong></td><td>Cannot be read by JavaScript</td><td>XSS token theft</td></tr>
+      <tr><td><strong>Secure</strong></td><td>Only sent over HTTPS</td><td>MitM interception</td></tr>
+      <tr><td><strong>SameSite=Strict</strong></td><td>Never sent cross-site</td><td>CSRF (strongest)</td></tr>
+      <tr><td><strong>SameSite=Lax</strong></td><td>Sent on top-level navigation GET</td><td>CSRF (most attacks)</td></tr>
+      <tr><td><strong>SameSite=None</strong></td><td>Always sent (requires Secure)</td><td>No protection (for cross-site APIs)</td></tr>
+      <tr><td><strong>Domain</strong></td><td>Which domains receive the cookie</td><td>Cookie scope restriction</td></tr>
+      <tr><td><strong>Path</strong></td><td>Which paths receive the cookie</td><td>Path-based access control</td></tr>
+      <tr><td><strong>Max-Age/Expires</strong></td><td>Cookie lifetime</td><td>Limits exposure window</td></tr>
+      <tr><td><strong>__Host- prefix</strong></td><td>Must be Secure, no Domain, Path=/</td><td>Cookie injection attacks</td></tr>
+      <tr><td><strong>__Secure- prefix</strong></td><td>Must have Secure flag</td><td>HTTP downgrade attacks</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Cookie Attribute Tester</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Set different cookies and see which ones are accessible to JavaScript:</p>
+    <button onclick="setRegularCookie()">📝 Set Regular Cookie</button>
+    <button onclick="setHttpOnlyCookie()">🔒 Set HttpOnly Cookie (via server)</button>
+    <button onclick="readCookies()">🔍 Read All Cookies (JavaScript)</button>
+    <button onclick="clearCookies()">🧹 Clear</button>
+    <div class="output" id="cookie-result">Click buttons to experiment with cookie attributes</div>
+  </div>
+  <div class="card">
+    <h3>🧪 SameSite Comparison (Real Server)</h3>
+    <button onclick="testSameSite()">⚡ Set cookies with all SameSite values</button>
+    <div class="output" id="samesite-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Cookie Prefixes (__Host-, __Secure-)</h3>
+    <pre><span class="cm">// Cookie prefixes enforce security at the browser level</span>
+<span class="cm">// Browsers REJECT cookies with prefixes that don't meet requirements</span>
+
+<span class="cm">// __Host- prefix requirements:</span>
+<span class="cm">// ✅ Must have Secure flag</span>
+<span class="cm">// ✅ Must NOT have Domain attribute</span>
+<span class="cm">// ✅ Must have Path=/</span>
+<span class="cm">// ✅ Must be set over HTTPS</span>
+Set-Cookie: __Host-session=abc123; Secure; Path=/
+
+<span class="cm">// Why? Prevents:</span>
+<span class="cm">// 1. Cookie injection from subdomains (no Domain = exact match)</span>
+<span class="cm">// 2. HTTP downgrade attacks (Secure required)</span>
+<span class="cm">// 3. Path-based cookie shadowing (Path=/ required)</span>
+
+<span class="cm">// __Secure- prefix requirements:</span>
+<span class="cm">// ✅ Must have Secure flag (only requirement)</span>
+Set-Cookie: __Secure-token=xyz; Secure; SameSite=Strict
+
+<span class="cm">// Google uses __Host- for their auth cookies!</span>
+<span class="cm">// Check: DevTools → Application → Cookies → google.com</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Cookie Security</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: What's the most secure cookie configuration for an auth session?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px"><code>Set-Cookie: __Host-session=token; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600</code>. Breakdown: __Host- prefix enforces Secure + no Domain + Path=/ at the browser level. HttpOnly blocks JavaScript access. SameSite=Strict prevents CSRF completely. Max-Age=3600 limits to 1 hour. This combination defends against: XSS (HttpOnly), CSRF (SameSite=Strict), MitM (Secure), cookie injection (__Host-), prolonged sessions (Max-Age).</p>
+      <p><strong style="color:#60a5fa">Q: SameSite=Strict breaks OAuth redirects. How do you handle this?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">OAuth redirects from the IdP back to your site are cross-site navigations — SameSite=Strict cookies won't be sent. Solutions: (1) Use SameSite=Lax for the initial auth check, then upgrade to a Strict session after the redirect. (2) Use a landing page pattern: OAuth callback → landing page (same-site) → redirect to app (now Strict cookie is sent). (3) Google's approach: Use a combination of Lax session cookie + a separate Strict CSRF cookie for state-changing operations.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function setRegularCookie(){
+  const el=document.getElementById('cookie-result');
+  document.cookie='regular_cookie=visible_to_js; path=/';
+  document.cookie='no_httponly=also_visible; path=/; SameSite=Lax';
+  el.textContent=`Set regular cookies (no HttpOnly):\n  regular_cookie=visible_to_js\n  no_httponly=also_visible\n\nThese ARE readable by JavaScript.\nClick "Read All Cookies" to verify.`;
+}
+
+async function setHttpOnlyCookie(){
+  const el=document.getElementById('cookie-result');
+  try{
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({username:'alice',password:'Password123!'})});
+    const d=await res.json();
+    const setCookieHeaders=res.headers.get('set-cookie');
+    el.textContent=`Server response:\n${JSON.stringify(d,null,2)}\n\nServer set HttpOnly cookie(s).\nThese are NOT readable by JavaScript!\n\ndocument.cookie: "${document.cookie}"\n\n⚠️ Notice: The HttpOnly session cookie does NOT appear in document.cookie.\nBut it WILL be sent automatically with every request to the server.\nCheck DevTools → Application → Cookies to see it.`;
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+
+function readCookies(){
+  const el=document.getElementById('cookie-result');
+  const cookies=document.cookie;
+  el.textContent=`document.cookie:\n"${cookies}"\n\nParsed cookies:\n`;
+  if(cookies){
+    cookies.split(';').forEach(c=>{
+      const [name,val]=c.trim().split('=');
+      el.textContent+=`  ${name} = ${val} ✅ (readable by JS)\n`;
+    });
+  }else{
+    el.textContent+='  (no cookies readable by JavaScript)\n';
+  }
+  el.textContent+='\n⚠️ HttpOnly cookies are NOT shown here.\nThey exist in the browser but are invisible to JavaScript.\nThis protects them from XSS attacks.';
+}
+
+function clearCookies(){
+  document.cookie.split(';').forEach(c=>{
+    document.cookie=c.trim().split('=')[0]+'=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+  });
+  document.getElementById('cookie-result').textContent='🧹 Cleared all JS-accessible cookies';
+}
+
+async function testSameSite(){
+  const el=document.getElementById('samesite-result');
+  el.textContent=`SameSite Cookie Comparison:\n${'='.repeat(50)}\n\n`;
+  el.textContent+=`SameSite=Strict:\n  Sent: Only same-site requests\n  NOT sent: Links from other sites, form submissions, iframes\n  Best for: Auth cookies, CSRF tokens\n\n`;
+  el.textContent+=`SameSite=Lax (default in modern browsers):\n  Sent: Same-site + top-level GET navigations\n  NOT sent: Cross-site POST, iframes, AJAX, images\n  Best for: General session cookies\n\n`;
+  el.textContent+=`SameSite=None; Secure:\n  Sent: Always (including cross-site)\n  Requires: Secure flag (HTTPS only)\n  Best for: Cross-site embedding (OAuth, payment widgets)\n\n`;
+  el.textContent+=`${'='.repeat(50)}\nBrowser defaults (when SameSite not set):\n  Chrome 80+: Treats as Lax\n  Firefox 69+: Treats as Lax\n  Safari: Varies (often blocks cross-site cookies entirely)\n\nDevTools: Application → Cookies → check SameSite column`;
+}
+</script>
+</body></html>

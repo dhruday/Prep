@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — CSP Nonces & Hashes</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1a3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 02 — CSP Nonces & Hashes</h1>
+<p class="sub">Module 12.3 · Script nonces, hash-based CSP, and strict-dynamic</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Nonces</div>
+  <div class="tab" onclick="setTab(1)">Hashes</div>
+  <div class="tab" onclick="setTab(2)">strict-dynamic</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Nonce-Based CSP</h3>
+    <pre><span class="cm">// Nonce = "Number used ONCE"</span>
+<span class="cm">// Random value generated per request, shared between header and script tags</span>
+
+<span class="cm">// Server generates nonce:</span>
+<span class="kw">const</span> crypto = require(<span class="str">'crypto'</span>);
+<span class="kw">const</span> nonce = crypto.randomBytes(16).toString(<span class="str">'base64'</span>);
+<span class="cm">// e.g., "YTk5NmI3ZmQ2NjhiMzA0ZQ=="</span>
+
+<span class="cm">// Set in CSP header:</span>
+Content-Security-Policy: script-src <span class="str">'nonce-YTk5NmI3ZmQ2NjhiMzA0ZQ=='</span>
+
+<span class="cm">// Add to allowed script tags:</span>
+&lt;script <span class="kw">nonce</span>=<span class="str">"YTk5NmI3ZmQ2NjhiMzA0ZQ=="</span>&gt;
+  console.log(<span class="str">'This runs!'</span>);  <span class="cm">// ✅ nonce matches</span>
+&lt;/script&gt;
+
+&lt;script&gt;
+  console.log(<span class="str">'This is blocked!'</span>);  <span class="cm">// ❌ no nonce</span>
+&lt;/script&gt;
+
+<span class="cm">// XSS payload injected by attacker:</span>
+&lt;script&gt;steal(cookies)&lt;/script&gt;  <span class="cm">// ❌ no nonce → BLOCKED</span>
+
+<span class="cm">// Critical requirements:</span>
+<span class="cm">// 1. Nonce must be random (not predictable)</span>
+<span class="cm">// 2. Nonce must be unique per response (not cached/reused)</span>
+<span class="cm">// 3. Use cryptographic randomness (not Math.random)</span>
+<span class="cm">// 4. At least 128 bits (16 bytes)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Hash-Based CSP</h3>
+    <pre><span class="cm">// Hash = SHA-256/384/512 of the script content</span>
+<span class="cm">// No dynamic generation needed — good for static scripts</span>
+
+<span class="cm">// For this inline script:</span>
+&lt;script&gt;alert(<span class="str">'Hello'</span>)&lt;/script&gt;
+
+<span class="cm">// Generate hash (must match EXACTLY — whitespace matters!):</span>
+<span class="cm">// echo -n "alert('Hello')" | openssl dgst -sha256 -binary | base64</span>
+<span class="cm">// → "qznLcsROx4GACP2dm0UCKCzCG+HiZ1guq6ZZDob/Tng="</span>
+
+<span class="cm">// CSP header:</span>
+Content-Security-Policy: script-src <span class="str">'sha256-qznLcsROx4GACP2dm0UCKCzCG+HiZ1guq6ZZDob/Tng='</span>
+
+<span class="cm">// ✅ Pros of hashes:</span>
+<span class="cm">// - No per-request generation (cacheable)</span>
+<span class="cm">// - Precise: only EXACT matching content runs</span>
+<span class="cm">// - Good for static inline scripts (analytics, config)</span>
+
+<span class="cm">// ❌ Cons:</span>
+<span class="cm">// - Any content change = new hash</span>
+<span class="cm">// - Whitespace matters (trailing newline changes hash)</span>
+<span class="cm">// - Doesn't work for external scripts (use nonce instead)</span>
+<span class="cm">// - Hard to maintain for frequently changing code</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>strict-dynamic</h3>
+    <pre><span class="cm">// strict-dynamic: Trust scripts loaded BY trusted scripts</span>
+<span class="cm">// Solves the "widget loading" problem</span>
+
+Content-Security-Policy: script-src <span class="str">'nonce-abc123'</span> <span class="str">'strict-dynamic'</span>
+
+<span class="cm">// With strict-dynamic:</span>
+&lt;script nonce=<span class="str">"abc123"</span>&gt;
+  <span class="cm">// ✅ This script is trusted (has nonce)</span>
+  <span class="kw">const</span> s = document.createElement(<span class="str">'script'</span>);
+  s.src = <span class="str">'https://analytics.google.com/analytics.js'</span>;
+  document.head.appendChild(s);
+  <span class="cm">// ✅ This dynamically loaded script is ALSO trusted!</span>
+  <span class="cm">// Because it was loaded by a trusted (nonced) script</span>
+&lt;/script&gt;
+
+<span class="cm">// Without strict-dynamic, you'd need:</span>
+<span class="cm">// script-src 'nonce-abc123' https://analytics.google.com</span>
+<span class="cm">// And every third-party CDN, and their dependencies...</span>
+
+<span class="cm">// How strict-dynamic works:</span>
+<span class="cm">// 1. Ignores URL-based allowlists (https://cdn.com)</span>
+<span class="cm">// 2. Ignores 'unsafe-inline'</span>
+<span class="cm">// 3. Only trusts: nonce'd scripts + scripts they load</span>
+<span class="cm">// 4. Propagates trust through dynamic createElement</span>
+
+<span class="cm">// Google's recommended strict CSP:</span>
+Content-Security-Policy:
+  script-src <span class="str">'nonce-{random}'</span> <span class="str">'strict-dynamic'</span>;
+  object-src <span class="str">'none'</span>;
+  base-uri <span class="str">'self'</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Nonces vs Hashes</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: When would you use nonces vs hashes for CSP?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Nonces: (1) SSR apps (Next.js, Nuxt) where server generates HTML per request. Each response gets a fresh nonce. (2) Dynamic inline scripts that change per user/request. (3) Combined with strict-dynamic for automatic trust chain. Hashes: (1) Static sites (SSG) where HTML is pre-built and cached by CDN. Can't inject per-request nonces. (2) Fixed inline scripts that never change (analytics snippet, config). (3) When you can't modify the server (static hosting). Key gotcha: Nonces break with full-page caching. If CDN caches the HTML, all users get the same nonce — but each response needs a unique CSP header. Solutions: (a) Edge computing (Cloudflare Workers) to inject nonce at CDN edge. (b) Use hashes for static content, nonces for dynamic. (c) 'strict-dynamic' + nonce on the entry script, all dynamic loads inherit trust. Google uses nonces + strict-dynamic for most properties.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+</script>
+</body></html>

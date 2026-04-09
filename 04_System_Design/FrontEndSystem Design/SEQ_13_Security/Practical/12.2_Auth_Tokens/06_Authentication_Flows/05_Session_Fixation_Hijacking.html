@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 05 — Session Fixation & Hijacking</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 05 — Session Fixation & Hijacking</h1>
+<p class="sub">Module 12.2 · Session attacks: fixation, hijacking, replay, and prevention</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Attack Concepts</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Defenses</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Session Fixation Attack</h3>
+    <pre><span class="cm">// Session Fixation: Attacker sets the session ID BEFORE the user logs in</span>
+
+<span class="cm">// Step 1: Attacker gets a valid session ID</span>
+<span class="cm">// Visit the site → receive session cookie: sid=ATTACKER_SESSION</span>
+
+<span class="cm">// Step 2: Attacker tricks victim into using that session</span>
+<span class="cm">// Via URL: https://bank.com/login?sid=ATTACKER_SESSION</span>
+<span class="cm">// Via XSS: document.cookie = "sid=ATTACKER_SESSION"</span>
+<span class="cm">// Via meta tag: &lt;meta http-equiv="Set-Cookie" content="sid=ATTACKER_SESSION"&gt;</span>
+
+<span class="cm">// Step 3: Victim logs in with the attacker's session ID</span>
+<span class="cm">// The server associates ATTACKER_SESSION with the victim's account</span>
+
+<span class="cm">// Step 4: Attacker uses ATTACKER_SESSION → logged in as victim!</span></pre>
+  </div>
+  <div class="card">
+    <h3>Session Hijacking Attack</h3>
+    <pre><span class="cm">// Session Hijacking: Attacker steals an EXISTING valid session</span>
+
+<span class="cm">// Methods:</span>
+<span class="cm">// 1. XSS → document.cookie → steal session cookie (if no HttpOnly)</span>
+<span class="cm">// 2. Network sniffing → intercept session cookie (if no HTTPS/Secure)</span>
+<span class="cm">// 3. Man-in-the-Middle → intercept/modify traffic</span>
+<span class="cm">// 4. Malware → browser credential theft</span>
+<span class="cm">// 5. Shoulder surfing → physical observation</span>
+
+<span class="cm">// Session Replay: Reuse a captured session/token</span>
+<span class="cm">// Even expired sessions may work if server doesn't validate expiry</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Session Fixation Simulation</h3>
+    <p style="font-size:.82rem;color:#94a3b8">This shows how session fixation works and how session regeneration prevents it:</p>
+    <button onclick="demoFixation('vulnerable')" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Vulnerable Flow (no regeneration)</button>
+    <button onclick="demoFixation('secure')" style="background:#1a3a2a;border-color:#10b981;color:#10b981">✅ Secure Flow (with regeneration)</button>
+    <div class="output" id="fixation-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 Session Binding Test</h3>
+    <button onclick="testBinding()">🔍 Test Session Binding (IP + User-Agent)</button>
+    <div class="output" id="binding-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Defense Matrix</h3>
+    <pre><span class="cm">// PREVENTION — Session Fixation:</span>
+<span class="cm">// 1. Regenerate session ID on login</span>
+app.post(<span class="str">'/login'</span>, (req, res) => {
+  <span class="kw">if</span> (validCredentials) {
+    req.session.regenerate(() => { <span class="cm">// ← NEW session ID!</span>
+      req.session.user = authenticatedUser;
+      res.redirect(<span class="str">'/dashboard'</span>);
+    });
+  }
+});
+
+<span class="cm">// 2. Regenerate on privilege change</span>
+<span class="cm">// Password change, role change, 2FA verification</span>
+
+<span class="cm">// PREVENTION — Session Hijacking:</span>
+<span class="cm">// 1. HttpOnly cookies — block XSS theft</span>
+<span class="cm">// 2. Secure flag — block network sniffing</span>
+<span class="cm">// 3. Session binding — tie to IP + User-Agent</span>
+<span class="cm">// 4. Short session lifetime — reduce exposure window</span>
+<span class="cm">// 5. Absolute timeout — force re-auth after X hours</span>
+<span class="cm">// 6. Concurrent session limits — detect hijacking</span>
+
+<span class="cm">// PREVENTION — Session Replay:</span>
+<span class="cm">// 1. Short-lived tokens (JWT exp claim)</span>
+<span class="cm">// 2. Token rotation on each use (refresh tokens)</span>
+<span class="cm">// 3. Nonce-based requests (one-time use tokens)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Session Security</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Design a session management system that detects and prevents hijacking in real-time.</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">1. Session metadata: Store IP, User-Agent, geolocation, device fingerprint with each session. 2. Anomaly detection: If request comes from a different IP/country than session creation, trigger step-up authentication (re-enter password or MFA). 3. Concurrent session monitoring: If same user is active from 2 different IPs simultaneously, alert and optionally invalidate the suspicious session. 4. Device tracking: Register known devices via a persistent secure cookie. New device = mandatory MFA. 5. Session activity log: Visible to user (like Google's "Security" → "Recent security activity"). Google adds: risk scoring based on typing patterns, mouse movement, and interaction timing to detect bot-driven session abuse.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function demoFixation(mode){
+  const el=document.getElementById('fixation-result');
+  const attackerSid='abc123-attacker-session';
+  if(mode==='vulnerable'){
+    el.textContent=`VULNERABLE FLOW — No Session Regeneration:\n${'='.repeat(50)}\n\n`;
+    el.textContent+=`1. Attacker visits site → receives session: sid=${attackerSid}\n\n`;
+    el.textContent+=`2. Attacker sends victim a link:\n   https://bank.com/login?sid=${attackerSid}\n   (or injects via XSS: document.cookie = "sid=${attackerSid}")\n\n`;
+    el.textContent+=`3. Victim clicks link → browser now has sid=${attackerSid}\n\n`;
+    el.textContent+=`4. Victim logs in with user/pass\n   Server: session ${attackerSid} → now authenticated as victim\n\n`;
+    el.textContent+=`5. Attacker uses sid=${attackerSid} → LOGGED IN AS VICTIM!\n\n`;
+    el.textContent+=`⚠️ The session ID persisted through authentication.\nThe attacker knew the session ID before login → full access after.`;
+  }else{
+    el.textContent=`SECURE FLOW — With Session Regeneration:\n${'='.repeat(50)}\n\n`;
+    el.textContent+=`1. Attacker visits site → receives session: sid=${attackerSid}\n\n`;
+    el.textContent+=`2. Attacker sends victim a link with the fixed session\n\n`;
+    el.textContent+=`3. Victim clicks link → browser has sid=${attackerSid}\n\n`;
+    el.textContent+=`4. Victim logs in with user/pass\n   Server: req.session.regenerate() → NEW sid=xyz789-new-session\n   Old session ${attackerSid} is DESTROYED\n\n`;
+    el.textContent+=`5. Attacker uses sid=${attackerSid} → SESSION NOT FOUND! ❌\n\n`;
+    el.textContent+=`✅ Session regeneration on login invalidates the attacker's session.\nThe victim gets a brand new session ID that the attacker doesn't know.`;
+  }
+}
+
+async function testBinding(){
+  const el=document.getElementById('binding-result');
+  const API='http://localhost:3001';
+  try{
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({username:'alice',password:'Password123!'})});
+    const d=await res.json();
+    el.textContent=`Session created with binding:\n\nUser-Agent: ${navigator.userAgent.slice(0,60)}...\nIP: (server-side, check response headers)\nTimestamp: ${new Date().toISOString()}\n\nSession binding checks on each request:\n  ✅ Same User-Agent? → Continue\n  ✅ Same IP range? → Continue\n  ⚠️ Different User-Agent? → Invalidate session\n  ⚠️ Different IP country? → Step-up auth\n\nResponse:\n${JSON.stringify(d,null,2)}`;
+  }catch(e){el.textContent=`Error: ${e.message}\nMake sure server is running.`}
+}
+</script>
+</body></html>

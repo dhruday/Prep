@@ -29,11 +29,15 @@ Security is **non-negotiable** in modern web applications. This section covers w
 - `124_XSS.md` - Cross-Site Scripting attacks and prevention
 - `125_CSRF.md` - Cross-Site Request Forgery protection
 - `126_CORS.md` - Cross-Origin Resource Sharing policies
+- `174_Prototype_Pollution.md` - Prototype chain manipulation attacks
+- `175_Supply_Chain_Attacks.md` - npm/dependency security threats
 
 **Key Concepts**:
 - XSS: Stored, Reflected, DOM-based
 - CSRF: Token-based protection, SameSite cookies
 - CORS: Preflight requests, credential handling
+- Prototype Pollution: __proto__ manipulation, safe merge patterns
+- Supply Chain: npm audit, lockfile integrity, CI/CD pipeline security
 
 **Interview Relevance**: 🔥🔥🔥🔥🔥
 These are the most commonly asked security questions.
@@ -47,6 +51,8 @@ These are the most commonly asked security questions.
 - `127_Authentication_Flows.md` - Session vs JWT, OAuth, SSO
 - `128_Token_Storage.md` - Memory, localStorage, HttpOnly cookies
 - `129_OAuth.md` - OAuth 2.0, OpenID Connect, social login
+- `179_JWT_Deep_Dive.md` - JWT structure, signing algorithms, attacks
+- `180_Passkeys_WebAuthn.md` - WebAuthn registration, passkey authentication
 
 **Key Concepts**:
 - Session-based vs token-based authentication
@@ -54,6 +60,8 @@ These are the most commonly asked security questions.
 - Secure token storage patterns
 - OAuth Authorization Code flow
 - SSO implementation
+- JWT signing (HMAC vs RSA), revocation, JWKS rotation
+- Passkeys/WebAuthn: passwordless authentication
 
 **Interview Relevance**: 🔥🔥🔥🔥🔥
 Essential for any application with user authentication.
@@ -71,6 +79,7 @@ Essential for any application with user authentication.
 - `134_Secure_Headers.md` - Security headers configuration
 - `135_Token_Refresh.md` - Automatic token refresh patterns
 - `136_Preventing_Data_Leaks.md` - Logging, caching, debugging
+- `188_Subresource_Integrity_SRI.md` - SRI for scripts, stylesheets, CDN integrity
 
 **Key Concepts**:
 - Content Security Policy (CSP)

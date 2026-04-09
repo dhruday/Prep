@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 04 — JWT Revocation Strategies</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 04 — JWT Revocation Strategies</h1>
+<p class="sub">Module 12.2 · The hardest problem with JWTs — how to invalidate them early</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Revocation Strategies</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Architecture Patterns</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>The JWT Revocation Problem</h3>
+    <pre><span class="cm">// JWTs are stateless — the server doesn't store them</span>
+<span class="cm">// So how do you revoke a JWT before it expires?</span>
+<span class="cm">// User logs out → token is still valid until exp!</span>
+<span class="cm">// Admin deactivates account → token still works!</span></pre>
+  </div>
+  <div class="card">
+    <h3>Strategy Comparison</h3>
+    <table>
+      <tr><th>Strategy</th><th>Latency</th><th>Consistency</th><th>Scalability</th><th>Complexity</th></tr>
+      <tr><td>Short expiry (5 min)</td><td>🟢 None</td><td>🟡 Eventual</td><td>🟢 Infinite</td><td>🟢 Easy</td></tr>
+      <tr><td>Token blacklist (Redis)</td><td>🟡 +1ms</td><td>🟢 Immediate</td><td>🟡 Redis bound</td><td>🟡 Medium</td></tr>
+      <tr><td>Token version (DB)</td><td>🔴 +5ms</td><td>🟢 Immediate</td><td>🔴 DB bound</td><td>🟡 Medium</td></tr>
+      <tr><td>Event-driven invalidation</td><td>🟡 ~seconds</td><td>🟡 Near-real-time</td><td>🟢 Excellent</td><td>🔴 Hard</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Token Blacklist Demo</h3>
+    <button onclick="loginAndLogout()">1️⃣ Login → Logout → Try Revoked Token</button>
+    <div class="output" id="blacklist-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 Token Version Demo</h3>
+    <button onclick="demoTokenVersion()">2️⃣ Simulate Token Version Check</button>
+    <div class="output" id="version-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Recommended: Short-Lived JWT + Refresh Token</h3>
+    <pre><span class="cm">// The industry standard approach:</span>
+
+<span class="cm">// Access token: JWT, 5-15 min expiry</span>
+<span class="cm">// Refresh token: opaque, stored server-side, 7-30 days</span>
+
+<span class="cm">// Normal flow:</span>
+<span class="cm">// 1. Login → get access_token (JWT) + refresh_token</span>
+<span class="cm">// 2. API calls use access_token in Authorization header</span>
+<span class="cm">// 3. Access token expires after 5 min</span>
+<span class="cm">// 4. Client calls /refresh with refresh_token</span>
+<span class="cm">// 5. Server validates refresh_token, issues new access_token</span>
+
+<span class="cm">// Revocation:</span>
+<span class="cm">// Delete refresh_token from server → no more renewals</span>
+<span class="cm">// Max 5 min window where old access_token still works</span>
+<span class="cm">// For instant revocation: add token to blacklist (Redis)</span>
+<span class="cm">// Blacklist only needs entries for 5 min (until token expires)</span>
+
+<span class="cm">// This is a great balance of stateless (JWT) + revocable (refresh)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — JWT Revocation</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Your product has a "Sign out from all devices" feature. How do you implement it with JWTs?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Approach: (1) Each user has a token_version (integer) in the database. (2) JWT includes the token_version at issue time. (3) On "sign out all": increment token_version in DB, delete all refresh tokens for the user from Redis/DB. (4) On every API request: JWT middleware checks token_version in JWT against DB. If mismatch → reject (user must re-login). (5) To avoid DB lookup on every request: use short-lived JWTs (5 min). Only check token_version during refresh. Old access tokens expire naturally within 5 min. (6) For immediate revocation: broadcast a "revoke user X" event via pub/sub. Each service adds user X to an in-memory deny list (TTL = max token lifetime). No DB lookup needed.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function loginAndLogout(){
+  const el=document.getElementById('blacklist-result');
+  el.textContent='Step 1: Logging in as alice...\n';
+  try{
+    const loginResp=await fetch('http://localhost:3001/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'alice',password:'Password123!'})});
+    const loginData=await loginResp.json();
+    const token=loginData.token;
+    el.textContent+=`✅ Got token: ${token.slice(0,50)}...\n\n`;
+    el.textContent+='Step 2: Using token to access protected resource...\n';
+    const r1=await fetch('http://localhost:3001/api/sensitive/data',{headers:{'Authorization':'Bearer '+token}});
+    el.textContent+=`Status: ${r1.status} ${r1.ok?'✅ Authorized':'❌ Denied'}\n\n`;
+    el.textContent+='Step 3: Logging out (token should be blacklisted)...\n';
+    const logoutResp=await fetch('http://localhost:3001/api/auth/logout',{method:'POST',headers:{'Authorization':'Bearer '+token}});
+    const logoutData=await logoutResp.json();
+    el.textContent+=`Logout: ${JSON.stringify(logoutData)}\n\n`;
+    el.textContent+='Step 4: Trying to use the SAME token after logout...\n';
+    const r2=await fetch('http://localhost:3001/api/sensitive/data',{headers:{'Authorization':'Bearer '+token}});
+    const d2=await r2.json();
+    el.textContent+=`Status: ${r2.status} ${r2.ok?'⚠️ Still works (token not revoked!)':'✅ Rejected (token revoked!)'}\n`;
+    el.textContent+=`Response: ${JSON.stringify(d2)}\n\n`;
+    el.textContent+=r2.ok?'🔴 Token still valid after logout — revocation not implemented!':'✅ Server correctly rejected the revoked token.';
+  }catch(e){el.textContent+='Server not running? cd server && node server.js\n'+e.message}
+}
+
+function demoTokenVersion(){
+  const el=document.getElementById('version-result');
+  const userDB={alice:{token_version:3},bob:{token_version:1}};
+  el.textContent=`Token Version Simulation:\n${'='.repeat(40)}\n\n`;
+  el.textContent+=`User DB: ${JSON.stringify(userDB,null,2)}\n\n`;
+  const jwt1={sub:'alice',token_version:3,role:'admin'};
+  const jwt2={sub:'alice',token_version:2,role:'admin'};
+  const jwt3={sub:'bob',token_version:1,role:'user'};
+  [[jwt1,'Alice current token'],[jwt2,'Alice old token (before sign-out-all)'],[jwt3,'Bob current token']].forEach(([jwt,desc])=>{
+    const dbVersion=userDB[jwt.sub].token_version;
+    const valid=jwt.token_version===dbVersion;
+    el.textContent+=`${desc}:\n  JWT version: ${jwt.token_version}, DB version: ${dbVersion}\n  ${valid?'✅ Valid — versions match':'❌ Rejected — version mismatch (user signed out from all devices)'}\n\n`;
+  });
+  el.textContent+=`"Sign out from all devices" flow:\n`;
+  el.textContent+=`  1. Increment alice.token_version: 3 → 4\n`;
+  el.textContent+=`  2. All existing JWTs have version ≤ 3\n`;
+  el.textContent+=`  3. All requests with old tokens → rejected\n`;
+  el.textContent+=`  4. User must re-login → gets new JWT with version 4`;
+}
+</script>
+</body></html>

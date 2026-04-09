@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — Passkey Registration</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a3a2a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:500px;overflow:auto;white-space:pre-wrap;margin-top:8px}input{padding:8px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-size:.82rem;margin:3px}
+</style>
+</head>
+<body>
+<h1>🟢 Lab 02 — Passkey Registration</h1>
+<p class="sub">Module 12.2 · Create a passkey with navigator.credentials.create()</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Registration API</div>
+  <div class="tab" onclick="setTab(1)">Live Registration</div>
+  <div class="tab" onclick="setTab(2)">Response Analysis</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>navigator.credentials.create() — Full Breakdown</h3>
+    <pre><span class="kw">const</span> credential = <span class="kw">await</span> navigator.credentials.create({
+  publicKey: {
+    <span class="cm">// Random challenge from server (prevents replay)</span>
+    challenge: serverChallenge,
+
+    <span class="cm">// Relying Party — your website</span>
+    rp: {
+      id: <span class="str">"example.com"</span>,     <span class="cm">// Domain (or registrable suffix)</span>
+      name: <span class="str">"My App"</span>           <span class="cm">// Display name</span>
+    },
+
+    <span class="cm">// User info — stored in authenticator</span>
+    user: {
+      id: userIdBytes,              <span class="cm">// Unique, random, NOT email</span>
+      name: <span class="str">"alice@example.com"</span>, <span class="cm">// For display in chooser</span>
+      displayName: <span class="str">"Alice"</span>        <span class="cm">// Friendly name</span>
+    },
+
+    <span class="cm">// Acceptable algorithms (server preference order)</span>
+    pubKeyCredParams: [
+      { alg: -7, type: <span class="str">"public-key"</span> },   <span class="cm">// ES256 (preferred)</span>
+      { alg: -257, type: <span class="str">"public-key"</span> }  <span class="cm">// RS256 (fallback)</span>
+    ],
+
+    <span class="cm">// Authenticator requirements</span>
+    authenticatorSelection: {
+      authenticatorAttachment: <span class="str">"platform"</span>,  <span class="cm">// built-in only</span>
+      residentKey: <span class="str">"required"</span>,             <span class="cm">// discoverable</span>
+      userVerification: <span class="str">"required"</span>          <span class="cm">// must verify user</span>
+    },
+
+    <span class="cm">// Prevent duplicate registrations</span>
+    excludeCredentials: existingCredentials,
+
+    timeout: 120000,        <span class="cm">// 2 minutes</span>
+    attestation: <span class="str">"none"</span>     <span class="cm">// don't need hardware proof</span>
+  }
+});</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Register a Passkey</h3>
+    <input id="reg-username" placeholder="Username (e.g., alice)" value="alice">
+    <input id="reg-display" placeholder="Display name" value="Alice Smith">
+    <br>
+    <button onclick="registerPasskey()">🔑 Register Passkey</button>
+    <div class="output" id="reg-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Registration Response Structure</h3>
+    <pre><span class="cm">// credential (PublicKeyCredential) contains:</span>
+
+credential.id          <span class="cm">// Base64URL credential ID</span>
+credential.rawId       <span class="cm">// ArrayBuffer credential ID</span>
+credential.type        <span class="cm">// Always "public-key"</span>
+credential.response    <span class="cm">// AuthenticatorAttestationResponse</span>
+
+<span class="cm">// credential.response contains:</span>
+.clientDataJSON        <span class="cm">// { type, challenge, origin, crossOrigin }</span>
+.attestationObject     <span class="cm">// CBOR-encoded: { fmt, attStmt, authData }</span>
+
+<span class="cm">// authData breakdown (binary):</span>
+<span class="cm">// [32 bytes] rpIdHash — SHA-256 of RP ID</span>
+<span class="cm">// [1 byte]   flags — UP, UV, AT, ED bits</span>
+<span class="cm">// [4 bytes]  signCount — replay counter</span>
+<span class="cm">// [variable] attestedCredData — AAGUID + credentialId + publicKey</span>
+
+<span class="cm">// Server must verify:</span>
+<span class="cm">// 1. challenge matches what was issued</span>
+<span class="cm">// 2. origin matches expected (phishing protection!)</span>
+<span class="cm">// 3. rpIdHash is SHA-256 of expected RP ID</span>
+<span class="cm">// 4. User Present (UP) flag is set</span>
+<span class="cm">// 5. User Verified (UV) flag matches requirements</span>
+<span class="cm">// 6. Extract and store public key + credential ID</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Passkey Registration</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Why does user.id need to be random bytes, not the email?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">The user.id (user handle) is stored in the authenticator and returned during authentication. If you use email: (1) Privacy — the authenticator reveals the user's email on every authentication. (2) Immutability — if user changes email, you need to update all their credentials. (3) Spec compliance — user.id is a byte sequence, max 64 bytes. Use a random UUID or database ID encoded as bytes. The user.name (email) is only for display in the credential chooser — it's not used for verification. Google generates a random 16-byte user handle per account.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function bufToB64url(buf){return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+
+async function registerPasskey(){
+  const el=document.getElementById('reg-result');
+  const username=document.getElementById('reg-username').value;
+  const displayName=document.getElementById('reg-display').value;
+  
+  if(!window.PublicKeyCredential){el.textContent='WebAuthn not supported in this browser';return}
+  
+  el.textContent='Step 1: Requesting registration options from server...\n';
+  try{
+    const optResp=await fetch('http://localhost:3001/api/webauthn/register-options',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,displayName})});
+    const options=await optResp.json();
+    el.textContent+=`Server options received:\n${JSON.stringify(options,null,2).slice(0,500)}\n\n`;
+    
+    // Convert base64url to ArrayBuffer
+    options.challenge=Uint8Array.from(atob(options.challenge.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+    options.user.id=Uint8Array.from(atob(options.user.id.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+    if(options.excludeCredentials)options.excludeCredentials.forEach(c=>{c.id=Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')),ch=>ch.charCodeAt(0))});
+    
+    el.textContent+='Step 2: Browser prompting for biometric/PIN...\n';
+    const credential=await navigator.credentials.create({publicKey:options});
+    
+    el.textContent+=`\nStep 3: Credential created!\n${'='.repeat(40)}\n`;
+    el.textContent+=`  ID: ${credential.id}\n`;
+    el.textContent+=`  Type: ${credential.type}\n`;
+    el.textContent+=`  authenticatorAttachment: ${credential.authenticatorAttachment||'unknown'}\n\n`;
+    
+    // Send to server
+    const regData={id:credential.id,rawId:bufToB64url(credential.rawId),type:credential.type,response:{attestationObject:bufToB64url(credential.response.attestationObject),clientDataJSON:bufToB64url(credential.response.clientDataJSON)}};
+    
+    el.textContent+=`Step 4: Sending to server for verification...\n`;
+    const verResp=await fetch('http://localhost:3001/api/webauthn/register-verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,credential:regData})});
+    const verData=await verResp.json();
+    el.textContent+=`\nServer verification: ${verResp.ok?'✅ SUCCESS':'❌ FAILED'}\n${JSON.stringify(verData,null,2)}`;
+  }catch(e){
+    if(e.name==='NotAllowedError')el.textContent+='\n⚠️ User cancelled or denied the request';
+    else if(e.name==='InvalidStateError')el.textContent+='\n⚠️ Credential already exists for this user';
+    else el.textContent+=`\nError: ${e.name}: ${e.message}\n\nMake sure server is running: cd server && node server.js`;
+  }
+}
+</script>
+</body></html>
