@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Prototype Pollution Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:1rem}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#ef4444;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #ef4444;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#ef4444;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Prototype Pollution Deep Study</h1>
+<p class="sub">Module 12.1 · Security Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Attack &amp; Defense</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. JavaScript Prototype Chain Recap</h3>
+    <pre><span class="cm">// Every JS object has [[Prototype]] → chain of inheritance</span>
+<span class="kw">const</span> obj = {};
+obj.__proto__ === Object.prototype; <span class="cm">// true</span>
+
+<span class="cm">// Property lookup walks up the chain:</span>
+<span class="cm">// obj.toString → not on obj → found on Object.prototype</span>
+<span class="cm">//</span>
+<span class="cm">// Prototype Pollution = modifying Object.prototype</span>
+<span class="cm">// → affects ALL objects in the runtime</span>
+<span class="cm">//</span>
+<span class="cm">// If attacker sets: Object.prototype.isAdmin = true</span>
+<span class="cm">// Then: ({}).isAdmin === true for every object</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. How Pollution Happens</h3>
+    <pre><span class="cm">// The attack vector: recursive merge / deep clone without key checks</span>
+
+<span class="kw">function</span> <span class="fn">merge</span>(target, source) {
+  <span class="kw">for</span> (<span class="kw">const</span> key <span class="kw">in</span> source) {
+    <span class="kw">if</span> (<span class="kw">typeof</span> source[key] === <span class="str">'object'</span>) {
+      <span class="kw">if</span> (!target[key]) target[key] = {};
+      <span class="fn">merge</span>(target[key], source[key]);
+    } <span class="kw">else</span> {
+      target[key] = source[key];
+    }
+  }
+}
+
+<span class="cm">// Attacker sends this JSON payload:</span>
+<span class="kw">const</span> payload = JSON.<span class="fn">parse</span>(<span class="str">'{"__proto__":{"isAdmin":true}}'</span>);
+<span class="fn">merge</span>({}, payload);
+
+<span class="cm">// Now EVERY object in the app has .isAdmin === true</span>
+<span class="kw">const</span> user = {};
+console.<span class="fn">log</span>(user.isAdmin); <span class="cm">// true ← polluted!</span>
+
+<span class="cm">// Also works via: constructor.prototype</span>
+<span class="cm">// {"constructor": {"prototype": {"isAdmin": true}}}</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Real-World Impact Chains</h3>
+    <table>
+      <tr><th>Polluted Property</th><th>Impact</th><th>Example Library</th></tr>
+      <tr><td>__proto__.isAdmin</td><td>Privilege escalation</td><td>Any app checking obj.isAdmin without hasOwnProperty</td></tr>
+      <tr><td>__proto__.shell</td><td>RCE via child_process</td><td>Lodash &lt; 4.17.12 merge</td></tr>
+      <tr><td>__proto__.env.NODE_OPTIONS</td><td>Env var injection → RCE</td><td>Handlebars + child_process</td></tr>
+      <tr><td>__proto__.constructor.name</td><td>Type confusion</td><td>Template engines (EJS, Pug)</td></tr>
+      <tr><td>__proto__.outputFunctionName</td><td>RCE in EJS</td><td>EJS &lt; 3.1.7</td></tr>
+    </table>
+    <div class="info">Prototype pollution is NOT just a theoretical concern — it has led to real RCE CVEs in widely used packages like Lodash, jQuery.extend, Handlebars, and EJS.</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Attack: Client-Side Prototype Pollution</h3>
+    <pre><span class="cm">// Source: URL parameters, postMessage, JSON inputs</span>
+
+<span class="cm">// URL-based pollution (common in SPAs):</span>
+<span class="cm">// https://app.com/?__proto__[isAdmin]=true</span>
+<span class="cm">// If the app parses query params into object with deep merge:</span>
+<span class="kw">const</span> params = <span class="fn">parseQuery</span>(location.search);
+<span class="cm">// params = {"__proto__": {"isAdmin": "true"}}</span>
+<span class="cm">// deepMerge into config → Object.prototype polluted</span>
+
+<span class="cm">// Client-side gadgets (what the pollution enables):</span>
+<span class="cm">// 1. XSS via innerHTML template: if template checks obj.html</span>
+<span class="cm">// 2. Open redirect: if config.redirectUrl is checked without hasOwn</span>
+<span class="cm">// 3. DOM clobbering: combined with prototype pollution → XSS</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>Defense Strategies</h3>
+    <pre><span class="cm">// 1. Freeze the prototype (nuclear option)</span>
+Object.<span class="fn">freeze</span>(Object.prototype);
+<span class="cm">// ⚠️ May break libraries that extend Object.prototype</span>
+
+<span class="cm">// 2. Use Map instead of plain objects for user data</span>
+<span class="kw">const</span> config = <span class="kw">new</span> <span class="fn">Map</span>(); <span class="cm">// No prototype chain issues</span>
+
+<span class="cm">// 3. Object.create(null) — no prototype at all</span>
+<span class="kw">const</span> safeObj = Object.<span class="fn">create</span>(<span class="kw">null</span>);
+safeObj.__proto__; <span class="cm">// undefined (not linked to Object.prototype)</span>
+
+<span class="cm">// 4. Key sanitization in merge functions</span>
+<span class="kw">function</span> <span class="fn">safeMerge</span>(target, source) {
+  <span class="kw">for</span> (<span class="kw">const</span> key <span class="kw">of</span> Object.<span class="fn">keys</span>(source)) {
+    <span class="kw">if</span> (key === <span class="str">'__proto__'</span> || key === <span class="str">'constructor'</span> || key === <span class="str">'prototype'</span>) {
+      <span class="kw">continue</span>; <span class="cm">// Skip dangerous keys</span>
+    }
+    <span class="kw">if</span> (<span class="kw">typeof</span> source[key] === <span class="str">'object'</span> &amp;&amp; source[key] !== <span class="kw">null</span>) {
+      target[key] = target[key] || {};
+      <span class="fn">safeMerge</span>(target[key], source[key]);
+    } <span class="kw">else</span> {
+      target[key] = source[key];
+    }
+  }
+  <span class="kw">return</span> target;
+}
+
+<span class="cm">// 5. Use hasOwnProperty checks in access patterns</span>
+<span class="kw">if</span> (Object.prototype.<span class="fn">hasOwnProperty</span>.<span class="fn">call</span>(user, <span class="str">'isAdmin'</span>)) { <span class="cm">/* safe */</span> }</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: What is prototype pollution and why is it dangerous in JavaScript?</div>
+      <div class="a">Prototype pollution is when an attacker modifies Object.prototype (or any prototype in the chain) by injecting properties through unsafe deep merge, clone, or path assignment functions. Since all objects inherit from Object.prototype via the prototype chain, a polluted property like Object.prototype.isAdmin = true becomes visible on every object: ({}).isAdmin === true. The danger escalates based on "gadgets" — code paths that read properties without hasOwnProperty checks. On the server (Node.js), this has led to RCE: polluting __proto__.shell or __proto__.env.NODE_OPTIONS can hijack child_process.exec behavior. On the client, it can enable XSS if a template engine reads a polluted property and injects it as HTML. The fix: use Object.create(null) for dictionaries, sanitize keys (__proto__, constructor, prototype), use Map for user data, and validate with hasOwnProperty.</div>
+      <div class="followup">Follow-up: How would you detect prototype pollution in a large codebase?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q2: How does prototype pollution differ between client-side and server-side JavaScript?</div>
+      <div class="a">Client-side: the attack source is typically URL parameters (?__proto__[polluted]=value), postMessage payloads, or JSON from untrusted APIs. The impact is usually XSS via DOM gadgets — template engines, innerHTML paths, or config objects that control security-sensitive behavior. Server-side (Node.js): the source is HTTP request bodies (JSON payloads), and the impact is far more severe — potential RCE. For example, polluting __proto__.env.NODE_OPTIONS = '--require=./malicious.js' can cause any subsequent child_process.fork to load attacker code. Server libraries like Lodash.merge, jQuery.extend(true), and Handlebars compile have all had prototype pollution CVEs. The key difference is blast radius: client-side affects one user's browser tab; server-side affects the entire Node.js process and all requests.</div>
+      <div class="followup">Follow-up: Can you give an example of a prototype pollution → RCE chain?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q3: How do modern frameworks and libraries protect against prototype pollution?</div>
+      <div class="a">Several layers: (1) Lodash 4.17.12+ blocks __proto__ in merge/set paths. (2) JSON.parse is actually safe — it creates objects with __proto__ as a regular string key, not the special [[Prototype]] accessor, BUT if you then pass the result to an unsafe merge, it's still dangerous. (3) Zod/Joi schema validation strips unknown fields before they reach merge functions. (4) ESLint plugin no-prototype-builtins catches missing hasOwnProperty checks. (5) Node.js v19+ added --frozen-intrinsics flag to freeze all builtins. (6) TypeScript strict mode helps because accessing unknown properties is a type error. (7) npm audit catches known CVEs. In my projects, I use schema validation (Zod) at the API boundary so untrusted data never reaches internal merge functions with arbitrary keys.</div>
+      <div class="followup">Follow-up: How does structuredClone handle prototype pollution compared to JSON.parse?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>1. Safe Deep Merge Implementation</h3>
+    <pre><span class="kw">const</span> DANGEROUS_KEYS = <span class="kw">new</span> <span class="fn">Set</span>([<span class="str">'__proto__'</span>, <span class="str">'constructor'</span>, <span class="str">'prototype'</span>]);
+
+<span class="kw">function</span> <span class="fn">safeDeepMerge</span>(target, ...sources) {
+  <span class="kw">for</span> (<span class="kw">const</span> source <span class="kw">of</span> sources) {
+    <span class="kw">if</span> (!source || <span class="kw">typeof</span> source !== <span class="str">'object'</span>) <span class="kw">continue</span>;
+
+    <span class="kw">for</span> (<span class="kw">const</span> key <span class="kw">of</span> Object.<span class="fn">keys</span>(source)) {
+      <span class="kw">if</span> (DANGEROUS_KEYS.<span class="fn">has</span>(key)) <span class="kw">continue</span>;
+
+      <span class="kw">const</span> val = source[key];
+      <span class="kw">if</span> (val &amp;&amp; <span class="kw">typeof</span> val === <span class="str">'object'</span> &amp;&amp; !Array.<span class="fn">isArray</span>(val)) {
+        target[key] = <span class="fn">safeDeepMerge</span>(target[key] || Object.<span class="fn">create</span>(<span class="kw">null</span>), val);
+      } <span class="kw">else</span> {
+        target[key] = val;
+      }
+    }
+  }
+  <span class="kw">return</span> target;
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Detection Script</h3>
+    <pre><span class="cm">// Runtime detection: check if prototype was polluted</span>
+<span class="kw">function</span> <span class="fn">checkPrototypePollution</span>() {
+  <span class="kw">const</span> clean = Object.<span class="fn">create</span>(<span class="kw">null</span>);
+  <span class="kw">const</span> polluted = {};
+
+  <span class="cm">// Object.create(null) has no prototype</span>
+  <span class="cm">// {} inherits from Object.prototype</span>
+  <span class="cm">// If {} has keys that Object.create(null) doesn't → polluted</span>
+
+  <span class="kw">const</span> suspicious = Object.<span class="fn">keys</span>(polluted).<span class="fn">filter</span>(
+    key =&gt; !(key <span class="kw">in</span> clean)
+  );
+
+  <span class="kw">if</span> (suspicious.length &gt; <span class="num">0</span>) {
+    console.<span class="fn">error</span>(<span class="str">'Prototype pollution detected!'</span>, suspicious);
+    <span class="cm">// Clean up</span>
+    suspicious.<span class="fn">forEach</span>(key =&gt; <span class="kw">delete</span> Object.prototype[key]);
+  }
+}</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Prevention Checklist</h3>
+    <pre>✅ Never use for...in without hasOwnProperty check for user data
+✅ Use Object.create(null) for dictionaries holding user input
+✅ Use Map/Set instead of plain objects for dynamic key-value stores
+✅ Sanitize keys: block __proto__, constructor, prototype in merge/set
+✅ Use Object.keys() / Object.entries() instead of for...in
+✅ Validate input with Zod/Joi before deep merge operations
+✅ Keep dependencies updated (npm audit)
+✅ Use --frozen-intrinsics in Node.js production
+✅ Add ESLint no-prototype-builtins rule
+✅ Prefer structuredClone() over custom deep clone</pre>
+  </div>
+
+  <div class="card">
+    <h3>Key Concepts</h3>
+    <table>
+      <tr><th>Term</th><th>Definition</th></tr>
+      <tr><td>Pollution Source</td><td>Where attacker input enters: JSON body, URL params, postMessage</td></tr>
+      <tr><td>Pollution Sink</td><td>The unsafe operation: deepMerge, _.set, Object.assign (shallow = safe)</td></tr>
+      <tr><td>Gadget</td><td>Code that reads the polluted property and triggers impact (XSS, RCE)</td></tr>
+      <tr><td>Object.create(null)</td><td>Creates object with NO prototype chain — immune to pollution reads</td></tr>
+      <tr><td>Object.freeze</td><td>Makes object immutable — prevents pollution writes to prototype</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

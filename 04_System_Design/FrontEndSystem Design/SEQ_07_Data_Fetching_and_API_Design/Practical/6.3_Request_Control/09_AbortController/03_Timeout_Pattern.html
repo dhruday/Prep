@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab 03 — Timeout Pattern</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}button.red{background:#3a1e1e;border-color:#ef4444;color:#ef4444}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+</style>
+</head>
+<body>
+<h1>Lab 03 — Timeout Pattern</h1>
+<p class="sub">Use AbortSignal.timeout() to set request deadlines. No more hanging requests.</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">🏃 Live Demo</div>
+  <div class="tab" onclick="setTab(1)">📖 API Explained</div>
+  <div class="tab" onclick="setTab(2)">🔄 Manual Timeout</div>
+  <div class="tab" onclick="setTab(3)">📊 Comparison</div>
+</div>
+
+<!-- Tab 0: Live Demo -->
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>⏱ Fetch with Timeout — /api/unreliable/timeout</h3>
+    <p style="color:#94a3b8;font-size:.82rem;margin-bottom:10px">The server responds with a random delay. Set a timeout and see if it succeeds or times out.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="fetchWithTimeout(1000)">⚡ 1s Timeout</button>
+      <button onclick="fetchWithTimeout(3000)">🕐 3s Timeout</button>
+      <button onclick="fetchWithTimeout(5000)">🐌 5s Timeout</button>
+      <button class="red" onclick="clearOut()">Clear</button>
+    </div>
+    <div class="output" id="demoOut">Click a timeout button to test...</div>
+  </div>
+  <div class="card">
+    <h3>📈 Results Summary</h3>
+    <div class="grid2">
+      <div><span style="color:#10b981">✅ Successes:</span> <span id="sCount">0</span></div>
+      <div><span style="color:#ef4444">⏰ Timeouts:</span> <span id="tCount">0</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 1: API Explained -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>📖 AbortSignal.timeout() — Built-in Timeout</h3>
+<pre><span class="cm">// Modern API — one line timeout!</span>
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${API}/api/unreliable/timeout`</span>, {
+  signal: AbortSignal.<span class="fn">timeout</span>(<span class="str">3000</span>) <span class="cm">// 3 second deadline</span>
+});
+
+<span class="cm">// The error type is different from manual abort:</span>
+<span class="kw">try</span> {
+  <span class="kw">const</span> data = <span class="kw">await</span> res.<span class="fn">json</span>();
+} <span class="kw">catch</span> (e) {
+  <span class="kw">if</span> (e.name === <span class="str">'TimeoutError'</span>) {
+    console.<span class="fn">log</span>(<span class="str">'Request timed out'</span>);
+  } <span class="kw">else if</span> (e.name === <span class="str">'AbortError'</span>) {
+    console.<span class="fn">log</span>(<span class="str">'Request was manually aborted'</span>);
+  }
+}</pre>
+  </div>
+  <div class="info">AbortSignal.timeout() throws a <code>TimeoutError</code> (not <code>AbortError</code>). This lets you distinguish timeouts from manual cancellations.</div>
+</div>
+
+<!-- Tab 2: Manual Timeout -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🔄 Manual Timeout (Pre AbortSignal.timeout)</h3>
+<pre><span class="cm">// Before AbortSignal.timeout() existed:</span>
+<span class="kw">async function</span> <span class="fn">fetchWithManualTimeout</span>(url, ms) {
+  <span class="kw">const</span> controller = <span class="kw">new</span> <span class="fn">AbortController</span>();
+  <span class="kw">const</span> timer = <span class="fn">setTimeout</span>(() => {
+    controller.<span class="fn">abort</span>();
+  }, ms);
+
+  <span class="kw">try</span> {
+    <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(url, { signal: controller.signal });
+    <span class="fn">clearTimeout</span>(timer); <span class="cm">// Don't forget!</span>
+    <span class="kw">return await</span> res.<span class="fn">json</span>();
+  } <span class="kw">catch</span> (e) {
+    <span class="fn">clearTimeout</span>(timer);
+    <span class="kw">throw</span> e;
+  }
+}</pre>
+  </div>
+  <div class="card">
+    <h3 class="good">✅ Modern Equivalent</h3>
+<pre><span class="cm">// One line — no manual timer management</span>
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(url, {
+  signal: AbortSignal.<span class="fn">timeout</span>(ms)
+});</pre>
+  </div>
+  <div class="info">AbortSignal.timeout() handles timer cleanup automatically. Less code, fewer bugs.</div>
+</div>
+
+<!-- Tab 3: Comparison -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>📊 Run All Timeouts Side-by-Side</h3>
+    <button onclick="compareAll()">▶ Run Comparison (1s / 3s / 5s)</button>
+    <button class="red" onclick="document.getElementById('compOut').textContent='Click Run to compare...'">Clear</button>
+    <div class="output" id="compOut">Click Run to compare all timeout values against the same endpoint...</div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+let successes = 0, timeouts = 0;
+function updateCounts() {
+  document.getElementById('sCount').textContent = successes;
+  document.getElementById('tCount').textContent = timeouts;
+}
+
+async function fetchWithTimeout(ms) {
+  const out = document.getElementById('demoOut');
+  out.textContent += `\n⏱ Fetching with ${ms}ms timeout...\n`;
+  const t0 = performance.now();
+  try {
+    const res = await fetch(`${API}/api/unreliable/timeout`, {
+      signal: AbortSignal.timeout(ms)
+    });
+    const data = await res.json();
+    const elapsed = (performance.now() - t0).toFixed(0);
+    out.textContent += `  ✅ Success in ${elapsed}ms (timeout was ${ms}ms)\n`;
+    out.textContent += `  Data: ${JSON.stringify(data).slice(0, 120)}\n`;
+    successes++;
+  } catch (e) {
+    const elapsed = (performance.now() - t0).toFixed(0);
+    if (e.name === 'TimeoutError') {
+      out.textContent += `  ⏰ TimeoutError after ${elapsed}ms (limit: ${ms}ms)\n`;
+      timeouts++;
+    } else if (e.name === 'AbortError') {
+      out.textContent += `  🛑 AbortError after ${elapsed}ms\n`;
+      timeouts++;
+    } else {
+      out.textContent += `  ❌ ${e.name}: ${e.message}\n`;
+    }
+  }
+  updateCounts();
+  out.scrollTop = out.scrollHeight;
+}
+
+function clearOut() {
+  document.getElementById('demoOut').textContent = 'Click a timeout button to test...';
+  successes = 0; timeouts = 0; updateCounts();
+}
+
+async function compareAll() {
+  const out = document.getElementById('compOut');
+  out.textContent = '🔄 Running 3 requests in parallel with different timeouts...\n\n';
+  const timeoutValues = [1000, 3000, 5000];
+  const results = await Promise.allSettled(
+    timeoutValues.map(async (ms) => {
+      const t0 = performance.now();
+      try {
+        const res = await fetch(`${API}/api/unreliable/timeout`, { signal: AbortSignal.timeout(ms) });
+        const data = await res.json();
+        return { ms, elapsed: (performance.now() - t0).toFixed(0), status: 'success', data };
+      } catch (e) {
+        return { ms, elapsed: (performance.now() - t0).toFixed(0), status: e.name };
+      }
+    })
+  );
+  results.forEach(r => {
+    const v = r.value;
+    const icon = v.status === 'success' ? '✅' : '⏰';
+    out.textContent += `${icon} Timeout=${v.ms}ms → ${v.status} in ${v.elapsed}ms\n`;
+  });
+  out.textContent += '\n✅ Compare which timeout values work for your use-case.';
+}
+</script>
+</body>
+</html>

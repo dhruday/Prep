@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lab 01 — Debounce Search</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+.counter{font-size:1.4rem;font-weight:700;color:#f59e0b}.counter-label{font-size:.75rem;color:#94a3b8}
+</style>
+</head>
+<body>
+<h1>Lab 01 — Debounce Search</h1>
+<p class="sub">Side-by-side comparison: raw keystrokes vs debounced (300 ms) API calls</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&amp;A</div>
+</div>
+
+<!-- ───── Concept ───── -->
+<div class="panel active">
+  <div class="card"><h3>What Is Debounce?</h3>
+    <p>Debounce delays invoking a function until <strong>N ms</strong> after the <em>last</em> call. If the user keeps typing, only the final pause triggers the API request.</p>
+    <div class="info">Typing "react" at normal speed fires 5 raw requests but only <strong>1</strong> debounced request.</div>
+  </div>
+  <div class="card"><h3>Classic Implementation</h3>
+<pre><span class="kw">function</span> <span class="fn">debounce</span>(fn, delay) {
+  <span class="kw">let</span> timer;
+  <span class="kw">return</span> (...args) =&gt; {
+    clearTimeout(timer);
+    timer = setTimeout(() =&gt; fn(...args), delay);
+  };
+}</pre>
+  </div>
+  <div class="card"><h3>When To Use</h3>
+    <p>• Search-as-you-type &nbsp;• Window resize handlers &nbsp;• Auto-save drafts &nbsp;• Form validation on input</p>
+  </div>
+</div>
+
+<!-- ───── Hands-On Lab ───── -->
+<div class="panel">
+  <div class="card"><h3>🔬 Live Comparison — Type in Both Inputs</h3>
+    <div class="grid2">
+      <div>
+        <label>Raw (every keystroke)</label>
+        <input id="rawInput" placeholder="Type a search term…" autocomplete="off">
+        <div style="text-align:center;margin:8px 0"><span class="counter" id="rawCount">0</span><br><span class="counter-label">requests sent</span></div>
+        <div class="output" id="rawLog"></div>
+      </div>
+      <div>
+        <label>Debounced (300 ms)</label>
+        <input id="debInput" placeholder="Type a search term…" autocomplete="off">
+        <div style="text-align:center;margin:8px 0"><span class="counter" id="debCount">0</span><br><span class="counter-label">requests sent</span></div>
+        <div class="output" id="debLog"></div>
+      </div>
+    </div>
+    <button onclick="resetLab()">Reset Counters</button>
+  </div>
+  <div class="info">Both inputs query <code>GET /api/search?q=…</code> — watch the request count difference.</div>
+</div>
+
+<!-- ───── Browser Internals ───── -->
+<div class="panel">
+  <div class="card"><h3>Event Loop &amp; Timers</h3>
+    <p><code>setTimeout</code> schedules a macro-task. <code>clearTimeout</code> cancels the pending timer ID before it fires, so only the <em>last</em> scheduled callback survives.</p>
+  </div>
+  <div class="card"><h3>Network Waterfall Impact</h3>
+<pre><span class="cm">// Without debounce — typing "react"</span>
+GET /api/search?q=r        → 200  45 ms
+GET /api/search?q=re       → 200  52 ms
+GET /api/search?q=rea      → 200  38 ms
+GET /api/search?q=reac     → 200  41 ms
+GET /api/search?q=react    → 200  47 ms   <span class="cm">← 5 requests</span>
+
+<span class="cm">// With 300 ms debounce</span>
+GET /api/search?q=react    → 200  47 ms   <span class="cm">← 1 request</span></pre>
+  </div>
+  <div class="card"><h3>Memory &amp; GC</h3>
+    <p>Each <code>setTimeout</code> holds a closure reference. <code>clearTimeout</code> releases the pending callback, making the previous closure eligible for garbage collection.</p>
+  </div>
+</div>
+
+<!-- ───── Interview Q&A ───── -->
+<div class="panel">
+  <div class="card"><h3>Q: Debounce vs Throttle?</h3>
+    <p><strong>Debounce</strong> waits for silence — fires once after activity stops.<br><strong>Throttle</strong> fires at fixed intervals during activity.</p>
+  </div>
+  <div class="card"><h3>Q: How do you cancel an in-flight fetch with debounce?</h3>
+<pre><span class="kw">function</span> <span class="fn">debouncedFetch</span>(fn, delay) {
+  <span class="kw">let</span> timer, controller;
+  <span class="kw">return</span> (...args) =&gt; {
+    clearTimeout(timer);
+    <span class="kw">if</span> (controller) controller.abort();
+    controller = <span class="kw">new</span> AbortController();
+    timer = setTimeout(() =&gt; fn(...args, controller.signal), delay);
+  };
+}</pre>
+  </div>
+  <div class="card"><h3>Q: What is the stale-closure risk?</h3>
+    <p>If the debounced callback captures an old state variable, it fires with outdated values. Use a <code>ref</code> in React or pass the latest value as an argument.</p>
+  </div>
+  <div class="card"><h3>Q: Should debounce delay be configurable?</h3>
+    <p>Yes — 150–300 ms for search, 500–1000 ms for auto-save. Expose it as a parameter so callers can tune for their UX.</p>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+let rawN=0,debN=0;
+const rawCount=document.getElementById('rawCount');
+const debCount=document.getElementById('debCount');
+const rawLog=document.getElementById('rawLog');
+const debLog=document.getElementById('debLog');
+
+function logEntry(el,msg){el.textContent=msg+'\n'+el.textContent;}
+
+function doSearch(q,label,counterEl,logEl,countRef){
+  const n=++countRef.v;
+  counterEl.textContent=n;
+  const url=`${API}/api/search?q=${encodeURIComponent(q)}`;
+  logEntry(logEl,`#${n} → GET /api/search?q=${q}`);
+  fetch(url).then(r=>r.json()).then(d=>{
+    logEntry(logEl,`  ✓ ${JSON.stringify(d).slice(0,80)}`);
+  }).catch(e=>logEntry(logEl,`  ✗ ${e.message}`));
+}
+
+const rawRef={v:0},debRef={v:0};
+
+document.getElementById('rawInput').addEventListener('input',e=>{
+  doSearch(e.target.value,'raw',rawCount,rawLog,rawRef);
+});
+
+function debounce(fn,delay){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),delay);};}
+const debouncedSearch=debounce((q)=>{
+  doSearch(q,'deb',debCount,debLog,debRef);
+},300);
+
+document.getElementById('debInput').addEventListener('input',e=>{
+  debouncedSearch(e.target.value);
+});
+
+function resetLab(){rawRef.v=0;debRef.v=0;rawCount.textContent='0';debCount.textContent='0';rawLog.textContent='';debLog.textContent='';document.getElementById('rawInput').value='';document.getElementById('debInput').value='';}
+</script>
+</body>
+</html>

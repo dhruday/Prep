@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Request Deduplication Deep Study — Eliminating Redundant Network Calls</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2e2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}.card h3.good{color:#10b981}.card h3.bad{color:#ef4444}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Request Deduplication Deep Study</h1>
+<p class="sub">Module 6.4 · FAANG Interview Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Architecture Patterns</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<!-- Tab 0: Deep Theory -->
+<div class="panel active">
+  <div class="card">
+    <h3>1. The Deduplication Problem</h3>
+    <pre><span class="cm">// Scenario: 5 React components mount simultaneously</span>
+<span class="cm">// Each calls useUser() which fetches GET /api/users/me</span>
+<span class="cm">//</span>
+<span class="cm">// WITHOUT deduplication:</span>
+<span class="cm">//   Component A → fetch(/api/users/me) → Network request #1</span>
+<span class="cm">//   Component B → fetch(/api/users/me) → Network request #2</span>
+<span class="cm">//   Component C → fetch(/api/users/me) → Network request #3</span>
+<span class="cm">//   Component D → fetch(/api/users/me) → Network request #4</span>
+<span class="cm">//   Component E → fetch(/api/users/me) → Network request #5</span>
+<span class="cm">//   Result: 5 identical requests → 5× server load, 0 UX benefit</span>
+<span class="cm">//</span>
+<span class="cm">// WITH deduplication:</span>
+<span class="cm">//   Component A → fetch starts → Network request #1</span>
+<span class="cm">//   Component B → joins in-flight promise ────┘</span>
+<span class="cm">//   Component C → joins in-flight promise ────┘</span>
+<span class="cm">//   Component D → joins in-flight promise ────┘</span>
+<span class="cm">//   Component E → joins in-flight promise ────┘</span>
+<span class="cm">//   Result: 1 request → all 5 components get the same data</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Two Levels of Deduplication</h3>
+    <pre><span class="cm">// Level 1: IN-FLIGHT deduplication (request coalescing)</span>
+<span class="cm">// → Multiple callers during the SAME request share ONE network call</span>
+<span class="cm">// → Promise is the dedup mechanism — all callers await same promise</span>
+<span class="cm">// → Cleaned up when promise resolves/rejects</span>
+<span class="cm">//</span>
+<span class="cm">// Level 2: CACHE deduplication (stale-while-revalidate)</span>
+<span class="cm">// → Data that was fetched recently is served from cache</span>
+<span class="cm">// → No network call at all if data is "fresh" (within staleTime)</span>
+<span class="cm">// → Cache has TTL; expired entries trigger new fetch</span>
+<span class="cm">//</span>
+<span class="cm">// React Query provides BOTH levels automatically:</span>
+<span class="cm">// - Same queryKey during in-flight fetch → promise shared (Level 1)</span>
+<span class="cm">// - Same queryKey within staleTime → cache hit, no fetch (Level 2)</span>
+<span class="cm">// - Same queryKey after staleTime → background refetch (SWR)</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. How React Query Deduplicates Internally</h3>
+    <pre><span class="cm">// Simplified internal mechanism:</span>
+
+<span class="kw">class</span> <span class="fn">QueryCache</span> {
+  queries = <span class="kw">new</span> <span class="fn">Map</span>();  <span class="cm">// key → Query instance</span>
+
+  <span class="fn">fetchQuery</span>(key, fetchFn, staleTime) {
+    <span class="kw">const</span> cacheKey = JSON.<span class="fn">stringify</span>(key);
+    <span class="kw">let</span> query = <span class="kw">this</span>.queries.<span class="fn">get</span>(cacheKey);
+
+    <span class="cm">// Case 1: Currently fetching → return SAME promise (dedup!)</span>
+    <span class="kw">if</span> (query?.state === <span class="str">'loading'</span>) {
+      <span class="kw">return</span> query.promise;  <span class="cm">// All callers share this</span>
+    }
+
+    <span class="cm">// Case 2: Fresh cache → return data, no network call</span>
+    <span class="kw">if</span> (query?.state === <span class="str">'fresh'</span> &amp;&amp; Date.<span class="fn">now</span>() - query.dataUpdatedAt &lt; staleTime) {
+      <span class="kw">return</span> Promise.<span class="fn">resolve</span>(query.data);
+    }
+
+    <span class="cm">// Case 3: Stale or missing → start new fetch</span>
+    <span class="kw">const</span> promise = <span class="fn">fetchFn</span>().<span class="fn">then</span>(data =&gt; {
+      <span class="kw">this</span>.queries.<span class="fn">set</span>(cacheKey, {
+        state: <span class="str">'fresh'</span>, data, dataUpdatedAt: Date.<span class="fn">now</span>()
+      });
+      <span class="kw">return</span> data;
+    });
+
+    <span class="kw">this</span>.queries.<span class="fn">set</span>(cacheKey, { state: <span class="str">'loading'</span>, promise });
+    <span class="kw">return</span> promise;
+  }
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>4. Cache Invalidation — The Hard Part</h3>
+    <pre><span class="cm">// "There are only two hard things in CS: cache invalidation and naming things"</span>
+
+<span class="cm">// When cached data becomes stale (mutation happened):</span>
+<span class="cm">// Option 1: Invalidate — mark cache as stale, trigger refetch</span>
+queryClient.<span class="fn">invalidateQueries</span>({ queryKey: [<span class="str">'products'</span>] });
+
+<span class="cm">// Option 2: Update directly — modify cache without refetch</span>
+queryClient.<span class="fn">setQueryData</span>([<span class="str">'products'</span>, id], newProduct);
+
+<span class="cm">// Option 3: Optimistic update — update cache immediately, revert on error</span>
+<span class="fn">useMutation</span>({
+  mutationFn: updateProduct,
+  onMutate: <span class="kw">async</span> (newData) =&gt; {
+    <span class="kw">await</span> queryClient.<span class="fn">cancelQueries</span>([<span class="str">'products'</span>, newData.id]);
+    <span class="kw">const</span> previous = queryClient.<span class="fn">getQueryData</span>([<span class="str">'products'</span>, newData.id]);
+    queryClient.<span class="fn">setQueryData</span>([<span class="str">'products'</span>, newData.id], newData);
+    <span class="kw">return</span> { previous };
+  },
+  onError: (err, newData, context) =&gt; {
+    queryClient.<span class="fn">setQueryData</span>([<span class="str">'products'</span>, newData.id], context.previous);
+  },
+});</pre>
+  </div>
+</div>
+
+<!-- Tab 1: Architecture Patterns -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Manual Promise Map Deduplicator</h3>
+    <pre><span class="cm">// When NOT using React Query — build your own dedup layer</span>
+
+<span class="kw">class</span> <span class="fn">RequestDeduplicator</span> {
+  pending = <span class="kw">new</span> <span class="fn">Map</span>();  <span class="cm">// key → Promise</span>
+
+  <span class="kw">async</span> <span class="fn">dedupe</span>(key, fetchFn) {
+    <span class="cm">// If same request is already in-flight → return same promise</span>
+    <span class="kw">if</span> (<span class="kw">this</span>.pending.<span class="fn">has</span>(key)) {
+      <span class="kw">return this</span>.pending.<span class="fn">get</span>(key);
+    }
+
+    <span class="cm">// Start new request, store promise</span>
+    <span class="kw">const</span> promise = <span class="fn">fetchFn</span>().<span class="fn">finally</span>(() =&gt; {
+      <span class="kw">this</span>.pending.<span class="fn">delete</span>(key);  <span class="cm">// Clean up after resolve/reject</span>
+    });
+
+    <span class="kw">this</span>.pending.<span class="fn">set</span>(key, promise);
+    <span class="kw">return</span> promise;
+  }
+}
+
+<span class="kw">const</span> dedup = <span class="kw">new</span> <span class="fn">RequestDeduplicator</span>();
+
+<span class="cm">// 10 simultaneous calls → 1 fetch request</span>
+<span class="kw">const</span> results = <span class="kw">await</span> Promise.<span class="fn">all</span>([
+  dedup.<span class="fn">dedupe</span>(<span class="str">'user:me'</span>, () =&gt; <span class="fn">fetch</span>(<span class="str">'/api/users/me'</span>)),
+  dedup.<span class="fn">dedupe</span>(<span class="str">'user:me'</span>, () =&gt; <span class="fn">fetch</span>(<span class="str">'/api/users/me'</span>)),
+  dedup.<span class="fn">dedupe</span>(<span class="str">'user:me'</span>, () =&gt; <span class="fn">fetch</span>(<span class="str">'/api/users/me'</span>)),
+]);</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Service Worker Deduplication</h3>
+    <pre><span class="cm">// Service Worker can intercept ALL fetch calls centrally</span>
+<span class="cm">// Even across multiple tabs!</span>
+
+<span class="cm">// sw.js</span>
+<span class="kw">const</span> inflight = <span class="kw">new</span> <span class="fn">Map</span>();
+
+self.<span class="fn">addEventListener</span>(<span class="str">'fetch'</span>, (event) =&gt; {
+  <span class="kw">const</span> url = event.request.url;
+
+  <span class="cm">// Only dedup GET requests</span>
+  <span class="kw">if</span> (event.request.method !== <span class="str">'GET'</span>) <span class="kw">return</span>;
+
+  <span class="kw">if</span> (inflight.<span class="fn">has</span>(url)) {
+    <span class="cm">// Clone the in-flight response for this requester</span>
+    event.<span class="fn">respondWith</span>(
+      inflight.<span class="fn">get</span>(url).<span class="fn">then</span>(res =&gt; res.<span class="fn">clone</span>())
+    );
+    <span class="kw">return</span>;
+  }
+
+  <span class="kw">const</span> responsePromise = <span class="fn">fetch</span>(event.request).<span class="fn">then</span>(res =&gt; {
+    inflight.<span class="fn">delete</span>(url);
+    <span class="kw">return</span> res;
+  });
+
+  inflight.<span class="fn">set</span>(url, responsePromise);
+  event.<span class="fn">respondWith</span>(responsePromise.<span class="fn">then</span>(res =&gt; res.<span class="fn">clone</span>()));
+});</pre>
+    <div class="info">Service Worker deduplication works across tabs — if Tab A and Tab B both request /api/users/me within the same time window, only one network request fires. This is invisible to application code.</div>
+  </div>
+
+  <div class="card">
+    <h3>3. Dedup + Cache Two-Layer Architecture</h3>
+    <pre><span class="cm">// Layer 1: Cache (prevents fetch for fresh data)</span>
+<span class="cm">// Layer 2: Dedup (prevents duplicate in-flight requests)</span>
+
+<span class="kw">class</span> <span class="fn">ApiCache</span> {
+  inflight = <span class="kw">new</span> <span class="fn">Map</span>();
+  cache = <span class="kw">new</span> <span class="fn">Map</span>();
+
+  <span class="kw">async</span> <span class="fn">get</span>(key, fetcher, ttl = <span class="num">60000</span>) {
+    <span class="cm">// Level 1: Fresh cache hit → no network call</span>
+    <span class="kw">const</span> cached = <span class="kw">this</span>.cache.<span class="fn">get</span>(key);
+    <span class="kw">if</span> (cached &amp;&amp; Date.<span class="fn">now</span>() &lt; cached.expiresAt) {
+      <span class="kw">return</span> cached.data;
+    }
+
+    <span class="cm">// Level 2: In-flight dedup → join existing request</span>
+    <span class="kw">if</span> (<span class="kw">this</span>.inflight.<span class="fn">has</span>(key)) {
+      <span class="kw">return this</span>.inflight.<span class="fn">get</span>(key);
+    }
+
+    <span class="cm">// Level 3: New request</span>
+    <span class="kw">const</span> promise = <span class="fn">fetcher</span>().<span class="fn">then</span>(data =&gt; {
+      <span class="kw">this</span>.cache.<span class="fn">set</span>(key, { data, expiresAt: Date.<span class="fn">now</span>() + ttl });
+      <span class="kw">this</span>.inflight.<span class="fn">delete</span>(key);
+      <span class="kw">return</span> data;
+    }).<span class="fn">catch</span>(err =&gt; {
+      <span class="kw">this</span>.inflight.<span class="fn">delete</span>(key);
+      <span class="kw">throw</span> err;
+    });
+
+    <span class="kw">this</span>.inflight.<span class="fn">set</span>(key, promise);
+    <span class="kw">return</span> promise;
+  }
+}</pre>
+  </div>
+</div>
+
+<!-- Tab 2: FAANG Interview -->
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+
+    <div class="qa">
+      <div class="q">Q1: How does React Query handle request deduplication and when would you need to implement your own?</div>
+      <div class="a">React Query deduplicates automatically at the queryKey level. When multiple useQuery hooks share the same queryKey during a render cycle, the first hook triggers the network request and subsequent hooks receive the same in-flight promise — one HTTP call serves all consumers. Combined with staleTime, cached data prevents fetches entirely for fresh data. You'd implement your own dedup when: 1) you're not using React Query (vanilla fetch, Angular, Vue), 2) you need cross-tab deduplication (Service Worker), 3) you need dedup at the network layer regardless of framework (API middleware), or 4) you need custom key generation logic beyond what queryKey provides.</div>
+      <div class="followup">Follow-up: How does React Query's dedup interact with Suspense mode?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: Explain the Promise Map pattern for request deduplication.</div>
+      <div class="a">The Promise Map pattern uses a Map&lt;string, Promise&gt; where the key is the request identifier (URL + params serialized) and the value is the in-flight Promise. When a request comes in, check if the Map already has an entry for that key. If yes, return the existing Promise (all callers await the same one). If no, start the fetch, store the Promise in the Map, and clean up with .finally() when it resolves. The critical detail is the .finally() cleanup — without it, the Map grows indefinitely. Also, errors should NOT be cached in the Map — if a request fails, the next caller should try again, not get the cached rejection.</div>
+      <div class="followup">Follow-up: How would you handle deduplication for POST requests?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q3: How can a Service Worker deduplicate requests across browser tabs?</div>
+      <div class="a">A Service Worker intercepts all fetch events from every tab in its scope. By maintaining an in-flight Map inside the Service Worker, when Tab A requests /api/users/me and Tab B requests the same URL 50ms later, the Service Worker returns a clone of Tab A's in-flight response to Tab B. This is transparent to application code — both tabs think they made independent requests. The key is using response.clone() because a Response body can only be consumed once. Limitations: only works for GET requests, doesn't handle POST dedup, and the Service Worker must be registered and active before the requests fire.</div>
+      <div class="followup">Follow-up: What happens if the Service Worker crashes while requests are in-flight?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q4: What's the relationship between deduplication and caching?</div>
+      <div class="a">They're complementary but solve different problems. Deduplication prevents duplicate in-flight requests — it only matters when the same request fires multiple times simultaneously. Caching prevents unnecessary requests by serving previously-fetched data. Think of it as: cache = "I already have this data," dedup = "I'm already fetching this data." In a well-designed system, the check order is: 1) Is data in cache and fresh? → return (no network call). 2) Is the same request already in-flight? → join (one network call). 3) Neither → start new request. React Query handles both levels automatically with queryKey + staleTime. Without a library, you build both layers yourself.</div>
+      <div class="followup">Follow-up: How does stale-while-revalidate fit into this picture?</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 3: Code Walkthrough -->
+<div class="panel">
+  <div class="card">
+    <h3>1. React Query Dedup in Action</h3>
+    <pre><span class="cm">// All three components share ONE network request</span>
+
+<span class="kw">function</span> <span class="fn">useUser</span>() {
+  <span class="kw">return</span> <span class="fn">useQuery</span>({
+    queryKey: [<span class="str">'user'</span>, <span class="str">'me'</span>],
+    queryFn: () =&gt; <span class="fn">fetch</span>(<span class="str">'/api/users/me'</span>).<span class="fn">then</span>(r =&gt; r.<span class="fn">json</span>()),
+    staleTime: <span class="num">5</span> * <span class="num">60</span> * <span class="num">1000</span>,  <span class="cm">// 5 min — prevents refetch for ALL consumers</span>
+  });
+}
+
+<span class="kw">function</span> <span class="fn">Header</span>() { <span class="kw">const</span> { data: user } = <span class="fn">useUser</span>(); <span class="cm">/* ... */</span> }
+<span class="kw">function</span> <span class="fn">Sidebar</span>() { <span class="kw">const</span> { data: user } = <span class="fn">useUser</span>(); <span class="cm">/* ... */</span> }
+<span class="kw">function</span> <span class="fn">Profile</span>() { <span class="kw">const</span> { data: user } = <span class="fn">useUser</span>(); <span class="cm">/* ... */</span> }
+
+<span class="cm">// Network tab: only 1 GET /api/users/me ✅</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Full Dedup + Cache + TTL Utility</h3>
+    <pre><span class="kw">class</span> <span class="fn">SmartFetcher</span> {
+  <span class="kw">constructor</span>() {
+    <span class="kw">this</span>.cache = <span class="kw">new</span> <span class="fn">Map</span>();
+    <span class="kw">this</span>.inflight = <span class="kw">new</span> <span class="fn">Map</span>();
+  }
+
+  <span class="fn">key</span>(url, params) {
+    <span class="kw">return</span> url + <span class="str">'?'</span> + <span class="kw">new</span> <span class="fn">URLSearchParams</span>(params).<span class="fn">toString</span>();
+  }
+
+  <span class="kw">async</span> <span class="fn">fetch</span>(url, params = {}, ttl = <span class="num">30000</span>) {
+    <span class="kw">const</span> k = <span class="kw">this</span>.<span class="fn">key</span>(url, params);
+
+    <span class="cm">// 1. Cache hit</span>
+    <span class="kw">const</span> cached = <span class="kw">this</span>.cache.<span class="fn">get</span>(k);
+    <span class="kw">if</span> (cached &amp;&amp; Date.<span class="fn">now</span>() &lt; cached.exp) <span class="kw">return</span> cached.data;
+
+    <span class="cm">// 2. Dedup — join in-flight</span>
+    <span class="kw">if</span> (<span class="kw">this</span>.inflight.<span class="fn">has</span>(k)) <span class="kw">return this</span>.inflight.<span class="fn">get</span>(k);
+
+    <span class="cm">// 3. New request</span>
+    <span class="kw">const</span> p = <span class="fn">fetch</span>(<span class="str">`${url}?${<span class="kw">new</span> <span class="fn">URLSearchParams</span>(params)}`</span>)
+      .<span class="fn">then</span>(r =&gt; r.<span class="fn">json</span>())
+      .<span class="fn">then</span>(data =&gt; {
+        <span class="kw">this</span>.cache.<span class="fn">set</span>(k, { data, exp: Date.<span class="fn">now</span>() + ttl });
+        <span class="kw">this</span>.inflight.<span class="fn">delete</span>(k);
+        <span class="kw">return</span> data;
+      })
+      .<span class="fn">catch</span>(err =&gt; { <span class="kw">this</span>.inflight.<span class="fn">delete</span>(k); <span class="kw">throw</span> err; });
+
+    <span class="kw">this</span>.inflight.<span class="fn">set</span>(k, p);
+    <span class="kw">return</span> p;
+  }
+
+  <span class="fn">invalidate</span>(url, params) {
+    <span class="kw">this</span>.cache.<span class="fn">delete</span>(<span class="kw">this</span>.<span class="fn">key</span>(url, params));
+  }
+}</pre>
+  </div>
+</div>
+
+<!-- Tab 4: Cheat Sheet -->
+<div class="panel">
+  <div class="card">
+    <h3>Dedup Layer Comparison</h3>
+    <table>
+      <tr><th>Layer</th><th>Scope</th><th>Method</th><th>Cross-Tab?</th></tr>
+      <tr><td>React Query</td><td>queryKey within app</td><td>Promise sharing</td><td>No</td></tr>
+      <tr><td>Promise Map</td><td>Custom key: url + params</td><td>Promise sharing</td><td>No</td></tr>
+      <tr><td>Service Worker</td><td>URL-based</td><td>Response cloning</td><td>Yes</td></tr>
+      <tr><td>HTTP Cache</td><td>URL + headers</td><td>Browser cache API</td><td>Yes</td></tr>
+      <tr><td>SWR (stale-while-revalidate)</td><td>Key-based + TTL</td><td>Cache + background refetch</td><td>No</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Key Lifecycle</h3>
+    <pre>Request arrives
+  │
+  ├─ Cache fresh? → Return cached data (no network)
+  │
+  ├─ In-flight for same key? → Return same Promise (dedup)
+  │
+  └─ Neither → Start fetch
+       │
+       ├─ Store Promise in inflight Map
+       │
+       ├─ On resolve → Store in cache, delete from inflight
+       │
+       └─ On reject → Delete from inflight (don't cache errors)</pre>
+  </div>
+
+  <div class="card">
+    <h3>Production Checklist</h3>
+    <pre>✅ Use React Query/SWR — built-in dedup + cache + SWR
+✅ Key generation must be deterministic (same input → same key)
+✅ NEVER cache error responses in the dedup layer
+✅ Use .finally() to clean up inflight Map entries
+✅ Set appropriate staleTime (not just cacheTime)
+✅ Only dedup GET requests (never POST/PUT/DELETE)
+✅ Consider Service Worker for cross-tab dedup
+✅ Invalidate cache after mutations (queryClient.invalidateQueries)
+✅ Use response.clone() in Service Worker (body can only be read once)
+✅ Monitor cache hit rates (are we actually saving requests?)</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

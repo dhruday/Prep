@@ -1,0 +1,81 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Lab 03 — Retry-After 429</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.cd{font-size:1.8rem;color:#ef4444;font-family:monospace;margin:8px 0}</style></head><body>
+<h1>Lab 03 — Retry-After 429</h1>
+<p class="sub">Respect Retry-After headers when rate-limited</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&amp;A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card"><h3>429 Too Many Requests</h3>
+    <p>The server sets <code>Retry-After</code> header (seconds or HTTP-date) telling the client exactly how long to wait before the next request.</p>
+    <div class="info">Always prefer the server's Retry-After over your own backoff — the server knows its capacity best.</div>
+  </div>
+  <div class="card"><h3>Header Format</h3>
+<pre>HTTP/1.1 429 Too Many Requests
+Retry-After: 5          <span class="cm">← seconds</span>
+Retry-After: Thu, 01 Jan 2026 00:00:00 GMT  <span class="cm">← date</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card"><h3>Burst 6 Requests (limit = 3)</h3>
+    <p>Sends 6 sequential requests to <code>/api/unreliable/rate-limited?max=3</code>. After hitting the limit, reads Retry-After, shows countdown, then resumes.</p>
+    <button onclick="run()">▶ Send 6 Requests</button>
+    <button onclick="out.textContent=''">Clear</button>
+    <div class="cd" id="cd"></div>
+    <div class="output" id="out"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card"><h3>Browser Behavior on 429</h3>
+    <p>• Browsers do <b>not</b> auto-retry on 429 — the app must handle it.<br>
+    • <code>fetch()</code> resolves normally; check <code>res.status === 429</code>.<br>
+    • The <code>Retry-After</code> header is accessible via <code>res.headers.get('Retry-After')</code>.</p></div>
+  <div class="card"><h3>Rate-Limit Headers (Common)</h3>
+<pre>X-RateLimit-Limit: 100       <span class="cm">← max per window</span>
+X-RateLimit-Remaining: 0     <span class="cm">← left in window</span>
+X-RateLimit-Reset: 1700000000<span class="cm">← epoch reset time</span>
+Retry-After: 5               <span class="cm">← wait seconds</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card"><h3>Q: Should you use Retry-After or your own backoff?</h3>
+    <p>Prefer <code>Retry-After</code> when present — the server knows its capacity. Fall back to exponential backoff only if the header is missing.</p></div>
+  <div class="card"><h3>Q: How do you prevent 429 in the first place?</h3>
+    <p>Client-side rate limiting (token bucket / leaky bucket), request batching, and caching reduce outbound request rate below the server's threshold.</p></div>
+  <div class="card"><h3>Q: What's the difference between 429 and 503?</h3>
+    <p>429 = client sending too fast (rate-limit). 503 = server overloaded/down (capacity). Both are transient & retryable, but 429 is client-triggered.</p></div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+const out=document.getElementById('out'),cd=document.getElementById('cd');
+function log(m){out.textContent+=m+'\n';out.scrollTop=out.scrollHeight;}
+function countdown(sec){return new Promise(r=>{let s=sec;cd.textContent=`⏳ ${s}s`;const iv=setInterval(()=>{s--;cd.textContent=s>0?`⏳ ${s}s`:'';if(s<=0){clearInterval(iv);r();}},1000);});}
+async function run(){
+  cd.textContent='';
+  for(let i=1;i<=6;i++){
+    log(`Request #${i}...`);
+    try{
+      const res=await fetch(`${API}/api/unreliable/rate-limited?max=3`);
+      if(res.status===429){
+        const ra=res.headers.get('Retry-After')||'3';
+        const wait=parseInt(ra,10)||3;
+        log(`  ✗ 429 — Retry-After: ${wait}s`);
+        await countdown(wait);
+        log(`  ↻ Resumed after ${wait}s wait`);
+        i--;continue;
+      }
+      const d=await res.json();
+      log(`  ✓ ${res.status} — ${JSON.stringify(d)}`);
+    }catch(e){log(`  ✗ ${e.message}`);}
+  }
+  log('Done.');
+}
+</script></body></html>

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Infinite Scroll Deep Study — IntersectionObserver to Virtual Scrolling</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a2e2a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:1rem}.card h3.warn{color:#f59e0b}.card h3.bad{color:#ef4444}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#10b981;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #10b981;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#10b981;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Infinite Scroll Deep Study — IntersectionObserver to Virtual Scrolling</h1>
+<p class="sub">Module 6.2 · FAANG Interview Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Architecture Patterns</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<!-- Tab 0: Deep Theory -->
+<div class="panel active">
+  <div class="card">
+    <h3>1. IntersectionObserver API Internals</h3>
+    <p>IntersectionObserver runs asynchronously off the main thread (compositor thread in Chromium). It uses a polling interval (~100ms) to check intersection ratios, NOT scroll events.</p>
+    <pre><span class="cm">// Browser internals:</span>
+<span class="num">1.</span> Observer registered → added to document's observer list
+<span class="num">2.</span> Compositor thread checks intersection every ~100ms
+<span class="num">3.</span> When threshold crossed → entry queued to microtask
+<span class="num">4.</span> Callback fires with IntersectionObserverEntry[]
+<span class="num">5.</span> Entry contains: intersectionRatio, isIntersecting,
+   boundingClientRect, intersectionRect, rootBounds, time
+
+<span class="cm">// Key difference from scroll events:</span>
+<span class="cm">// - No layout thrashing (no forced reflow)</span>
+<span class="cm">// - No main thread blocking</span>
+<span class="cm">// - Battery efficient (hardware compositor)</span>
+<span class="cm">// - Multiple thresholds: [0, 0.25, 0.5, 0.75, 1.0]</span></pre>
+    <div class="info">Chrome's IntersectionObserver batches intersection checks with rAF timing. Firefox uses a separate thread. The 100ms polling is an implementation detail — the spec only guarantees async delivery.</div>
+  </div>
+
+  <div class="card">
+    <h3>2. Scroll Events vs IntersectionObserver</h3>
+    <pre><span class="cm">// Scroll event approach (legacy — avoid):</span>
+window.<span class="fn">addEventListener</span>(<span class="str">'scroll'</span>, () =&gt; {
+  <span class="cm">// Fires 30-120 times/second during scroll</span>
+  <span class="cm">// Each call triggers: getBoundingClientRect() → forced reflow</span>
+  <span class="cm">// Layout thrashing: read → write → read → write...</span>
+  <span class="cm">// scrollTop + innerHeight >= scrollHeight - threshold</span>
+});
+<span class="cm">// Problems: jank, battery drain, complex debounce needed</span>
+
+<span class="cm">// IntersectionObserver approach (modern):</span>
+<span class="kw">const</span> observer = <span class="kw">new</span> <span class="fn">IntersectionObserver</span>(
+  (entries) =&gt; { <span class="cm">/* fires only when threshold crossed */</span> },
+  { root: <span class="kw">null</span>, rootMargin: <span class="str">'200px'</span>, threshold: <span class="num">0</span> }
+);
+<span class="cm">// rootMargin: '200px' = trigger 200px BEFORE visible</span>
+<span class="cm">// This prefetches data for smoother experience</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Virtual Scrolling — DOM Recycling</h3>
+    <pre><span class="cm">// Problem: 10,000 items = 10,000 DOM nodes = memory explosion</span>
+<span class="cm">// Virtual scrolling renders only visible items + buffer</span>
+
+<span class="cm">// Visual model (viewport = 5 items visible, buffer = 2):</span>
+<span class="cm">//   [hidden]    item 0-94     ← not in DOM</span>
+<span class="cm">//   [buffer]    item 95-96    ← rendered but above viewport</span>
+<span class="cm">//   [visible]   item 97-101   ← visible to user</span>
+<span class="cm">//   [buffer]    item 102-103  ← rendered but below viewport</span>
+<span class="cm">//   [hidden]    item 104-9999 ← not in DOM</span>
+
+<span class="cm">// Only 9 DOM nodes exist at any time!</span>
+<span class="cm">// Spacer divs maintain scroll container height:</span>
+<span class="cm">//   top spacer:    95 * itemHeight px</span>
+<span class="cm">//   visible items: 9 * itemHeight px</span>
+<span class="cm">//   bottom spacer: (10000 - 104) * itemHeight px</span>
+
+<span class="cm">// On scroll: recalculate visible range → update items</span>
+<span class="cm">// translateY on container or absolute positioning per item</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>4. Variable Height Items</h3>
+    <pre><span class="cm">// Fixed height: simple — totalHeight = count * itemHeight</span>
+<span class="cm">// Variable height: complex — need measured heights</span>
+
+<span class="cm">// Strategy 1: Estimated height + measurement cache</span>
+<span class="num">1.</span> Estimate: assume 60px per item
+<span class="num">2.</span> Render item → measure actual height via ResizeObserver
+<span class="num">3.</span> Cache measured height in Map&lt;index, height&gt;
+<span class="num">4.</span> Recalculate positions using actual heights
+<span class="num">5.</span> Total height = sum of all (measured || estimated)
+
+<span class="cm">// Strategy 2: TanStack Virtual approach</span>
+<span class="num">1.</span> estimateSize callback provides initial estimate
+<span class="num">2.</span> measureElement ref measures on mount
+<span class="num">3.</span> Dynamic recalculation with memoized prefix sums
+<span class="num">4.</span> Binary search for scrollOffset → startIndex</pre>
+  </div>
+
+  <div class="card">
+    <h3>5. Scroll Position Restoration</h3>
+    <pre><span class="cm">// Problem: user scrolls to item 500 → navigates away → comes back</span>
+<span class="cm">// Solution layers:</span>
+
+<span class="cm">// Layer 1: Browser default (history.scrollRestoration)</span>
+history.scrollRestoration = <span class="str">'manual'</span>; <span class="cm">// disable browser default</span>
+
+<span class="cm">// Layer 2: Cache scroll position</span>
+<span class="cm">// Save: sessionStorage.setItem('feed-scroll', scrollTop)</span>
+<span class="cm">// Restore: element.scrollTo(0, savedPosition)</span>
+
+<span class="cm">// Layer 3: With virtual scrolling</span>
+<span class="cm">// Save: { scrollOffset, firstVisibleIndex, pagesCached: 25 }</span>
+<span class="cm">// Restore: virtualizer.scrollToIndex(firstVisibleIndex)</span>
+<span class="cm">// Must also restore data — use React Query cache persistence</span>
+
+<span class="cm">// Layer 4: Content-addressable restoration</span>
+<span class="cm">// URL hash: /feed#item-500</span>
+<span class="cm">// On mount: find item in cache → scrollToIndex</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>6. CLS (Cumulative Layout Shift) Impact</h3>
+    <pre><span class="cm">// Infinite scroll CLS sources:</span>
+<span class="num">1.</span> <span class="fn">Images loading</span>: No reserved space → content shifts down
+   Fix: aspect-ratio CSS or explicit width/height
+<span class="num">2.</span> <span class="fn">Dynamic content</span>: Variable height items with lazy content
+   Fix: min-height on containers, skeleton placeholders
+<span class="num">3.</span> <span class="fn">Ads injected</span>: Between feed items with unknown height
+   Fix: Reserved ad slots with fixed dimensions
+<span class="num">4.</span> <span class="fn">Footer pushed</span>: Content above pushes footer down
+   Fix: Infinite scroll replaces footer with "loading" state
+
+<span class="cm">// Measurement: PerformanceObserver for 'layout-shift' entries</span>
+<span class="cm">// Target CLS &lt; 0.1 for "Good" Core Web Vitals score</span></pre>
+  </div>
+</div>
+
+<!-- Tab 1: Architecture Patterns -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Sentinel Element Pattern</h3>
+    <pre><span class="cm">// Architecture: invisible element at bottom triggers fetch</span>
+
+┌────────────────────────────┐
+│  Item 1                    │
+│  Item 2                    │ ← Viewport
+│  Item 3                    │
+│  Item 4                    │
+│  Item 5                    │
+├────────────────────────────┤
+│  Item 6                    │ ← Below fold
+│  Item 7                    │
+│  ● Sentinel (0px height)   │ ← IntersectionObserver target
+│                            │   rootMargin: '200px' (trigger early)
+└────────────────────────────┘
+
+<span class="cm">// When sentinel enters extended viewport (200px margin):</span>
+<span class="cm">// 1. Observer callback fires</span>
+<span class="cm">// 2. Fetch next page</span>
+<span class="cm">// 3. Append items above sentinel</span>
+<span class="cm">// 4. Sentinel naturally pushed down</span>
+<span class="cm">// 5. Repeat</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Virtual Scrolling Architecture</h3>
+    <pre><span class="cm">// Component tree:</span>
+
+&lt;ScrollContainer&gt;         <span class="cm">// overflow: auto, fixed height</span>
+  &lt;VirtualSpace&gt;           <span class="cm">// height = totalSize (e.g., 500000px)</span>
+    &lt;ItemWindow&gt;           <span class="cm">// transform: translateY(startPx)</span>
+      &lt;Item key={95} /&gt;   <span class="cm">// buffer top</span>
+      &lt;Item key={96} /&gt;   <span class="cm">// buffer top</span>
+      &lt;Item key={97} /&gt;   <span class="cm">// visible</span>
+      &lt;Item key={98} /&gt;   <span class="cm">// visible</span>
+      &lt;Item key={99} /&gt;   <span class="cm">// visible</span>
+      &lt;Item key={100} /&gt;  <span class="cm">// buffer bottom</span>
+      &lt;Item key={101} /&gt;  <span class="cm">// buffer bottom</span>
+    &lt;/ItemWindow&gt;
+  &lt;/VirtualSpace&gt;
+&lt;/ScrollContainer&gt;
+
+<span class="cm">// State: { scrollOffset, overscan, items[] }</span>
+<span class="cm">// On scroll: binary search for new startIndex</span>
+<span class="cm">// Re-render only if visible range changed</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Data Layer — useInfiniteQuery + Virtualizer</h3>
+    <pre><span class="cm">// Integration pattern:</span>
+
+<span class="fn">useInfiniteQuery</span>                    <span class="fn">useVirtualizer</span>
+    │                                    │
+    ├─ pages: [[p1], [p2], [p3]]        ├─ scrollOffset
+    ├─ fetchNextPage()                   ├─ virtualItems[]
+    ├─ hasNextPage                       ├─ getTotalSize()
+    │                                    │
+    └───────────┬────────────────────────┘
+                │
+        <span class="fn">allItems</span> = pages.flatMap(p =&gt; p.data)
+        <span class="fn">virtualizer</span>.count = allItems.length
+                │
+        ┌───────▼───────┐
+        │ When last virtual item   │
+        │ index &gt; allItems.length  │──→ fetchNextPage()
+        │ - threshold              │
+        └───────────────┘</pre>
+  </div>
+
+  <div class="card">
+    <h3>4. Bidirectional Infinite Scroll</h3>
+    <pre><span class="cm">// Use case: chat messages — load older (up) and newer (down)</span>
+
+<span class="cm">// Two sentinels:</span>
+● Top Sentinel ──→ fetchPreviousPage() ──→ prepend items
+│                                           maintain scroll position!
+│ [messages...]
+│
+● Bottom Sentinel ──→ fetchNextPage() ──→ append items
+
+<span class="cm">// Scroll position maintenance on prepend:</span>
+<span class="cm">// Before prepend: scrollHeight = 5000, scrollTop = 0</span>
+<span class="cm">// After prepend 20 items (400px): scrollHeight = 5400</span>
+<span class="cm">// Adjust: scrollTop = 0 + 400 = 400 (user sees same content)</span>
+
+<span class="cm">// React 18: flushSync(() => setState) + ref.scrollTop adjustment</span>
+<span class="cm">// Or: CSS overflow-anchor: auto (browser-native anchor)</span></pre>
+  </div>
+</div>
+
+<!-- Tab 2: FAANG Interview -->
+<div class="panel">
+  <div class="qa">
+    <div class="q">Q1: Why use IntersectionObserver instead of scroll events for infinite scroll?</div>
+    <div class="a">Three key reasons:<br>
+    1. <strong>Performance</strong>: IO runs on compositor thread, doesn't block main thread. Scroll events fire 30-120/sec and require getBoundingClientRect() which forces layout reflow.<br>
+    2. <strong>Battery</strong>: IO uses hardware-accelerated intersection checks. Scroll listeners keep CPU active during momentum scroll on mobile.<br>
+    3. <strong>Simplicity</strong>: No manual debounce/throttle needed. IO fires exactly when threshold is crossed, not on every pixel change.<br><br>
+    IO also supports rootMargin for prefetching (trigger 200px before visibility) and multiple thresholds for progressive loading.</div>
+    <div class="followup">Follow-up: What are IO's limitations?</div>
+    <div class="a">1. ~100ms polling delay (not instant). 2. Can't detect scroll direction. 3. rootMargin doesn't support percentage on non-root elements in some browsers. 4. Disconnecting observers during rapid DOM changes can miss entries.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q2: How would you implement virtual scrolling for 100K items with variable heights?</div>
+    <div class="a">Architecture overview:<br>
+    1. <strong>estimateSize</strong>: Provide estimated height (e.g., 60px) for initial render<br>
+    2. <strong>measureElement</strong>: Use ResizeObserver to capture actual rendered height<br>
+    3. <strong>Height cache</strong>: Map&lt;index, measuredHeight&gt; — falls back to estimate if unmeasured<br>
+    4. <strong>Prefix sum array</strong>: Running total of heights for O(log N) scroll-to-index<br>
+    5. <strong>Binary search</strong>: Given scrollOffset, find startIndex in prefix sums<br>
+    6. <strong>Overscan</strong>: Render 3-5 items beyond visible range as buffer<br>
+    7. <strong>Container</strong>: Fixed-height scroll container, inner div with totalHeight, items positioned with translateY<br><br>
+    Key detail: When an item's measured height differs from estimate, all positions below shift. Must batch these recalculations to avoid layout thrashing. TanStack Virtual handles this with requestAnimationFrame batching.</div>
+    <div class="followup">Follow-up: How do you handle scroll position when item heights change after render (e.g., image loads)?</div>
+    <div class="a">ResizeObserver on each item detects size changes. On resize: update height cache, recalc positions, adjust scrollTop to maintain visual position. Some libraries call this "scroll anchor correction." CSS overflow-anchor property helps for simple cases.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q3: How do you prevent memory leaks in infinite scroll?</div>
+    <div class="a">Memory grows unbounded as pages accumulate. Strategies:<br>
+    1. <strong>Window dehydration</strong>: After N pages, remove data from oldest pages but keep metadata (count, height). Re-fetch on scroll back.<br>
+    2. <strong>React Query maxPages</strong>: useInfiniteQuery({ maxPages: 5 }) — automatically drops oldest pages beyond limit.<br>
+    3. <strong>Virtual DOM</strong>: Only mount visible items + buffer — unmounted items get garbage collected if no references held.<br>
+    4. <strong>Image cleanup</strong>: Revoke blob URLs (URL.revokeObjectURL) for items scrolled far out of view.<br>
+    5. <strong>WeakRef for caches</strong>: Use WeakRef for item caches, allowing GC under memory pressure.<br><br>
+    At Google scale: Instagram feed limits in-memory pages to ~10, evicts oldest with placeholder. Scrolling back re-fetches.</div>
+    <div class="followup">Follow-up: How do you measure memory usage in practice?</div>
+    <div class="a">performance.measureUserAgentSpecificMemory() (Chrome only), DevTools Memory tab heap snapshots, performance.memory.usedJSHeapSize. Set up automated memory regression tests with Puppeteer.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q4: Design infinite scroll for a social media feed. What are the edge cases?</div>
+    <div class="a">Core edge cases:<br>
+    1. <strong>Empty state</strong>: No items → show "No posts yet" with CTA<br>
+    2. <strong>Error mid-stream</strong>: Page 5 fails → show retry button inline, preserve pages 1-4<br>
+    3. <strong>New content</strong>: While user is on page 3, 50 new posts arrive → show "50 new posts" toast at top, don't shift content<br>
+    4. <strong>Rapid scroll</strong>: User scrolls to bottom instantly → queue/deduplicate page requests, show skeleton<br>
+    5. <strong>Tab hidden</strong>: Stop prefetching when tab is background (Page Visibility API)<br>
+    6. <strong>Offline</strong>: Show cached pages, hide "Load More", show offline banner<br>
+    7. <strong>Deleted content</strong>: Item was deleted between page renders → placeholder "This post was deleted"<br>
+    8. <strong>Accessibility</strong>: Screen reader needs to know new content loaded → aria-live region, focus management</div>
+    <div class="followup">Follow-up: How do you handle the "new content" notification without layout shift?</div>
+    <div class="a">Fetch new items in background but DON'T prepend. Show floating toast "12 new posts" at top. On click: scroll to top, prepend items, animate in. Twitter/X uses this pattern.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q5: Explain scroll position restoration with React and virtual scrolling.</div>
+    <div class="a">Multi-layer approach:<br>
+    1. <strong>Disable browser default</strong>: history.scrollRestoration = 'manual'<br>
+    2. <strong>Save state</strong>: On route leave, persist { scrollOffset, firstVisibleIndex, pages: pageCount } to sessionStorage<br>
+    3. <strong>Restore data</strong>: React Query's gcTime keeps data in cache. On return, cache is still warm.<br>
+    4. <strong>Restore position</strong>: After data renders, virtualizer.scrollToIndex(savedIndex, { align: 'start' })<br>
+    5. <strong>Verification</strong>: After scrollTo, check if target item is actually visible. If not (data changed), scroll to nearest valid position.<br><br>
+    Race condition: data re-fetch may complete after scrollTo. Solution: wait for data to settle, then restore position in useEffect.</div>
+    <div class="followup">Follow-up: What about with React Router?</div>
+    <div class="a">React Router v6.4+ has ScrollRestoration component. For virtual lists, create custom ScrollRestoration that saves virtualizer state, not raw scrollTop. Use useBeforeUnload for the save point.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q6: When would you NOT use infinite scroll?</div>
+    <div class="a">1. <strong>E-commerce search results</strong>: Users want to compare, bookmark, share page links → use pagination<br>
+    2. <strong>Admin data tables</strong>: Need "jump to page 47", exact total count, export selection → pagination with page numbers<br>
+    3. <strong>Legal/medical documents</strong>: Need precise references ("page 12, item 3") → traditional pagination<br>
+    4. <strong>SEO content</strong>: Search engines have limited infinite scroll support → paginated with &lt;link rel="next"&gt;<br>
+    5. <strong>Accessibility-first</strong>: Screen readers struggle with dynamic content injection → provide pagination alternative<br>
+    6. <strong>Footer important</strong>: If users need to reach the footer (contact, legal), infinite scroll pushes it unreachable</div>
+  </div>
+</div>
+
+<!-- Tab 3: Code Walkthrough -->
+<div class="panel">
+  <div class="card">
+    <h3>1. IntersectionObserver Sentinel Hook</h3>
+    <pre><span class="kw">function</span> <span class="fn">useIntersectionSentinel</span>(onIntersect, options = {}) {
+  <span class="kw">const</span> sentinelRef = <span class="fn">useRef</span>(<span class="kw">null</span>);
+  <span class="kw">const</span> callbackRef = <span class="fn">useRef</span>(onIntersect);
+  callbackRef.current = onIntersect; <span class="cm">// Always fresh callback</span>
+  
+  <span class="fn">useEffect</span>(() =&gt; {
+    <span class="kw">const</span> el = sentinelRef.current;
+    <span class="kw">if</span> (!el) <span class="kw">return</span>;
+    
+    <span class="kw">const</span> observer = <span class="kw">new</span> <span class="fn">IntersectionObserver</span>(
+      (entries) =&gt; {
+        <span class="cm">// entries[0] — we observe single element</span>
+        <span class="kw">if</span> (entries[<span class="num">0</span>].isIntersecting) {
+          callbackRef.current();
+        }
+      },
+      {
+        root: options.root || <span class="kw">null</span>,      <span class="cm">// null = viewport</span>
+        rootMargin: options.rootMargin || <span class="str">'200px'</span>, <span class="cm">// prefetch buffer</span>
+        threshold: options.threshold || <span class="num">0</span>  <span class="cm">// any visibility</span>
+      }
+    );
+    
+    observer.<span class="fn">observe</span>(el);
+    <span class="kw">return</span> () =&gt; observer.<span class="fn">disconnect</span>();
+    <span class="cm">// ^ Clean up on unmount — prevents memory leak</span>
+  }, []); <span class="cm">// Empty deps — observer created once</span>
+  
+  <span class="kw">return</span> sentinelRef;
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Complete Infinite Scroll Component</h3>
+    <pre><span class="kw">function</span> <span class="fn">InfiniteFeed</span>() {
+  <span class="kw">const</span> {
+    data, fetchNextPage, hasNextPage,
+    isFetchingNextPage, status
+  } = <span class="fn">useInfiniteQuery</span>({
+    queryKey: [<span class="str">'feed'</span>],
+    queryFn: ({ pageParam }) =&gt; <span class="fn">fetchFeed</span>(pageParam),
+    initialPageParam: <span class="kw">null</span>,
+    getNextPageParam: (last) =&gt;
+      last.pageInfo.hasNextPage ? last.pageInfo.endCursor : <span class="kw">undefined</span>,
+    maxPages: <span class="num">10</span>, <span class="cm">// Memory limit: drop oldest pages</span>
+  });
+  
+  <span class="kw">const</span> allItems = data?.pages.<span class="fn">flatMap</span>(p =&gt; p.edges) ?? [];
+  
+  <span class="kw">const</span> sentinelRef = <span class="fn">useIntersectionSentinel</span>(() =&gt; {
+    <span class="kw">if</span> (hasNextPage &amp;&amp; !isFetchingNextPage) {
+      <span class="fn">fetchNextPage</span>();
+      <span class="cm">// Guard: don't fetch if already fetching</span>
+    }
+  });
+  
+  <span class="kw">if</span> (status === <span class="str">'pending'</span>) <span class="kw">return</span> &lt;FeedSkeleton /&gt;;
+  <span class="kw">if</span> (status === <span class="str">'error'</span>) <span class="kw">return</span> &lt;ErrorFallback /&gt;;
+  
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      {allItems.<span class="fn">map</span>(edge =&gt; (
+        &lt;FeedItem key={edge.cursor} item={edge.node} /&gt;
+      ))}
+      
+      {<span class="cm">/* Sentinel — invisible trigger element */</span>}
+      &lt;div ref={sentinelRef} style={{ height: <span class="num">1</span> }} /&gt;
+      
+      {isFetchingNextPage &amp;&amp; &lt;LoadingSpinner /&gt;}
+      {!hasNextPage &amp;&amp; &lt;EndOfFeed /&gt;}
+    &lt;/div&gt;
+  );
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Virtual Scrolling with TanStack Virtual</h3>
+    <pre><span class="kw">function</span> <span class="fn">VirtualFeed</span>() {
+  <span class="kw">const</span> parentRef = <span class="fn">useRef</span>(<span class="kw">null</span>);
+  <span class="kw">const</span> { data, fetchNextPage, hasNextPage } = <span class="fn">useInfiniteQuery</span>({...});
+  <span class="kw">const</span> allItems = data?.pages.<span class="fn">flatMap</span>(p =&gt; p.data) ?? [];
+  
+  <span class="kw">const</span> virtualizer = <span class="fn">useVirtualizer</span>({
+    count: allItems.length,
+    getScrollElement: () =&gt; parentRef.current,
+    estimateSize: () =&gt; <span class="num">80</span>,  <span class="cm">// estimated row height</span>
+    overscan: <span class="num">5</span>,              <span class="cm">// render 5 extra items each side</span>
+    measureElement: (el) =&gt; el.getBoundingClientRect().height,
+    <span class="cm">// ^ Measures actual height after render</span>
+  });
+  
+  <span class="cm">// Trigger fetch when nearing end of data</span>
+  <span class="kw">const</span> virtualItems = virtualizer.<span class="fn">getVirtualItems</span>();
+  <span class="kw">const</span> lastItem = virtualItems[virtualItems.length - <span class="num">1</span>];
+  
+  <span class="fn">useEffect</span>(() =&gt; {
+    <span class="kw">if</span> (lastItem &amp;&amp; lastItem.index &gt;= allItems.length - <span class="num">5</span> &amp;&amp; hasNextPage) {
+      <span class="fn">fetchNextPage</span>();
+    }
+  }, [lastItem?.index]);
+  
+  <span class="kw">return</span> (
+    &lt;div ref={parentRef} style={{ height: <span class="str">'100vh'</span>, overflow: <span class="str">'auto'</span> }}&gt;
+      &lt;div style={{ height: virtualizer.<span class="fn">getTotalSize</span>(), position: <span class="str">'relative'</span> }}&gt;
+        {virtualItems.<span class="fn">map</span>(vItem =&gt; (
+          &lt;div key={vItem.key}
+            ref={virtualizer.measureElement}
+            data-index={vItem.index}
+            style={{
+              position: <span class="str">'absolute'</span>,
+              top: <span class="num">0</span>,
+              transform: <span class="str">`translateY(${vItem.start}px)`</span>,
+              width: <span class="str">'100%'</span>,
+            }}&gt;
+            &lt;FeedItem item={allItems[vItem.index]} /&gt;
+          &lt;/div&gt;
+        ))}
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+  </div>
+</div>
+
+<!-- Tab 4: Cheat Sheet -->
+<div class="panel">
+  <div class="card">
+    <h3>Approach Comparison</h3>
+    <table>
+      <tr><th>Feature</th><th>Sentinel IO</th><th>Scroll Events</th><th>Virtual Scroll</th></tr>
+      <tr><td>DOM nodes</td><td>All loaded items</td><td>All loaded items</td><td style="color:#10b981">Visible + buffer only</td></tr>
+      <tr><td>Memory usage</td><td style="color:#f59e0b">Grows with pages</td><td style="color:#f59e0b">Grows with pages</td><td style="color:#10b981">Constant</td></tr>
+      <tr><td>Main thread impact</td><td style="color:#10b981">Minimal</td><td style="color:#ef4444">High (scroll events)</td><td style="color:#10b981">Minimal</td></tr>
+      <tr><td>Variable heights</td><td style="color:#10b981">Natural</td><td style="color:#10b981">Natural</td><td style="color:#f59e0b">Needs measurement</td></tr>
+      <tr><td>Implementation</td><td style="color:#10b981">Simple</td><td style="color:#10b981">Simple</td><td style="color:#ef4444">Complex</td></tr>
+      <tr><td>10K+ items</td><td style="color:#ef4444">DOM explosion</td><td style="color:#ef4444">DOM explosion</td><td style="color:#10b981">Handles well</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Decision Tree</h3>
+    <pre>Expected items &lt; 200? ──── Yes ──→ <span class="fn">Sentinel + IO</span> (simplest)
+         │ No
+         ▼
+Items 200-5000? ──────────── Yes ──→ <span class="fn">Sentinel + IO + maxPages</span>
+         │ No                          (evict old pages)
+         ▼
+Items 5000+? ─────────────── Yes ──→ <span class="fn">Virtual Scrolling</span>
+         │                             (TanStack Virtual)
+         ▼
+Variable heights + 5000+? ── Yes ──→ <span class="fn">Virtual + measureElement</span>
+                                       (most complex)</pre>
+  </div>
+
+  <div class="card">
+    <h3>Key Code Snippets</h3>
+    <pre><span class="cm">// IntersectionObserver sentinel</span>
+<span class="kw">new</span> <span class="fn">IntersectionObserver</span>(cb, { rootMargin: <span class="str">'200px'</span> });
+
+<span class="cm">// React Query infinite</span>
+<span class="fn">useInfiniteQuery</span>({ getNextPageParam, maxPages: <span class="num">10</span> });
+data.pages.<span class="fn">flatMap</span>(p =&gt; p.data);
+
+<span class="cm">// Scroll restoration</span>
+history.scrollRestoration = <span class="str">'manual'</span>;
+sessionStorage.<span class="fn">setItem</span>(<span class="str">'scroll'</span>, JSON.<span class="fn">stringify</span>({ offset, index }));
+
+<span class="cm">// Prevent refetch on hidden tab</span>
+document.<span class="fn">addEventListener</span>(<span class="str">'visibilitychange'</span>, () =&gt; {
+  <span class="kw">if</span> (document.hidden) observer.<span class="fn">disconnect</span>();
+  <span class="kw">else</span> observer.<span class="fn">observe</span>(sentinel);
+});</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

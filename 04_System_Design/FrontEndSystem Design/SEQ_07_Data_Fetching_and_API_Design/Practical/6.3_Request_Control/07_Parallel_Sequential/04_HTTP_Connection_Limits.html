@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab 04 — HTTP Connection Limits</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}
+.waterfall{margin:10px 0}.wf-row{display:flex;align-items:center;margin:3px 0;font-size:.72rem}.wf-label{width:60px;color:#94a3b8;flex-shrink:0}.wf-track{flex:1;height:20px;background:#0f1117;border-radius:4px;position:relative}.wf-bar{position:absolute;height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;color:#fff;font-size:.65rem}.wf-queued{background:#475569;opacity:.5}.wf-active{background:#60a5fa}
+.conn-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:10px 0}.conn-slot{background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:8px;text-align:center;font-size:.7rem;min-height:50px;transition:all .3s}.conn-slot.active{border-color:#f59e0b;background:#3a2a1a}.conn-slot.done{border-color:#10b981;background:#064e3b}
+</style>
+</head>
+<body>
+<h1>Lab 04 — HTTP Connection Limits</h1>
+<p class="sub">Browser 6-connection-per-origin limit — queuing & waterfall effects</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&amp;A</div>
+</div>
+
+<!-- Tab 0: Concept -->
+<div class="panel active">
+  <div class="card">
+    <h3>The 6-Connection Limit</h3>
+    <p>Browsers enforce a maximum of <strong>6 simultaneous TCP connections per origin</strong> (HTTP/1.1). If you fire 12 requests, only 6 start immediately — the remaining 6 are <strong>queued</strong> and wait for a connection to free up.</p>
+    <div class="info">This limit exists in Chrome, Firefox, Safari, and Edge. It applies per origin (scheme + host + port).</div>
+  </div>
+  <div class="card">
+    <h3>HTTP/1.1 vs HTTP/2</h3>
+<pre><span class="cm">// HTTP/1.1: 6 parallel TCP connections per origin</span>
+<span class="cm">//   → 12 requests = 2 batches of 6</span>
+<span class="cm">//   → Queuing delay for requests 7-12</span>
+
+<span class="cm">// HTTP/2: 1 TCP connection, multiplexed streams</span>
+<span class="cm">//   → 12 requests = all on 1 connection</span>
+<span class="cm">//   → No queuing (but server may limit concurrency)</span></pre>
+    <div class="info warn">Our localhost server uses HTTP/1.1, so you'll see the 6-connection limit clearly in the waterfall.</div>
+  </div>
+  <div class="card">
+    <h3>Workarounds (Historical)</h3>
+    <p><strong>Domain sharding:</strong> split assets across img1.cdn.com, img2.cdn.com to get 6 connections each. Now obsolete with HTTP/2.<br>
+    <strong>Bundling:</strong> combine multiple resources into one request. Still relevant for reducing total requests.<br>
+    <strong>Priority hints:</strong> <code>fetchpriority="high"</code> to reorder the queue.</p>
+  </div>
+</div>
+
+<!-- Tab 1: Hands-On Lab -->
+<div class="panel">
+  <div class="card">
+    <h3>Fire 12 Parallel Requests</h3>
+    <button onclick="fire12()">▶ Fire 12 Requests</button>
+    <button onclick="fire6()">▶ Fire 6 Requests</button>
+    <button onclick="clearLab()">✕ Clear</button>
+    <div class="info">Watch requests 7-12 queue behind the first 6 — proving the browser connection limit.</div>
+  </div>
+  <div class="card">
+    <h3>Connection Slots (6 max)</h3>
+    <div class="conn-grid" id="conn-slots">
+      <div class="conn-slot" id="slot-0">Slot 1<br><span class="slot-status">idle</span></div>
+      <div class="conn-slot" id="slot-1">Slot 2<br><span class="slot-status">idle</span></div>
+      <div class="conn-slot" id="slot-2">Slot 3<br><span class="slot-status">idle</span></div>
+      <div class="conn-slot" id="slot-3">Slot 4<br><span class="slot-status">idle</span></div>
+      <div class="conn-slot" id="slot-4">Slot 5<br><span class="slot-status">idle</span></div>
+      <div class="conn-slot" id="slot-5">Slot 6<br><span class="slot-status">idle</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Timing Waterfall</h3>
+    <div id="waterfall"></div>
+  </div>
+  <div class="output" id="lab-log"></div>
+</div>
+
+<!-- Tab 2: Browser Internals -->
+<div class="panel">
+  <div class="card">
+    <h3>Network Stack Queue</h3>
+    <p>When you call <code>fetch()</code>, the request enters the browser's <strong>network service</strong>:</p>
+    <p>1. Request enters the <strong>pending queue</strong> per origin.<br>
+    2. If fewer than 6 connections are active, a TCP socket is allocated immediately.<br>
+    3. If 6 are in use, the request <strong>waits in the queue</strong> (shown as "Queueing" in DevTools).<br>
+    4. When a connection completes, the next queued request gets that socket.</p>
+  </div>
+  <div class="card">
+    <h3>DevTools Evidence</h3>
+    <p>In the <strong>Network tab waterfall</strong>, queued requests show a <strong>gray bar</strong> (Queueing) before the green TTFB bar. Requests 7+ will have visible queueing time.</p>
+    <div class="info">Chrome DevTools → Network → right-click header → enable "Connection ID" column to see which requests share TCP connections.</div>
+  </div>
+  <div class="card">
+    <h3>HTTP/2 Multiplexing</h3>
+    <p>HTTP/2 uses a single TCP connection with multiplexed <strong>streams</strong>. Each request/response is a stream — no head-of-line blocking at the HTTP level. The 6-connection browser limit doesn't apply.</p>
+    <div class="info warn">HTTP/2 has its own concurrency limit: <code>SETTINGS_MAX_CONCURRENT_STREAMS</code> (server-configured, typically 100-256). Exceeding it still causes queueing.</div>
+  </div>
+</div>
+
+<!-- Tab 3: Interview Q&A -->
+<div class="panel">
+  <div class="card">
+    <h3>Q: Why do browsers limit connections per origin?</h3>
+    <p><strong>A:</strong> To prevent a single page from overwhelming a server and to be a good network citizen. The HTTP/1.1 spec recommended 2 connections; browsers relaxed it to 6. It also limits resource consumption on the client (each TCP connection uses memory and kernel resources).</p>
+  </div>
+  <div class="card">
+    <h3>Q: How does HTTP/2 solve the connection limit problem?</h3>
+    <p><strong>A:</strong> HTTP/2 multiplexes multiple streams over a <strong>single TCP connection</strong>. Hundreds of requests can be in-flight simultaneously without the 6-connection limit. However, TCP-level head-of-line blocking remains — a dropped packet stalls all streams (solved by HTTP/3 + QUIC).</p>
+  </div>
+  <div class="card">
+    <h3>Q: What is domain sharding and is it still relevant?</h3>
+    <p><strong>A:</strong> Splitting resources across subdomains (img1.cdn.com, img2.cdn.com) to get 6 connections per subdomain. It was a key optimization for HTTP/1.1 but is <strong>anti-pattern for HTTP/2</strong> — it prevents multiplexing and wastes connections.</p>
+  </div>
+  <div class="card">
+    <h3>Q: If I fire 100 fetch() calls, what happens?</h3>
+    <p><strong>A:</strong> All 100 promises are created instantly (JS is non-blocking). The browser's network layer queues them — only 6 active at a time over HTTP/1.1. As each completes, the next queued request fires. Total time ≈ (100/6) × average_request_time. Over HTTP/2, all 100 could be concurrent.</p>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const logEl = document.getElementById('lab-log');
+const wfEl = document.getElementById('waterfall');
+function appendLog(msg) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+
+const COLORS = ['#60a5fa','#a78bfa','#10b981','#f59e0b','#f472b6','#06b6d4',
+                '#ef4444','#84cc16','#e879f9','#fb923c','#14b8a6','#fbbf24'];
+
+let activeSlots = [null,null,null,null,null,null];
+
+function allocSlot(reqId) {
+  const idx = activeSlots.indexOf(null);
+  if (idx === -1) return -1;
+  activeSlots[idx] = reqId;
+  const el = document.getElementById(`slot-${idx}`);
+  el.className = 'conn-slot active';
+  el.querySelector('.slot-status').textContent = `Req ${reqId + 1}`;
+  return idx;
+}
+
+function freeSlot(reqId) {
+  const idx = activeSlots.indexOf(reqId);
+  if (idx === -1) return;
+  activeSlots[idx] = null;
+  const el = document.getElementById(`slot-${idx}`);
+  el.className = 'conn-slot done';
+  el.querySelector('.slot-status').textContent = 'done';
+  setTimeout(() => {
+    if (activeSlots[idx] === null) {
+      el.className = 'conn-slot';
+      el.querySelector('.slot-status').textContent = 'idle';
+    }
+  }, 500);
+}
+
+function resetSlots() {
+  activeSlots = [null,null,null,null,null,null];
+  for (let i = 0; i < 6; i++) {
+    const el = document.getElementById(`slot-${i}`);
+    el.className = 'conn-slot';
+    el.querySelector('.slot-status').textContent = 'idle';
+  }
+}
+
+async function fireRequests(count) {
+  resetSlots();
+  wfEl.innerHTML = '';
+  logEl.textContent = '';
+  appendLog(`🚀 Firing ${count} parallel requests...\n`);
+  const baseTime = Date.now();
+  const timings = [];
+  const endpoints = ['/api/rest/products','/api/rest/categories','/api/posts','/api/dashboard'];
+
+  const promises = Array.from({ length: count }, (_, i) => {
+    const url = `${API}${endpoints[i % endpoints.length]}?_req=${i}&_t=${Date.now()}`;
+    const start = Date.now() - baseTime;
+    const slot = allocSlot(i);
+    return fetch(url).then(async res => {
+      await res.json();
+      const end = Date.now() - baseTime;
+      freeSlot(i);
+      timings.push({ id: i, start, end, color: COLORS[i % COLORS.length], slot });
+      appendLog(`  ✓ Req ${i + 1}: ${end - start}ms (started @${start}ms, slot: ${slot >= 0 ? slot + 1 : 'queued'})`);
+    });
+  });
+
+  await Promise.all(promises);
+  const total = Date.now() - baseTime;
+  appendLog(`\n🏁 All ${count} done in ${total}ms`);
+  if (count > 6) appendLog(`📊 First 6 started ~immediately; requests 7-${count} were queued behind them.`);
+
+  renderWaterfall(timings, total);
+}
+
+function renderWaterfall(timings, totalMs) {
+  timings.sort((a, b) => a.start - b.start);
+  const maxEnd = Math.max(...timings.map(t => t.end));
+  wfEl.innerHTML = timings.map(t => {
+    const left = (t.start / maxEnd) * 100;
+    const width = Math.max(((t.end - t.start) / maxEnd) * 100, 3);
+    const queueW = (t.start / maxEnd) * 100;
+    return `<div class="wf-row">
+      <div class="wf-label">Req ${t.id + 1}</div>
+      <div class="wf-track">
+        ${t.start > 0 ? `<div class="wf-bar wf-queued" style="left:0;width:${queueW}%">queued</div>` : ''}
+        <div class="wf-bar wf-active" style="left:${left}%;width:${width}%;background:${t.color}">${t.end - t.start}ms</div>
+      </div>
+    </div>`;
+  }).join('') + `<div style="color:#f59e0b;font-weight:600;margin-top:8px">Total: ${totalMs}ms</div>`;
+}
+
+function fire12() { fireRequests(12); }
+function fire6() { fireRequests(6); }
+function clearLab() { resetSlots(); wfEl.innerHTML = ''; logEl.textContent = ''; }
+</script>
+</body>
+</html>

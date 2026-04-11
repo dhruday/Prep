@@ -67,6 +67,13 @@ app.use('/labs', express.static(practicalDir, {
   index: false,
 }));
 
+// ── Study Files Serving ──────────────────────────────────────────────────────
+const studyDir = path.join(__dirname, '..', '..', 'Study');
+app.use('/study', express.static(studyDir, {
+  extensions: ['html'],
+  index: false,
+}));
+
 // ── Index Page (Lab Directory) ───────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.send(`
@@ -90,6 +97,13 @@ app.get('/', (req, res) => {
         .status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
         .status.server { background: #22c55e; }
         .status.client { background: #f59e0b; }
+        .badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 4px; vertical-align: middle; }
+        .badge-lab { background: #1e40af; color: #93c5fd; }
+        .badge-study { background: #7f1d1d; color: #fca5a5; }
+        .study-section { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #2d2d3d; }
+        .study-section h4 { font-size: 12px; color: #ef4444; margin-bottom: 4px; font-weight: 600; }
+        .topic a.study-link { color: #f87171; }
+        .topic a.study-link:hover { color: #fca5a5; }
         .legend { display: flex; gap: 16px; margin-bottom: 24px; font-size: 13px; color: #94a3b8; }
         .api-test { background: #1e293b; border-radius: 8px; padding: 16px; margin-top: 24px; }
         .api-test h3 { color: #22c55e; font-size: 14px; margin-bottom: 8px; }
@@ -107,6 +121,7 @@ app.get('/', (req, res) => {
         <div class="legend">
           <span><span class="status server"></span>Requires server (localhost:3001)</span>
           <span><span class="status client"></span>Client-side only</span>
+          <span><span class="badge badge-study">STUDY</span> Deep Theory Files</span>
         </div>
 
         <div class="module">
@@ -123,12 +138,24 @@ app.get('/', (req, res) => {
               <a href="/labs/12.1_Web_Threats/01_XSS/07_Double_Encoding_Attack.html"><span class="status server"></span>07 Double Encoding Attack</a>
             </div>
             <div class="topic">
+              <div class="study-section">
+                <h4>📖 Study</h4>
+                <a class="study-link" href="/study/12.1_Web_Threats/124_XSS_Deep_Study.html">XSS Deep Study</a>
+              </div>
+            </div>
+            <div class="topic">
               <h3>02 · CSRF (Cross-Site Request Forgery)</h3>
               <a href="/labs/12.1_Web_Threats/02_CSRF/01_CSRF_Attack_Mechanics.html"><span class="status server"></span>01 CSRF Attack Mechanics</a>
               <a href="/labs/12.1_Web_Threats/02_CSRF/02_CSRF_Token_Patterns.html"><span class="status server"></span>02 CSRF Token Patterns</a>
               <a href="/labs/12.1_Web_Threats/02_CSRF/03_SameSite_Cookie_Defense.html"><span class="status server"></span>03 SameSite Cookie Defense</a>
               <a href="/labs/12.1_Web_Threats/02_CSRF/04_CSRF_in_SPAs.html"><span class="status server"></span>04 CSRF in SPAs</a>
               <a href="/labs/12.1_Web_Threats/02_CSRF/05_CSRF_CORS_Interplay.html"><span class="status server"></span>05 CSRF/CORS Interplay</a>
+            </div>
+            <div class="topic">
+              <div class="study-section">
+                <h4>📖 Study</h4>
+                <a class="study-link" href="/study/12.1_Web_Threats/125_CSRF_Deep_Study.html">CSRF Deep Study</a>
+              </div>
             </div>
             <div class="topic">
               <h3>03 · CORS (Cross-Origin Resource Sharing)</h3>
@@ -140,6 +167,12 @@ app.get('/', (req, res) => {
               <a href="/labs/12.1_Web_Threats/03_CORS/06_CORS_Debugging_Toolkit.html"><span class="status server"></span>06 CORS Debugging Toolkit</a>
             </div>
             <div class="topic">
+              <div class="study-section">
+                <h4>📖 Study</h4>
+                <a class="study-link" href="/study/12.1_Web_Threats/126_CORS_Deep_Study.html">CORS Deep Study</a>
+              </div>
+            </div>
+            <div class="topic">
               <h3>04 · Prototype Pollution</h3>
               <a href="/labs/12.1_Web_Threats/04_Prototype_Pollution/01_Prototype_Pollution_Basics.html"><span class="status client"></span>01 Prototype Pollution Basics</a>
               <a href="/labs/12.1_Web_Threats/04_Prototype_Pollution/02_Pollution_to_XSS.html"><span class="status client"></span>02 Pollution to XSS</a>
@@ -149,12 +182,19 @@ app.get('/', (req, res) => {
               <a href="/labs/12.1_Web_Threats/04_Prototype_Pollution/06_Detecting_Pollution.html"><span class="status client"></span>06 Detecting Pollution</a>
             </div>
             <div class="topic">
+              <div class="study-section">
+                <h4>📖 Study</h4>
+                <a class="study-link" href="/study/12.1_Web_Threats/174_Prototype_Pollution_Deep_Study.html">Prototype Pollution Deep Study</a>
+              </div>
+            </div>
+            <div class="topic">
               <h3>05 · Supply Chain Attacks</h3>
               <a href="/labs/12.1_Web_Threats/05_Supply_Chain/01_npm_Supply_Chain_Attacks.html"><span class="status client"></span>01 npm Supply Chain Attacks</a>
               <a href="/labs/12.1_Web_Threats/05_Supply_Chain/02_Dependency_Confusion.html"><span class="status server"></span>02 Dependency Confusion</a>
               <a href="/labs/12.1_Web_Threats/05_Supply_Chain/03_Lockfile_Integrity.html"><span class="status client"></span>03 Lockfile Integrity</a>
               <a href="/labs/12.1_Web_Threats/05_Supply_Chain/04_npm_Audit_Scanning.html"><span class="status client"></span>04 npm Audit Scanning</a>
               <a href="/labs/12.1_Web_Threats/05_Supply_Chain/05_Secure_CICD_Pipeline.html"><span class="status client"></span>05 Secure CI/CD Pipeline</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.1_Web_Threats/175_Supply_Chain_Deep_Study.html">Supply Chain Deep Study</a></div>
             </div>
           </div>
         </div>
@@ -170,6 +210,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.2_Auth_Tokens/06_Authentication_Flows/04_Multi_Factor_Auth.html"><span class="status server"></span>04 Multi-Factor Auth</a>
               <a href="/labs/12.2_Auth_Tokens/06_Authentication_Flows/05_Session_Fixation_Hijacking.html"><span class="status server"></span>05 Session Fixation/Hijacking</a>
               <a href="/labs/12.2_Auth_Tokens/06_Authentication_Flows/06_Password_Security_Hashing.html"><span class="status server"></span>06 Password Security</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.2_Auth_Tokens/127_Authentication_Flows_Deep_Study.html">Authentication Flows Deep Study</a></div>
             </div>
             <div class="topic">
               <h3>07 · Token Storage</h3>
@@ -178,6 +219,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.2_Auth_Tokens/07_Token_Storage/03_HttpOnly_BFF_Pattern.html"><span class="status server"></span>03 HttpOnly BFF Pattern</a>
               <a href="/labs/12.2_Auth_Tokens/07_Token_Storage/04_Web_Crypto_Encryption.html"><span class="status server"></span>04 Web Crypto Encryption</a>
               <a href="/labs/12.2_Auth_Tokens/07_Token_Storage/05_Cross_Tab_Sync.html"><span class="status client"></span>05 Cross-Tab Sync</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.2_Auth_Tokens/128_Token_Storage_Deep_Study.html">Token Storage Deep Study</a></div>
             </div>
             <div class="topic">
               <h3>08 · OAuth 2.0</h3>
@@ -186,6 +228,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.2_Auth_Tokens/08_OAuth/03_OAuth_Vulnerabilities.html"><span class="status server"></span>03 OAuth Vulnerabilities</a>
               <a href="/labs/12.2_Auth_Tokens/08_OAuth/04_OpenID_Connect.html"><span class="status server"></span>04 OpenID Connect</a>
               <a href="/labs/12.2_Auth_Tokens/08_OAuth/05_OAuth_SPA_Best_Practices.html"><span class="status server"></span>05 OAuth SPA Best Practices</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.2_Auth_Tokens/129_OAuth_Deep_Study.html">OAuth Deep Study</a></div>
             </div>
             <div class="topic">
               <h3>09 · JWT Deep Dive</h3>
@@ -195,6 +238,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.2_Auth_Tokens/09_JWT_Deep_Dive/04_JWT_Revocation.html"><span class="status server"></span>04 JWT Revocation</a>
               <a href="/labs/12.2_Auth_Tokens/09_JWT_Deep_Dive/05_JWKS_Key_Rotation.html"><span class="status server"></span>05 JWKS Key Rotation</a>
               <a href="/labs/12.2_Auth_Tokens/09_JWT_Deep_Dive/06_JWT_Best_Practices.html"><span class="status server"></span>06 JWT Best Practices</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.2_Auth_Tokens/179_JWT_Deep_Study.html">JWT Deep Study</a></div>
             </div>
             <div class="topic">
               <h3>10 · Passkeys & WebAuthn</h3>
@@ -203,6 +247,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.2_Auth_Tokens/10_Passkeys_WebAuthn/03_Passkey_Authentication.html"><span class="status client"></span>03 Passkey Authentication</a>
               <a href="/labs/12.2_Auth_Tokens/10_Passkeys_WebAuthn/04_Passkey_Security_Analysis.html"><span class="status client"></span>04 Passkey Security Analysis</a>
               <a href="/labs/12.2_Auth_Tokens/10_Passkeys_WebAuthn/05_Passkey_UX_Patterns.html"><span class="status server"></span>05 Passkey UX Patterns</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.2_Auth_Tokens/180_Passkeys_WebAuthn_Deep_Study.html">Passkeys & WebAuthn Deep Study</a></div>
             </div>
           </div>
         </div>
@@ -217,6 +262,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.3_Hardening_UI/11_Sensitive_UI_Data/03_Console_DevTools_Leaks.html"><span class="status client"></span>03 Console/DevTools Leaks</a>
               <a href="/labs/12.3_Hardening_UI/11_Sensitive_UI_Data/04_Data_Masking_Sanitization.html"><span class="status client"></span>04 Data Masking & Sanitization</a>
               <a href="/labs/12.3_Hardening_UI/11_Sensitive_UI_Data/05_Clipboard_Screenshot_Protection.html"><span class="status client"></span>05 Clipboard/Screenshot Protection</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.3_Hardening_UI/130_Protecting_Sensitive_Data_Deep_Study.html">Protecting Sensitive Data Deep Study</a></div>
             </div>
             <div class="topic">
               <h3>12 · Secure API Consumption</h3>
@@ -226,6 +272,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.3_Hardening_UI/12_Secure_API_Consumption/04_HTTPS_Transport_Security.html"><span class="status server"></span>04 HTTPS Transport Security</a>
               <a href="/labs/12.3_Hardening_UI/12_Secure_API_Consumption/05_API_Error_Handling.html"><span class="status server"></span>05 API Error Handling</a>
               <a href="/labs/12.3_Hardening_UI/12_Secure_API_Consumption/06_API_Security_Checklist.html"><span class="status server"></span>06 API Security Checklist</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.3_Hardening_UI/131_Secure_API_Deep_Study.html">Secure API Deep Study</a></div>
             </div>
             <div class="topic">
               <h3>13 · Clickjacking</h3>
@@ -234,6 +281,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.3_Hardening_UI/13_Clickjacking/03_Frame_Ancestors_CSP.html"><span class="status server"></span>03 frame-ancestors CSP</a>
               <a href="/labs/12.3_Hardening_UI/13_Clickjacking/04_Frame_Busting.html"><span class="status client"></span>04 Frame Busting</a>
               <a href="/labs/12.3_Hardening_UI/13_Clickjacking/05_Advanced_UI_Redressing.html"><span class="status client"></span>05 Advanced UI Redressing</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.3_Hardening_UI/132_Clickjacking_Deep_Study.html">Clickjacking Deep Study</a></div>
             </div>
             <div class="topic">
               <h3>14 · Content Security Policy</h3>
@@ -243,6 +291,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.3_Hardening_UI/14_CSP/04_CSP_Bypasses.html"><span class="status server"></span>04 CSP Bypasses</a>
               <a href="/labs/12.3_Hardening_UI/14_CSP/05_CSP_SPAs.html"><span class="status server"></span>05 CSP for SPAs</a>
               <a href="/labs/12.3_Hardening_UI/14_CSP/06_CSP_Best_Practices.html"><span class="status client"></span>06 CSP Best Practices</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.3_Hardening_UI/133_CSP_Deep_Study.html">CSP Deep Study</a></div>
             </div>
             <div class="topic">
               <h3>15 · Secure Headers</h3>
@@ -252,6 +301,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.3_Hardening_UI/15_Secure_Headers/04_Permissions_Policy.html"><span class="status client"></span>04 Permissions-Policy</a>
               <a href="/labs/12.3_Hardening_UI/15_Secure_Headers/05_Cross_Origin_Policies.html"><span class="status server"></span>05 Cross-Origin Policies</a>
               <a href="/labs/12.3_Hardening_UI/15_Secure_Headers/06_Headers_Audit.html"><span class="status server"></span>06 Headers Audit</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.3_Hardening_UI/134_Secure_Headers_Deep_Study.html">Secure Headers Deep Study</a></div>
             </div>
             <div class="topic">
               <h3>16 · Token Refresh</h3>
@@ -261,6 +311,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.3_Hardening_UI/16_Token_Refresh/04_Race_Conditions.html"><span class="status client"></span>04 Race Conditions</a>
               <a href="/labs/12.3_Hardening_UI/16_Token_Refresh/05_Multi_Tab_Sync.html"><span class="status server"></span>05 Multi-Tab Sync</a>
               <a href="/labs/12.3_Hardening_UI/16_Token_Refresh/06_Refresh_Best_Practices.html"><span class="status server"></span>06 Refresh Best Practices</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.3_Hardening_UI/135_Token_Refresh_Deep_Study.html">Token Refresh Deep Study</a></div>
             </div>
             <div class="topic">
               <h3>17 · Data Leak Prevention</h3>
@@ -270,6 +321,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.3_Hardening_UI/17_Data_Leak_Prevention/04_Timing_Side_Channels.html"><span class="status server"></span>04 Timing Side Channels</a>
               <a href="/labs/12.3_Hardening_UI/17_Data_Leak_Prevention/05_Storage_Memory_Security.html"><span class="status client"></span>05 Storage/Memory Security</a>
               <a href="/labs/12.3_Hardening_UI/17_Data_Leak_Prevention/06_DLP_Checklist.html"><span class="status client"></span>06 DLP Checklist</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.3_Hardening_UI/136_Data_Leak_Prevention_Deep_Study.html">Data Leak Prevention Deep Study</a></div>
             </div>
             <div class="topic">
               <h3>18 · Subresource Integrity</h3>
@@ -279,6 +331,7 @@ app.get('/', (req, res) => {
               <a href="/labs/12.3_Hardening_UI/18_SRI/04_Dynamic_Script_SRI.html"><span class="status server"></span>04 Dynamic Script SRI</a>
               <a href="/labs/12.3_Hardening_UI/18_SRI/05_SRI_Build_Integration.html"><span class="status client"></span>05 SRI Build Integration</a>
               <a href="/labs/12.3_Hardening_UI/18_SRI/06_SRI_Monitoring.html"><span class="status server"></span>06 SRI Monitoring</a>
+              <div class="study-section"><h4>📖 Study</h4><a class="study-link" href="/study/12.3_Hardening_UI/188_SRI_Deep_Study.html">SRI Deep Study</a></div>
             </div>
           </div>
         </div>

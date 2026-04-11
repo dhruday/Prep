@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>OAuth 2.0 Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:1rem}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#ef4444;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #ef4444;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#ef4444;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>OAuth 2.0 Deep Study</h1>
+<p class="sub">Module 12.2 · Security Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Attack &amp; Defense</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. OAuth 2.0 Roles</h3>
+    <pre><span class="cm">// Resource Owner  → The user (who owns the data)</span>
+<span class="cm">// Client          → Your app (wants to access user's data)</span>
+<span class="cm">// Authorization Server → Issues tokens (Auth0, Keycloak, Google)</span>
+<span class="cm">// Resource Server      → Hosts protected data (your API)</span>
+<span class="cm">//</span>
+<span class="cm">// Key principle: DELEGATION</span>
+<span class="cm">// "Let my app access your Google Drive files without giving me your password"</span>
+<span class="cm">//</span>
+<span class="cm">// OAuth is NOT authentication — it's authorization</span>
+<span class="cm">// OAuth tells you: "User X allowed app Y to access scope Z"</span>
+<span class="cm">// It does NOT tell you: "The user is X" (that's OpenID Connect)</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Grant Types Comparison</h3>
+    <table>
+      <tr><th>Grant Type</th><th>Use Case</th><th>Security Level</th><th>Status</th></tr>
+      <tr><td>Authorization Code</td><td>Server-side apps</td><td>Highest (confidential client)</td><td>✅ Recommended</td></tr>
+      <tr><td>Auth Code + PKCE</td><td>SPAs, mobile apps</td><td>High (public client)</td><td>✅ Recommended</td></tr>
+      <tr><td>Client Credentials</td><td>Machine-to-machine</td><td>High (no user involved)</td><td>✅ Recommended</td></tr>
+      <tr><td>Implicit</td><td>SPAs (legacy)</td><td>Low (token in URL fragment)</td><td>❌ Deprecated</td></tr>
+      <tr><td>Resource Owner Password</td><td>Trusted first-party</td><td>Low (user gives password)</td><td>❌ Deprecated</td></tr>
+      <tr><td>Device Code</td><td>TVs, CLI tools</td><td>Medium</td><td>✅ Specific use</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>3. Authorization Code Flow with PKCE</h3>
+    <pre><span class="cm">// Step 1: Generate PKCE challenge</span>
+<span class="kw">const</span> codeVerifier = <span class="fn">generateRandom</span>(<span class="num">128</span>); <span class="cm">// Random string</span>
+<span class="kw">const</span> codeChallenge = <span class="fn">base64url</span>(SHA256(codeVerifier));
+
+<span class="cm">// Step 2: Redirect user to authorization server</span>
+<span class="cm">// GET https://auth.example.com/authorize?</span>
+<span class="cm">//   response_type=code</span>
+<span class="cm">//   &client_id=my-spa</span>
+<span class="cm">//   &redirect_uri=https://app.com/callback</span>
+<span class="cm">//   &scope=openid profile email</span>
+<span class="cm">//   &state=random-csrf-nonce      ← prevents CSRF</span>
+<span class="cm">//   &code_challenge=abc123...      ← PKCE challenge</span>
+<span class="cm">//   &code_challenge_method=S256</span>
+
+<span class="cm">// Step 3: User authenticates, consents, gets redirected back</span>
+<span class="cm">// GET https://app.com/callback?code=AUTH_CODE&state=random-csrf-nonce</span>
+
+<span class="cm">// Step 4: Exchange code for tokens (via BFF or directly)</span>
+<span class="cm">// POST https://auth.example.com/token</span>
+<span class="cm">//   grant_type=authorization_code</span>
+<span class="cm">//   &code=AUTH_CODE</span>
+<span class="cm">//   &redirect_uri=https://app.com/callback</span>
+<span class="cm">//   &client_id=my-spa</span>
+<span class="cm">//   &code_verifier=original_random_string  ← PKCE proof</span>
+
+<span class="cm">// Step 5: Auth server verifies SHA256(code_verifier) === code_challenge</span>
+<span class="cm">//   → returns: { access_token, refresh_token, id_token }</span></pre>
+    <div class="info">PKCE (Proof Key for Code Exchange) prevents authorization code interception attacks. Even if an attacker intercepts the auth code, they can't exchange it without the original code_verifier.</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>OAuth Attack Vectors</h3>
+    <h4>1. Authorization Code Interception (Why PKCE Exists)</h4>
+    <pre><span class="cm">// Without PKCE:</span>
+<span class="cm">// 1. User starts OAuth flow</span>
+<span class="cm">// 2. Auth server redirects: app.com/callback?code=SECRET_CODE</span>
+<span class="cm">// 3. Attacker intercepts redirect (malicious app, browser history)</span>
+<span class="cm">// 4. Attacker exchanges code for tokens → has full access</span>
+<span class="cm">//</span>
+<span class="cm">// With PKCE:</span>
+<span class="cm">// Attacker has the code but NOT the code_verifier</span>
+<span class="cm">// → Token exchange fails → attack blocked</span></pre>
+
+    <h4>2. State Parameter Forgery (Login CSRF)</h4>
+    <pre><span class="cm">// Without state parameter:</span>
+<span class="cm">// 1. Attacker gets their own auth code for victim app</span>
+<span class="cm">// 2. Tricks victim into visiting: app.com/callback?code=ATTACKER_CODE</span>
+<span class="cm">// 3. Victim's app exchanges code → logs in as attacker(!)</span>
+<span class="cm">// 4. Victim uploads data to attacker's account</span>
+<span class="cm">//</span>
+<span class="cm">// With state parameter:</span>
+<span class="cm">// App sets state=random_nonce before redirect</span>
+<span class="cm">// Checks state on callback → attacker can't forge it</span></pre>
+
+    <h4>3. Open Redirect via redirect_uri</h4>
+    <pre><span class="cm">// Lax redirect_uri validation on auth server:</span>
+<span class="cm">// Attacker crafts: redirect_uri=https://app.com.evil.com/callback</span>
+<span class="cm">// Auth server redirects code to evil domain</span>
+<span class="cm">//</span>
+<span class="cm">// Defense: exact match redirect_uri validation (no wildcards)</span>
+<span class="cm">// Register exact URLs: https://app.example.com/callback</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: Walk through the OAuth 2.0 Authorization Code flow with PKCE for an SPA.</div>
+      <div class="a">The SPA generates a random code_verifier (128 chars) and computes code_challenge = base64url(SHA256(code_verifier)). It redirects the user to the authorization server with client_id, redirect_uri, scope (e.g., openid profile), state (CSRF nonce), and the code_challenge. The user authenticates and consents. The auth server redirects back to the SPA's callback URL with an authorization code and the state. The SPA verifies the state matches what it stored. Then it exchanges the code for tokens by sending to the token endpoint: the authorization code, client_id, redirect_uri, and the code_verifier. The auth server computes SHA256(code_verifier) and checks it matches the code_challenge from step 1. If valid, it returns an access token (JWT, 5-15 min), a refresh token (opaque, 7-30 days), and optionally an id_token (OpenID Connect). The SPA stores the access token in memory and the refresh token in an HttpOnly cookie (via BFF) or uses it directly for silent refresh.</div>
+      <div class="followup">Follow-up: Why was the Implicit flow deprecated, and how does PKCE replace it?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q2: What's the difference between OAuth 2.0 and OpenID Connect?</div>
+      <div class="a">OAuth 2.0 is an authorization framework — it lets a third-party app access user resources with scoped permissions (e.g., "read your Google Calendar"). It intentionally does NOT specify how to identify the user. The access token is an opaque string from the resource server's perspective. OpenID Connect (OIDC) is an identity layer on top of OAuth 2.0 — it adds authentication. It introduces: (1) The id_token — a JWT containing user claims (sub, email, name, picture). (2) The /userinfo endpoint — returns additional user profile data. (3) Standard scopes: openid, profile, email. (4) Discovery document — .well-known/openid-configuration for automated setup. In practice, if you need "Sign in with Google" (who is this user?), you use OIDC. If you need "Access this user's Google Drive" (what can this app do?), you use OAuth 2.0 access tokens. Most auth flows use both simultaneously.</div>
+      <div class="followup">Follow-up: Can you use the access token for authentication? What's the security risk?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q3: How would you implement "Sign in with Google/GitHub" for a production app?</div>
+      <div class="a">I'd use Auth Code + PKCE with a BFF. Flow: (1) User clicks "Sign in with Google." SPA redirects to Google's /authorize with client_id, redirect_uri pointing to BFF, scope (openid email profile), state (CSRF), and PKCE challenge. (2) User authenticates at Google. (3) Google redirects to BFF with auth code. (4) BFF exchanges code for tokens using client_secret (server-side, never exposed). (5) BFF creates an app session, stores tokens server-side, sets HttpOnly session cookie for the SPA. (6) BFF returns user info to SPA. For multi-provider: use a standardized OIDC library (node-openid-client). Map Google/GitHub users to internal accounts via sub + provider. Handle account linking: if same email exists from different provider, require verification before merge. Security: validate id_token signature (fetch Google's JWKS), check iss, aud, exp, nonce claims. Rate limit login attempts. Log all auth events for audit.</div>
+      <div class="followup">Follow-up: How do you handle the case where the user revokes access at Google?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>1. PKCE Implementation</h3>
+    <pre><span class="cm">// Generate code verifier and challenge</span>
+<span class="kw">function</span> <span class="fn">generateCodeVerifier</span>() {
+  <span class="kw">const</span> array = <span class="kw">new</span> Uint8Array(<span class="num">32</span>);
+  crypto.<span class="fn">getRandomValues</span>(array);
+  <span class="kw">return</span> <span class="fn">base64UrlEncode</span>(array);
+}
+
+<span class="kw">async function</span> <span class="fn">generateCodeChallenge</span>(verifier) {
+  <span class="kw">const</span> encoder = <span class="kw">new</span> <span class="fn">TextEncoder</span>();
+  <span class="kw">const</span> data = encoder.<span class="fn">encode</span>(verifier);
+  <span class="kw">const</span> hash = <span class="kw">await</span> crypto.subtle.<span class="fn">digest</span>(<span class="str">'SHA-256'</span>, data);
+  <span class="kw">return</span> <span class="fn">base64UrlEncode</span>(<span class="kw">new</span> Uint8Array(hash));
+}
+
+<span class="kw">function</span> <span class="fn">base64UrlEncode</span>(buffer) {
+  <span class="kw">return</span> btoa(String.<span class="fn">fromCharCode</span>(...buffer))
+    .<span class="fn">replace</span>(/\+/g, <span class="str">'-'</span>)
+    .<span class="fn">replace</span>(/\//g, <span class="str">'_'</span>)
+    .<span class="fn">replace</span>(/=+$/, <span class="str">''</span>);
+}
+
+<span class="cm">// Start OAuth flow</span>
+<span class="kw">async function</span> <span class="fn">startLogin</span>() {
+  <span class="kw">const</span> verifier = <span class="fn">generateCodeVerifier</span>();
+  <span class="kw">const</span> challenge = <span class="kw">await</span> <span class="fn">generateCodeChallenge</span>(verifier);
+  <span class="kw">const</span> state = crypto.<span class="fn">randomUUID</span>();
+
+  sessionStorage.<span class="fn">setItem</span>(<span class="str">'pkce_verifier'</span>, verifier);
+  sessionStorage.<span class="fn">setItem</span>(<span class="str">'oauth_state'</span>, state);
+
+  <span class="kw">const</span> params = <span class="kw">new</span> <span class="fn">URLSearchParams</span>({
+    response_type: <span class="str">'code'</span>,
+    client_id: <span class="str">'my-spa'</span>,
+    redirect_uri: <span class="str">'https://app.com/callback'</span>,
+    scope: <span class="str">'openid profile email'</span>,
+    state,
+    code_challenge: challenge,
+    code_challenge_method: <span class="str">'S256'</span>,
+  });
+
+  window.location.href = <span class="str">`https://auth.example.com/authorize?</span>${params}<span class="str">`</span>;
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Callback Handler</h3>
+    <pre><span class="kw">async function</span> <span class="fn">handleCallback</span>() {
+  <span class="kw">const</span> params = <span class="kw">new</span> <span class="fn">URLSearchParams</span>(location.search);
+  <span class="kw">const</span> code = params.<span class="fn">get</span>(<span class="str">'code'</span>);
+  <span class="kw">const</span> state = params.<span class="fn">get</span>(<span class="str">'state'</span>);
+
+  <span class="cm">// Verify state (CSRF protection)</span>
+  <span class="kw">if</span> (state !== sessionStorage.<span class="fn">getItem</span>(<span class="str">'oauth_state'</span>)) {
+    <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">'State mismatch — possible CSRF attack'</span>);
+  }
+
+  <span class="kw">const</span> verifier = sessionStorage.<span class="fn">getItem</span>(<span class="str">'pkce_verifier'</span>);
+  sessionStorage.<span class="fn">removeItem</span>(<span class="str">'pkce_verifier'</span>);
+  sessionStorage.<span class="fn">removeItem</span>(<span class="str">'oauth_state'</span>);
+
+  <span class="cm">// Exchange code for tokens</span>
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'https://auth.example.com/token'</span>, {
+    method: <span class="str">'POST'</span>,
+    headers: { <span class="str">'Content-Type'</span>: <span class="str">'application/x-www-form-urlencoded'</span> },
+    body: <span class="kw">new</span> <span class="fn">URLSearchParams</span>({
+      grant_type: <span class="str">'authorization_code'</span>,
+      code,
+      redirect_uri: <span class="str">'https://app.com/callback'</span>,
+      client_id: <span class="str">'my-spa'</span>,
+      code_verifier: verifier,
+    }),
+  });
+
+  <span class="kw">const</span> tokens = <span class="kw">await</span> res.<span class="fn">json</span>();
+  tokenManager.<span class="fn">setToken</span>(tokens.access_token, tokens.expires_in);
+}</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>OAuth 2.0 Flow Selection Guide</h3>
+    <pre>Is a user involved?
+  NO → Client Credentials (M2M)
+  YES ↓
+
+Is the client confidential (can keep a secret)?
+  YES → Authorization Code (with client_secret)
+  NO ↓
+
+Is it a browser-based app (SPA)?
+  YES → Authorization Code + PKCE
+  NO ↓
+
+Is it a native mobile app?
+  YES → Authorization Code + PKCE + Custom URL Scheme
+  NO ↓
+
+Is it a device with no browser (TV, IoT)?
+  YES → Device Authorization Grant
+
+NEVER → Implicit Grant (deprecated)
+NEVER → Resource Owner Password Grant (deprecated)</pre>
+  </div>
+
+  <div class="card">
+    <h3>Security Checklist</h3>
+    <pre>✅ Always use PKCE (even for confidential clients — defense in depth)
+✅ Validate state parameter on callback (CSRF protection)
+✅ Exact match redirect_uri (no wildcards or query params)
+✅ Use id_token only for authentication (validate signature, iss, aud, exp)
+✅ Use access_token only for API authorization (don't trust claims blindly)
+✅ Verify tokens via JWKS (public key from .well-known/jwks.json)
+✅ Keep client_secret server-side (use BFF for confidential flows)
+✅ Request minimal scopes (least privilege)
+✅ Short access token lifetime (5-15 min)
+✅ Rotate refresh tokens on use (detect theft via reuse)
+✅ Implement proper logout (revoke tokens at IdP + clear local state)
+✅ Handle token revocation webhooks from IdP</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

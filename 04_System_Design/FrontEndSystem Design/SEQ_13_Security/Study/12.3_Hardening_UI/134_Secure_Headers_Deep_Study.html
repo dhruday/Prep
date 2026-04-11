@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Secure Headers Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:1rem}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#ef4444;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #ef4444;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#ef4444;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Secure Headers Deep Study</h1>
+<p class="sub">Module 12.3 · Security Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Attack &amp; Defense</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>Essential Security Headers</h3>
+    <table>
+      <tr><th>Header</th><th>Value</th><th>Protects Against</th></tr>
+      <tr><td>Strict-Transport-Security</td><td>max-age=31536000; includeSubDomains; preload</td><td>SSL stripping, MITM</td></tr>
+      <tr><td>Content-Security-Policy</td><td>script-src 'nonce-{r}' 'strict-dynamic'...</td><td>XSS, data injection</td></tr>
+      <tr><td>X-Content-Type-Options</td><td>nosniff</td><td>MIME sniffing attacks</td></tr>
+      <tr><td>X-Frame-Options</td><td>DENY</td><td>Clickjacking</td></tr>
+      <tr><td>Referrer-Policy</td><td>strict-origin-when-cross-origin</td><td>URL data leakage</td></tr>
+      <tr><td>Permissions-Policy</td><td>camera=(), microphone=(), geolocation=()</td><td>Feature abuse</td></tr>
+      <tr><td>X-DNS-Prefetch-Control</td><td>off</td><td>DNS-based tracking</td></tr>
+      <tr><td>Cross-Origin-Opener-Policy</td><td>same-origin</td><td>Cross-origin window attacks</td></tr>
+      <tr><td>Cross-Origin-Resource-Policy</td><td>same-origin</td><td>Resource theft (Spectre)</td></tr>
+      <tr><td>Cross-Origin-Embedder-Policy</td><td>require-corp</td><td>Spectre-class attacks</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>1. X-Content-Type-Options: nosniff</h3>
+    <pre><span class="cm">// Without this: browser may "sniff" the content type</span>
+<span class="cm">// Example: upload malicious.html as image/png</span>
+<span class="cm">// Browser sees HTML content → renders as HTML → XSS!</span>
+<span class="cm">//</span>
+<span class="cm">// With nosniff: browser strictly uses the declared Content-Type</span>
+<span class="cm">// If Content-Type says image/png, browser treats it as an image</span>
+<span class="cm">// Even if the content looks like HTML → no XSS</span>
+<span class="cm">//</span>
+<span class="cm">// Also blocks: loading non-script MIME types as scripts</span>
+<span class="cm">// &lt;script src="file.txt"&gt; → blocked if nosniff and wrong MIME</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Permissions-Policy (formerly Feature-Policy)</h3>
+    <pre><span class="cm">// Controls which browser features your page can use</span>
+<span class="cm">// Even if third-party scripts try to access them → blocked</span>
+
+Permissions-Policy:
+  camera=(),                    <span class="cm">// Disable camera for all</span>
+  microphone=(),                <span class="cm">// Disable microphone for all</span>
+  geolocation=(self),           <span class="cm">// Only same-origin can use</span>
+  payment=(self <span class="str">"https://pay.stripe.com"</span>),  <span class="cm">// Specific origins</span>
+  usb=(),
+  bluetooth=(),
+  fullscreen=(self),
+  autoplay=(self)
+
+<span class="cm">// Why this matters:</span>
+<span class="cm">// Malicious third-party script can't secretly enable camera</span>
+<span class="cm">// Even if XSS happens, attacker can't access geolocation</span>
+<span class="cm">// Reduces browser's attack surface for your page</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Cross-Origin Isolation (COOP + COEP + CORP)</h3>
+    <pre><span class="cm">// These three headers work together to enable cross-origin isolation</span>
+<span class="cm">// Required for: SharedArrayBuffer, high-resolution timers</span>
+<span class="cm">// Protects against: Spectre-class side-channel attacks</span>
+<span class="cm">//</span>
+<span class="cm">// COOP (Cross-Origin-Opener-Policy): same-origin</span>
+<span class="cm">//   → Your page can't be accessed via window.opener from cross-origin</span>
+<span class="cm">//   → Prevents: cross-origin window reference attacks</span>
+<span class="cm">//</span>
+<span class="cm">// COEP (Cross-Origin-Embedder-Policy): require-corp</span>
+<span class="cm">//   → All cross-origin resources must explicitly opt-in via CORP header</span>
+<span class="cm">//   → Prevents: loading resources that didn't consent to being embedded</span>
+<span class="cm">//</span>
+<span class="cm">// CORP (Cross-Origin-Resource-Policy): same-origin | same-site | cross-origin</span>
+<span class="cm">//   → Resource declares who can load it</span>
+<span class="cm">//   → Set on CDN assets: cross-origin (allow embedding)</span>
+<span class="cm">//   → Set on API responses: same-origin (don't allow cross-site loading)</span>
+<span class="cm">//</span>
+<span class="cm">// Check: crossOriginIsolated === true → all three are correctly set</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>What Each Header Prevents</h3>
+    <h4>MIME Sniffing Attack</h4>
+    <pre><span class="cm">// 1. Attacker uploads file.html disguised as file.txt to a CDN</span>
+<span class="cm">// 2. Server serves with Content-Type: text/plain</span>
+<span class="cm">// 3. Without nosniff: browser sniffs content → "looks like HTML!"</span>
+<span class="cm">// 4. Renders as HTML → JavaScript executes → XSS</span>
+<span class="cm">// With X-Content-Type-Options: nosniff → browser keeps it as text/plain</span></pre>
+
+    <h4>Spectre-Class Attack</h4>
+    <pre><span class="cm">// Spectre exploits CPU speculative execution</span>
+<span class="cm">// In browser: malicious page uses SharedArrayBuffer as high-res timer</span>
+<span class="cm">// Times cache access patterns to read cross-origin memory</span>
+<span class="cm">//</span>
+<span class="cm">// Defense: COOP + COEP enable cross-origin isolation</span>
+<span class="cm">// Process isolation: each origin gets its own process</span>
+<span class="cm">// Cross-origin data never in the same memory space</span>
+<span class="cm">// SharedArrayBuffer only available after isolation (prevents timing)</span></pre>
+
+    <h4>Referrer Leakage</h4>
+    <pre><span class="cm">// User on: https://app.com/reset-password?token=abc123</span>
+<span class="cm">// Clicks external link, or page loads third-party analytics</span>
+<span class="cm">// Without Referrer-Policy: full URL sent as Referer header</span>
+<span class="cm">// → Third party sees the password reset token!</span>
+<span class="cm">//</span>
+<span class="cm">// With strict-origin-when-cross-origin:</span>
+<span class="cm">// Cross-origin: sends only https://app.com (no path/query)</span>
+<span class="cm">// Same-origin: sends full URL (safe)</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: What security headers would you add to a production web app? Walk through each one.</div>
+      <div class="a">The essential set: (1) HSTS (max-age=1yr, includeSubDomains, preload) — enforces HTTPS, prevents downgrade. (2) CSP with nonces and strict-dynamic — prevents XSS, controls resource loading. (3) X-Content-Type-Options: nosniff — prevents MIME sniffing attacks where uploaded files are executed as scripts. (4) X-Frame-Options: DENY + frame-ancestors 'none' — prevents clickjacking. (5) Referrer-Policy: strict-origin-when-cross-origin — prevents URL data leakage to third parties. (6) Permissions-Policy: disable unused APIs (camera, microphone, geolocation) — reduces attack surface even if XSS succeeds. (7) COOP: same-origin — prevents cross-origin window reference attacks. For APIs specifically: also add Cache-Control: no-store on sensitive endpoints. I'd use Helmet.js in Express for a sensible default and customize per-route. Test with securityheaders.com which grades your headers A through F.</div>
+      <div class="followup">Follow-up: Which headers can break existing functionality if added carelessly?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q2: Explain cross-origin isolation (COOP + COEP) and when you'd need it.</div>
+      <div class="a">Cross-origin isolation puts your page in a separate OS process, preventing Spectre-class side-channel attacks where malicious code reads cross-origin data via CPU cache timing. You need it to use SharedArrayBuffer (for WASM multi-threading, Web Workers with shared memory) and high-resolution timers (performance.now with microsecond precision). To enable: set COOP: same-origin (your page can't be opened as a popup from cross-origin) and COEP: require-corp (all resources you load must explicitly consent via CORP headers). The catch: every cross-origin resource (CDN images, fonts, scripts) must set Cross-Origin-Resource-Policy: cross-origin. If a third-party resource doesn't set CORP, COEP blocks it. Alternatives: use credentialless mode for images or use COEP: credentialless (less strict). Check: if (crossOriginIsolated) tells you if it's working. Most sites don't need this unless using WASM or SharedArrayBuffer.</div>
+      <div class="followup">Follow-up: How does this relate to Site Isolation in Chrome?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>1. Full Helmet.js Configuration</h3>
+    <pre><span class="kw">import</span> helmet <span class="kw">from</span> <span class="str">'helmet'</span>;
+<span class="kw">import</span> crypto <span class="kw">from</span> <span class="str">'crypto'</span>;
+
+app.<span class="fn">use</span>((req, res, next) =&gt; {
+  res.locals.nonce = crypto.<span class="fn">randomBytes</span>(<span class="num">16</span>).<span class="fn">toString</span>(<span class="str">'base64'</span>);
+  <span class="fn">next</span>();
+});
+
+app.<span class="fn">use</span>((req, res, next) =&gt; {
+  <span class="fn">helmet</span>({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: [<span class="str">"'self'"</span>],
+        scriptSrc: [<span class="str">`'nonce-</span>${res.locals.nonce}<span class="str">'`</span>, <span class="str">"'strict-dynamic'"</span>],
+        styleSrc: [<span class="str">"'self'"</span>, <span class="str">`'nonce-</span>${res.locals.nonce}<span class="str">'`</span>],
+        imgSrc: [<span class="str">"'self'"</span>, <span class="str">'data:'</span>, <span class="str">'https://cdn.example.com'</span>],
+        connectSrc: [<span class="str">"'self'"</span>, <span class="str">'https://api.example.com'</span>],
+        fontSrc: [<span class="str">"'self'"</span>, <span class="str">'https://fonts.gstatic.com'</span>],
+        objectSrc: [<span class="str">"'none'"</span>],
+        frameAncestors: [<span class="str">"'none'"</span>],
+        baseUri: [<span class="str">"'self'"</span>],
+        formAction: [<span class="str">"'self'"</span>],
+      },
+    },
+    strictTransportSecurity: {
+      maxAge: <span class="num">31536000</span>,
+      includeSubDomains: <span class="kw">true</span>,
+      preload: <span class="kw">true</span>,
+    },
+    referrerPolicy: { policy: <span class="str">'strict-origin-when-cross-origin'</span> },
+    crossOriginOpenerPolicy: { policy: <span class="str">'same-origin'</span> },
+    crossOriginResourcePolicy: { policy: <span class="str">'same-origin'</span> },
+    permissionsPolicy: {
+      camera: [], microphone: [], geolocation: [],
+      payment: [<span class="str">'self'</span>], usb: [], bluetooth: [],
+    },
+  })(req, res, next);
+});</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Nginx Security Headers</h3>
+    <pre><span class="cm"># /etc/nginx/conf.d/security-headers.conf</span>
+
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "DENY" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+add_header Cross-Origin-Resource-Policy "same-origin" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+<span class="cm"># CSP with nonce requires dynamic generation (use app server)</span>
+<span class="cm"># Or use nginx's sub_filter to inject nonce into HTML</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Production Headers Checklist</h3>
+    <pre>✅ Strict-Transport-Security (HSTS) with preload
+✅ Content-Security-Policy with nonces
+✅ X-Content-Type-Options: nosniff
+✅ X-Frame-Options: DENY  (+ CSP frame-ancestors)
+✅ Referrer-Policy: strict-origin-when-cross-origin
+✅ Permissions-Policy: disable unused browser features
+✅ Cross-Origin-Opener-Policy: same-origin
+✅ Cross-Origin-Resource-Policy: same-origin (API) / cross-origin (CDN)
+✅ Cache-Control: no-store on sensitive API responses
+✅ Remove Server, X-Powered-By headers (info leakage)
+✅ Test with securityheaders.com → aim for A+ grade
+✅ Monitor CSP reports for violations</pre>
+  </div>
+
+  <div class="card">
+    <h3>Headers to REMOVE</h3>
+    <table>
+      <tr><th>Header</th><th>Why Remove</th></tr>
+      <tr><td>Server: nginx/1.21.3</td><td>Reveals server software + version → targeted exploits</td></tr>
+      <tr><td>X-Powered-By: Express</td><td>Reveals framework → targeted attacks</td></tr>
+      <tr><td>X-AspNet-Version</td><td>Reveals runtime version</td></tr>
+    </table>
+    <pre><span class="cm">// Express: Helmet removes X-Powered-By by default</span>
+app.<span class="fn">disable</span>(<span class="str">'x-powered-by'</span>);
+
+<span class="cm">// Nginx: hide server header</span>
+server_tokens off;</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

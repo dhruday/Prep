@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Token Bucket Rate Limiter</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+.bucket-wrap{display:flex;align-items:flex-end;gap:20px;margin:16px 0}.bucket{width:80px;height:200px;border:2px solid #2d3551;border-top:none;border-radius:0 0 12px 12px;position:relative;overflow:hidden}.bucket-fill{position:absolute;bottom:0;width:100%;background:linear-gradient(0deg,#ef4444,#f87171);transition:height .3s}.bucket-label{text-align:center;font-size:.75rem;color:#94a3b8;margin-top:6px}.stats{font-size:.8rem;color:#94a3b8;line-height:2}
+</style>
+</head>
+<body>
+<h1>🪣 Token Bucket Rate Limiter</h1>
+<p class="sub">Visual bucket with token level — tokens refill 1/sec, requests consume tokens</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Live Demo</div>
+  <div class="tab" onclick="setTab(1)">How It Works</div>
+  <div class="tab" onclick="setTab(2)">Source Code</div>
+  <div class="tab" onclick="setTab(3)">Key Takeaways</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Token Bucket Visualization</h3>
+    <div class="bucket-wrap">
+      <div>
+        <div class="bucket"><div class="bucket-fill" id="fill"></div></div>
+        <div class="bucket-label" id="tokenLabel">10 / 10</div>
+      </div>
+      <div class="stats">
+        <div>Tokens: <strong id="tkCount">10</strong> / 10</div>
+        <div>Refill rate: 1 token/sec</div>
+        <div>Accepted: <span id="accepted" style="color:#10b981">0</span></div>
+        <div>Rejected: <span id="rejected" style="color:#ef4444">0</span></div>
+      </div>
+    </div>
+    <button onclick="sendOne()">Send 1 Request</button>
+    <button onclick="sendBurst()">⚡ Burst (10 fast)</button>
+    <button onclick="resetBucket()">Reset</button>
+    <div class="output" id="log"></div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card"><h3>Token Bucket Algorithm</h3>
+    <div class="info">A bucket holds up to <b>maxTokens</b>. Each request costs 1 token. Tokens refill at a constant rate. If the bucket is empty, the request is rejected (rate-limited).</div>
+    <p style="font-size:.82rem;margin-top:10px">1. Bucket starts full (capacity = 10).<br>2. Each request removes 1 token.<br>3. Every second, 1 token is added (up to max).<br>4. Allows short bursts up to bucket capacity.<br>5. Sustained rate is bounded by refill rate.</p>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card"><h3>Implementation</h3>
+<pre><span class="kw">class</span> <span class="fn">TokenBucket</span> {
+  <span class="fn">constructor</span>(capacity, refillRate) {
+    <span class="kw">this</span>.capacity = capacity;
+    <span class="kw">this</span>.tokens = capacity;
+    <span class="kw">this</span>.refillRate = refillRate; <span class="cm">// tokens per second</span>
+    <span class="kw">this</span>.lastRefill = Date.now();
+  }
+  <span class="fn">refill</span>() {
+    <span class="kw">const</span> now = Date.now();
+    <span class="kw">const</span> elapsed = (now - <span class="kw">this</span>.lastRefill) / <span class="str">1000</span>;
+    <span class="kw">this</span>.tokens = Math.min(<span class="kw">this</span>.capacity,
+      <span class="kw">this</span>.tokens + elapsed * <span class="kw">this</span>.refillRate);
+    <span class="kw">this</span>.lastRefill = now;
+  }
+  <span class="fn">tryConsume</span>() {
+    <span class="kw">this</span>.refill();
+    <span class="kw">if</span> (<span class="kw">this</span>.tokens >= <span class="str">1</span>) {
+      <span class="kw">this</span>.tokens -= <span class="str">1</span>;
+      <span class="kw">return true</span>;
+    }
+    <span class="kw">return false</span>;
+  }
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card"><h3>Key Takeaways</h3>
+    <div class="info">Token bucket allows controlled bursts while enforcing a long-term average rate.</div>
+    <ul style="font-size:.82rem;padding-left:18px;line-height:2">
+      <li>Smooth traffic shaping — no hard per-second walls</li>
+      <li>Burst-friendly — bucket capacity = max burst size</li>
+      <li>Refill rate = sustained throughput ceiling</li>
+      <li>Used in AWS API Gateway, Stripe, nginx</li>
+      <li>Compare with leaky bucket (fixed drain) and sliding window</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const MAX=10, REFILL=1;
+let tokens=MAX, accepted=0, rejected=0;
+const fill=document.getElementById('fill'), tkCount=document.getElementById('tkCount'),
+  tokenLabel=document.getElementById('tokenLabel'), logEl=document.getElementById('log'),
+  accEl=document.getElementById('accepted'), rejEl=document.getElementById('rejected');
+
+function updateUI(){
+  const t=Math.max(0,Math.floor(tokens));
+  fill.style.height=(tokens/MAX*100)+'%';
+  tkCount.textContent=t; tokenLabel.textContent=t+' / '+MAX;
+  accEl.textContent=accepted; rejEl.textContent=rejected;
+}
+function log(msg,ok){
+  const ts=new Date().toLocaleTimeString();
+  logEl.textContent=`[${ts}] ${ok?'✅':'❌'} ${msg}\n`+logEl.textContent;
+}
+function sendOne(){
+  if(tokens>=1){tokens--;accepted++;log('Request accepted (token consumed)',true);}
+  else{rejected++;log('Request REJECTED — bucket empty',false);}
+  updateUI();
+}
+function sendBurst(){
+  let i=0;const iv=setInterval(()=>{if(i++>=10){clearInterval(iv);return;}sendOne();},80);
+}
+function resetBucket(){tokens=MAX;accepted=0;rejected=0;logEl.textContent='';updateUI();}
+setInterval(()=>{if(tokens<MAX){tokens=Math.min(MAX,tokens+REFILL);updateUI();}},1000);
+updateUI();
+</script>
+</body>
+</html>

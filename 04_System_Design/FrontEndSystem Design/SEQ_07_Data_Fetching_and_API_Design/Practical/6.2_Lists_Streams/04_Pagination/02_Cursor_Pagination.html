@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — Cursor Pagination</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a3a2a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#60a5fa}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.err{color:#ef4444}.num{color:#f59e0b}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #10b981;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}
+.item-row{padding:8px 12px;border-bottom:1px solid #2d3551;display:flex;justify-content:space-between;font-size:.82rem}.cursor-badge{background:#1a3a2a;color:#10b981;padding:2px 8px;border-radius:4px;font-size:.72rem;font-family:monospace}
+</style>
+</head>
+<body>
+<h1>Lab 02 — Cursor Pagination</h1>
+<div class="sub">Module 6.2 Pagination • Opaque cursor tokens • O(1) seek performance</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">📖 Concept</div>
+  <div class="tab" onclick="setTab(1)">▶️ Live Demo</div>
+  <div class="tab" onclick="setTab(2)">🔍 Index Seek</div>
+  <div class="tab" onclick="setTab(3)">🏢 Real-World</div>
+</div>
+
+<!-- TAB 0 — Concept -->
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>How Cursor Pagination Works</h3>
+    <p>Instead of skipping N rows, the server uses a <strong>cursor</strong> — an opaque token that encodes the position of the last seen item.</p>
+<pre>
+<span class="cm">-- Traditional offset (slow at depth):</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> items <span class="kw">ORDER BY</span> id <span class="kw">LIMIT</span> <span class="num">10</span> <span class="kw">OFFSET</span> <span class="num">10000</span>;
+
+<span class="cm">-- Cursor-based (O(1) regardless of position):</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> items
+<span class="kw">WHERE</span> id > <span class="num">10000</span>   <span class="cm">-- cursor decoded to last_id</span>
+<span class="kw">ORDER BY</span> id
+<span class="kw">LIMIT</span> <span class="num">10</span>;
+</pre>
+  </div>
+
+  <div class="card">
+    <h3>Cursor Encoding</h3>
+    <p>Cursors are typically <strong>base64-encoded</strong> to be opaque to clients:</p>
+<pre>
+<span class="cm">// Server creates cursor</span>
+<span class="kw">const</span> cursor = <span class="fn">btoa</span>(JSON.<span class="fn">stringify</span>({ id: <span class="num">1050</span> }));
+<span class="cm">// → "eyJpZCI6MTA1MH0="</span>
+
+<span class="cm">// Server decodes cursor</span>
+<span class="kw">const</span> decoded = JSON.<span class="fn">parse</span>(<span class="fn">atob</span>(cursor));
+<span class="cm">// → { id: 1050 }</span>
+
+<span class="cm">// Then: WHERE id > 1050 LIMIT 10</span>
+</pre>
+    <div class="info">Opaque cursors let the server change the underlying encoding without breaking clients.</div>
+  </div>
+
+  <div class="card">
+    <h3>Response Shape</h3>
+<pre>
+{
+  <span class="str">"data"</span>: [ ... <span class="num">10</span> items ... ],
+  <span class="str">"nextCursor"</span>: <span class="str">"eyJpZCI6MTA2MH0="</span>,
+  <span class="str">"hasMore"</span>: <span class="kw">true</span>
+}
+</pre>
+  </div>
+</div>
+
+<!-- TAB 1 — Live Demo -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>📡 Cursor Pagination — Load More</h3>
+    <div style="margin-bottom:10px">
+      <button class="green" onclick="loadMore()">🔄 Load More</button>
+      <button onclick="resetDemo()">🗑️ Reset</button>
+      <span id="cursorInfo" style="color:#94a3b8;font-size:.78rem;margin-left:10px"></span>
+    </div>
+    <div id="cursorDisplay" class="info" style="display:none"></div>
+    <div id="itemsList" style="border:1px solid #2d3551;border-radius:8px;overflow:hidden"></div>
+    <div id="loadCount" style="color:#94a3b8;font-size:.78rem;margin-top:6px"></div>
+    <div id="demoOutput" class="output"></div>
+  </div>
+</div>
+
+<!-- TAB 2 — Index Seek -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>B-Tree Index Seek — O(1) Lookup</h3>
+    <p>When the query uses <code>WHERE id > cursor</code>, the database performs an <strong>index seek</strong>, not a scan.</p>
+<pre>
+<span class="cm">-- B-Tree for "id" column:</span>
+<span class="cm">--</span>
+<span class="cm">--        [500]</span>
+<span class="cm">--       /     \</span>
+<span class="cm">--    [250]   [750]</span>
+<span class="cm">--    / \     / \</span>
+<span class="cm">--  [100][400][600][900]</span>
+<span class="cm">--</span>
+<span class="cm">-- WHERE id > 600: seek to 600 in O(log N), scan forward 10</span>
+<span class="cm">-- Total: O(log N + limit) ≈ O(1) for fixed limit</span>
+</pre>
+  </div>
+
+  <div class="card">
+    <h3>Keyset Condition Internals</h3>
+<pre>
+<span class="cm">-- The cursor WHERE clause enables index-only access:</span>
+<span class="kw">EXPLAIN ANALYZE</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> items
+<span class="kw">WHERE</span> id > <span class="num">50000</span>
+<span class="kw">ORDER BY</span> id <span class="kw">LIMIT</span> <span class="num">10</span>;
+
+<span class="cm">-- → Index Scan using items_pkey</span>
+<span class="cm">--   Index Cond: (id > 50000)</span>
+<span class="cm">--   Rows: 10</span>
+<span class="cm">--   Time: 0.04ms  ← constant regardless of position!</span>
+</pre>
+    <div class="info">
+      Offset: O(offset + limit) — scans all skipped rows<br>
+      Cursor: O(log N + limit) — seeks directly via B-tree
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3 — Real-World -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Why Twitter/Instagram Use Cursors</h3>
+    <ul style="padding-left:18px;font-size:.85rem">
+      <li><strong>Billions of tweets/posts</strong> — offset would scan millions of rows</li>
+      <li><strong>Real-time inserts</strong> — 6,000+ tweets/sec; offset causes ghost records</li>
+      <li><strong>Infinite scroll UX</strong> — "Load more" maps perfectly to cursors</li>
+      <li><strong>Consistent reads</strong> — cursor guarantees no duplicates/skips</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Twitter API v2 — Actual Cursor Response</h3>
+<pre>
+{
+  <span class="str">"data"</span>: [ ... tweets ... ],
+  <span class="str">"meta"</span>: {
+    <span class="str">"next_token"</span>: <span class="str">"7140w"</span>,
+    <span class="str">"result_count"</span>: <span class="num">10</span>,
+    <span class="str">"newest_id"</span>: <span class="str">"1338971066773905408"</span>,
+    <span class="str">"oldest_id"</span>: <span class="str">"1338886696513867778"</span>
+  }
+}
+<span class="cm">// Next request: GET /tweets?pagination_token=7140w</span>
+</pre>
+  </div>
+
+  <div class="card">
+    <h3>Interview Key Points</h3>
+    <div class="info">
+      ✅ O(1) seek via B-tree index — scales to billions of rows<br>
+      ✅ No ghost records — cursor is a stable pointer<br>
+      ❌ Cannot jump to arbitrary page N<br>
+      ❌ Only forward/backward traversal<br>
+      🎯 FAANG: "Design a news feed API" → Always cursor pagination
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+let nextCursor = null;
+let allItems = [];
+
+async function loadMore() {
+  const out = document.getElementById('demoOutput');
+  const cursorDisp = document.getElementById('cursorDisplay');
+  try {
+    let url = `${API}/api/pagination/cursor?limit=10`;
+    if (nextCursor) url += `&cursor=${encodeURIComponent(nextCursor)}`;
+
+    out.textContent = `Fetching with cursor: ${nextCursor || '(none — first page)'}`;
+    const t0 = performance.now();
+    const res = await fetch(url);
+    const elapsed = (performance.now() - t0).toFixed(1);
+    const json = await res.json();
+
+    const items = json.items || json.data || [];
+    const cursor = json.nextCursor || json.next_cursor || null;
+    const hasMore = json.hasMore ?? json.has_more ?? !!cursor;
+
+    allItems = allItems.concat(items);
+    nextCursor = cursor;
+
+    // Decode cursor
+    cursorDisp.style.display = 'block';
+    let decoded = '(none)';
+    if (cursor) {
+      try { decoded = atob(cursor); } catch { decoded = cursor; }
+    }
+    cursorDisp.innerHTML = `
+      <strong>Cursor:</strong> <code>${cursor || 'null'}</code><br>
+      <strong>Decoded:</strong> <code>${decoded}</code><br>
+      <strong>Has More:</strong> ${hasMore} · <strong>Time:</strong> ${elapsed}ms
+    `;
+
+    renderItems();
+    document.getElementById('loadCount').textContent = `Showing ${allItems.length} items total`;
+    document.getElementById('cursorInfo').textContent = hasMore ? 'More available ↓' : '✓ All loaded';
+
+    out.textContent = JSON.stringify(json, null, 2);
+  } catch (e) {
+    out.textContent = '❌ ' + e.message;
+  }
+}
+
+function renderItems() {
+  const list = document.getElementById('itemsList');
+  list.innerHTML = '';
+  allItems.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <span>#${item.id} — ${item.name || item.title || '-'}</span>
+      <span class="cursor-badge">id:${item.id}</span>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function resetDemo() {
+  nextCursor = null;
+  allItems = [];
+  document.getElementById('itemsList').innerHTML = '';
+  document.getElementById('demoOutput').textContent = '';
+  document.getElementById('cursorDisplay').style.display = 'none';
+  document.getElementById('loadCount').textContent = '';
+  document.getElementById('cursorInfo').textContent = '';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 03 — Zod Runtime Validation</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#60a5fa;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#60a5fa;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.err{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#60a5fa;color:#60a5fa}button.blue{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #60a5fa;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}.ok{border-left-color:#10b981}</style>
+</head>
+<body>
+<h1>Lab 03 — Zod Runtime Validation</h1>
+<p class="sub">Input validation with type derivation — runtime safety meets compile-time types</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&amp;A</div>
+</div>
+
+<!-- TAB 0: Concept -->
+<div class="panel active">
+  <div class="card">
+    <h3>Zod: Schema = Runtime Validator + TypeScript Type</h3>
+    <p>Define once, get both runtime validation and a TypeScript type via <code>z.infer</code>. No duplication.</p>
+    <div class="info ok">Single source of truth: schema validates at runtime AND provides compile-time types.</div>
+  </div>
+  <div class="card">
+    <h3>Defining Schemas</h3>
+<pre><span class="kw">import</span> { z } <span class="kw">from</span> <span class="str">'zod'</span>;
+
+<span class="kw">const</span> CreateUserSchema = z.<span class="fn">object</span>({
+  name:     z.<span class="fn">string</span>().<span class="fn">min</span>(2).<span class="fn">max</span>(50),
+  email:    z.<span class="fn">string</span>().<span class="fn">email</span>(),
+  age:      z.<span class="fn">number</span>().<span class="fn">int</span>().<span class="fn">min</span>(13).<span class="fn">max</span>(120).<span class="fn">optional</span>(),
+  role:     z.<span class="fn">enum</span>([<span class="str">'user'</span>, <span class="str">'admin'</span>]).<span class="fn">default</span>(<span class="str">'user'</span>),
+  tags:     z.<span class="fn">array</span>(z.<span class="fn">string</span>()).<span class="fn">max</span>(5).<span class="fn">default</span>([]),
+  metadata: z.<span class="fn">record</span>(z.<span class="fn">string</span>()).<span class="fn">optional</span>(),
+});
+
+<span class="cm">// Derive TypeScript type — zero duplication!</span>
+<span class="kw">type</span> CreateUser = z.<span class="fn">infer</span>&lt;<span class="kw">typeof</span> CreateUserSchema&gt;;
+<span class="cm">// = { name: string; email: string; age?: number; role: 'user'|'admin'; ... }</span></pre>
+  </div>
+  <div class="card">
+    <h3>In tRPC — Schema as Input Validator</h3>
+<pre><span class="kw">const</span> appRouter = t.router({
+  <span class="fn">createUser</span>: t.procedure
+    .<span class="fn">input</span>(CreateUserSchema)   <span class="cm">// runtime validation + type inference</span>
+    .<span class="fn">mutation</span>(({ input }) => {
+      <span class="cm">// input is fully typed as CreateUser</span>
+      <span class="cm">// AND validated at runtime — invalid data never reaches here</span>
+      <span class="kw">return</span> db.users.<span class="fn">create</span>(input);
+    }),
+});</pre>
+  </div>
+</div>
+
+<!-- TAB 1: Hands-On Lab -->
+<div class="panel">
+  <div class="card">
+    <h3>🧪 Form Validator — Zod Schema</h3>
+    <p style="margin-bottom:12px;">Fill out the form. Validation runs against the Zod schema on submit.</p>
+    <div class="grid2">
+      <div>
+        <label style="color:#94a3b8;font-size:.82rem;display:block;margin-bottom:4px">Name (2-50 chars)</label>
+        <input id="f-name" type="text" placeholder="Alice" style="width:100%;padding:8px;background:#0d1117;border:1px solid #2d3551;border-radius:6px;color:#e2e8f0;font-size:.82rem">
+      </div>
+      <div>
+        <label style="color:#94a3b8;font-size:.82rem;display:block;margin-bottom:4px">Email</label>
+        <input id="f-email" type="text" placeholder="alice@example.com" style="width:100%;padding:8px;background:#0d1117;border:1px solid #2d3551;border-radius:6px;color:#e2e8f0;font-size:.82rem">
+      </div>
+      <div>
+        <label style="color:#94a3b8;font-size:.82rem;display:block;margin-bottom:4px">Age (optional, 13-120)</label>
+        <input id="f-age" type="text" placeholder="25" style="width:100%;padding:8px;background:#0d1117;border:1px solid #2d3551;border-radius:6px;color:#e2e8f0;font-size:.82rem">
+      </div>
+      <div>
+        <label style="color:#94a3b8;font-size:.82rem;display:block;margin-bottom:4px">Role</label>
+        <select id="f-role" style="width:100%;padding:8px;background:#0d1117;border:1px solid #2d3551;border-radius:6px;color:#e2e8f0;font-size:.82rem">
+          <option value="user">user</option>
+          <option value="admin">admin</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <button class="green" onclick="validateForm()">Validate with Zod</button>
+      <button onclick="fillBad()">Fill Invalid Data</button>
+      <button onclick="fillGood()">Fill Valid Data</button>
+    </div>
+    <div id="val-out" class="output">Fill the form and click validate...</div>
+  </div>
+  <div class="card">
+    <h3>Schema Used</h3>
+<pre>z.object({
+  name:  z.string().min(2).max(50),
+  email: z.string().email(),
+  age:   z.number().int().min(13).max(120).optional(),
+  role:  z.enum(['user', 'admin']).default('user'),
+})</pre>
+  </div>
+</div>
+
+<!-- TAB 2: Browser Internals -->
+<div class="panel">
+  <div class="card">
+    <h3>How Zod Validates at Runtime</h3>
+<pre><span class="cm">// Zod builds a validation pipeline internally:</span>
+
+z.<span class="fn">string</span>().<span class="fn">email</span>().<span class="fn">parse</span>(input)
+
+<span class="cm">// Internally runs:</span>
+1. <span class="fn">typeof</span> input === <span class="str">'string'</span>  → or ZodError
+2. <span class="fn">emailRegex</span>.<span class="fn">test</span>(input)      → or ZodError
+3. Return validated string
+
+<span class="cm">// .parse() throws on failure</span>
+<span class="cm">// .safeParse() returns { success, data?, error? }</span></pre>
+  </div>
+  <div class="card">
+    <h3>Zod vs Joi vs Yup</h3>
+<pre><b>Feature</b>          <b>Zod</b>           <b>Joi</b>           <b>Yup</b>
+──────────────   ────────────  ────────────  ────────────
+TS-first         ✅ Yes        ❌ No         ⚠️ Partial
+Type inference   ✅ z.infer    ❌ Manual     ⚠️ InferType
+Bundle size      ~13KB         ~150KB        ~40KB
+Tree-shakeable   ✅ Yes        ❌ No         ⚠️ Partial
+Error format     Structured    Structured    Structured
+Async validate   ✅ Yes        ✅ Yes        ✅ Yes
+Custom errors    ✅ Yes        ✅ Yes        ✅ Yes
+tRPC native      ✅ Yes        ⚠️ Adapter    ⚠️ Adapter
+Ecosystem        Growing       Mature        React-form
+
+<b>Verdict:</b>
+  <span class="good">Zod</span> → TypeScript projects, tRPC, modern stacks
+  <span class="cm">Joi</span> → Node.js/Express, Hapi ecosystem
+  <span class="cm">Yup</span> → React + Formik legacy projects</pre>
+  </div>
+  <div class="card">
+    <h3>z.infer Under the Hood</h3>
+    <div class="info">
+      <code>z.infer&lt;typeof schema&gt;</code> is a <b>purely compile-time</b> operation. It recursively walks the Zod schema's TypeScript type to extract the output type. At runtime, <code>z.infer</code> doesn't exist — it's erased during compilation. This means zero runtime cost for type derivation.
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: Interview Q&A -->
+<div class="panel">
+  <div class="card">
+    <h3>Q1: Why use Zod instead of manual validation?</h3>
+    <p><b>A:</b> Zod provides: (1) <b>Type inference</b> — <code>z.infer</code> derives TypeScript types from the schema, eliminating duplication between runtime checks and compile-time types. (2) <b>Composability</b> — schemas are objects you can extend, merge, pick, and omit. (3) <b>Structured errors</b> — ZodError provides path-aware errors for nested objects. (4) <b>Ecosystem integration</b> — native support in tRPC, React Hook Form, and Astro. Manual validation lacks all of these.</p>
+  </div>
+  <div class="card">
+    <h3>Q2: .parse() vs .safeParse() — when to use which?</h3>
+    <p><b>A:</b> <code>.parse()</code> throws a ZodError on invalid input — use it when invalid data should halt execution (tRPC input validation, API handlers). <code>.safeParse()</code> returns <code>{ success: boolean, data?, error? }</code> — use it for form validation, user input, or when you want to handle errors gracefully without try/catch. In tRPC, <code>.parse()</code> is used internally; the framework catches the error and returns a typed error response.</p>
+  </div>
+  <div class="card">
+    <h3>Q3: How does Zod compare to Joi for TypeScript projects?</h3>
+    <p><b>A:</b> Zod was designed TypeScript-first. Joi was built for JavaScript (Hapi ecosystem) and added TypeScript types later. Key differences: (1) Zod's <code>z.infer</code> gives perfect type inference; Joi requires manual type definitions. (2) Zod is 13KB vs Joi's 150KB. (3) Zod integrates natively with tRPC; Joi needs an adapter. Choose Zod for modern TS stacks, Joi for existing Express/Hapi codebases.</p>
+  </div>
+  <div class="card">
+    <h3>Q4: Can Zod validate at the boundary only?</h3>
+    <p><b>A:</b> Yes — and it should. Validate at system boundaries (API input, form submission, external data) and use TypeScript's type system internally. Once data passes Zod validation, you have a typed value. There's no need to re-validate in business logic. This is the "parse, don't validate" principle: transform unknown data into typed data at the boundary, then trust the types throughout.</p>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const valOut = document.getElementById('val-out');
+
+function validateForm() {
+  const name = document.getElementById('f-name').value;
+  const email = document.getElementById('f-email').value;
+  const ageStr = document.getElementById('f-age').value;
+  const role = document.getElementById('f-role').value;
+  const errors = [];
+  const log = [];
+
+  log.push('Validating against Zod schema...\n');
+
+  // name
+  if (typeof name !== 'string' || name.length < 2) errors.push({ path: 'name', msg: 'String must contain at least 2 character(s)' });
+  else if (name.length > 50) errors.push({ path: 'name', msg: 'String must contain at most 50 character(s)' });
+  else log.push('✓ name: "' + name + '"');
+
+  // email
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRe.test(email)) errors.push({ path: 'email', msg: 'Invalid email' });
+  else log.push('✓ email: "' + email + '"');
+
+  // age
+  if (ageStr !== '') {
+    const age = Number(ageStr);
+    if (isNaN(age) || !Number.isInteger(age)) errors.push({ path: 'age', msg: 'Expected integer, received NaN' });
+    else if (age < 13) errors.push({ path: 'age', msg: 'Number must be greater than or equal to 13' });
+    else if (age > 120) errors.push({ path: 'age', msg: 'Number must be less than or equal to 120' });
+    else log.push('✓ age: ' + age);
+  } else {
+    log.push('✓ age: undefined (optional)');
+  }
+
+  // role
+  if (!['user', 'admin'].includes(role)) errors.push({ path: 'role', msg: 'Invalid enum value' });
+  else log.push('✓ role: "' + role + '"');
+
+  if (errors.length > 0) {
+    log.push('\n❌ ZodError: ' + errors.length + ' issue(s)\n');
+    errors.forEach((e, i) => {
+      log.push(`  Issue ${i + 1}:`);
+      log.push(`    path: ["${e.path}"]`);
+      log.push(`    message: "${e.msg}"`);
+    });
+    valOut.style.borderColor = '#ef4444';
+  } else {
+    log.push('\n✅ Validation passed!');
+    log.push('\nParsed output:');
+    log.push(JSON.stringify({ name, email, age: ageStr ? Number(ageStr) : undefined, role }, null, 2));
+    valOut.style.borderColor = '#10b981';
+  }
+
+  valOut.textContent = log.join('\n');
+}
+
+function fillBad() {
+  document.getElementById('f-name').value = 'A';
+  document.getElementById('f-email').value = 'not-an-email';
+  document.getElementById('f-age').value = '5';
+  document.getElementById('f-role').value = 'user';
+}
+
+function fillGood() {
+  document.getElementById('f-name').value = 'Alice Johnson';
+  document.getElementById('f-email').value = 'alice@example.com';
+  document.getElementById('f-age').value = '28';
+  document.getElementById('f-role').value = 'admin';
+}
+</script>
+</body>
+</html>

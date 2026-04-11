@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Circuit Breaker — State Machine</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+.state-diagram{display:flex;gap:16px;justify-content:center;align-items:center;margin:16px 0;flex-wrap:wrap}.state-box{padding:14px 22px;border-radius:10px;border:2px solid #2d3551;background:#1e2130;font-weight:600;font-size:.9rem;text-align:center;min-width:100px;transition:all .3s}.state-box.current{border-color:#ef4444;background:#3a1e1e;color:#ef4444;box-shadow:0 0 12px #ef444444}.arrow{color:#475569;font-size:1.2rem}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0}.stat{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;text-align:center}.stat .val{font-size:1.3rem;font-weight:700;color:#ef4444}.stat .lbl{font-size:.72rem;color:#94a3b8}
+</style>
+</head>
+<body>
+<h1>⚡ Circuit Breaker — State Machine</h1>
+<p class="sub">Visual CLOSED → OPEN → HALF-OPEN transitions with failure counter & cool-down timer</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Live Demo</div>
+  <div class="tab" onclick="setTab(1)">How It Works</div>
+  <div class="tab" onclick="setTab(2)">Code</div>
+  <div class="tab" onclick="setTab(3)">Key Takeaways</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>State Diagram</h3>
+    <div class="state-diagram">
+      <div class="state-box current" id="s-closed">🟢 CLOSED</div>
+      <div class="arrow">→ failures ≥ 3 →</div>
+      <div class="state-box" id="s-open">🔴 OPEN</div>
+      <div class="arrow">→ cooldown →</div>
+      <div class="state-box" id="s-half">🟡 HALF-OPEN</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Controls</h3>
+    <button onclick="makeRequest()">🔥 Call /api/unreliable/flaky</button>
+    <button onclick="resetBreaker()">♻️ Reset Breaker</button>
+    <div class="stats">
+      <div class="stat"><div class="val" id="v-state">CLOSED</div><div class="lbl">State</div></div>
+      <div class="stat"><div class="val" id="v-fail">0</div><div class="lbl">Failures</div></div>
+      <div class="stat"><div class="val" id="v-success">0</div><div class="lbl">Successes</div></div>
+      <div class="stat"><div class="val" id="v-timer">—</div><div class="lbl">Cooldown (s)</div></div>
+    </div>
+    <div class="output" id="log"></div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card"><h3>Circuit Breaker States</h3>
+    <div class="info"><b>CLOSED</b> — Requests pass through. Failures are counted. When failure threshold (3) is reached, circuit opens.</div>
+    <div class="info"><b>OPEN</b> — All requests are fast-failed immediately (no network call). A cooldown timer starts (5s).</div>
+    <div class="info"><b>HALF-OPEN</b> — One probe request is allowed. If it succeeds → CLOSED. If it fails → OPEN again.</div>
+  </div>
+  <div class="card"><h3>Why 70% Fail Rate?</h3>
+    <p style="font-size:.83rem;color:#94a3b8">The <code>/api/unreliable/flaky?failRate=0.7</code> endpoint fails 70% of the time, making it easy to observe the breaker trip after a few calls.</p></div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card"><h3>CircuitBreaker Class</h3>
+<pre><span class="kw">class</span> <span class="fn">CircuitBreaker</span> {
+  <span class="fn">constructor</span>(threshold = <span class="str">3</span>, cooldown = <span class="str">5000</span>) {
+    <span class="kw">this</span>.state = <span class="str">'CLOSED'</span>;
+    <span class="kw">this</span>.failures = <span class="str">0</span>;
+    <span class="kw">this</span>.threshold = threshold;
+    <span class="kw">this</span>.cooldown = cooldown;
+    <span class="kw">this</span>.nextAttempt = <span class="str">0</span>;
+  }
+  <span class="kw">async</span> <span class="fn">call</span>(fn) {
+    <span class="kw">if</span> (<span class="kw">this</span>.state === <span class="str">'OPEN'</span>) {
+      <span class="kw">if</span> (Date.now() &lt; <span class="kw">this</span>.nextAttempt)
+        <span class="kw">throw new</span> Error(<span class="str">'Circuit OPEN — fast fail'</span>);
+      <span class="kw">this</span>.state = <span class="str">'HALF_OPEN'</span>; <span class="cm">// cooldown elapsed</span>
+    }
+    <span class="kw">try</span> {
+      <span class="kw">const</span> res = <span class="kw">await</span> fn();
+      <span class="kw">this</span>.onSuccess();
+      <span class="kw">return</span> res;
+    } <span class="kw">catch</span>(e) { <span class="kw">this</span>.onFailure(); <span class="kw">throw</span> e; }
+  }
+}</pre></div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card"><h3>Key Takeaways</h3>
+    <div class="info">✅ Circuit breakers prevent cascading failures by fast-failing when a service is down.</div>
+    <div class="info">✅ The HALF-OPEN state acts as a probe — one request checks if the service recovered.</div>
+    <div class="info">✅ Threshold & cooldown are tunable per service reliability profile.</div>
+    <div class="info">✅ Fast-fail in OPEN state saves bandwidth and reduces user-perceived latency.</div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const log=document.getElementById('log');
+const vState=document.getElementById('v-state'),vFail=document.getElementById('v-fail'),vSuccess=document.getElementById('v-success'),vTimer=document.getElementById('v-timer');
+let successCount=0,timerInterval=null;
+
+class CircuitBreaker{
+  constructor(threshold=3,cooldown=5000){this.state='CLOSED';this.failures=0;this.threshold=threshold;this.cooldown=cooldown;this.nextAttempt=0;}
+  async call(fn){
+    if(this.state==='OPEN'){
+      if(Date.now()<this.nextAttempt) throw new Error('Circuit OPEN — fast fail');
+      this.state='HALF_OPEN';updateUI();addLog('⏳ Cooldown elapsed → HALF-OPEN, probing…');
+    }
+    try{const r=await fn();this.onSuccess();return r;}catch(e){this.onFailure();throw e;}
+  }
+  onSuccess(){
+    if(this.state==='HALF_OPEN') addLog('✅ Probe succeeded → CLOSED');
+    this.failures=0;this.state='CLOSED';stopTimer();updateUI();
+  }
+  onFailure(){
+    this.failures++;
+    if(this.state==='HALF_OPEN'){this.state='OPEN';this.nextAttempt=Date.now()+this.cooldown;startTimer();addLog('❌ Probe failed → OPEN again');updateUI();return;}
+    if(this.failures>=this.threshold){this.state='OPEN';this.nextAttempt=Date.now()+this.cooldown;startTimer();addLog(`🔴 Threshold reached (${this.failures}) → OPEN`);}
+    updateUI();
+  }
+}
+
+const breaker=new CircuitBreaker(3,5000);
+
+function updateUI(){
+  vState.textContent=breaker.state;vFail.textContent=breaker.failures;vSuccess.textContent=successCount;
+  document.getElementById('s-closed').classList.toggle('current',breaker.state==='CLOSED');
+  document.getElementById('s-open').classList.toggle('current',breaker.state==='OPEN');
+  document.getElementById('s-half').classList.toggle('current',breaker.state==='HALF_OPEN');
+}
+function addLog(msg){log.textContent=`[${new Date().toLocaleTimeString()}] ${msg}\n`+log.textContent;}
+function startTimer(){stopTimer();timerInterval=setInterval(()=>{const rem=Math.max(0,((breaker.nextAttempt-Date.now())/1000)).toFixed(1);vTimer.textContent=rem+'s';if(rem<=0)stopTimer();},200);}
+function stopTimer(){clearInterval(timerInterval);vTimer.textContent='—';}
+
+async function makeRequest(){
+  try{
+    addLog(`📡 Calling flaky endpoint… [state=${breaker.state}]`);
+    const data=await breaker.call(async()=>{
+      const r=await fetch(`${API}/api/unreliable/flaky?failRate=0.7`);
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);return r.json();
+    });
+    successCount++;updateUI();addLog('✅ Success: '+JSON.stringify(data));
+  }catch(e){addLog('❌ '+e.message);}
+}
+function resetBreaker(){breaker.state='CLOSED';breaker.failures=0;breaker.nextAttempt=0;successCount=0;stopTimer();updateUI();addLog('♻️ Breaker reset');}
+</script>
+</body>
+</html>

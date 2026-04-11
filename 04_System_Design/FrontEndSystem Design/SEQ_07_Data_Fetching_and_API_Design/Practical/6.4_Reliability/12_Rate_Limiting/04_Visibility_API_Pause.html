@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Visibility API Pause</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+.status-row{display:flex;gap:16px;align-items:center;margin:12px 0;flex-wrap:wrap}.status-badge{padding:6px 14px;border-radius:20px;font-size:.78rem;font-weight:600}.badge-active{background:#1e3a1e;border:1px solid #10b981;color:#10b981}.badge-paused{background:#3a1e1e;border:1px solid #ef4444;color:#ef4444}.counter{font-size:.8rem;color:#94a3b8}.pulse{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;animation:blink 1s infinite}@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}.pulse-on{background:#10b981}.pulse-off{background:#ef4444}
+</style>
+</head>
+<body>
+<h1>👁️ Visibility API — Pause Polling</h1>
+<p class="sub">Polling every 2s — pauses when tab is hidden, resumes when visible</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Live Demo</div>
+  <div class="tab" onclick="setTab(1)">How It Works</div>
+  <div class="tab" onclick="setTab(2)">Source Code</div>
+  <div class="tab" onclick="setTab(3)">Key Takeaways</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Polling Status</h3>
+    <div class="status-row">
+      <div id="badge" class="status-badge badge-active"><span class="pulse pulse-on" id="pulse"></span>POLLING</div>
+      <div class="counter">Polls sent: <strong id="pollCount">0</strong></div>
+      <div class="counter">Polls saved: <strong id="savedCount" style="color:#10b981">0</strong></div>
+    </div>
+    <div class="info">Switch to another tab to see polling pause. Come back to see it resume. Check the event log below.</div>
+    <button onclick="resetDemo()">Reset Log</button>
+    <div class="output" id="log"></div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card"><h3>Page Visibility API</h3>
+    <div class="info"><code>document.visibilityState</code> tells you if the tab is visible or hidden. The <code>visibilitychange</code> event fires on transitions.</div>
+    <ol style="font-size:.82rem;padding-left:18px;line-height:2.2">
+      <li>Start a polling interval (e.g., every 2 seconds).</li>
+      <li>On <b>visibilitychange</b>, check <code>document.hidden</code>.</li>
+      <li>If hidden → clear the interval (pause polling).</li>
+      <li>If visible → restart the interval (resume polling).</li>
+      <li>Optional: fire an immediate poll on resume to get fresh data.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card"><h3>Implementation</h3>
+<pre><span class="kw">let</span> pollTimer = <span class="kw">null</span>;
+<span class="kw">const</span> INTERVAL = <span class="str">2000</span>;
+
+<span class="kw">function</span> <span class="fn">poll</span>() {
+  fetch(<span class="str">'/api/status'</span>)
+    .then(r => r.json())
+    .then(data => <span class="fn">updateUI</span>(data));
+}
+
+<span class="kw">function</span> <span class="fn">startPolling</span>() {
+  <span class="fn">poll</span>(); <span class="cm">// immediate first poll</span>
+  pollTimer = setInterval(<span class="fn">poll</span>, INTERVAL);
+}
+
+<span class="kw">function</span> <span class="fn">stopPolling</span>() {
+  clearInterval(pollTimer);
+  pollTimer = <span class="kw">null</span>;
+}
+
+document.addEventListener(<span class="str">'visibilitychange'</span>, () => {
+  <span class="kw">if</span> (document.hidden) {
+    <span class="fn">stopPolling</span>();
+    console.log(<span class="str">'⏸ Tab hidden — polling paused'</span>);
+  } <span class="kw">else</span> {
+    <span class="fn">startPolling</span>();
+    console.log(<span class="str">'▶ Tab visible — polling resumed'</span>);
+  }
+});
+
+<span class="fn">startPolling</span>();</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card"><h3>Key Takeaways</h3>
+    <div class="info">Pausing background polling saves bandwidth, reduces server load, and preserves battery on mobile.</div>
+    <ul style="font-size:.82rem;padding-left:18px;line-height:2">
+      <li><code>document.hidden</code> + <code>visibilitychange</code> = reliable detection</li>
+      <li>Fire an immediate poll on resume for instant freshness</li>
+      <li>Saves API quota — critical with rate-limited backends</li>
+      <li>React Query & SWR use this pattern built-in (<code>refetchOnWindowFocus</code>)</li>
+      <li>Also useful for pausing animations, videos, WebSocket connections</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const logEl=document.getElementById('log'),badge=document.getElementById('badge'),
+  pulse=document.getElementById('pulse'),pollCountEl=document.getElementById('pollCount'),
+  savedCountEl=document.getElementById('savedCount');
+let pollTimer=null,pollCount=0,savedCount=0,hiddenAt=null;
+const INTERVAL=2000;
+
+function log(m){const ts=new Date().toLocaleTimeString();logEl.textContent=`[${ts}] ${m}\n`+logEl.textContent;}
+function setActive(on){
+  badge.className='status-badge '+(on?'badge-active':'badge-paused');
+  badge.innerHTML=`<span class="pulse ${on?'pulse-on':'pulse-off'}"></span>${on?'POLLING':'PAUSED'}`;
+}
+function poll(){
+  pollCount++;pollCountEl.textContent=pollCount;
+  log(`📡 Poll #${pollCount} sent`);
+}
+function startPolling(){
+  setActive(true);poll();
+  pollTimer=setInterval(poll,INTERVAL);
+}
+function stopPolling(){
+  clearInterval(pollTimer);pollTimer=null;setActive(false);
+}
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    stopPolling();hiddenAt=Date.now();
+    log('⏸ Tab hidden — polling PAUSED');
+  }else{
+    const away=hiddenAt?((Date.now()-hiddenAt)/1000).toFixed(1):0;
+    const missed=Math.floor(away*1000/INTERVAL);
+    savedCount+=missed;savedCountEl.textContent=savedCount;
+    log(`▶ Tab visible — resumed (away ${away}s, ~${missed} polls saved)`);
+    startPolling();
+  }
+});
+
+function resetDemo(){pollCount=0;savedCount=0;pollCountEl.textContent=0;savedCountEl.textContent=0;logEl.textContent='';log('🔄 Demo reset');}
+startPolling();
+</script>
+</body>
+</html>

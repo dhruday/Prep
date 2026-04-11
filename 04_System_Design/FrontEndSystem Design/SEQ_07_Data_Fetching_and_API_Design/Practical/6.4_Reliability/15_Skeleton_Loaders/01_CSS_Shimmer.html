@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CSS Shimmer Skeleton</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.skeleton{background:linear-gradient(90deg,#1e2130 25%,#2d3551 50%,#1e2130 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px}
+.skel-line{height:14px;margin-bottom:8px;border-radius:4px}
+.skel-circle{width:48px;height:48px;border-radius:50%}
+.skel-rect{height:100px;border-radius:8px}
+@media(prefers-reduced-motion:reduce){.skeleton{animation:none;background:#2d3551}}
+</style>
+</head>
+<body>
+<h1>CSS Shimmer Skeleton</h1>
+<p class="sub">Linear-gradient shimmer animation with prefers-reduced-motion fallback</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Code</div>
+  <div class="tab" onclick="setTab(2)">Live Demo</div>
+  <div class="tab" onclick="setTab(3)">Key Points</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card"><h3>Shimmer Animation Technique</h3>
+    <p>The shimmer effect uses a <code>linear-gradient</code> with three color stops animated via <code>background-position</code>:</p>
+    <p style="margin-top:8px;font-size:.82rem">1. Base color (dark) → highlight (lighter) → base color</p>
+    <p style="font-size:.82rem">2. <code>background-size: 200% 100%</code> makes the gradient wider than the element</p>
+    <p style="font-size:.82rem">3. Animate <code>background-position</code> from <code>-200%</code> to <code>200%</code> for the sweep</p>
+  </div>
+  <div class="card"><h3>prefers-reduced-motion</h3>
+    <p style="font-size:.82rem">Users who enable "Reduce motion" in OS settings should see a static gray placeholder instead of animation. Use <code>@media (prefers-reduced-motion: reduce)</code> to disable the shimmer.</p>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card"><h3>CSS Shimmer Implementation</h3>
+<pre><span class="cm">/* Shimmer keyframes */</span>
+<span class="kw">@keyframes</span> shimmer {
+  <span class="str">0%</span>   { background-position: <span class="str">-200% 0</span>; }
+  <span class="str">100%</span> { background-position: <span class="str">200% 0</span>; }
+}
+
+<span class="kw">.skeleton</span> {
+  background: <span class="fn">linear-gradient</span>(
+    <span class="str">90deg</span>,
+    <span class="str">#1e2130 25%</span>,    <span class="cm">/* base color */</span>
+    <span class="str">#2d3551 50%</span>,    <span class="cm">/* highlight */</span>
+    <span class="str">#1e2130 75%</span>     <span class="cm">/* base color */</span>
+  );
+  background-size: <span class="str">200% 100%</span>;
+  animation: shimmer <span class="str">1.5s infinite</span>;
+  border-radius: <span class="str">6px</span>;
+}
+
+<span class="cm">/* Reduced motion fallback */</span>
+<span class="kw">@media</span> (prefers-reduced-motion: reduce) {
+  <span class="kw">.skeleton</span> {
+    animation: <span class="str">none</span>;
+    background: <span class="str">#2d3551</span>;
+  }
+}</pre></div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card"><h3>Live Shimmer Skeletons</h3>
+    <button onclick="showSkeleton()">Show Skeleton</button>
+    <button onclick="showContent()">Show Content</button>
+    <button onclick="toggleMotion()">Toggle Reduced Motion</button>
+    <div class="grid2" style="margin-top:12px">
+      <div>
+        <b style="font-size:.82rem">Skeleton State</b>
+        <div id="skel-demo" style="background:#161925;border:1px solid #2d3551;border-radius:8px;padding:14px;margin-top:8px">
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+            <div class="skeleton skel-circle"></div>
+            <div style="flex:1"><div class="skeleton skel-line" style="width:60%"></div><div class="skeleton skel-line" style="width:40%"></div></div>
+          </div>
+          <div class="skeleton skel-rect"></div>
+          <div class="skeleton skel-line" style="width:80%;margin-top:10px"></div>
+          <div class="skeleton skel-line" style="width:55%"></div>
+        </div>
+      </div>
+      <div>
+        <b style="font-size:.82rem">Loaded State</b>
+        <div id="content-demo" style="background:#161925;border:1px solid #2d3551;border-radius:8px;padding:14px;margin-top:8px">
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+            <div style="width:48px;height:48px;border-radius:50%;background:#3a1e1e;display:flex;align-items:center;justify-content:center;font-size:1.2rem">👤</div>
+            <div><b>Jane Doe</b><br><span style="color:#94a3b8;font-size:.78rem">Senior Engineer</span></div>
+          </div>
+          <div style="height:100px;border-radius:8px;background:linear-gradient(135deg,#1a2332,#2a1a1a);display:flex;align-items:center;justify-content:center;color:#ef4444">📊 Revenue Chart</div>
+          <p style="margin-top:10px;font-size:.82rem">Dashboard loaded with 4 widgets and 12 data points.</p>
+        </div>
+      </div>
+    </div>
+    <div class="output" id="log"></div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card"><h3>Key Points</h3>
+    <p>• Use <code>linear-gradient</code> + <code>background-position</code> — pure CSS, no JS needed</p>
+    <p>• <code>background-size: 200%</code> lets the gradient slide across the element</p>
+    <p>• Always respect <code>prefers-reduced-motion</code> — show static gray instead</p>
+    <p>• Use <code>will-change: background-position</code> for GPU acceleration if many skeletons</p>
+    <p>• The shimmer direction (90deg) mimics a left-to-right reading pattern</p>
+  </div>
+  <div class="info">Interview tip: "Our shimmer uses CSS-only animated gradients with a reduced-motion fallback to static gray."</div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+let reducedMotion=false;
+function showSkeleton(){document.getElementById('skel-demo').style.opacity='1';document.getElementById('log').textContent='Showing skeleton shimmer state...\nAnimation: shimmer 1.5s infinite\nGradient: 3-stop linear-gradient at 200% width';}
+function showContent(){document.getElementById('log').textContent='Content loaded — replace skeleton with real data\nTransition: skeleton → content (no layout shift if dimensions match)';}
+function toggleMotion(){
+  reducedMotion=!reducedMotion;
+  document.querySelectorAll('.skeleton').forEach(el=>{
+    el.style.animation=reducedMotion?'none':'shimmer 1.5s infinite';
+    if(reducedMotion)el.style.background='#2d3551';
+    else el.style.background='linear-gradient(90deg,#1e2130 25%,#2d3551 50%,#1e2130 75%)';
+    el.style.backgroundSize='200% 100%';
+  });
+  document.getElementById('log').textContent=`prefers-reduced-motion: ${reducedMotion?'reduce':'no-preference'}\n${reducedMotion?'Animation disabled — showing static gray':'Animation enabled — shimmer active'}`;
+}
+</script>
+</body>
+</html>

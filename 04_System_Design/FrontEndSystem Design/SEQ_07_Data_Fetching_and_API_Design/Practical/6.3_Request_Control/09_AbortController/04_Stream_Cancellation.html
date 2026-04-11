@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab 04 — Stream Cancellation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}button.red{background:#3a1e1e;border-color:#ef4444;color:#ef4444}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+.stat{display:inline-block;padding:4px 10px;border-radius:6px;background:#0f1117;border:1px solid #2d3551;font-size:.78rem;margin:3px}
+</style>
+</head>
+<body>
+<h1>Lab 04 — Stream Cancellation</h1>
+<p class="sub">Cancel an SSE/streaming response mid-flight using AbortController. Save bandwidth, stop processing.</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">🏃 Live Stream</div>
+  <div class="tab" onclick="setTab(1)">📖 ReadableStream</div>
+  <div class="tab" onclick="setTab(2)">🔧 Implementation</div>
+  <div class="tab" onclick="setTab(3)">📊 Stats</div>
+</div>
+
+<!-- Tab 0: Live Stream -->
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>🤖 AI Chat Stream — /api/streaming/ai-chat</h3>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="green" onclick="startStream()">▶ Start Stream</button>
+      <button class="red" onclick="stopStream()">⏹ Cancel Stream</button>
+      <button onclick="clearStream()">Clear</button>
+      <span class="stat">Chunks: <span id="chunkCount">0</span></span>
+      <span class="stat">Bytes: <span id="byteCount">0</span></span>
+      <span class="stat" id="statusBadge">⏸ Idle</span>
+    </div>
+    <div class="output" id="streamOut" style="min-height:150px">Click "Start Stream" to begin receiving tokens...</div>
+  </div>
+  <div class="info">Start the stream, watch tokens arrive, then cancel mid-stream. The server stops sending data immediately.</div>
+</div>
+
+<!-- Tab 1: ReadableStream -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>📖 Reading a Stream with AbortController</h3>
+<pre><span class="kw">const</span> controller = <span class="kw">new</span> <span class="fn">AbortController</span>();
+
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${API}/api/streaming/ai-chat`</span>, {
+  signal: controller.signal
+});
+
+<span class="kw">const</span> reader = res.body
+  .<span class="fn">pipeThrough</span>(<span class="kw">new</span> <span class="fn">TextDecoderStream</span>())
+  .<span class="fn">getReader</span>();
+
+<span class="kw">while</span> (<span class="kw">true</span>) {
+  <span class="kw">const</span> { done, value } = <span class="kw">await</span> reader.<span class="fn">read</span>();
+  <span class="kw">if</span> (done) <span class="kw">break</span>;
+  processChunk(value);
+}
+
+<span class="cm">// To cancel mid-stream:</span>
+controller.<span class="fn">abort</span>(); <span class="cm">// reader.read() rejects with AbortError</span></pre>
+  </div>
+  <div class="info">Aborting the fetch signal causes the ReadableStream reader to reject. Always handle AbortError in your read loop.</div>
+</div>
+
+<!-- Tab 2: Implementation -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🔧 Full SSE Stream + Cancel Implementation</h3>
+<pre><span class="kw">let</span> controller = <span class="kw">null</span>;
+
+<span class="kw">async function</span> <span class="fn">startStream</span>() {
+  controller = <span class="kw">new</span> <span class="fn">AbortController</span>();
+  <span class="kw">let</span> bytes = <span class="str">0</span>, chunks = <span class="str">0</span>;
+
+  <span class="kw">try</span> {
+    <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(url, { signal: controller.signal });
+    <span class="kw">const</span> reader = res.body
+      .<span class="fn">pipeThrough</span>(<span class="kw">new</span> <span class="fn">TextDecoderStream</span>())
+      .<span class="fn">getReader</span>();
+
+    <span class="kw">while</span> (<span class="kw">true</span>) {
+      <span class="kw">const</span> { done, value } = <span class="kw">await</span> reader.<span class="fn">read</span>();
+      <span class="kw">if</span> (done) <span class="kw">break</span>;
+      chunks++;
+      bytes += value.length;
+      appendToOutput(value);
+    }
+  } <span class="kw">catch</span> (e) {
+    <span class="kw">if</span> (e.name === <span class="str">'AbortError'</span>) {
+      log(<span class="str">`Cancelled after ${chunks} chunks (${bytes} bytes)`</span>);
+    }
+  }
+}
+
+<span class="kw">function</span> <span class="fn">stopStream</span>() {
+  <span class="kw">if</span> (controller) controller.<span class="fn">abort</span>();
+}</pre>
+  </div>
+</div>
+
+<!-- Tab 3: Stats -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>📊 Stream History</h3>
+    <button onclick="document.getElementById('histOut').textContent='No history yet...'">Clear History</button>
+    <div class="output" id="histOut">No history yet. Start and stop streams to see stats...</div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+let ctrl = null, chunks = 0, bytes = 0, streaming = false, streamRun = 0;
+
+async function startStream() {
+  if (streaming) return;
+  ctrl = new AbortController();
+  streaming = true; chunks = 0; bytes = 0; streamRun++;
+  const run = streamRun;
+  const out = document.getElementById('streamOut');
+  const badge = document.getElementById('statusBadge');
+  out.textContent = '';
+  badge.textContent = '🟢 Streaming...';
+  badge.style.borderColor = '#10b981';
+  updateStats();
+  const t0 = performance.now();
+
+  try {
+    const res = await fetch(`${API}/api/streaming/ai-chat`, { signal: ctrl.signal });
+    const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks++;
+      bytes += new Blob([value]).size;
+      out.textContent += value;
+      out.scrollTop = out.scrollHeight;
+      updateStats();
+    }
+    const ms = (performance.now() - t0).toFixed(0);
+    badge.textContent = '✅ Complete';
+    badge.style.borderColor = '#10b981';
+    addHistory(run, chunks, bytes, ms, 'completed');
+  } catch (e) {
+    const ms = (performance.now() - t0).toFixed(0);
+    if (e.name === 'AbortError') {
+      out.textContent += '\n\n🛑 [Stream cancelled by user]';
+      badge.textContent = '🛑 Cancelled';
+      badge.style.borderColor = '#ef4444';
+      addHistory(run, chunks, bytes, ms, 'cancelled');
+    } else {
+      out.textContent += `\n❌ Error: ${e.message}`;
+      badge.textContent = '❌ Error';
+      badge.style.borderColor = '#ef4444';
+    }
+  }
+  streaming = false;
+}
+
+function stopStream() {
+  if (ctrl && streaming) ctrl.abort();
+}
+
+function clearStream() {
+  document.getElementById('streamOut').textContent = 'Click "Start Stream" to begin...';
+  document.getElementById('statusBadge').textContent = '⏸ Idle';
+  document.getElementById('statusBadge').style.borderColor = '#2d3551';
+  chunks = 0; bytes = 0; updateStats();
+}
+
+function updateStats() {
+  document.getElementById('chunkCount').textContent = chunks;
+  document.getElementById('byteCount').textContent = bytes;
+}
+
+function addHistory(run, c, b, ms, status) {
+  const out = document.getElementById('histOut');
+  if (out.textContent === 'No history yet. Start and stop streams to see stats...') out.textContent = '';
+  const icon = status === 'completed' ? '✅' : '🛑';
+  out.textContent += `${icon} Run #${run}: ${c} chunks, ${b} bytes, ${ms}ms — ${status}\n`;
+}
+</script>
+</body>
+</html>

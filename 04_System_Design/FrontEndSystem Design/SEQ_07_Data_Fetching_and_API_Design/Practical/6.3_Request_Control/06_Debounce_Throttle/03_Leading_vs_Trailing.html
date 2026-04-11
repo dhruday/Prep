@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lab 03 — Leading vs Trailing</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+.timeline{display:flex;align-items:flex-end;gap:2px;height:60px;margin-top:8px;padding:4px;background:#0d1117;border-radius:8px;border:1px solid #2d3551;overflow-x:auto}
+.tbar{width:6px;border-radius:3px 3px 0 0;min-height:4px;transition:height .15s}
+.tbar.click{background:#475569;height:20px}.tbar.fire{background:#f59e0b;height:50px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.mode-label{text-align:center;font-size:.75rem;color:#f59e0b;margin-bottom:4px;font-weight:600}
+</style>
+</head>
+<body>
+<h1>Lab 03 — Leading vs Trailing</h1>
+<p class="sub">Visual timeline showing when the debounced function fires for each edge mode</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&amp;A</div>
+</div>
+
+<!-- ───── Concept ───── -->
+<div class="panel active">
+  <div class="card"><h3>Edge Modes Explained</h3>
+    <p><strong>Leading (immediate):</strong> Fires on the <em>first</em> call, then ignores until the cooldown expires.<br>
+    <strong>Trailing (default):</strong> Fires once after the <em>last</em> call + delay.<br>
+    <strong>Both:</strong> Fires on the first call <em>and</em> once after the burst ends.</p>
+  </div>
+  <div class="card"><h3>Implementation with Options</h3>
+<pre><span class="kw">function</span> <span class="fn">debounce</span>(fn, delay, { leading=<span class="kw">false</span>, trailing=<span class="kw">true</span> }={}) {
+  <span class="kw">let</span> timer, lastArgs;
+  <span class="kw">return</span> (...args) =&gt; {
+    lastArgs = args;
+    <span class="kw">const</span> callNow = leading &amp;&amp; !timer;
+    clearTimeout(timer);
+    timer = setTimeout(() =&gt; {
+      timer = <span class="kw">null</span>;
+      <span class="kw">if</span> (trailing &amp;&amp; lastArgs) fn(...lastArgs);
+      lastArgs = <span class="kw">null</span>;
+    }, delay);
+    <span class="kw">if</span> (callNow) fn(...args);
+  };
+}</pre>
+  </div>
+</div>
+
+<!-- ───── Hands-On Lab ───── -->
+<div class="panel">
+  <div class="card"><h3>🔬 Click the Buttons Rapidly — Watch the Timelines</h3>
+    <p style="font-size:.8rem;color:#94a3b8;margin-bottom:10px">Grey = your click &nbsp; Orange = function execution &nbsp; (500 ms delay)</p>
+    <div class="grid3">
+      <div>
+        <div class="mode-label">Leading</div>
+        <button onclick="handleClick('leading')" style="width:100%">Click Me</button>
+        <div class="timeline" id="tl-leading"></div>
+        <div class="output" id="log-leading" style="min-height:50px"></div>
+      </div>
+      <div>
+        <div class="mode-label">Trailing</div>
+        <button onclick="handleClick('trailing')" style="width:100%">Click Me</button>
+        <div class="timeline" id="tl-trailing"></div>
+        <div class="output" id="log-trailing" style="min-height:50px"></div>
+      </div>
+      <div>
+        <div class="mode-label">Both</div>
+        <button onclick="handleClick('both')" style="width:100%">Click Me</button>
+        <div class="timeline" id="tl-both"></div>
+        <div class="output" id="log-both" style="min-height:50px"></div>
+      </div>
+    </div>
+    <button onclick="resetLab()" style="margin-top:10px">Reset Timelines</button>
+  </div>
+  <div class="info">Try rapid clicks, then pause. Leading fires instantly; trailing fires after the pause; both does both.</div>
+</div>
+
+<!-- ───── Browser Internals ───── -->
+<div class="panel">
+  <div class="card"><h3>Timer Lifecycle</h3>
+    <p><strong>Leading edge:</strong> The first invocation is synchronous — no timer needed. The timer only exists to enforce the cooldown.<br>
+    <strong>Trailing edge:</strong> Each call resets the timer via <code>clearTimeout</code> + <code>setTimeout</code>. The callback sits in the macro-task queue until the delay elapses.</p>
+  </div>
+  <div class="card"><h3>Micro-task vs Macro-task Nuance</h3>
+    <p>A leading-edge fire is synchronous (runs in the current micro-task turn). A trailing-edge fire is a macro-task (setTimeout). This means leading fires <em>before</em> any pending promises resolve in that turn.</p>
+  </div>
+  <div class="card"><h3>Performance Consideration</h3>
+    <p>Leading edge gives perceived instant response (good for button clicks). Trailing edge batches work (good for network calls). Using both is common for "instant feedback + final sync" patterns.</p>
+  </div>
+</div>
+
+<!-- ───── Interview Q&A ───── -->
+<div class="panel">
+  <div class="card"><h3>Q: Give a real-world use case for leading-edge debounce.</h3>
+    <p>A "Submit Order" button — you want the first click to fire immediately, then ignore rapid repeated clicks to prevent duplicate orders.</p>
+  </div>
+  <div class="card"><h3>Q: How does Lodash _.debounce handle maxWait?</h3>
+    <p><code>maxWait</code> sets an upper bound: even if calls keep coming, the function will fire after <code>maxWait</code> ms. This is effectively a throttle layered on top of debounce.</p>
+  </div>
+  <div class="card"><h3>Q: How would you test a debounced function?</h3>
+    <p>Use fake timers (<code>jest.useFakeTimers()</code>), call the function N times, advance time with <code>jest.advanceTimersByTime(delay)</code>, and assert the inner function was called exactly once (or twice for both-edge mode).</p>
+  </div>
+  <div class="card"><h3>Q: What happens if leading=false and trailing=false?</h3>
+    <p>The function never fires — it's a no-op. Lodash guards against this, but a naive implementation would silently discard all calls.</p>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const DELAY=500;
+const state={leading:{n:0},trailing:{n:0},both:{n:0}};
+
+function debounce(fn,delay,{leading=false,trailing=true}={}){
+  let timer,lastArgs;
+  return(...args)=>{
+    lastArgs=args;
+    const callNow=leading&&!timer;
+    clearTimeout(timer);
+    timer=setTimeout(()=>{timer=null;if(trailing&&lastArgs)fn(...lastArgs);lastArgs=null;},delay);
+    if(callNow)fn(...args);
+  };
+}
+
+function addBar(id,type){
+  const tl=document.getElementById('tl-'+id);
+  const bar=document.createElement('div');
+  bar.className='tbar '+type;
+  tl.appendChild(bar);
+  tl.scrollLeft=tl.scrollWidth;
+}
+
+function logFire(id){
+  state[id].n++;
+  const el=document.getElementById('log-'+id);
+  const t=performance.now().toFixed(0);
+  el.textContent=`[${t}ms] fired #${state[id].n}\n`+el.textContent;
+}
+
+const debouncedFns={
+  leading:debounce(()=>{addBar('leading','fire');logFire('leading');},DELAY,{leading:true,trailing:false}),
+  trailing:debounce(()=>{addBar('trailing','fire');logFire('trailing');},DELAY,{leading:false,trailing:true}),
+  both:debounce(()=>{addBar('both','fire');logFire('both');},DELAY,{leading:true,trailing:true})
+};
+
+function handleClick(mode){
+  addBar(mode,'click');
+  debouncedFns[mode]();
+}
+
+function resetLab(){
+  ['leading','trailing','both'].forEach(m=>{
+    document.getElementById('tl-'+m).innerHTML='';
+    document.getElementById('log-'+m).textContent='';
+    state[m].n=0;
+  });
+}
+</script>
+</body>
+</html>
