@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>useMemo & useCallback Lab</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}button{background:#f59e0b;color:#0f1117;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.82rem;margin:4px}#output{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;margin-top:10px;font-size:.78rem;max-height:250px;overflow-y:auto;font-family:monospace}</style>
+</head>
+<body>
+<h1>useMemo & useCallback Lab</h1>
+<p class="sub">Practical 7.2 · When and how to use React memoization hooks</p>
+
+<div class="card">
+  <h3>Interactive Demo: Memoization vs No Memoization</h3>
+  <button onclick="runWithout()">Run WITHOUT useMemo (sort 10K items)</button>
+  <button onclick="runWith()">Run WITH useMemo (cached)</button>
+  <button onclick="clearLog()">Clear</button>
+  <div id="output"></div>
+</div>
+
+<div class="card">
+  <h3>useMemo: Memoize Expensive Computations</h3>
+  <pre><span class="cm">// ❌ Without useMemo: re-sorts on EVERY render</span>
+<span class="kw">function</span> <span class="fn">ProductList</span>({ products, sortBy }) {
+  <span class="kw">const</span> sorted = products
+    .slice()
+    .sort((a, b) =&gt; a[sortBy] - b[sortBy]); <span class="cm">// O(n log n) every render!</span>
+  <span class="kw">return</span> sorted.map(p =&gt; &lt;Product key={p.id} {...p} /&gt;);
+}
+
+<span class="cm">// ✅ With useMemo: only re-sorts when products or sortBy change</span>
+<span class="kw">function</span> <span class="fn">ProductList</span>({ products, sortBy }) {
+  <span class="kw">const</span> sorted = <span class="fn">useMemo</span>(
+    () =&gt; products.slice().sort((a, b) =&gt; a[sortBy] - b[sortBy]),
+    [products, sortBy] <span class="cm">// dependency array</span>
+  );
+  <span class="kw">return</span> sorted.map(p =&gt; &lt;Product key={p.id} {...p} /&gt;);
+}</pre>
+</div>
+
+<div class="card">
+  <h3>useCallback: Stable Function References</h3>
+  <pre><span class="cm">// useCallback = useMemo for functions</span>
+<span class="cm">// useCallback(fn, deps) is identical to useMemo(() => fn, deps)</span>
+
+<span class="cm">// ❌ Without: new function reference every render, breaks memo</span>
+<span class="kw">function</span> <span class="fn">Parent</span>() {
+  <span class="kw">const</span> [count, setCount] = <span class="fn">useState</span>(<span class="num">0</span>);
+  <span class="kw">const</span> handleClick = () =&gt; console.log(<span class="str">'clicked'</span>); <span class="cm">// new ref!</span>
+  <span class="kw">return</span> &lt;MemoChild onClick={handleClick} /&gt;; <span class="cm">// memo defeated!</span>
+}
+
+<span class="cm">// ✅ With: same function reference across renders</span>
+<span class="kw">function</span> <span class="fn">Parent</span>() {
+  <span class="kw">const</span> [count, setCount] = <span class="fn">useState</span>(<span class="num">0</span>);
+  <span class="kw">const</span> handleClick = <span class="fn">useCallback</span>(
+    () =&gt; console.log(<span class="str">'clicked'</span>),
+    [] <span class="cm">// no dependencies — stable forever</span>
+  );
+  <span class="kw">return</span> &lt;MemoChild onClick={handleClick} /&gt;; <span class="cm">// memo works!</span>
+}
+
+<span class="cm">// When to use useCallback:</span>
+<span class="cm">// ✅ Passing functions to React.memo'd children</span>
+<span class="cm">// ✅ Functions in useEffect dependency arrays</span>
+<span class="cm">// ✅ Functions passed to expensive hooks</span>
+<span class="cm">// ❌ Every function (add overhead for no benefit)</span></pre>
+</div>
+
+<div class="card">
+  <h3>When NOT to Memoize</h3>
+  <pre><span class="cm">// ❌ Cheap computation (< 1ms)</span>
+<span class="kw">const</span> fullName = <span class="fn">useMemo</span>(
+  () =&gt; <span class="str">`${firstName} ${lastName}`</span>,
+  [firstName, lastName]
+);
+<span class="cm">// String concat is instant — useMemo overhead > computation cost</span>
+
+<span class="cm">// ❌ Values that change every render anyway</span>
+<span class="kw">const</span> now = <span class="fn">useMemo</span>(() =&gt; Date.now(), [trigger]);
+<span class="cm">// If trigger changes every render, memo never caches</span>
+
+<span class="cm">// ❌ Simple state derivation (use derived state)</span>
+<span class="kw">const</span> isAdult = age &gt;= <span class="num">18</span>; <span class="cm">// Just compute inline</span>
+
+<span class="cm">// Rule of thumb:</span>
+<span class="cm">// "Don't useMemo unless profiling shows it's needed"</span>
+<span class="cm">// — React team recommendation</span>
+<span class="cm">//</span>
+<span class="cm">// React Compiler (coming) will auto-memoize everything</span></pre>
+</div>
+
+<script>
+const output = document.getElementById('output');
+const log = (msg) => { output.innerHTML += msg + '\n'; output.scrollTop = output.scrollHeight; };
+const clearLog = () => { output.innerHTML = ''; };
+
+// Generate 10K items
+const items = Array.from({ length: 10000 }, (_, i) => ({ id: i, value: Math.random() * 10000 }));
+let cached = null;
+let cacheKey = null;
+
+function runWithout() {
+  log('<span style="color:#ef4444">--- Without useMemo ---</span>');
+  for (let i = 0; i < 5; i++) {
+    const start = performance.now();
+    const sorted = items.slice().sort((a, b) => a.value - b.value);
+    const dur = (performance.now() - start).toFixed(2);
+    log(`  Render ${i+1}: sorted 10K items in ${dur}ms`);
+  }
+  log('  Total: 5 sorts (runs every render)\n');
+}
+
+function runWith() {
+  log('<span style="color:#10b981">--- With useMemo ---</span>');
+  const key = JSON.stringify(items.length); // simulate dependency check
+  for (let i = 0; i < 5; i++) {
+    const start = performance.now();
+    if (cacheKey !== key) {
+      cached = items.slice().sort((a, b) => a.value - b.value);
+      cacheKey = key;
+      const dur = (performance.now() - start).toFixed(2);
+      log(`  Render ${i+1}: COMPUTED sort in ${dur}ms (cache miss)`);
+    } else {
+      const dur = (performance.now() - start).toFixed(4);
+      log(`  Render ${i+1}: CACHED result in ${dur}ms (cache hit)`);
+    }
+  }
+  log('  Total: 1 sort + 4 cache hits\n');
+}
+</script>
+</body>
+</html>

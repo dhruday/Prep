@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>React.memo Profiling Lab</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}button{background:#f59e0b;color:#0f1117;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.82rem;margin:4px}#output{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;margin-top:10px;font-size:.78rem;max-height:300px;overflow-y:auto;font-family:monospace}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:4px;margin:8px 0}.cell{width:50px;height:50px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:#0f1117;font-weight:700;cursor:pointer;transition:transform .1s}.cell:hover{transform:scale(1.1)}</style>
+</head>
+<body>
+<h1>React.memo Profiling Lab</h1>
+<p class="sub">Practical 7.2 · Visualize render counts with and without React.memo</p>
+
+<div class="card">
+  <h3>Live Render-Count Grid (50 "components")</h3>
+  <p style="font-size:.78rem;margin-bottom:8px;color:#94a3b8">Each cell simulates a child component. Click a cell to update only that cell. Green = not re-rendered, Red = re-rendered.</p>
+  <button onclick="renderAllWithoutMemo()">Parent Re-render (no memo)</button>
+  <button onclick="renderAllWithMemo()">Parent Re-render (with memo)</button>
+  <button onclick="resetGrid()">Reset</button>
+  <div id="grid" class="grid"></div>
+  <div id="output"></div>
+</div>
+
+<div class="card">
+  <h3>React.memo: Shallow Comparison Bailout</h3>
+  <pre><span class="cm">// React.memo wraps a component to skip re-renders</span>
+<span class="cm">// when props haven't changed (shallow equality)</span>
+
+<span class="kw">const</span> <span class="fn">ExpensiveRow</span> = React.memo(<span class="kw">function</span> ExpensiveRow({ data, onClick }) {
+  console.log(<span class="str">'ExpensiveRow rendered'</span>, data.id);
+  <span class="kw">return</span> (
+    &lt;tr onClick={onClick}&gt;
+      &lt;td&gt;{data.name}&lt;/td&gt;
+      &lt;td&gt;{heavyFormat(data.value)}&lt;/td&gt;
+    &lt;/tr&gt;
+  );
+});
+
+<span class="cm">// ⚠️ Common pitfall: inline objects break memo</span>
+<span class="cm">// ❌ style={{color:'red'}} — creates new object every render</span>
+<span class="cm">// ✅ const style = useMemo(() => ({color:'red'}), [])</span></pre>
+</div>
+
+<div class="card">
+  <h3>Custom Comparison Function</h3>
+  <pre><span class="cm">// Second argument: custom areEqual function</span>
+<span class="kw">const</span> <span class="fn">Chart</span> = React.memo(
+  <span class="kw">function</span> <span class="fn">Chart</span>({ data, theme }) {
+    <span class="kw">return</span> &lt;canvas ref={drawChart(data)} /&gt;;
+  },
+  (prevProps, nextProps) =&gt; {
+    <span class="cm">// Return true to SKIP re-render (areEqual → true)</span>
+    <span class="cm">// Only re-render when data changes, ignore theme</span>
+    <span class="kw">return</span> prevProps.data === nextProps.data;
+  }
+);
+
+<span class="cm">// ⚠️ Custom comparison is rarely needed</span>
+<span class="cm">// Use it when:</span>
+<span class="cm">// - You want to compare only specific props</span>
+<span class="cm">// - Deep equality on a specific prop is required</span>
+<span class="cm">// - Ignoring callback props that are known stable</span></pre>
+</div>
+
+<div class="card">
+  <h3>React DevTools Profiler Workflow</h3>
+  <pre><span class="cm">// Step 1: Open React DevTools → Profiler tab</span>
+<span class="cm">// Step 2: Click Record → Perform interactions → Stop</span>
+<span class="cm">// Step 3: Look at flame chart</span>
+<span class="cm">//</span>
+<span class="cm">// Color coding in Profiler:</span>
+<span class="cm">//   🟡 Yellow = rendered, took some time</span>
+<span class="cm">//   🔵 Blue   = rendered quickly</span>
+<span class="cm">//   ⚪ Gray   = did NOT re-render (memo worked!)</span>
+<span class="cm">//</span>
+<span class="cm">// Step 4: Enable "Highlight updates when components render"</span>
+<span class="cm">// Step 5: Enable "Record why each component rendered?"</span>
+<span class="cm">//         → Shows: "Props changed: onClick"</span>
+<span class="cm">//         → Tells you EXACTLY which prop broke memo</span>
+<span class="cm">//</span>
+<span class="cm">// Step 6: Fix the unstable prop with useCallback/useMemo</span>
+<span class="cm">// Step 7: Profile again to verify gray (skipped)</span>
+
+<span class="cm">// Programmatic profiling:</span>
+&lt;<span class="fn">Profiler</span> id=<span class="str">"Navigation"</span> onRender={onRenderCallback}&gt;
+  &lt;Navigation /&gt;
+&lt;/Profiler&gt;
+
+<span class="kw">function</span> <span class="fn">onRenderCallback</span>(
+  id,           <span class="cm">// "Navigation"</span>
+  phase,        <span class="cm">// "mount" | "update"</span>
+  actualDur,    <span class="cm">// time spent rendering</span>
+  baseDur,      <span class="cm">// estimated time without memoization</span>
+  startTime,
+  commitTime
+) {
+  <span class="cm">// Log to analytics</span>
+  analytics.track(<span class="str">'react_render'</span>, { id, phase, actualDur, baseDur });
+}</pre>
+</div>
+
+<script>
+const output = document.getElementById('output');
+const gridEl = document.getElementById('grid');
+const log = (msg) => { output.innerHTML += msg + '\n'; output.scrollTop = output.scrollHeight; };
+
+const CELLS = 50;
+let renderCounts = new Array(CELLS).fill(0);
+let values = Array.from({length:CELLS},(_,i)=>i);
+
+function resetGrid() {
+  renderCounts = new Array(CELLS).fill(0);
+  values = Array.from({length:CELLS},(_,i)=>i);
+  output.innerHTML = '';
+  drawGrid();
+}
+
+function drawGrid() {
+  gridEl.innerHTML = '';
+  for (let i = 0; i < CELLS; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const count = renderCounts[i];
+    if (count === 0) {
+      cell.style.background = '#2d3551';
+      cell.style.color = '#e2e8f0';
+    } else if (count === 1) {
+      cell.style.background = '#10b981';
+    } else {
+      const r = Math.min(255, 100 + count * 30);
+      cell.style.background = `rgb(${r},60,60)`;
+      cell.style.color = '#fff';
+    }
+    cell.textContent = count;
+    cell.onclick = () => {
+      renderCounts[i]++;
+      drawGrid();
+      log(`Cell ${i} clicked → only this cell re-renders (${renderCounts[i]}x)`);
+    };
+    gridEl.appendChild(cell);
+  }
+}
+
+function renderAllWithoutMemo() {
+  log('<span style="color:#ef4444">--- Parent re-render WITHOUT memo ---</span>');
+  const start = performance.now();
+  for (let i = 0; i < CELLS; i++) renderCounts[i]++;
+  drawGrid();
+  const dur = (performance.now() - start).toFixed(2);
+  log(`  All ${CELLS} children re-rendered in ${dur}ms (no bailout)`);
+}
+
+function renderAllWithMemo() {
+  log('<span style="color:#10b981">--- Parent re-render WITH memo ---</span>');
+  const start = performance.now();
+  // simulate: only 2-3 cells actually changed props
+  const changed = [Math.floor(Math.random()*CELLS), Math.floor(Math.random()*CELLS)];
+  changed.forEach(i => renderCounts[i]++);
+  drawGrid();
+  const dur = (performance.now() - start).toFixed(2);
+  log(`  Only ${changed.length} of ${CELLS} children re-rendered in ${dur}ms (memo bailout!)`);
+}
+
+drawGrid();
+</script>
+</body>
+</html>

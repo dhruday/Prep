@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lighthouse CI &amp; Performance Budgets Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2e1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Lighthouse CI &amp; Automating Performance Budgets</h1>
+<p class="sub">Module 7.1 · Metrics &amp; Measurement · CI/CD Performance Gates</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">CI Setup</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Config Examples</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. What Is Lighthouse CI?</h3>
+    <pre><span class="cm">// Lighthouse CI (LHCI) runs Lighthouse audits in your CI/CD pipeline</span>
+<span class="cm">// It catches performance regressions BEFORE they reach production</span>
+<span class="cm">//</span>
+<span class="cm">// Architecture:</span>
+<span class="cm">// ┌──────────┐     ┌──────────────┐     ┌──────────────┐</span>
+<span class="cm">// │ PR Push  │ ──▶ │ CI Pipeline  │ ──▶ │ LHCI Server  │</span>
+<span class="cm">// │ (GitHub) │     │ (Run Lighthouse)│   │ (Store/Compare)│</span>
+<span class="cm">// └──────────┘     └──────────────┘     └──────────────┘</span>
+<span class="cm">//                        │</span>
+<span class="cm">//                  ┌─────┴─────┐</span>
+<span class="cm">//                  │  Pass/Fail │ ──▶ GitHub Status Check</span>
+<span class="cm">//                  └───────────┘</span>
+<span class="cm">//</span>
+<span class="cm">// Three components:</span>
+<span class="cm">// 1. @lhci/cli — CLI that collects Lighthouse runs</span>
+<span class="cm">// 2. LHCI Server — stores results, compares against baselines</span>
+<span class="cm">// 3. GitHub App — posts status checks on PRs</span>
+<span class="cm">//</span>
+<span class="cm">// Key concept: Run Lighthouse 3-5 times per URL (reduce variance)</span>
+<span class="cm">// LHCI uses median of runs for assertions</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Performance Budgets — Theory</h3>
+    <pre><span class="cm">// A performance budget is a set of limits on metrics that should not be exceeded</span>
+<span class="cm">//</span>
+<span class="cm">// Types of budgets:</span>
+<span class="cm">// 1. Quantity-based: max bundle size, max number of requests, max image weight</span>
+<span class="cm">// 2. Milestone-based: max LCP, max FCP, max TTI</span>
+<span class="cm">// 3. Rule-based: min Lighthouse score, no violations of specific audits</span>
+<span class="cm">//</span>
+<span class="cm">// Why budgets work at FAANG scale:</span>
+<span class="cm">// - Without budgets, performance degrades incrementally ("boiling frog")</span>
+<span class="cm">// - Each developer adds "just 10KB" → death by a thousand cuts</span>
+<span class="cm">// - Budgets make the invisible visible — CI fails when limits exceeded</span>
+<span class="cm">// - Creates a culture of performance ownership</span>
+<span class="cm">//</span>
+<span class="cm">// Google's budget philosophy:</span>
+<span class="cm">// - Start with competitor analysis (what's the p75 LCP of top 5 competitors?)</span>
+<span class="cm">// - Set budget 20% better than the best competitor</span>
+<span class="cm">// - Assign "budget owners" for each page/feature team</span>
+<span class="cm">// - Budget violations block merges (hard gate, not advisory)</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Lighthouse Internals</h3>
+    <pre><span class="cm">// Lighthouse internally does:</span>
+<span class="cm">// 1. Launches headless Chrome (via chrome-launcher)</span>
+<span class="cm">// 2. Connects via Chrome DevTools Protocol (CDP)</span>
+<span class="cm">// 3. Navigates to URL</span>
+<span class="cm">// 4. Collects artifacts:</span>
+<span class="cm">//    - Network requests (HAR-like)</span>
+<span class="cm">//    - DOM snapshot</span>
+<span class="cm">//    - Trace (Chrome Trace format)</span>
+<span class="cm">//    - Console messages, JS coverage</span>
+<span class="cm">// 5. Runs audits against artifacts (200+ audits)</span>
+<span class="cm">// 6. Scores each category (Performance, A11y, Best Practices, SEO, PWA)</span>
+<span class="cm">//</span>
+<span class="cm">// Performance score calculation:</span>
+<span class="cm">// Weighted average of 6 metrics:</span>
+<span class="cm">// FCP:          10%</span>
+<span class="cm">// Speed Index:  10%</span>
+<span class="cm">// LCP:          25%</span>
+<span class="cm">// TBT:          30%  (lab proxy for INP)</span>
+<span class="cm">// CLS:          25%</span>
+<span class="cm">//</span>
+<span class="cm">// Each metric score is mapped via a log-normal distribution</span>
+<span class="cm">// (not linear — diminishing returns at extremes)</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Lighthouse CI Setup — GitHub Actions</h3>
+    <pre><span class="cm"># .github/workflows/lighthouse.yml</span>
+name: Lighthouse CI
+on: [pull_request]
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: <span class="num">20</span>
+
+      - name: Install &amp; Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Start server
+        run: npm run start &amp;
+
+      - name: Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}</pre>
+  </div>
+
+  <div class="card">
+    <h3>lighthouserc.js — Configuration</h3>
+    <pre><span class="cm">// lighthouserc.js</span>
+module.exports = {
+  ci: {
+    collect: {
+      url: [
+        <span class="str">'http://localhost:3000/'</span>,
+        <span class="str">'http://localhost:3000/products'</span>,
+        <span class="str">'http://localhost:3000/checkout'</span>,
+      ],
+      numberOfRuns: <span class="num">5</span>,  <span class="cm">// Reduce variance</span>
+      settings: {
+        preset: <span class="str">'desktop'</span>,  <span class="cm">// or 'mobile' (4x CPU throttle, slow 4G)</span>
+        chromeFlags: <span class="str">'--no-sandbox'</span>,
+      },
+    },
+    assert: {
+      assertions: {
+        <span class="cm">// Metric-based budgets</span>
+        <span class="str">'first-contentful-paint'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">2000</span> }],
+        <span class="str">'largest-contentful-paint'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">2500</span> }],
+        <span class="str">'cumulative-layout-shift'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">0.1</span> }],
+        <span class="str">'total-blocking-time'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">300</span> }],
+
+        <span class="cm">// Score-based budgets</span>
+        <span class="str">'categories:performance'</span>: [<span class="str">'error'</span>, { minScore: <span class="num">0.9</span> }],
+        <span class="str">'categories:accessibility'</span>: [<span class="str">'error'</span>, { minScore: <span class="num">0.95</span> }],
+
+        <span class="cm">// Resource budgets</span>
+        <span class="str">'resource-summary:script:size'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">300000</span> }],
+        <span class="str">'resource-summary:total:size'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">500000</span> }],
+
+        <span class="cm">// Specific audit checks</span>
+        <span class="str">'uses-responsive-images'</span>: <span class="str">'error'</span>,
+        <span class="str">'render-blocking-resources'</span>: <span class="str">'warn'</span>,
+        <span class="str">'unused-javascript'</span>: <span class="str">'warn'</span>,
+      },
+    },
+    upload: {
+      target: <span class="str">'lhci'</span>,
+      serverBaseUrl: <span class="str">'https://lhci.mycompany.com'</span>,
+      <span class="cm">// Or use temporary public storage:</span>
+      <span class="cm">// target: 'temporary-public-storage',</span>
+    },
+  },
+};</pre>
+  </div>
+
+  <div class="card">
+    <h3>Bundle Size Budget — webpack</h3>
+    <pre><span class="cm">// webpack.config.js — Built-in performance hints</span>
+module.exports = {
+  performance: {
+    maxAssetSize: <span class="num">250000</span>,      <span class="cm">// 250KB per asset</span>
+    maxEntrypointSize: <span class="num">300000</span>, <span class="cm">// 300KB per entrypoint</span>
+    hints: <span class="str">'error'</span>,             <span class="cm">// 'warning' | 'error' | false</span>
+  },
+};
+
+<span class="cm">// bundlesize (npm package) — more granular</span>
+<span class="cm">// package.json</span>
+{
+  <span class="str">"bundlesize"</span>: [
+    { <span class="str">"path"</span>: <span class="str">"dist/main.*.js"</span>, <span class="str">"maxSize"</span>: <span class="str">"150 kB"</span> },
+    { <span class="str">"path"</span>: <span class="str">"dist/vendor.*.js"</span>, <span class="str">"maxSize"</span>: <span class="str">"100 kB"</span> },
+    { <span class="str">"path"</span>: <span class="str">"dist/*.css"</span>, <span class="str">"maxSize"</span>: <span class="str">"30 kB"</span> }
+  ]
+}
+
+<span class="cm">// size-limit (more accurate — accounts for gzip + parse time)</span>
+<span class="cm">// .size-limit.json</span>
+[
+  { <span class="str">"path"</span>: <span class="str">"dist/main.js"</span>, <span class="str">"limit"</span>: <span class="str">"50 kB"</span>, <span class="str">"gzip"</span>: <span class="kw">true</span> },
+  { <span class="str">"path"</span>: <span class="str">"dist/main.js"</span>, <span class="str">"limit"</span>: <span class="str">"100 ms"</span>, <span class="str">"running"</span>: <span class="kw">true</span> }
+]</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: How would you implement performance budgets in a CI/CD pipeline?</div>
+      <div class="a">I'd use a two-layer approach. Layer 1: Bundle size budgets using size-limit or bundlesize in the build step — these are fast (no browser needed) and catch JavaScript/CSS growth immediately. Each PR shows a size diff. Layer 2: Lighthouse CI running against a staging deployment — this catches metric regressions (LCP, CLS, TBT) that bundle size alone can't detect (e.g., render-blocking CSS order change). Configuration: 5 Lighthouse runs per URL (median reduces variance), assertions for LCP < 2.5s, CLS < 0.1, TBT < 300ms as hard errors that block merge. Results upload to LHCI Server for trend analysis. GitHub status check shows pass/fail with a link to the detailed report. For a mature team: add custom Lighthouse audits — for example, check that hero images have fetchpriority="high", or that no third-party script exceeds 50KB.</div>
+      <div class="followup">Follow-up: How do you handle Lighthouse score variance in CI?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: Lighthouse gives your page a 65 performance score. Walk through your optimization process.</div>
+      <div class="a">Step 1: Look at the "Metrics" section — identify which metrics are red. Usually LCP or TBT. Step 2: Check "Opportunities" — Lighthouse prioritizes fixes by estimated savings. Common findings: unused JavaScript (code splitting needed), unoptimized images (modern formats, responsive), render-blocking resources (defer/async). Step 3: Check "Diagnostics" — DOM size, main thread work breakdown, critical request chains. Step 4: Use the Treemap view to visualize bundle composition — often one large dependency (moment.js, lodash) dominates. Step 5: Implement fixes in priority order: largest-impact-first. Typically: add image optimization (5-15 points), implement code splitting (5-10 points), inline critical CSS (3-5 points), defer third-party scripts (3-8 points). Step 6: Re-run Lighthouse after each change to verify improvement. Target: 90+ score, which typically means CWV are all "good."</div>
+      <div class="followup">Follow-up: Why might a page score 95 on Lighthouse but still have poor CrUX data?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Complete Lighthouse CI Configuration</h3>
+    <pre><span class="cm">// Advanced lighthouserc.js with custom budgets per URL</span>
+module.exports = {
+  ci: {
+    collect: {
+      url: [
+        <span class="str">'http://localhost:3000/'</span>,
+        <span class="str">'http://localhost:3000/search?q=shoes'</span>,
+        <span class="str">'http://localhost:3000/product/123'</span>,
+      ],
+      numberOfRuns: <span class="num">5</span>,
+      settings: {
+        <span class="cm">// Simulate real mobile conditions</span>
+        formFactor: <span class="str">'mobile'</span>,
+        throttling: {
+          rttMs: <span class="num">150</span>,           <span class="cm">// Round-trip time</span>
+          throughputKbps: <span class="num">1638</span>,   <span class="cm">// ~1.6 Mbps (slow 4G)</span>
+          cpuSlowdownMultiplier: <span class="num">4</span>, <span class="cm">// 4x CPU throttle</span>
+        },
+        screenEmulation: {
+          mobile: <span class="kw">true</span>,
+          width: <span class="num">412</span>,
+          height: <span class="num">823</span>,
+          deviceScaleFactor: <span class="num">1.75</span>,
+        },
+      },
+    },
+    assert: {
+      assertMatrix: [
+        {
+          matchingUrlPattern: <span class="str">'.*/$'</span>,  <span class="cm">// Homepage — strictest</span>
+          assertions: {
+            <span class="str">'largest-contentful-paint'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">2000</span> }],
+            <span class="str">'cumulative-layout-shift'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">0.05</span> }],
+            <span class="str">'categories:performance'</span>: [<span class="str">'error'</span>, { minScore: <span class="num">0.92</span> }],
+          },
+        },
+        {
+          matchingUrlPattern: <span class="str">'.*/product/.*'</span>,  <span class="cm">// Product pages — images heavy</span>
+          assertions: {
+            <span class="str">'largest-contentful-paint'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">2500</span> }],
+            <span class="str">'uses-responsive-images'</span>: <span class="str">'error'</span>,
+            <span class="str">'categories:performance'</span>: [<span class="str">'error'</span>, { minScore: <span class="num">0.85</span> }],
+          },
+        },
+      ],
+    },
+  },
+};</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Performance Budget Cheat Sheet</h3>
+    <table>
+      <tr><th>Budget Type</th><th>Tool</th><th>Recommended Limit</th></tr>
+      <tr><td>Total JS (gzip)</td><td>size-limit, bundlesize</td><td>&lt; 170KB</td></tr>
+      <tr><td>Total CSS</td><td>size-limit</td><td>&lt; 30KB</td></tr>
+      <tr><td>LCP</td><td>Lighthouse CI</td><td>&lt; 2.5s</td></tr>
+      <tr><td>TBT</td><td>Lighthouse CI</td><td>&lt; 300ms</td></tr>
+      <tr><td>CLS</td><td>Lighthouse CI</td><td>&lt; 0.1</td></tr>
+      <tr><td>Third-party JS</td><td>Custom audit</td><td>&lt; 50KB per vendor</td></tr>
+      <tr><td>Image weight</td><td>Lighthouse CI</td><td>&lt; 500KB total</td></tr>
+      <tr><td>Requests</td><td>Lighthouse CI</td><td>&lt; 50 per page</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Production Checklist</h3>
+    <pre>✅ Lighthouse CI runs on every PR with 5 runs per URL
+✅ Hard gates: LCP < 2.5s, CLS < 0.1, TBT < 300ms
+✅ Bundle size limits per chunk (size-limit in CI)
+✅ LHCI Server stores historical data for trend analysis
+✅ GitHub status check blocks merge on budget violation
+✅ Per-page budgets (homepage stricter than deep pages)
+✅ Mobile throttling enabled (4x CPU, slow 4G)
+✅ Custom audits for project-specific rules
+✅ Weekly review of LHCI trends dashboard
+✅ Budget owners assigned per feature team</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

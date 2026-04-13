@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Component-Based Splitting</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}
+</style>
+</head>
+<body>
+<h1>Component-Based Code Splitting</h1>
+<p class="sub">Practical 7.2 · Split heavy components that aren't needed on initial render</p>
+
+<div class="card">
+  <h3>Pattern 1: Split on User Action (Modal)</h3>
+  <pre><span class="cm">// Heavy modal with rich text editor (200KB)</span>
+<span class="cm">// Only 5% of users actually open it</span>
+
+<span class="kw">const</span> RichEditor = <span class="fn">lazy</span>(() =&gt; <span class="kw">import</span>(<span class="str">'./RichEditor'</span>));
+
+<span class="kw">function</span> <span class="fn">CommentSection</span>() {
+  <span class="kw">const</span> [showEditor, setShowEditor] = <span class="fn">useState</span>(<span class="kw">false</span>);
+
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      &lt;button onClick={() =&gt; setShowEditor(<span class="kw">true</span>)}&gt;
+        Write Comment
+      &lt;/button&gt;
+
+      {showEditor && (
+        &lt;Suspense fallback={&lt;EditorSkeleton /&gt;}&gt;
+          &lt;RichEditor /&gt;  <span class="cm">{/* Loaded only when button clicked */}</span>
+        &lt;/Suspense&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</pre>
+</div>
+
+<div class="card">
+  <h3>Pattern 2: Split Below the Fold</h3>
+  <pre><span class="cm">// Components not visible on initial viewport</span>
+<span class="kw">const</span> Reviews = <span class="fn">lazy</span>(() =&gt; <span class="kw">import</span>(<span class="str">'./Reviews'</span>));
+<span class="kw">const</span> RelatedProducts = <span class="fn">lazy</span>(() =&gt; <span class="kw">import</span>(<span class="str">'./RelatedProducts'</span>));
+<span class="kw">const</span> Footer = <span class="fn">lazy</span>(() =&gt; <span class="kw">import</span>(<span class="str">'./Footer'</span>));
+
+<span class="kw">function</span> <span class="fn">ProductPage</span>() {
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      <span class="cm">{/* Above fold — loaded immediately */}</span>
+      &lt;ProductHero /&gt;
+      &lt;PriceCard /&gt;
+      &lt;AddToCartButton /&gt;
+
+      <span class="cm">{/* Below fold — lazy loaded */}</span>
+      &lt;Suspense fallback={&lt;SectionSkeleton /&gt;}&gt;
+        &lt;Reviews /&gt;
+        &lt;RelatedProducts /&gt;
+        &lt;Footer /&gt;
+      &lt;/Suspense&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+</div>
+
+<div class="card">
+  <h3>Pattern 3: Split by Feature Flag / Role</h3>
+  <pre><span class="cm">// Admin tools (150KB) only loaded for admin users</span>
+<span class="kw">const</span> AdminTools = <span class="fn">lazy</span>(() =&gt; <span class="kw">import</span>(<span class="str">'./AdminTools'</span>));
+
+<span class="kw">function</span> <span class="fn">Dashboard</span>({ user }) {
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      &lt;DashboardContent /&gt;
+      {user.role === <span class="str">'admin'</span> && (
+        &lt;Suspense fallback={&lt;div&gt;Loading admin tools...&lt;/div&gt;}&gt;
+          &lt;AdminTools /&gt;
+        &lt;/Suspense&gt;
+      )}
+    &lt;/div&gt;
+  );
+}
+
+<span class="cm">// Pattern 4: Intersection Observer trigger</span>
+<span class="kw">function</span> <span class="fn">LazySection</span>({ importFn, fallback }) {
+  <span class="kw">const</span> [Component, setComponent] = <span class="fn">useState</span>(<span class="kw">null</span>);
+  <span class="kw">const</span> ref = <span class="fn">useRef</span>(<span class="kw">null</span>);
+
+  <span class="fn">useEffect</span>(() =&gt; {
+    <span class="kw">const</span> observer = <span class="kw">new</span> IntersectionObserver(([entry]) =&gt; {
+      <span class="kw">if</span> (entry.isIntersecting) {
+        importFn().then(mod =&gt; setComponent(() =&gt; mod.default));
+        observer.disconnect();
+      }
+    }, { rootMargin: <span class="str">'200px'</span> }); <span class="cm">// Load 200px before visible</span>
+    observer.observe(ref.current);
+    <span class="kw">return</span> () =&gt; observer.disconnect();
+  }, []);
+
+  <span class="kw">return</span> &lt;div ref={ref}&gt;{Component ? &lt;Component /&gt; : fallback}&lt;/div&gt;;
+}</pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Infinite Scroll Virtual List</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}button{background:#f59e0b;color:#0f1117;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.82rem;margin:4px}#output{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;margin-top:10px;font-size:.78rem;max-height:180px;overflow-y:auto;font-family:monospace}.list-container{height:350px;overflow-y:auto;border:1px solid #2d3551;border-radius:8px;margin:8px 0}.row{padding:10px 14px;border-bottom:1px solid #1a1d2e;font-size:.82rem;display:flex;justify-content:space-between;align-items:center}.row .idx{color:#475569;font-size:.7rem;width:45px}.row .name{flex:1;color:#e2e8f0}.row .price{color:#10b981;font-weight:600}.loading{text-align:center;padding:16px;color:#f59e0b;font-size:.82rem}.stats{display:flex;gap:16px;margin:8px 0;font-size:.78rem;flex-wrap:wrap}.stat{background:#1a1d2e;padding:5px 10px;border-radius:6px}.stat span{color:#f59e0b;font-weight:700}</style>
+</head>
+<body>
+<h1>Infinite Scroll Virtual List</h1>
+<p class="sub">Practical 7.3 · Combine virtualization with infinite data loading</p>
+
+<div class="card">
+  <h3>Live Demo: Infinite Scroll + Virtualization</h3>
+  <div class="stats">
+    <div class="stat">Loaded: <span id="loadedCount">0</span></div>
+    <div class="stat">DOM Nodes: <span id="domNodes">0</span></div>
+    <div class="stat">Fetches: <span id="fetchCount">0</span></div>
+    <div class="stat">Status: <span id="status">Ready</span></div>
+  </div>
+  <button onclick="startInfiniteScroll()">Start Infinite Scroll</button>
+  <button onclick="clearDemo()">Reset</button>
+  <div id="listContainer" class="list-container"></div>
+  <div id="output"></div>
+</div>
+
+<div class="card">
+  <h3>react-window + react-window-infinite-loader</h3>
+  <pre><span class="kw">import</span> { FixedSizeList } <span class="kw">from</span> <span class="str">'react-window'</span>;
+<span class="kw">import</span> InfiniteLoader <span class="kw">from</span> <span class="str">'react-window-infinite-loader'</span>;
+
+<span class="kw">function</span> <span class="fn">InfiniteList</span>() {
+  <span class="kw">const</span> [items, setItems] = useState([]);
+  <span class="kw">const</span> [hasMore, setHasMore] = useState(<span class="kw">true</span>);
+
+  <span class="cm">// Is this item loaded yet?</span>
+  <span class="kw">const</span> <span class="fn">isItemLoaded</span> = (index) =&gt; index &lt; items.length;
+
+  <span class="cm">// Load more items (called when scrolling near end)</span>
+  <span class="kw">const</span> <span class="fn">loadMoreItems</span> = <span class="kw">async</span> (startIndex, stopIndex) =&gt; {
+    <span class="kw">const</span> response = <span class="kw">await</span> fetch(
+      <span class="str">`/api/items?offset=${startIndex}&limit=${stopIndex - startIndex + 1}`</span>
+    );
+    <span class="kw">const</span> newItems = <span class="kw">await</span> response.json();
+    setItems(prev =&gt; [...prev, ...newItems]);
+    <span class="kw">if</span> (newItems.length === <span class="num">0</span>) setHasMore(<span class="kw">false</span>);
+  };
+
+  <span class="kw">const</span> itemCount = hasMore ? items.length + <span class="num">1</span> : items.length;
+
+  <span class="kw">return</span> (
+    &lt;<span class="fn">InfiniteLoader</span>
+      isItemLoaded={isItemLoaded}
+      loadMoreItems={loadMoreItems}
+      itemCount={itemCount}
+      threshold={<span class="num">15</span>} <span class="cm">// start loading 15 items before end</span>
+    &gt;
+      {({ onItemsRendered, ref }) =&gt; (
+        &lt;<span class="fn">FixedSizeList</span>
+          ref={ref}
+          onItemsRendered={onItemsRendered}
+          height={<span class="num">600</span>}
+          itemCount={itemCount}
+          itemSize={<span class="num">50</span>}
+          width={<span class="str">"100%"</span>}
+        &gt;
+          {({ index, style }) =&gt; (
+            &lt;div style={style}&gt;
+              {isItemLoaded(index)
+                ? &lt;ProductRow data={items[index]} /&gt;
+                : &lt;LoadingRow /&gt;}
+            &lt;/div&gt;
+          )}
+        &lt;/FixedSizeList&gt;
+      )}
+    &lt;/InfiniteLoader&gt;
+  );
+}</pre>
+</div>
+
+<div class="card">
+  <h3>@tanstack/react-virtual + Intersection Observer</h3>
+  <pre><span class="kw">import</span> { useVirtualizer } <span class="kw">from</span> <span class="str">'@tanstack/react-virtual'</span>;
+<span class="kw">import</span> { useInfiniteQuery } <span class="kw">from</span> <span class="str">'@tanstack/react-query'</span>;
+
+<span class="kw">function</span> <span class="fn">InfiniteVirtualList</span>() {
+  <span class="kw">const</span> { data, fetchNextPage, hasNextPage, isFetchingNextPage }
+    = <span class="fn">useInfiniteQuery</span>({
+      queryKey: [<span class="str">'products'</span>],
+      queryFn: ({ pageParam }) =&gt; fetchProducts(pageParam),
+      getNextPageParam: (last) =&gt; last.nextCursor,
+    });
+
+  <span class="kw">const</span> allItems = data?.pages.flatMap(p =&gt; p.items) ?? [];
+  <span class="kw">const</span> parentRef = useRef(<span class="kw">null</span>);
+
+  <span class="kw">const</span> virtualizer = <span class="fn">useVirtualizer</span>({
+    count: hasNextPage ? allItems.length + <span class="num">1</span> : allItems.length,
+    getScrollElement: () =&gt; parentRef.current,
+    estimateSize: () =&gt; <span class="num">50</span>,
+    overscan: <span class="num">5</span>,
+  });
+
+  <span class="cm">// Trigger fetch when last virtual item becomes visible</span>
+  useEffect(() =&gt; {
+    <span class="kw">const</span> lastItem = virtualizer.getVirtualItems().at(-<span class="num">1</span>);
+    <span class="kw">if</span> (lastItem?.index &gt;= allItems.length - <span class="num">1</span> && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [virtualizer.getVirtualItems(), hasNextPage, fetchNextPage]);
+
+  <span class="kw">return</span> (
+    &lt;div ref={parentRef} style={{ height: <span class="num">600</span>, overflow: <span class="str">'auto'</span> }}&gt;
+      &lt;div style={{ height: virtualizer.getTotalSize() }}&gt;
+        {virtualizer.getVirtualItems().map(row =&gt; (
+          &lt;div key={row.key} ref={virtualizer.measureElement}
+               style={{ transform: <span class="str">`translateY(${row.start}px)`</span> }}&gt;
+            {row.index &lt; allItems.length
+              ? &lt;ProductRow data={allItems[row.index]} /&gt;
+              : &lt;LoadingSkeleton /&gt;}
+          &lt;/div&gt;
+        ))}
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</pre>
+</div>
+
+<script>
+const container = document.getElementById('listContainer');
+const output = document.getElementById('output');
+const log = (msg) => { output.innerHTML += msg + '\n'; output.scrollTop = output.scrollHeight; };
+
+let allItems = [];
+let fetchCount = 0;
+const PAGE_SIZE = 50;
+const ROW_H = 42;
+const THRESHOLD = 200; // px from bottom to trigger load
+
+function generatePage(offset, count) {
+  return Array.from({length: count}, (_, i) => ({
+    id: offset + i,
+    name: `Product ${offset + i + 1}`,
+    price: (5 + Math.random() * 95).toFixed(2),
+  }));
+}
+
+async function fakeFetch(offset) {
+  // Simulate network delay
+  await new Promise(r => setTimeout(r, 300 + Math.random() * 400));
+  fetchCount++;
+  document.getElementById('fetchCount').textContent = fetchCount;
+  return generatePage(offset, PAGE_SIZE);
+}
+
+let loading = false;
+
+async function loadMore() {
+  if (loading) return;
+  loading = true;
+  document.getElementById('status').textContent = 'Loading...';
+  document.getElementById('status').style.color = '#f59e0b';
+  
+  const newItems = await fakeFetch(allItems.length);
+  allItems = allItems.concat(newItems);
+  
+  document.getElementById('loadedCount').textContent = allItems.length;
+  document.getElementById('status').textContent = 'Ready';
+  document.getElementById('status').style.color = '#10b981';
+  loading = false;
+  
+  renderItems();
+  log(`Fetched page ${fetchCount}: items ${allItems.length - PAGE_SIZE + 1}-${allItems.length}`);
+}
+
+function renderItems() {
+  container.innerHTML = '';
+  // Only render visible items (virtualized)
+  const scrollTop = container.scrollTop || 0;
+  const viewH = container.clientHeight || 350;
+  const startIdx = Math.max(0, Math.floor(scrollTop / ROW_H) - 3);
+  const endIdx = Math.min(allItems.length - 1, Math.ceil((scrollTop + viewH) / ROW_H) + 3);
+  
+  const wrapper = document.createElement('div');
+  wrapper.style.height = (allItems.length * ROW_H) + 'px';
+  wrapper.style.position = 'relative';
+  
+  for (let i = startIdx; i <= endIdx; i++) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.style.position = 'absolute';
+    row.style.top = (i * ROW_H) + 'px';
+    row.style.width = '100%';
+    row.style.height = ROW_H + 'px';
+    row.innerHTML = `<span class="idx">#${allItems[i].id+1}</span><span class="name">${allItems[i].name}</span><span class="price">$${allItems[i].price}</span>`;
+    wrapper.appendChild(row);
+  }
+  container.appendChild(wrapper);
+  document.getElementById('domNodes').textContent = endIdx - startIdx + 1;
+}
+
+function startInfiniteScroll() {
+  allItems = [];
+  fetchCount = 0;
+  document.getElementById('fetchCount').textContent = 0;
+  loadMore();
+  
+  container.onscroll = () => {
+    requestAnimationFrame(() => {
+      renderItems();
+      const scrollBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      if (scrollBottom < THRESHOLD && !loading) {
+        loadMore();
+      }
+    });
+  };
+}
+
+function clearDemo() {
+  allItems = [];
+  fetchCount = 0;
+  container.innerHTML = '';
+  container.onscroll = null;
+  output.innerHTML = '';
+  document.getElementById('loadedCount').textContent = 0;
+  document.getElementById('domNodes').textContent = 0;
+  document.getElementById('fetchCount').textContent = 0;
+  document.getElementById('status').textContent = 'Ready';
+}
+</script>
+</body>
+</html>

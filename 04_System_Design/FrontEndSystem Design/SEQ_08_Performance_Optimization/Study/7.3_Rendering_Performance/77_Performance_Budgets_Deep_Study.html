@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Performance Budgets Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2e1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Performance Budgets Deep Study</h1>
+<p class="sub">Module 7.3 · Rendering Performance · Budget-Driven Performance Culture</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Implementation</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. What Is a Performance Budget?</h3>
+    <pre><span class="cm">// A performance budget is a quantitative LIMIT on a metric</span>
+<span class="cm">// that a page or app must not exceed.</span>
+<span class="cm">//</span>
+<span class="cm">// It's the performance equivalent of a test suite:</span>
+<span class="cm">// if the budget is broken → the build FAILS / PR is blocked</span>
+<span class="cm">//</span>
+<span class="cm">// Why budgets matter:</span>
+<span class="cm">// ✓ Prevent slow death by 1000 small regressions</span>
+<span class="cm">//   (each +5KB "doesn't matter" until you're 2MB)</span>
+<span class="cm">// ✓ Make performance a first-class team concern</span>
+<span class="cm">// ✓ Shift-left: catch regressions at build time, not in production</span>
+<span class="cm">// ✓ Align engineering with business (Amazon: +100ms → –1% revenue)</span>
+<span class="cm">//</span>
+<span class="cm">// Three budget categories:</span>
+<span class="cm">//</span>
+<span class="cm">// 1. QUANTITY budgets</span>
+<span class="cm">//    - Max JS bundle: 170KB gzipped (Google recommendation)</span>
+<span class="cm">//    - Max total page weight: 500KB transferred</span>
+<span class="cm">//    - Max images per page: 1MB</span>
+<span class="cm">//    - Max third-party scripts: 50KB</span>
+<span class="cm">//</span>
+<span class="cm">// 2. TIMING budgets</span>
+<span class="cm">//    - LCP < 2.5s (Core Web Vital)</span>
+<span class="cm">//    - INP < 200ms (Core Web Vital)</span>
+<span class="cm">//    - CLS < 0.1 (Core Web Vital)</span>
+<span class="cm">//    - TTI < 5s on 3G mobile</span>
+<span class="cm">//</span>
+<span class="cm">// 3. RULE budgets</span>
+<span class="cm">//    - Lighthouse Performance ≥ 90</span>
+<span class="cm">//    - No render-blocking resources > 1</span>
+<span class="cm">//    - No images without width/height</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Setting Budgets: The Science</h3>
+    <pre><span class="cm">// Step 1: Baseline measurement</span>
+<span class="cm">// Run Lighthouse on 3G throttled, mid-tier device</span>
+<span class="cm">// Use WebPageTest for real device data</span>
+<span class="cm">//</span>
+<span class="cm">// Step 2: Competitive analysis</span>
+<span class="cm">// Measure your top 5 competitors</span>
+<span class="cm">// Budget should be 20% FASTER than the fastest competitor</span>
+<span class="cm">// (Tim Kadlec's recommendation)</span>
+<span class="cm">//</span>
+<span class="cm">// Step 3: Target device/network</span>
+<span class="cm">// Google's guidance: budget for a $200 Android phone on 3G</span>
+<span class="cm">// CPU: ~4x slower than MacBook Pro</span>
+<span class="cm">// Network: 1.6Mbps, 150ms RTT (Slow 3G)</span>
+<span class="cm">//</span>
+<span class="cm">// The ~170KB JS budget comes from:</span>
+<span class="cm">// - 5s TTI budget on 3G mobile</span>
+<span class="cm">// - ~1.5s network transfer (170KB gzipped ≈ 500KB parsed)</span>
+<span class="cm">// - ~3.5s parse + compile + execute on slow CPU</span>
+<span class="cm">// - Total: ~5s to interactive</span>
+<span class="cm">//</span>
+<span class="cm">// Budget allocation for a typical SPA:</span>
+<span class="cm">//   Framework: 45KB  (React ~42KB gzipped)</span>
+<span class="cm">//   App code:  50KB  (your features)</span>
+<span class="cm">//   Libraries: 30KB  (routing, state, utils)</span>
+<span class="cm">//   Polyfills: 15KB  (modern: near zero)</span>
+<span class="cm">//   3rd party: 30KB  (analytics, etc.)</span>
+<span class="cm">//   TOTAL:    170KB  gzipped</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Webpack Performance Budget</h3>
+    <pre><span class="cm">// webpack.config.js</span>
+module.exports = {
+  performance: {
+    maxAssetSize: <span class="num">250000</span>,          <span class="cm">// 250KB per asset</span>
+    maxEntrypointSize: <span class="num">300000</span>,     <span class="cm">// 300KB for entry chunk</span>
+    hints: <span class="str">'error'</span>,               <span class="cm">// 'warning' | 'error' | false</span>
+    assetFilter: (file) =&gt;
+      file.endsWith(<span class="str">'.js'</span>) || file.endsWith(<span class="str">'.css'</span>),
+  },
+};</pre>
+  </div>
+
+  <div class="card">
+    <h3>Lighthouse CI Budget</h3>
+    <pre><span class="cm">// lighthouserc.js</span>
+module.exports = {
+  ci: {
+    assert: {
+      assertions: {
+        <span class="str">'categories:performance'</span>: [<span class="str">'error'</span>, { minScore: <span class="num">0.9</span> }],
+        <span class="str">'first-contentful-paint'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">2000</span> }],
+        <span class="str">'largest-contentful-paint'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">2500</span> }],
+        <span class="str">'cumulative-layout-shift'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">0.1</span> }],
+        <span class="str">'interactive'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">5000</span> }],
+        <span class="str">'total-byte-weight'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">500000</span> }],
+        <span class="str">'resource-summary:script:size'</span>: [<span class="str">'error'</span>, { maxNumericValue: <span class="num">170000</span> }],
+      },
+    },
+    upload: { target: <span class="str">'temporary-public-storage'</span> },
+  },
+};</pre>
+  </div>
+
+  <div class="card">
+    <h3>bundlesize (CI integration)</h3>
+    <pre><span class="cm">// package.json</span>
+{
+  <span class="str">"bundlesize"</span>: [
+    { <span class="str">"path"</span>: <span class="str">"dist/main.*.js"</span>, <span class="str">"maxSize"</span>: <span class="str">"170 kB"</span> },
+    { <span class="str">"path"</span>: <span class="str">"dist/vendor.*.js"</span>, <span class="str">"maxSize"</span>: <span class="str">"120 kB"</span> },
+    { <span class="str">"path"</span>: <span class="str">"dist/styles.*.css"</span>, <span class="str">"maxSize"</span>: <span class="str">"30 kB"</span> }
+  ]
+}
+
+<span class="cm">// GitHub Actions CI step:</span>
+- name: Check bundle size
+  run: npx bundlesize
+  env:
+    BUNDLESIZE_GITHUB_TOKEN: ${{ secrets.BUNDLESIZE_TOKEN }}</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: How would you implement a performance budget system for a large-scale frontend application?</div>
+      <div class="a">I'd implement a three-layer budget system: (1) Build-time: webpack/Vite performance hints fail the build if any chunk exceeds the budget. bundlesize or size-limit in CI check individual bundles against limits and post PR comments showing delta. (2) Synthetic: Lighthouse CI runs against staging on every PR. Assert on LCP < 2.5s, INP < 200ms, CLS < 0.1, and performance score ≥ 90. This runs on consistent infrastructure (no real-user variance). (3) RUM-based: In production, track p75 and p95 of Core Web Vitals via web-vitals library + analytics. Set alerting thresholds — if p75 LCP crosses 2.5s, page the on-call. For governance: store historical budgets in a config file checked into the repo. Require tech lead approval to increase any budget. Provide an "escape hatch" — if a feature genuinely needs more JS, the team must offset it by removing something else (budget trade-off). For dashboard: display trends over time so the team sees drift before it becomes a crisis.</div>
+      <div class="followup">Follow-up: How do you handle third-party script budgets when marketing wants to add more analytics tags?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: The team keeps breaking performance budgets. How do you create a perf-aware culture?</div>
+      <div class="a">Three approaches: (1) Visibility: set up a performance dashboard on a TV in the office (or a Slack channel with weekly reports). Show Core Web Vitals trends, bundle size trends, and the budget line. Make it impossible to ignore. (2) Guardrails: integrate bundlesize into PR checks — the PR literally cannot merge if it breaks the budget. This removes "I'll fix it later." Add Lighthouse CI as a required check. (3) Ownership: assign a "perf champion" per team rotation who reviews the weekly report, investigates regressions, and presents findings. At Google, each team has a performance SLO owner. Also: celebrate wins! When someone reduces bundle size by 20KB, highlight it in standup. When LCP improves by 200ms, show the business impact (higher conversion). Culture change is about making performance visible, actionable, and rewarded.</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Complete CI Pipeline Example</h3>
+    <pre><span class="cm"># .github/workflows/perf-budget.yml</span>
+name: Performance Budget
+on: [pull_request]
+
+jobs:
+  bundle-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: npm ci && npm run build
+      - name: Check bundle size
+        run: npx size-limit
+      - uses: andresz1/size-limit-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+  
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: npm ci && npm run build
+      - name: Lighthouse CI
+        run: |
+          npm i -g @lhci/cli
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_TOKEN }}</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Quick Reference</h3>
+    <table>
+      <tr><th>Metric</th><th>Budget</th><th>Tool</th></tr>
+      <tr><td>LCP</td><td>&lt; 2.5s</td><td>Lighthouse CI</td></tr>
+      <tr><td>INP</td><td>&lt; 200ms</td><td>RUM (web-vitals)</td></tr>
+      <tr><td>CLS</td><td>&lt; 0.1</td><td>Lighthouse CI</td></tr>
+      <tr><td>Total JS (gzipped)</td><td>&lt; 170KB</td><td>bundlesize / size-limit</td></tr>
+      <tr><td>Total page weight</td><td>&lt; 500KB</td><td>webpack hints</td></tr>
+      <tr><td>3rd party scripts</td><td>&lt; 50KB</td><td>bundlesize</td></tr>
+      <tr><td>Lighthouse score</td><td>≥ 90</td><td>Lighthouse CI</td></tr>
+    </table>
+    <pre>Implementation order:
+1. Measure baseline → set budgets 10% below current
+2. Add webpack performance.hints: 'error'
+3. Add bundlesize/size-limit to CI as required check
+4. Add Lighthouse CI on staging
+5. Add RUM monitoring + alerting in production
+6. Review budgets quarterly, tighten as you improve</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

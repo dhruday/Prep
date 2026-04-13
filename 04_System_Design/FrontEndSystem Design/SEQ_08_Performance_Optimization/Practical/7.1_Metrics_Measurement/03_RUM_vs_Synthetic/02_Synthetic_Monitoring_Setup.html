@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Synthetic vs RUM Monitoring</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}table{width:100%;border-collapse:collapse;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.cm{color:#475569}.kw{color:#60a5fa}.str{color:#10b981}
+</style>
+</head>
+<body>
+<h1>Synthetic vs RUM Monitoring</h1>
+<p class="sub">Practical 7.1 · Understanding when to use each monitoring approach</p>
+
+<div class="card">
+  <h3>Comparison Matrix</h3>
+  <table>
+    <tr><th>Aspect</th><th>Synthetic</th><th>RUM (Real User Monitoring)</th></tr>
+    <tr><td>Data source</td><td>Lab environment, controlled</td><td>Real users, real devices</td></tr>
+    <tr><td>When to measure</td><td>Pre-deploy (CI/CD), scheduled</td><td>Post-deploy, continuous</td></tr>
+    <tr><td>Consistency</td><td>Reproducible (same device/network)</td><td>Varies by user conditions</td></tr>
+    <tr><td>Coverage</td><td>Only tested pages/flows</td><td>All pages users actually visit</td></tr>
+    <tr><td>User diversity</td><td>Simulated (throttled profiles)</td><td>Real devices, networks, locations</td></tr>
+    <tr><td>Regression detection</td><td>Immediate (in PR check)</td><td>After deployment (needs traffic)</td></tr>
+    <tr><td>Cost</td><td>Infrastructure cost (CI runners)</td><td>Beacon storage + analytics</td></tr>
+    <tr><td>Metrics</td><td>All Lighthouse metrics + custom</td><td>CWV + Navigation + Resource Timing</td></tr>
+    <tr><td>INP measurement</td><td>❌ Cannot simulate real interactions</td><td>✅ Only way to measure real INP</td></tr>
+    <tr><td>Tools</td><td>Lighthouse CI, WebPageTest, SpeedCurve</td><td>web-vitals, CrUX, Datadog RUM, Sentry</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3>Decision Framework</h3>
+  <pre><span class="cm">Use Synthetic when:</span>
+<span class="cm">✓ Catching regressions before deploy (CI gate)</span>
+<span class="cm">✓ A/B testing build configurations</span>
+<span class="cm">✓ Benchmarking against competitors</span>
+<span class="cm">✓ Testing specific user journeys (checkout flow)</span>
+<span class="cm">✓ You need reproducible, blame-able numbers</span>
+
+<span class="cm">Use RUM when:</span>
+<span class="cm">✓ Understanding real user experience (p75, p95)</span>
+<span class="cm">✓ Measuring INP (requires real interactions)</span>
+<span class="cm">✓ Segmenting by device/network/geography</span>
+<span class="cm">✓ Correlating perf with business KPIs (conversion)</span>
+<span class="cm">✓ Monitoring long-tail pages you can't test synthetically</span>
+
+<span class="cm">Best practice: Use BOTH</span>
+<span class="cm">Synthetic = front door guard (prevents regressions)</span>
+<span class="cm">RUM = security camera (monitors real experience)</span></pre>
+</div>
+
+<div class="card">
+  <h3>Typical Setup</h3>
+  <pre><span class="cm">// PR pipeline (Synthetic):</span>
+<span class="cm">// 1. Build app</span>
+<span class="cm">// 2. Deploy to preview URL</span>
+<span class="cm">// 3. Run Lighthouse CI against preview</span>
+<span class="cm">// 4. Assert budgets → fail PR if exceeded</span>
+<span class="cm">// 5. Post results as PR comment</span>
+
+<span class="cm">// Production (RUM):</span>
+<span class="cm">// 1. Include web-vitals in app bundle</span>
+<span class="kw">import</span> { onLCP, onINP, onCLS } <span class="kw">from</span> <span class="str">'web-vitals'</span>;
+
+onLCP(sendToAnalytics);
+onINP(sendToAnalytics);
+onCLS(sendToAnalytics);
+
+<span class="kw">function</span> <span class="fn">sendToAnalytics</span>(metric) {
+  <span class="cm">// Send to your backend/analytics</span>
+  navigator.sendBeacon(<span class="str">'/api/vitals'</span>, JSON.stringify({
+    name: metric.name,     <span class="cm">// 'LCP', 'INP', 'CLS'</span>
+    value: metric.value,   <span class="cm">// ms or score</span>
+    rating: metric.rating, <span class="cm">// 'good', 'needs-improvement', 'poor'</span>
+    url: location.pathname,
+    id: metric.id,
+  }));
+}
+
+<span class="cm">// Dashboard: aggregate p75 per page per day</span>
+<span class="cm">// Alert: if p75 LCP crosses 2.5s for any key page</span></pre>
+</div>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ES Module Tree Shaking</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}</style>
+</head>
+<body>
+<h1>ES Module Tree Shaking</h1>
+<p class="sub">Practical 7.2 · How bundlers eliminate dead code via static analysis</p>
+
+<div class="card">
+  <h3>Tree Shaking in Action</h3>
+  <pre><span class="cm">// utils.js — exports 5 functions</span>
+<span class="kw">export function</span> <span class="fn">add</span>(a, b) { <span class="kw">return</span> a + b; }
+<span class="kw">export function</span> <span class="fn">subtract</span>(a, b) { <span class="kw">return</span> a - b; }
+<span class="kw">export function</span> <span class="fn">multiply</span>(a, b) { <span class="kw">return</span> a * b; }
+<span class="kw">export function</span> <span class="fn">divide</span>(a, b) { <span class="kw">return</span> a / b; }
+<span class="kw">export function</span> <span class="fn">modulo</span>(a, b) { <span class="kw">return</span> a % b; }
+
+<span class="cm">// app.js — only imports 1</span>
+<span class="kw">import</span> { <span class="fn">add</span> } <span class="kw">from</span> <span class="str">'./utils'</span>;
+console.log(<span class="fn">add</span>(<span class="num">2</span>, <span class="num">3</span>));
+
+<span class="cm">// After tree shaking, bundle only contains:</span>
+<span class="cm">// function add(a, b) { return a + b; }</span>
+<span class="cm">// subtract, multiply, divide, modulo are removed!</span>
+
+<span class="cm">// ❌ This DEFEATS tree shaking:</span>
+<span class="kw">import</span> * <span class="kw">as</span> utils <span class="kw">from</span> <span class="str">'./utils'</span>;
+<span class="cm">// Bundler can't statically determine which exports are used</span>
+<span class="cm">// (actually modern bundlers CAN handle this, but older ones can't)</span>
+
+<span class="cm">// ❌ CommonJS is NOT tree-shakeable:</span>
+<span class="kw">const</span> utils = require(<span class="str">'./utils'</span>);
+<span class="cm">// require() is dynamic — can't statically analyze</span>
+<span class="cm">// Entire module is included</span></pre>
+</div>
+
+<div class="card">
+  <h3>Why ES Modules Enable Tree Shaking</h3>
+  <pre><span class="cm">// ES Modules are STATICALLY analyzable:</span>
+<span class="cm">//</span>
+<span class="cm">// 1. import/export must be at top level (not inside if/function)</span>
+<span class="cm">// 2. Module specifiers must be string literals (not variables)</span>
+<span class="cm">// 3. Exports are named and known at compile time</span>
+<span class="cm">//</span>
+<span class="cm">// This means the bundler can BUILD A GRAPH at compile time:</span>
+<span class="cm">//   app.js imports { add } from utils.js</span>
+<span class="cm">//   → add is USED → keep it</span>
+<span class="cm">//   → subtract is NOT imported anywhere → remove it</span>
+<span class="cm">//</span>
+<span class="cm">// CommonJS can NOT do this because:</span>
+<span class="cm">//   const module = require(someVariable); // dynamic!</span>
+<span class="cm">//   if (condition) { module.someMethod(); } // runtime-only knowledge</span>
+<span class="cm">//</span>
+<span class="cm">// Library best practice: publish ESM build</span>
+<span class="cm">// package.json:</span>
+{
+  <span class="str">"main"</span>: <span class="str">"dist/cjs/index.js"</span>,    <span class="cm">// CommonJS fallback</span>
+  <span class="str">"module"</span>: <span class="str">"dist/esm/index.js"</span>,  <span class="cm">// ESM for bundlers (tree-shaking)</span>
+  <span class="str">"exports"</span>: {
+    <span class="str">"."</span>: {
+      <span class="str">"import"</span>: <span class="str">"./dist/esm/index.js"</span>,
+      <span class="str">"require"</span>: <span class="str">"./dist/cjs/index.js"</span>
+    }
+  }
+}</pre>
+</div>
+
+<div class="card">
+  <h3>Real Impact: lodash Example</h3>
+  <pre><span class="cm">// ❌ Import entire lodash: 71KB gzipped</span>
+<span class="kw">import</span> _ <span class="kw">from</span> <span class="str">'lodash'</span>;
+_.get(obj, <span class="str">'a.b.c'</span>);
+
+<span class="cm">// ✅ Named import from lodash-es: tree-shakeable</span>
+<span class="kw">import</span> { get } <span class="kw">from</span> <span class="str">'lodash-es'</span>;
+get(obj, <span class="str">'a.b.c'</span>);
+<span class="cm">// Bundle size: ~2KB instead of 71KB</span>
+
+<span class="cm">// ✅ Direct path import (works with lodash too):</span>
+<span class="kw">import</span> get <span class="kw">from</span> <span class="str">'lodash/get'</span>;
+<span class="cm">// Only includes the get function and its dependencies</span></pre>
+</div>
+</body>
+</html>

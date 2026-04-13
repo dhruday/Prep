@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Memoization Techniques Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2e1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Memoization Techniques Deep Study</h1>
+<p class="sub">Module 7.2 · Code Optimization · useMemo, useCallback, React.memo &amp; Beyond</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">React Patterns</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Anti-Patterns</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. What Is Memoization?</h3>
+    <pre><span class="cm">// Memoization = caching the result of expensive computations</span>
+<span class="cm">// If the same inputs are provided, return the cached result</span>
+<span class="cm">// instead of recalculating.</span>
+<span class="cm">//</span>
+<span class="cm">// In React, there are THREE memoization tools:</span>
+<span class="cm">//</span>
+<span class="cm">// 1. React.memo(Component)</span>
+<span class="cm">//    → Memoizes the COMPONENT RENDER</span>
+<span class="cm">//    → Skips re-rendering if props haven't changed (shallow compare)</span>
+<span class="cm">//</span>
+<span class="cm">// 2. useMemo(computeFn, deps)</span>
+<span class="cm">//    → Memoizes a COMPUTED VALUE</span>
+<span class="cm">//    → Recalculates only when deps change</span>
+<span class="cm">//</span>
+<span class="cm">// 3. useCallback(fn, deps)</span>
+<span class="cm">//    → Memoizes a FUNCTION REFERENCE</span>
+<span class="cm">//    → Returns same function object unless deps change</span>
+<span class="cm">//    → Syntactic sugar: useCallback(fn, deps) === useMemo(() => fn, deps)</span>
+<span class="cm">//</span>
+<span class="cm">// WHY this matters:</span>
+<span class="cm">// React re-renders a component when its parent re-renders</span>
+<span class="cm">// This can cascade: 1 state change → 100+ component re-renders</span>
+<span class="cm">// Memoization breaks the cascade by skipping unchanged subtrees</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. React's Reconciliation &amp; Why Memo Helps</h3>
+    <pre><span class="cm">// React's rendering pipeline:</span>
+<span class="cm">// 1. Trigger: state/context change → component re-renders</span>
+<span class="cm">// 2. Render: component function executes → returns new JSX</span>
+<span class="cm">// 3. Reconcile: React diffs old and new virtual DOM (fiber tree)</span>
+<span class="cm">// 4. Commit: React applies minimal DOM changes</span>
+<span class="cm">//</span>
+<span class="cm">// IMPORTANT: Step 2 (render) is the expensive part for CPU</span>
+<span class="cm">// Not step 4 (DOM commit) — React is already efficient there</span>
+<span class="cm">//</span>
+<span class="cm">// Without memo:</span>
+<span class="cm">// Parent re-renders → ALL children re-render (even unchanged ones)</span>
+<span class="cm">// Each child runs its function body, creates JSX objects, diffs</span>
+<span class="cm">//</span>
+<span class="cm">// With React.memo:</span>
+<span class="cm">// Parent re-renders → React checks child props (shallow compare)</span>
+<span class="cm">// If props unchanged → SKIP rendering entirely (no function call)</span>
+<span class="cm">//</span>
+<span class="cm">// The catch: "unchanged" means shallow equality</span>
+<span class="cm">// Objects/arrays create NEW references every render:</span>
+<span class="cm">// { name: 'John' } !== { name: 'John' }  // Different reference!</span>
+<span class="cm">// [1, 2, 3] !== [1, 2, 3]                 // Different reference!</span>
+<span class="cm">// () => {} !== () => {}                    // Different reference!</span>
+<span class="cm">//</span>
+<span class="cm">// This is why useMemo/useCallback exist:</span>
+<span class="cm">// They preserve references across renders when deps don't change</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. React 19's Automatic Memoization (React Compiler)</h3>
+    <pre><span class="cm">// React Compiler (formerly React Forget) — automatic memoization</span>
+<span class="cm">// Available in React 19+ (experimental, Meta production since 2024)</span>
+<span class="cm">//</span>
+<span class="cm">// What it does:</span>
+<span class="cm">// Compiler analyzes your component code at BUILD TIME</span>
+<span class="cm">// Automatically inserts useMemo/useCallback where beneficial</span>
+<span class="cm">// No manual memoization needed!</span>
+<span class="cm">//</span>
+<span class="cm">// Before (manual):</span>
+<span class="kw">function</span> <span class="fn">Product</span>({ item }) {
+  <span class="kw">const</span> price = <span class="fn">useMemo</span>(() =&gt; <span class="fn">formatPrice</span>(item.price), [item.price]);
+  <span class="kw">const</span> handleClick = <span class="fn">useCallback</span>(() =&gt; <span class="fn">addToCart</span>(item.id), [item.id]);
+  <span class="kw">return</span> &lt;div onClick={handleClick}&gt;{price}&lt;/div&gt;;
+}
+
+<span class="cm">// After (compiler does it for you):</span>
+<span class="kw">function</span> <span class="fn">Product</span>({ item }) {
+  <span class="kw">const</span> price = <span class="fn">formatPrice</span>(item.price);
+  <span class="kw">const</span> handleClick = () =&gt; <span class="fn">addToCart</span>(item.id);
+  <span class="kw">return</span> &lt;div onClick={handleClick}&gt;{price}&lt;/div&gt;;
+}
+<span class="cm">// Compiler output: same as the "before" version but auto-generated</span>
+<span class="cm">//</span>
+<span class="cm">// Current status (2026): Stable in React 19</span>
+<span class="cm">// Instagram.com fully compiled — 12% improvement in INP</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Pattern 1: React.memo for Component Memoization</h3>
+    <pre><span class="cm">// ✅ GOOD: Expensive component that receives stable props</span>
+<span class="kw">const</span> ExpensiveList = <span class="fn">React.memo</span>(<span class="kw">function</span> <span class="fn">ExpensiveList</span>({ items, onSelect }) {
+  <span class="kw">return</span> (
+    &lt;ul&gt;
+      {items.map(item =&gt; (
+        &lt;li key={item.id} onClick={() =&gt; <span class="fn">onSelect</span>(item.id)}&gt;
+          {<span class="fn">expensiveRender</span>(item)}
+        &lt;/li&gt;
+      ))}
+    &lt;/ul&gt;
+  );
+});
+
+<span class="cm">// Custom comparison for complex props:</span>
+<span class="kw">const</span> Chart = <span class="fn">React.memo</span>(<span class="fn">ChartComponent</span>, (prevProps, nextProps) =&gt; {
+  <span class="cm">// Return true if props are "equal" (skip re-render)</span>
+  <span class="kw">return</span> prevProps.data.length === nextProps.data.length
+    &amp;&amp; prevProps.data.every((d, i) =&gt; d.id === nextProps.data[i].id);
+});
+
+<span class="cm">// ❌ BAD: Memoizing a simple component</span>
+<span class="kw">const</span> Label = <span class="fn">React.memo</span>(({ text }) =&gt; &lt;span&gt;{text}&lt;/span&gt;);
+<span class="cm">// Cost of memo check ≈ cost of re-rendering — no benefit</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>Pattern 2: useMemo for Expensive Computations</h3>
+    <pre><span class="cm">// ✅ GOOD: Filtering/sorting large datasets</span>
+<span class="kw">function</span> <span class="fn">ProductList</span>({ products, filter }) {
+  <span class="kw">const</span> filtered = <span class="fn">useMemo</span>(() =&gt; {
+    <span class="kw">return</span> products
+      .<span class="fn">filter</span>(p =&gt; p.category === filter)
+      .<span class="fn">sort</span>((a, b) =&gt; b.rating - a.rating);
+  }, [products, filter]);
+
+  <span class="kw">return</span> filtered.map(p =&gt; &lt;Product key={p.id} product={p} /&gt;);
+}
+
+<span class="cm">// ✅ GOOD: Creating stable object/array references for memo'd children</span>
+<span class="kw">function</span> <span class="fn">Dashboard</span>({ userId }) {
+  <span class="kw">const</span> config = <span class="fn">useMemo</span>(() =&gt; ({
+    userId,
+    theme: <span class="str">'dark'</span>,
+    features: [<span class="str">'analytics'</span>, <span class="str">'charts'</span>],
+  }), [userId]);
+
+  <span class="kw">return</span> &lt;MemoizedPanel config={config} /&gt;;
+}
+
+<span class="cm">// ❌ BAD: Trivial computation</span>
+<span class="kw">const</span> fullName = <span class="fn">useMemo</span>(() =&gt; <span class="str">`${first} ${last}`</span>, [first, last]);
+<span class="cm">// String concatenation is cheaper than useMemo's overhead</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>Pattern 3: useCallback for Stable Function References</h3>
+    <pre><span class="cm">// useCallback prevents creating new function on every render</span>
+<span class="cm">// ONLY useful when passed to a React.memo'd child</span>
+
+<span class="cm">// ✅ GOOD: Handler passed to memo'd list item</span>
+<span class="kw">function</span> <span class="fn">TodoList</span>({ todos }) {
+  <span class="kw">const</span> handleToggle = <span class="fn">useCallback</span>((id) =&gt; {
+    <span class="fn">setTodos</span>(prev =&gt; prev.map(t =&gt;
+      t.id === id ? { ...t, done: !t.done } : t
+    ));
+  }, []); <span class="cm">// No deps because we use updater function</span>
+
+  <span class="kw">return</span> todos.map(todo =&gt;
+    &lt;MemoizedTodoItem key={todo.id} todo={todo} onToggle={handleToggle} /&gt;
+  );
+}
+
+<span class="cm">// ✅ GOOD: Dependency of useEffect</span>
+<span class="kw">const</span> fetchData = <span class="fn">useCallback</span>(<span class="kw">async</span> () =&gt; {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`/api/user/${userId}`</span>);
+  setData(<span class="kw">await</span> res.json());
+}, [userId]);
+
+<span class="fn">useEffect</span>(() =&gt; { <span class="fn">fetchData</span>(); }, [fetchData]);
+
+<span class="cm">// ❌ BAD: useCallback without React.memo recipient</span>
+<span class="kw">const</span> handleClick = <span class="fn">useCallback</span>(() =&gt; setCount(c =&gt; c + <span class="num">1</span>), []);
+<span class="kw">return</span> &lt;button onClick={handleClick}&gt;+&lt;/button&gt;;
+<span class="cm">// &lt;button&gt; is a native element — it ALWAYS re-renders with parent</span>
+<span class="cm">// useCallback adds overhead with zero benefit here</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: When should you use React.memo vs useMemo vs useCallback?</div>
+      <div class="a">React.memo wraps a component to skip re-rendering when props are shallowly equal — use it for components that are expensive to render AND receive the same props frequently (e.g., list items, charts, data grids). useMemo caches a computed value — use it for expensive calculations (filtering 10K items, complex transformations) or to create stable object/array references passed to memo'd children. useCallback caches a function reference — it's essentially useMemo(() => fn, deps). Use it when passing callbacks to React.memo'd children, otherwise the new function reference defeats memo. Key rule: useCallback is only useful if the receiving component is wrapped in React.memo or uses the callback in a useEffect dependency array. Without that, you're adding memoization overhead with no benefit.</div>
+      <div class="followup">Follow-up: How does React Compiler change the memoization strategy?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: What are the costs of excessive memoization?</div>
+      <div class="a">Memoization has real costs that are often overlooked: (1) Memory — every useMemo/useCallback stores the cached value plus the dependency array in the fiber. For a component rendering 1000 list items each with 3 memoized values, that's 3000 cached objects in memory. (2) Comparison cost — on every render, React must shallow-compare all dependencies. If there are many deps or deps are deep objects, comparison can approach the cost of just recalculating. (3) Code complexity — developers wrap everything in useMemo "just in case," making code harder to read and maintain. (4) Stale closures — useCallback with missing dependencies returns a stale function that references old state, causing bugs. The rule: profile first, then memoize. Don't memoize computations that take less than ~1ms. Use React DevTools Profiler to identify actual bottlenecks before adding memo.</div>
+      <div class="followup">Follow-up: How would you profile to determine if memoization is actually helping?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q3: Explain how useMemo and useCallback work internally in React's fiber architecture.</div>
+      <div class="a">In React's fiber tree, each component instance has a "hooks" linked list attached to its fiber node. useMemo creates a hook node that stores [memoizedValue, deps]. On subsequent renders, React walks the hooks list in order. For useMemo, it compares current deps with stored deps using Object.is() for each element. If all deps are identical, it returns the cached value (skips executing the compute function). If any dep changed, it runs the compute function, stores the new value and new deps. useCallback is identical internally — it stores the function itself as the memoized value. The key implementation detail: hooks MUST be called in the same order every render because React uses the call order to map hooks to fiber nodes. That's why hooks can't be inside conditionals. Memory-wise, each hook adds ~40 bytes to the fiber, so thousands of hooks across many components have measurable memory impact.</div>
+      <div class="followup">Follow-up: What happens to memoized values when a component unmounts?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Memoization Anti-Patterns</h3>
+    <pre><span class="cm">// ❌ Anti-Pattern 1: Memoizing everything "just in case"</span>
+<span class="kw">const</span> name = <span class="fn">useMemo</span>(() =&gt; user.name, [user.name]); <span class="cm">// NO! Property access is free</span>
+<span class="kw">const</span> onClick = <span class="fn">useCallback</span>(() =&gt; setOpen(<span class="kw">true</span>), []); <span class="cm">// NO! button isn't memo'd</span>
+
+<span class="cm">// ❌ Anti-Pattern 2: Unstable deps defeating memoization</span>
+<span class="kw">function</span> <span class="fn">Parent</span>() {
+  <span class="kw">const</span> config = { theme: <span class="str">'dark'</span> }; <span class="cm">// New object every render!</span>
+  <span class="kw">return</span> &lt;MemoChild config={config} /&gt;; <span class="cm">// Memo is useless — new ref each time</span>
+}
+<span class="cm">// Fix: const config = useMemo(() => ({ theme: 'dark' }), []);</span>
+
+<span class="cm">// ❌ Anti-Pattern 3: Missing deps in useCallback</span>
+<span class="kw">const</span> [count, setCount] = <span class="fn">useState</span>(<span class="num">0</span>);
+<span class="kw">const</span> handleClick = <span class="fn">useCallback</span>(() =&gt; {
+  console.log(count); <span class="cm">// Always logs 0! Stale closure</span>
+}, []); <span class="cm">// Missing dep: count</span>
+<span class="cm">// Fix: use updater: setCount(c => c + 1) → no dep needed</span>
+
+<span class="cm">// ❌ Anti-Pattern 4: React.memo on components with children prop</span>
+<span class="kw">const</span> Layout = <span class="fn">React.memo</span>(({ children }) =&gt; &lt;div&gt;{children}&lt;/div&gt;);
+<span class="cm">// children is JSX — new object every render → memo never skips</span>
+
+<span class="cm">// ✅ Better pattern: composition over memo</span>
+<span class="kw">function</span> <span class="fn">Parent</span>() {
+  <span class="kw">const</span> [count, setCount] = <span class="fn">useState</span>(<span class="num">0</span>);
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      &lt;Counter count={count} setCount={setCount} /&gt;
+      &lt;ExpensiveTree /&gt; <span class="cm">{/* Doesn't re-render! Not a child of Counter */}</span>
+    &lt;/div&gt;
+  );
+}</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Memoization Decision Table</h3>
+    <table>
+      <tr><th>Scenario</th><th>Tool</th><th>Worth It?</th></tr>
+      <tr><td>Filter/sort 1000+ items</td><td>useMemo</td><td>✅ Yes</td></tr>
+      <tr><td>String concatenation</td><td>useMemo</td><td>❌ No</td></tr>
+      <tr><td>List item component (100+ items)</td><td>React.memo</td><td>✅ Yes</td></tr>
+      <tr><td>Simple &lt;p&gt; or &lt;span&gt;</td><td>React.memo</td><td>❌ No</td></tr>
+      <tr><td>Callback to memo'd child</td><td>useCallback</td><td>✅ Yes</td></tr>
+      <tr><td>onClick on native &lt;button&gt;</td><td>useCallback</td><td>❌ No</td></tr>
+      <tr><td>Object prop to memo'd child</td><td>useMemo</td><td>✅ Yes</td></tr>
+      <tr><td>useEffect dependency</td><td>useCallback</td><td>✅ Yes</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Production Checklist</h3>
+    <pre>✅ Profile with React DevTools before adding memo
+✅ React.memo on list items in large lists (>50 items)
+✅ React.memo on components receiving context (they re-render on ANY context change)
+✅ useMemo for expensive computations (>1ms with React Profiler)
+✅ useCallback for functions passed to memo'd children
+✅ Stable references for objects/arrays passed as props
+✅ No missing dependencies in useMemo/useCallback
+✅ Consider composition (lifting state) before memoization
+✅ Monitor React Compiler compatibility for auto-memo
+✅ Track re-render counts in dev with React.Profiler</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

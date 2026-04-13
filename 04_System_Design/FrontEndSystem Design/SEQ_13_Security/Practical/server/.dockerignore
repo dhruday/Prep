@@ -4,6 +4,6 @@ npm-debug.log
 .gitignore
 README.md
 .DS_Store
-*.db
+.db
 package-lock.json
 dump.rdb

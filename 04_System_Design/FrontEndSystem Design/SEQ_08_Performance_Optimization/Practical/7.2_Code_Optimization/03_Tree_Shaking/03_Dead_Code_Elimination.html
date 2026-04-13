@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dead Code Elimination</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}</style>
+</head>
+<body>
+<h1>Dead Code Elimination</h1>
+<p class="sub">Practical 7.2 · How minifiers remove unreachable code</p>
+
+<div class="card">
+  <h3>Tree Shaking vs Dead Code Elimination</h3>
+  <pre><span class="cm">// Tree Shaking (bundler — webpack/Rollup/esbuild):</span>
+<span class="cm">// Removes unused EXPORTS across module boundaries</span>
+<span class="cm">// Works at the MODULE level</span>
+<span class="cm">//</span>
+<span class="cm">// Dead Code Elimination (minifier — Terser/esbuild):</span>
+<span class="cm">// Removes unreachable code WITHIN a module</span>
+<span class="cm">// Works at the CODE level</span>
+<span class="cm">//</span>
+<span class="cm">// They're complementary:</span>
+<span class="cm">// 1. Bundler tree-shakes unused exports</span>
+<span class="cm">// 2. Minifier eliminates dead code in remaining modules</span></pre>
+</div>
+
+<div class="card">
+  <h3>Patterns Eliminated by Minifiers</h3>
+  <pre><span class="cm">// 1. Unreachable code after return</span>
+<span class="kw">function</span> <span class="fn">example</span>() {
+  <span class="kw">return</span> <span class="num">42</span>;
+  console.log(<span class="str">'never runs'</span>); <span class="cm">// ← removed by Terser</span>
+}
+
+<span class="cm">// 2. Always-false conditions (with process.env)</span>
+<span class="kw">if</span> (process.env.NODE_ENV === <span class="str">'development'</span>) {
+  console.log(<span class="str">'debug info'</span>); <span class="cm">// ← removed in production build</span>
+}
+<span class="cm">// webpack DefinePlugin replaces process.env.NODE_ENV with "production"</span>
+<span class="cm">// → if ("production" === "development") → if (false) → removed</span>
+
+<span class="cm">// 3. Unused variables</span>
+<span class="kw">const</span> unused = <span class="fn">expensiveComputation</span>(); <span class="cm">// removed if `unused` never read</span>
+
+<span class="cm">// 4. Empty functions</span>
+<span class="kw">function</span> <span class="fn">noop</span>() {} <span class="cm">// inlined as nothing at call sites</span>
+
+<span class="cm">// 5. Feature flags</span>
+<span class="kw">const</span> FEATURE_NEW_UI = <span class="kw">false</span>; <span class="cm">// set by build config</span>
+<span class="kw">if</span> (FEATURE_NEW_UI) {
+  <span class="fn">renderNewUI</span>(); <span class="cm">// entire block removed when flag is false</span>
+} <span class="kw">else</span> {
+  <span class="fn">renderOldUI</span>(); <span class="cm">// this branch is kept</span>
+}</pre>
+</div>
+
+<div class="card">
+  <h3>Build Config for Elimination</h3>
+  <pre><span class="cm">// webpack.config.js — DefinePlugin for compile-time constants</span>
+<span class="kw">const</span> webpack = require(<span class="str">'webpack'</span>);
+
+module.exports = {
+  mode: <span class="str">'production'</span>, <span class="cm">// Enables Terser + tree shaking</span>
+  plugins: [
+    <span class="kw">new</span> webpack.DefinePlugin({
+      <span class="str">'process.env.NODE_ENV'</span>: JSON.stringify(<span class="str">'production'</span>),
+      __DEV__: <span class="kw">false</span>,
+      FEATURE_FLAGS: JSON.stringify({
+        newCheckout: <span class="kw">true</span>,
+        darkMode: <span class="kw">false</span>,
+      }),
+    }),
+  ],
+  optimization: {
+    usedExports: <span class="kw">true</span>,    <span class="cm">// Mark unused exports</span>
+    minimize: <span class="kw">true</span>,       <span class="cm">// Run Terser</span>
+    sideEffects: <span class="kw">true</span>,   <span class="cm">// Respect sideEffects field</span>
+  },
+};
+
+<span class="cm">// Vite — same concept, different API:</span>
+<span class="kw">export default</span> defineConfig({
+  define: {
+    __DEV__: <span class="kw">false</span>,
+    <span class="str">'import.meta.env.FEATURE_NEW_UI'</span>: <span class="kw">false</span>,
+  },
+});</pre>
+</div>
+</body>
+</html>

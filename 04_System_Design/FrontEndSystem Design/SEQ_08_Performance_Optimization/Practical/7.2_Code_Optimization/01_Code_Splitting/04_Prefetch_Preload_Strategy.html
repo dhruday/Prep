@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Prefetch & Preload Strategy</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}</style>
+</head>
+<body>
+<h1>Prefetch & Preload Strategy</h1>
+<p class="sub">Practical 7.2 · Resource hints for optimal loading priority</p>
+
+<div class="card">
+  <h3>Resource Hint Comparison</h3>
+  <table>
+    <tr><th>Hint</th><th>Priority</th><th>When</th><th>Use Case</th></tr>
+    <tr><td>&lt;link rel="preload"&gt;</td><td>High (mandatory)</td><td>Current page, immediately</td><td>Critical fonts, hero image, above-fold CSS</td></tr>
+    <tr><td>&lt;link rel="prefetch"&gt;</td><td>Low (idle time)</td><td>Next navigation, idle</td><td>Next page chunks, likely user paths</td></tr>
+    <tr><td>&lt;link rel="preconnect"&gt;</td><td>High</td><td>Current page</td><td>Third-party origins (CDN, API, fonts)</td></tr>
+    <tr><td>&lt;link rel="dns-prefetch"&gt;</td><td>Low</td><td>Background</td><td>Third-party domains, fallback for preconnect</td></tr>
+    <tr><td>&lt;link rel="modulepreload"&gt;</td><td>High</td><td>Current page</td><td>ES modules (parses + compiles too)</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h3>Correct Usage</h3>
+  <pre><span class="cm">&lt;!-- HEAD: Resource hints --&gt;</span>
+
+<span class="cm">&lt;!-- 1. Preconnect to critical origins (do DNS + TCP + TLS early) --&gt;</span>
+&lt;link rel=<span class="str">"preconnect"</span> href=<span class="str">"https://fonts.googleapis.com"</span>&gt;
+&lt;link rel=<span class="str">"preconnect"</span> href=<span class="str">"https://api.example.com"</span> crossorigin&gt;
+
+<span class="cm">&lt;!-- 2. Preload critical resources for THIS page --&gt;</span>
+&lt;link rel=<span class="str">"preload"</span> href=<span class="str">"/fonts/inter.woff2"</span> as=<span class="str">"font"</span> type=<span class="str">"font/woff2"</span> crossorigin&gt;
+&lt;link rel=<span class="str">"preload"</span> href=<span class="str">"/hero.webp"</span> as=<span class="str">"image"</span>&gt;
+&lt;link rel=<span class="str">"preload"</span> href=<span class="str">"/critical.css"</span> as=<span class="str">"style"</span>&gt;
+
+<span class="cm">&lt;!-- 3. Prefetch resources for NEXT likely page --&gt;</span>
+&lt;link rel=<span class="str">"prefetch"</span> href=<span class="str">"/dashboard.chunk.js"</span>&gt;
+&lt;link rel=<span class="str">"prefetch"</span> href=<span class="str">"/api/user/dashboard"</span> as=<span class="str">"fetch"</span>&gt;
+
+<span class="cm">&lt;!-- ⚠️ Common mistakes: --&gt;</span>
+<span class="cm">&lt;!-- ❌ Preloading too many resources (contends with critical path) --&gt;</span>
+<span class="cm">&lt;!-- ❌ Missing 'as' attribute (browser can't prioritize correctly) --&gt;</span>
+<span class="cm">&lt;!-- ❌ Missing 'crossorigin' for fonts (always CORS) --&gt;</span>
+<span class="cm">&lt;!-- ❌ Prefetching on slow connections (check navigator.connection) --&gt;</span></pre>
+</div>
+
+<div class="card">
+  <h3>Programmatic Prefetch on Hover</h3>
+  <pre><span class="cm">// Prefetch route chunk when user hovers over a link</span>
+<span class="cm">// Google uses this pattern (QuickLink library)</span>
+
+<span class="kw">function</span> <span class="fn">PrefetchLink</span>({ to, children }) {
+  <span class="kw">const</span> prefetched = <span class="fn">useRef</span>(<span class="kw">false</span>);
+
+  <span class="kw">const</span> handleHover = () =&gt; {
+    <span class="kw">if</span> (prefetched.current) <span class="kw">return</span>;
+    prefetched.current = <span class="kw">true</span>;
+
+    <span class="cm">// Check if connection is fast enough</span>
+    <span class="kw">const</span> conn = navigator.connection;
+    <span class="kw">if</span> (conn?.saveData || conn?.effectiveType === <span class="str">'2g'</span>) <span class="kw">return</span>;
+
+    <span class="cm">// Create prefetch link</span>
+    <span class="kw">const</span> link = document.createElement(<span class="str">'link'</span>);
+    link.rel = <span class="str">'prefetch'</span>;
+    link.href = <span class="fn">getChunkUrl</span>(to);
+    document.head.appendChild(link);
+  };
+
+  <span class="kw">return</span> (
+    &lt;Link to={to} onMouseEnter={handleHover} onFocus={handleHover}&gt;
+      {children}
+    &lt;/Link&gt;
+  );
+}
+
+<span class="cm">// Intersection Observer pattern (QuickLink-style):</span>
+<span class="cm">// Prefetch any link that enters the viewport</span>
+<span class="kw">const</span> observer = <span class="kw">new</span> IntersectionObserver((entries) =&gt; {
+  entries.filter(e =&gt; e.isIntersecting).forEach(entry =&gt; {
+    <span class="kw">const</span> link = document.createElement(<span class="str">'link'</span>);
+    link.rel = <span class="str">'prefetch'</span>;
+    link.href = entry.target.href;
+    document.head.appendChild(link);
+    observer.unobserve(entry.target);
+  });
+});
+document.querySelectorAll(<span class="str">'a[href^="/"]'</span>).forEach(a =&gt; observer.observe(a));</pre>
+</div>
+</body>
+</html>
