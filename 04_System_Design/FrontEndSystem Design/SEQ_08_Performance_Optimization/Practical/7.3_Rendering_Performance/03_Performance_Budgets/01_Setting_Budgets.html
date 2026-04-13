@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Setting Performance Budgets</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}button{background:#f59e0b;color:#0f1117;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.82rem;margin:4px}#output{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;margin-top:10px;font-size:.78rem;max-height:280px;overflow-y:auto;font-family:monospace}table{width:100%;border-collapse:collapse;margin:8px 0;font-size:.78rem}th,td{padding:6px 10px;text-align:left;border-bottom:1px solid #2d3551}th{color:#f59e0b}input[type=number]{background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:4px 8px;border-radius:4px;width:70px;font-size:.78rem}</style>
+</head>
+<body>
+<h1>Setting Performance Budgets</h1>
+<p class="sub">Practical 7.3 · Define, calculate, and enforce performance budgets</p>
+
+<div class="card">
+  <h3>Interactive: Budget Calculator</h3>
+  <p style="font-size:.78rem;color:#94a3b8;margin-bottom:8px">Set your target TTI and connection speed to derive resource budgets.</p>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px">
+    <label style="font-size:.78rem">Target TTI (sec): <input type="number" id="tti" value="5" min="1" max="15" step="0.5"></label>
+    <label style="font-size:.78rem">Connection:
+      <select id="conn" style="background:#0f1117;border:1px solid #2d3551;color:#e2e8f0;padding:4px;border-radius:4px;font-size:.78rem">
+        <option value="1.6">Slow 3G (1.6 Mbps)</option>
+        <option value="4" selected>Fast 3G (4 Mbps)</option>
+        <option value="10">4G (10 Mbps)</option>
+        <option value="50">Wi-Fi (50 Mbps)</option>
+      </select>
+    </label>
+    <button onclick="calculate()">Calculate Budgets</button>
+  </div>
+  <table>
+    <thead><tr><th>Resource</th><th>Budget</th><th>Recommendation</th></tr></thead>
+    <tbody id="budgetTable"></tbody>
+  </table>
+  <div id="output"></div>
+</div>
+
+<div class="card">
+  <h3>budget.json (Lighthouse CI)</h3>
+  <pre><span class="cm">// .lighthouserc.json or budget.json</span>
+[{
+  <span class="str">"path"</span>: <span class="str">"/*"</span>,
+  <span class="str">"timings"</span>: [
+    { <span class="str">"metric"</span>: <span class="str">"interactive"</span>, <span class="str">"budget"</span>: <span class="num">5000</span> },
+    { <span class="str">"metric"</span>: <span class="str">"first-contentful-paint"</span>, <span class="str">"budget"</span>: <span class="num">1800</span> },
+    { <span class="str">"metric"</span>: <span class="str">"largest-contentful-paint"</span>, <span class="str">"budget"</span>: <span class="num">2500</span> },
+    { <span class="str">"metric"</span>: <span class="str">"cumulative-layout-shift"</span>, <span class="str">"budget"</span>: <span class="num">0.1</span> },
+    { <span class="str">"metric"</span>: <span class="str">"total-blocking-time"</span>, <span class="str">"budget"</span>: <span class="num">300</span> }
+  ],
+  <span class="str">"resourceSizes"</span>: [
+    { <span class="str">"resourceType"</span>: <span class="str">"script"</span>, <span class="str">"budget"</span>: <span class="num">170</span> },
+    { <span class="str">"resourceType"</span>: <span class="str">"stylesheet"</span>, <span class="str">"budget"</span>: <span class="num">50</span> },
+    { <span class="str">"resourceType"</span>: <span class="str">"image"</span>, <span class="str">"budget"</span>: <span class="num">500</span> },
+    { <span class="str">"resourceType"</span>: <span class="str">"font"</span>, <span class="str">"budget"</span>: <span class="num">100</span> },
+    { <span class="str">"resourceType"</span>: <span class="str">"total"</span>, <span class="str">"budget"</span>: <span class="num">800</span> }
+  ],
+  <span class="str">"resourceCounts"</span>: [
+    { <span class="str">"resourceType"</span>: <span class="str">"script"</span>, <span class="str">"budget"</span>: <span class="num">10</span> },
+    { <span class="str">"resourceType"</span>: <span class="str">"third-party"</span>, <span class="str">"budget"</span>: <span class="num">5</span> }
+  ]
+}]
+
+<span class="cm">// Run: npx lhci autorun</span>
+<span class="cm">// Fails CI if any budget exceeded</span></pre>
+</div>
+
+<div class="card">
+  <h3>How to Derive Budgets (Google Method)</h3>
+  <pre><span class="cm">// Step 1: Define target TTI in seconds</span>
+<span class="cm">//   Recommendation: 5s on Fast 3G (mid-tier mobile)</span>
+<span class="cm">//   Moto G4 / Samsung A-series = target device</span>
+
+<span class="cm">// Step 2: Calculate total transfer budget</span>
+<span class="cm">//   Fast 3G ≈ 4 Mbps = 500 KB/s</span>
+<span class="cm">//   5s × 500 KB/s = 2500 KB total transfer budget</span>
+<span class="cm">//   BUT: subtract ~300ms TCP + TLS + DNS overhead</span>
+<span class="cm">//   AND: 1.5s for JavaScript parse/compile on slow CPU</span>
+<span class="cm">//   Effective budget: ~2500 - 750 = ~1750 KB transfer</span>
+
+<span class="cm">// Step 3: Allocate budget across resource types</span>
+<span class="cm">//   HTML:   ~20 KB (10% - document + inline critical CSS)</span>
+<span class="cm">//   CSS:    ~50 KB (critical + above-fold)</span>
+<span class="cm">//   JS:     ~170 KB (compressed — Google's recommendation)</span>
+<span class="cm">//   Fonts:  ~50 KB (2 weights × 25KB each)</span>
+<span class="cm">//   Images: ~500 KB (hero + above-fold, lazy rest)</span>
+<span class="cm">//   ─────────────────</span>
+<span class="cm">//   Total:  ~790 KB (leaves margin for analytics/3rd party)</span>
+
+<span class="cm">// Step 4: Set up enforcement</span>
+<span class="cm">//   → Lighthouse CI budgets (above)</span>
+<span class="cm">//   → bundlesize / size-limit in CI</span>
+<span class="cm">//   → webpack performance.hints: 'error'</span>
+<span class="cm">//   → PR checks blocking on budget violations</span></pre>
+</div>
+
+<script>
+const tbl = document.getElementById('budgetTable');
+const output = document.getElementById('output');
+const log = (msg) => { output.innerHTML += msg + '\n'; };
+
+function calculate() {
+  const tti = parseFloat(document.getElementById('tti').value);
+  const mbps = parseFloat(document.getElementById('conn').value);
+  const kbps = mbps * 1000 / 8; // Convert Mbps to KB/s
+  
+  // Subtract overhead: DNS + TCP + TLS ≈ 0.5s, Parse/Compile ≈ 1.5s on slow device
+  const overhead = mbps <= 4 ? 2.0 : mbps <= 10 ? 1.2 : 0.5;
+  const effectiveTime = Math.max(0.5, tti - overhead);
+  const totalBudget = Math.round(effectiveTime * kbps);
+  
+  // Allocate budget
+  const jsBudget = Math.round(totalBudget * 0.22);
+  const cssBudget = Math.round(totalBudget * 0.06);
+  const imgBudget = Math.round(totalBudget * 0.55);
+  const fontBudget = Math.round(totalBudget * 0.06);
+  const htmlBudget = Math.round(totalBudget * 0.03);
+  const otherBudget = totalBudget - jsBudget - cssBudget - imgBudget - fontBudget - htmlBudget;
+  
+  const rows = [
+    ['JavaScript', jsBudget, jsBudget <= 170 ? '✅ Within Google rec (170KB)' : '⚠️ Exceeds Google rec (170KB)'],
+    ['CSS', cssBudget, cssBudget <= 50 ? '✅ Good' : 'Consider critical CSS extraction'],
+    ['Images', imgBudget, 'Use WebP/AVIF, lazy-load below fold'],
+    ['Fonts', fontBudget, fontBudget <= 100 ? '✅ Good' : 'Limit to 2 font files'],
+    ['HTML', htmlBudget, 'Inline critical CSS for FCP'],
+    ['Other (3rd party)', otherBudget, 'Minimize analytics/trackers'],
+    ['<strong>TOTAL</strong>', totalBudget, `${tti}s TTI @ ${mbps} Mbps`],
+  ];
+  
+  tbl.innerHTML = rows.map(([res,kb,rec]) => 
+    `<tr><td>${res}</td><td>${kb} KB</td><td style="color:#94a3b8">${rec}</td></tr>`
+  ).join('');
+  
+  output.innerHTML = '';
+  log(`Target: ${tti}s TTI on ${mbps} Mbps connection`);
+  log(`Network time: ${effectiveTime.toFixed(1)}s (after ${overhead}s overhead)`);
+  log(`Transfer rate: ${kbps.toFixed(0)} KB/s`);
+  log(`Total budget: ${totalBudget} KB compressed`);
+  if (jsBudget > 170) log(`<span style="color:#f59e0b">⚠️ JS budget ${jsBudget}KB exceeds Google's 170KB rec</span>`);
+}
+
+calculate();
+</script>
+</body>
+</html>

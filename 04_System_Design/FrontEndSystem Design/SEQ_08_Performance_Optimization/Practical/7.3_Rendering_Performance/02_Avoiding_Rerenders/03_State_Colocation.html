@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>State Colocation Lab</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}button{background:#f59e0b;color:#0f1117;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.82rem;margin:4px}#output{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;margin-top:10px;font-size:.78rem;max-height:250px;overflow-y:auto;font-family:monospace}.example{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0}.example-side{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px}.example-side h4{font-size:.82rem;margin-bottom:6px}.bad{border-color:#ef4444}.good{border-color:#10b981}</style>
+</head>
+<body>
+<h1>State Colocation Lab</h1>
+<p class="sub">Practical 7.3 · Move state closer to where it's used to prevent cascade re-renders</p>
+
+<div class="card">
+  <h3>Interactive: State Location Impact</h3>
+  <div class="example">
+    <div class="example-side bad">
+      <h4 style="color:#ef4444">❌ State Lifted Too High</h4>
+      <div id="badTree" style="font-size:.75rem;font-family:monospace"></div>
+      <button onclick="badType()">Type in Search</button>
+      <div style="font-size:.72rem;color:#94a3b8;margin-top:4px">Renders: <span id="badRenders">0</span></div>
+    </div>
+    <div class="example-side good">
+      <h4 style="color:#10b981">✅ State Colocated</h4>
+      <div id="goodTree" style="font-size:.75rem;font-family:monospace"></div>
+      <button onclick="goodType()">Type in Search</button>
+      <div style="font-size:.72rem;color:#94a3b8;margin-top:4px">Renders: <span id="goodRenders">0</span></div>
+    </div>
+  </div>
+  <div id="output"></div>
+</div>
+
+<div class="card">
+  <h3>State Colocation Principle (Kent C. Dodds)</h3>
+  <pre><span class="cm">// "Place state as close to where it's relevant as possible"</span>
+<span class="cm">// — KCD's State Colocation blog post</span>
+<span class="cm">//</span>
+<span class="cm">// State placement spectrum:</span>
+<span class="cm">//</span>
+<span class="cm">//  Local ←─────────────────────────────────────→ Global</span>
+<span class="cm">//  useState    useReducer   Context    Zustand    Redux</span>
+<span class="cm">//  (component) (component)  (subtree)  (global)   (global)</span>
+<span class="cm">//</span>
+<span class="cm">// Rule: Start LOCAL. Only lift when multiple components need it.</span>
+<span class="cm">//</span>
+<span class="cm">// Decision tree:</span>
+<span class="cm">// Q: Does ONLY this component use this state?</span>
+<span class="cm">//    → YES: useState in that component ✅</span>
+<span class="cm">//    → NO: Do sibling components need it?</span>
+<span class="cm">//          → YES: Lift to shared parent (lowest common ancestor)</span>
+<span class="cm">//          → NO, but deep children need it?</span>
+<span class="cm">//                → Context (or composition pattern)</span>
+<span class="cm">//          → Accessed from many unrelated parts?</span>
+<span class="cm">//                → Global store (Zustand/Redux)</span></pre>
+</div>
+
+<div class="card">
+  <h3>Composition Pattern (Children as Props)</h3>
+  <pre><span class="cm">// ❌ Everything re-renders when `open` changes</span>
+<span class="kw">function</span> <span class="fn">Layout</span>() {
+  <span class="kw">const</span> [open, setOpen] = <span class="fn">useState</span>(<span class="kw">false</span>);
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      &lt;SidePanel isOpen={open} /&gt;
+      &lt;ExpensiveTree /&gt; <span class="cm">// re-renders! No connection to `open`</span>
+    &lt;/div&gt;
+  );
+}
+
+<span class="cm">// ✅ Extract state into its own component, pass children</span>
+<span class="kw">function</span> <span class="fn">SidePanelWrapper</span>({ children }) {
+  <span class="kw">const</span> [open, setOpen] = <span class="fn">useState</span>(<span class="kw">false</span>);
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      &lt;SidePanel isOpen={open} /&gt;
+      {children} <span class="cm">// children is a stable reference from parent!</span>
+    &lt;/div&gt;
+  );
+}
+
+<span class="kw">function</span> <span class="fn">Layout</span>() {
+  <span class="kw">return</span> (
+    &lt;<span class="fn">SidePanelWrapper</span>&gt;
+      &lt;ExpensiveTree /&gt; <span class="cm">// ✅ Does NOT re-render when panel toggles</span>
+    &lt;/SidePanelWrapper&gt;
+  );
+}
+
+<span class="cm">// Why? Because &lt;ExpensiveTree /&gt; is created in Layout's render.</span>
+<span class="cm">// Layout doesn't re-render → same JSX element → same reference.</span>
+<span class="cm">// This is the "moving state down" + "composition" pattern.</span>
+<span class="cm">// React team recommends this BEFORE reaching for memo.</span></pre>
+</div>
+
+<div class="card">
+  <h3>Context Splitting to Prevent Re-renders</h3>
+  <pre><span class="cm">// ❌ Single context with multiple values</span>
+<span class="kw">const</span> AppContext = <span class="fn">createContext</span>();
+
+<span class="kw">function</span> <span class="fn">AppProvider</span>({ children }) {
+  <span class="kw">const</span> [user, setUser] = <span class="fn">useState</span>(<span class="kw">null</span>);
+  <span class="kw">const</span> [theme, setTheme] = <span class="fn">useState</span>(<span class="str">'dark'</span>);
+  <span class="kw">const</span> [locale, setLocale] = <span class="fn">useState</span>(<span class="str">'en'</span>);
+  
+  <span class="cm">// ❌ Every consumer re-renders when ANY value changes</span>
+  <span class="kw">return</span> (
+    &lt;AppContext.Provider value={{ user, theme, locale, setUser, setTheme }}&gt;
+      {children}
+    &lt;/AppContext.Provider&gt;
+  );
+}
+
+<span class="cm">// ✅ Split into focused contexts</span>
+<span class="kw">const</span> UserContext = <span class="fn">createContext</span>();
+<span class="kw">const</span> ThemeContext = <span class="fn">createContext</span>();
+<span class="kw">const</span> LocaleContext = <span class="fn">createContext</span>();
+
+<span class="cm">// Now ThemeToggle only re-renders when theme changes</span>
+<span class="cm">// UserMenu only re-renders when user changes</span>
+
+<span class="cm">// ✅ Alternative: use-context-selector library</span>
+<span class="kw">import</span> { createContext, useContextSelector } <span class="kw">from</span> <span class="str">'use-context-selector'</span>;
+
+<span class="kw">const</span> theme = <span class="fn">useContextSelector</span>(AppContext, ctx =&gt; ctx.theme);
+<span class="cm">// Only re-renders when ctx.theme changes!</span></pre>
+</div>
+
+<script>
+const output = document.getElementById('output');
+const log = (msg) => { output.innerHTML += msg + '\n'; output.scrollTop = output.scrollHeight; };
+
+let badCount = 0, goodCount = 0;
+
+const badComponents = ['App','├ Header','├ SearchBox','├ ProductGrid','│  ├ Card[0]','│  ├ Card[1]','│  ├ Card[2]','├ Footer'];
+const goodComponents = ['App','├ Header','├ SearchSection','│  ├ SearchBox','│  └ Results','├ ProductGrid','│  ├ Card[0]','│  ├ Card[1]','│  ├ Card[2]','├ Footer'];
+
+function renderBadTree(highlights) {
+  const el = document.getElementById('badTree');
+  el.innerHTML = badComponents.map((c, i) => {
+    const hl = highlights.includes(i);
+    return `<div style="color:${hl?'#ef4444':'#475569'};padding:1px 0">${c}${hl?' ⚡':'  ·'}</div>`;
+  }).join('');
+}
+
+function renderGoodTree(highlights) {
+  const el = document.getElementById('goodTree');
+  el.innerHTML = goodComponents.map((c, i) => {
+    const hl = highlights.includes(i);
+    return `<div style="color:${hl?'#10b981':'#475569'};padding:1px 0">${c}${hl?' ⚡':'  ·'}</div>`;
+  }).join('');
+}
+
+function badType() {
+  badCount += 8;
+  document.getElementById('badRenders').textContent = badCount;
+  renderBadTree([0,1,2,3,4,5,6,7]); // ALL re-render
+  log(`<span style="color:#ef4444">❌ Bad: ${8} components rendered (search state in App)</span>`);
+}
+
+function goodType() {
+  goodCount += 3;
+  document.getElementById('goodRenders').textContent = goodCount;
+  renderGoodTree([2,3,4]); // Only SearchSection subtree
+  log(`<span style="color:#10b981">✅ Good: ${3} components rendered (state colocated)</span>`);
+}
+
+renderBadTree([]);
+renderGoodTree([]);
+</script>
+</body>
+</html>
