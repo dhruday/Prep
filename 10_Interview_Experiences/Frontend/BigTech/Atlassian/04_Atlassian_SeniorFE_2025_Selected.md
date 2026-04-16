@@ -10,7 +10,7 @@
 | **Date** | March 2025 |
 | **Result** | ✅ Selected |
 | **Location** | Sydney, Australia (Remote) |
-| **Source** | [Glassdoor](https://www.glassdoor.com/Interview/Atlassian-Interview-Questions-E115699.htm) |
+| **Source** | [Glassdoor](https://www.glassdoor.co.in/Interview/Atlassian-Interview-Questions-E115699.htm) |
 | **Author** | Anonymous |
 | **Team** | Jira Cloud |
 

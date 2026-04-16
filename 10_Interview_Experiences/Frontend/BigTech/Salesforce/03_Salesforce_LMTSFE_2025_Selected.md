@@ -10,7 +10,7 @@
 | **Date** | April 2025 |
 | **Result** | ✅ Selected |
 | **Location** | Hyderabad, India |
-| **Source** | [Glassdoor](https://www.glassdoor.co.in/Interview/Salesforce-Interview-Questions-E11159.htm) |
+| **Source** | [Glassdoor](https://www.geeksforgeeks.org/salesforce-interview-experience/-E11159.htm) |
 | **Author** | Anonymous |
 | **Team** | Lightning Web Components |
 

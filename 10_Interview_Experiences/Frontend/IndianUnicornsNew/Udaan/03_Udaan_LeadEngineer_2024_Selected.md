@@ -11,7 +11,7 @@
 | **Date** | July 2024 |
 | **Result** | ✅ Selected |
 | **Location** | Bangalore, India |
-| **Source** | [Interview Source](https://www.glassdoor.co.in/Interview/Udaan-Interview-Questions-E2296898.htm) |
+| **Source** | [Interview Source](https://www.ambitionbox.com/interviews/udaan-interview-questions) |
 | **Author** | Anonymous |
 
 ---

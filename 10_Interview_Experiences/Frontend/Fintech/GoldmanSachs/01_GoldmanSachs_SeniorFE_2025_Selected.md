@@ -10,7 +10,7 @@
 | **Date** | January 2025 |
 | **Result** | ✅ Selected |
 | **Location** | Bangalore, India |
-| **Source** | [Glassdoor](https://www.glassdoor.co.in/Interview/Goldman-Sachs-Interview-Questions) |
+| **Source** | [Glassdoor](https://www.glassdoor.co.in/Interview/Goldman-Sachs-Interview-Questions-E2800.htm) |
 | **Author** | Anonymous |
 
 ---

@@ -11,7 +11,7 @@
 | **Date** | April 2025 |
 | **Result** | ❌ Rejected |
 | **Location** | Mumbai, India |
-| **Source** | [Interview Source](https://www.glassdoor.co.in/Interview/Dream11-Interview-Questions-E1492498.htm) |
+| **Source** | [Interview Source](https://www.ambitionbox.com/interviews/dream11-interview-questions) |
 | **Author** | Anonymous |
 
 ---

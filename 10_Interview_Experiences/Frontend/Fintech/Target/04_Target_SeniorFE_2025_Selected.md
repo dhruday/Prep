@@ -10,7 +10,7 @@
 | **Date** | April 2025 |
 | **Result** | ✅ Selected |
 | **Location** | Minneapolis, MN (Hybrid) |
-| **Source** | [Glassdoor](https://www.glassdoor.com/Interview/Target-Interview-Questions-E194521.htm) |
+| **Source** | [Glassdoor](https://www.geeksforgeeks.org/target-interview-experience/) |
 | **Author** | Anonymous |
 
 ---

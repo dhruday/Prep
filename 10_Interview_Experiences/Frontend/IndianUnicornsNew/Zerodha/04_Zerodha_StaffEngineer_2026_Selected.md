@@ -11,7 +11,7 @@
 | **Date** | August 2026 |
 | **Result** | ✅ Selected |
 | **Location** | Bangalore, India |
-| **Source** | [Interview Source](https://www.glassdoor.co.in/Interview/Zerodha-Interview-Questions-E1474855.htm) |
+| **Source** | [Interview Source](https://www.ambitionbox.com/interviews/zerodha-interview-questions) |
 | **Author** | Anonymous |
 
 ---

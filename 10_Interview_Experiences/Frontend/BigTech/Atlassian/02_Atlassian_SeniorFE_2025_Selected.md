@@ -10,7 +10,7 @@
 | **Date** | February 2025 |
 | **Result** | ✅ Selected |
 | **Location** | Bangalore, India |
-| **Source** | [Glassdoor](https://www.glassdoor.com/Interview/Atlassian-Interview-Questions) |
+| **Source** | [Glassdoor](https://www.glassdoor.co.in/Interview/Atlassian-Interview-Questions-E115699.htm) |
 | **Author** | Anonymous |
 
 ---

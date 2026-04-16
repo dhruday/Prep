@@ -11,7 +11,7 @@
 | **Date** | May 2026 |
 | **Result** | ❌ Rejected |
 | **Location** | Pune, India |
-| **Source** | [Interview Source](https://www.glassdoor.co.in/Interview/Hitachi-Vantara-Interview-Questions-E1519779.htm) |
+| **Source** | [Interview Source](https://www.ambitionbox.com/interviews/hitachi-vantara-interview-questions) |
 | **Author** | Anonymous |
 
 ---

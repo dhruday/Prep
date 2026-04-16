@@ -10,7 +10,7 @@
 | **Date** | March 2025 |
 | **Result** | ✅ Selected |
 | **Location** | Hyderabad, India |
-| **Source** | [Glassdoor](https://www.glassdoor.co.in/Interview/Salesforce-Interview-Questions) |
+| **Source** | [Glassdoor](https://www.geeksforgeeks.org/salesforce-interview-experience/) |
 | **Author** | Anonymous |
 
 ---

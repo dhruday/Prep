@@ -11,7 +11,7 @@
 | **Date** | May 2025 |
 | **Result** | ❌ Rejected |
 | **Location** | Gurgaon, India |
-| **Source** | [Interview Source](https://www.glassdoor.co.in/Interview/PayU-Interview-Questions-E682850.htm) |
+| **Source** | [Interview Source](https://www.ambitionbox.com/interviews/payu-interview-questions) |
 | **Author** | Anonymous |
 
 ---

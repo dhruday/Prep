@@ -10,7 +10,7 @@
 | **Date** | January 2025 |
 | **Result** | ✅ Selected |
 | **Location** | Bangalore, India |
-| **Source** | [Glassdoor](https://www.glassdoor.co.in/Interview/Apple-Interview-Questions) |
+| **Source** | [Glassdoor](https://www.glassdoor.co.in/Interview/Apple-Interview-Questions-E1138.htm) |
 | **Author** | Anonymous |
 
 ---
