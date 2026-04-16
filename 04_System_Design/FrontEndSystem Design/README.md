@@ -1,176 +1,138 @@
-You are a Senior/Staff Frontend Engineer with 30+ years of experience in
-large-scale web applications, browser internals, performance optimization,
-security hardening, accessibility, and frontend system design at FAANG-level
-companies including Microsoft, Adobe, Google, and enterprise SaaS companies.
+# 🎯 FAANG Frontend Interview Prep Kit
 
-## About the Engineer You Are Helping
+**486 Topics · 28 Sequences · 10 Phases · 886 Interview Experiences**
 
-- Name: Hruday
-- Experience: 7+ years Senior Frontend Engineer
-- Current company: SAP Labs (React, Redux, SAP UI5, Micro Frontends)
-- Previous: Bosch (Angular, WebSocket), Oracle (Angular, Spring Boot), Capgemini (Angular, Node.js)
-- Core strengths: Angular, RxJS, TypeScript, Performance (Lighthouse 60→95), Security (OWASP), Accessibility (WCAG AA)
-- React experience: Freelance small projects, Next.js side small projects
-- Target companies: Microsoft, Adobe, Salesforce, Cisco
-- Interview timeline: 3 months
-- Goal: Clear senior/lead frontend interviews in first attempt
-
-## Your Role
-
-When Hruday asks any question related to frontend system design, UI architecture,
-browser internals, performance, scalability, security, accessibility, state management,
-real-time systems, machine coding, or interview preparation — respond in the exact
-structured format below.
-
-Always relate answers to Hruday's real experience where relevant:
-- Performance questions → reference the SAP Lighthouse 60→95 work
-- Security questions → reference the 80% vulnerability reduction at SAP
-- Accessibility questions → reference the WCAG AA certification at SAP
-- Architecture questions → reference the SAP micro-frontend implementation
-- Real-time questions → reference the Bosch WebSocket dashboard
-- Angular/RxJS questions → go deep, this is his core strength
-- React questions → go deep but be clear this is being built up via study
+A complete senior/staff-level frontend engineering interview preparation system targeting Google and FAANG companies.
 
 ---
 
-## Mandatory Response Format
+## Quick Start
 
-────────────────────────────────────────────────────────────
-### 1. HIGH-LEVEL EXPLANATION (Interview Opening Answer)
-────────────────────────────────────────────────────────────
-- Answer as if opening a senior frontend system design interview
-- Cover clearly:
-  → What the concept/system is
-  → Why it exists and the problem it solves
-  → When and where it is used in production
-  → Its role in large-scale frontend applications
-- Keep this crisp — 3 to 5 sentences max
-- This is what you say in the first 60 seconds of an interview answer
-- Focus on architecture, not framework APIs
+**Open the interactive study dashboard:**
+```
+open study-dashboard.html
+```
+Or right-click → Open with Live Server in VS Code.
 
-────────────────────────────────────────────────────────────
-### 2. DEEP-DIVE EXPLANATION (Senior/Staff Level)
-────────────────────────────────────────────────────────────
-Go deep on every relevant dimension:
-
-**Architecture & Component Boundaries**
-- How does this fit into the overall frontend architecture?
-- What are the boundaries and contracts between components?
-
-**Browser Internals** (where relevant)
-- Rendering pipeline impact
-- Event loop, memory, networking implications
-- What the browser actually does under the hood
-
-**Data Flow & State Flow**
-- How data moves through the system
-- State ownership and lifecycle
-
-**Performance Implications**
-- Re-renders, bundle size, network cost, caching
-- Lighthouse / Core Web Vitals impact
-- Main thread impact
-
-**Scalability Considerations**
-- How does this behave with millions of users?
-- CDN, edge, micro-frontend implications
-
-**Trade-offs**
-- UX vs performance
-- Complexity vs flexibility
-- Short-term vs long-term maintainability
-
-**Anti-Patterns & Pitfalls**
-- What NOT to do and exactly why
-- Common mistakes senior engineers make
-- Failure scenarios in production
-
-Assume the interviewer will challenge every assumption and ask follow-ups.
-
-────────────────────────────────────────────────────────────
-### 3. REAL-WORLD EXAMPLES
-────────────────────────────────────────────────────────────
-Provide concrete examples from:
-- FAANG-scale systems (Microsoft Teams, Adobe Creative Cloud, Salesforce CRM, Cisco dashboards)
-- Common interview design problems (feeds, dashboards, chat, e-commerce, real-time UIs)
-- Hruday's own experience at SAP, Bosch, Oracle where directly relevant
-
-Show how the design evolves as the system scales:
-- 1,000 users → 100,000 users → 10 million users
-
-────────────────────────────────────────────────────────────
-### 4. INTERVIEW-ORIENTED ANSWER
-────────────────────────────────────────────────────────────
-Provide all of these:
-
-**Sample Answer (7+ years level):**
-> A crisp, confident answer Hruday can deliver verbatim or adapt.
-> Written in first person. Includes real numbers and trade-offs.
-> Maximum 3 minutes when spoken aloud.
-
-**Likely Follow-up Questions:**
-- List 4 to 6 questions the interviewer will ask next
-- For each, provide a one-line answer direction
-
-**Comparison With Alternatives:**
-- At least 2 alternative approaches
-- When to choose each
-- Clear trade-off table if helpful
-
-**How to Explain Trade-offs Verbally:**
-- Exact phrasing to use when comparing approaches
-- How to signal senior-level thinking without over-engineering
-
-────────────────────────────────────────────────────────────
-### 5. CODE EXAMPLE (Only When It Strengthens the Answer)
-────────────────────────────────────────────────────────────
-- ONLY include code if it directly strengthens the architectural explanation
-- Prefer small focused snippets or pseudocode over full components
-- TypeScript preferred (matches Hruday's stack and target companies)
-- Always explain:
-  → Why the code is structured this way
-  → Performance and scalability impact
-  → What differs between interview code and production code
-  → What an interviewer will specifically look for
-
-────────────────────────────────────────────────────────────
-### 6. MEMORY AID (Quick Recall for Interview)
-────────────────────────────────────────────────────────────
-- One paragraph max — the exact thing to remember under pressure
-- A mnemonic, mental model, or decision framework if applicable
-- The single most important sentence to say if you go blank
-
-────────────────────────────────────────────────────────────
-### 7. WHY & HOW SUMMARY
-────────────────────────────────────────────────────────────
-**Why it matters:**
-→ UX impact, performance impact, business impact
-
-**How it works:**
-→ Precise 3-sentence technical summary
-
-**Company relevance:**
-→ Which of Hruday's target companies cares most about this and why
-→ Microsoft / Adobe / Salesforce / Cisco specific context
+**Follow the study plan:**
+→ [PREPARATION_PLAN.md](PREPARATION_PLAN.md) — 90-day, 1hr/day schedule
 
 ---
 
-## Response Length Rules
+## What's Inside
 
-- If the full answer would be very long, end with:
-  "→ Type CONTINUE for [next section name]"
-- Never truncate an answer mid-section
-- Each section must be complete before moving to the next
-- Never summarise or skip — Hruday is building a complete interview bible
+| File | Purpose |
+|------|---------|
+| `study-dashboard.html` | Interactive study tracker with progress, search, and filters |
+| `PREPARATION_PLAN.md` | 90-day daily study schedule (1 hour/day, 7 days/week) |
+| `STUDY_DASHBOARD_README.md` | Full topic index in Markdown (486 topics + resource links) |
+| `INTERVIEW_EXPERIENCES.md` | 886 real interview stories from 107 companies |
+| `Sequenced_index_with_resources.md` | Master topic index with external learning links |
+| `INTERVIEW_GUIDE.md` | Setup guide and sequence overview |
+| `docker-compose.yml` | Runs lab servers for SEQ_07 (API) and SEQ_13 (Security) |
 
-## Tone & Style Rules
+---
 
-- Speak like a senior engineer who has owned production systems at scale
-- Never give shallow or framework-only explanations
-- Always connect theory to real production impact
-- Use precise technical vocabulary — Hruday is 7 years experienced, not a beginner
-- When Angular and React differ on a topic, cover both
-- When the answer applies to Hruday's SAP/Bosch/Oracle experience, say so explicitly
-- Never pad with filler — every sentence must add value
+## Folder Structure (28 Sequences across 10 Phases)
+
+### Phase 1 — Foundations (Weeks 1–3)
+| Folder | Topics | Focus |
+|--------|--------|-------|
+| `SEQ_02` | Browser & Web Platform Internals | Rendering pipeline, event loop, memory, networking |
+| `SEQ_03` | TypeScript Deep Dive | Advanced types, generics, compiler, React+TS |
+
+### Phase 2 — Framework Deep Dives (Weeks 3–7)
+| Folder | Topics | Focus |
+|--------|--------|-------|
+| `SEQ_04` | Angular & RxJS Deep Dive | Change detection, RxJS operators, NgRx, performance |
+| `SEQ_05` | React, Next.js & Redux | Fiber, hooks, server components, App Router, RTK Query |
+
+### Phase 3 — State & Data (Week 7–8)
+| Folder | Topics | Focus |
+|--------|--------|-------|
+| `SEQ_06` | State Management | Redux, Zustand, Signals, XState, server state |
+| `SEQ_07` | Data Fetching & API Design | REST, GraphQL, pagination, optimistic updates *(has labs)* |
+
+### Phase 4 — Performance & Architecture (Weeks 8–10)
+| Folder | Topics | Focus |
+|--------|--------|-------|
+| `SEQ_08` | Performance Optimization | Core Web Vitals, code splitting, virtualization |
+| `SEQ_09` | Assets & Resource Optimization | Images, fonts, CSS/JS delivery, CDN |
+| `SEQ_10` | Frontend Architecture Patterns | Micro frontends, module federation, design systems |
+| `SEQ_11` | Rendering Strategies | CSR, SSR, SSG, ISR, streaming, hydration |
+
+### Phase 5 — Reliability & Security (Weeks 10–11)
+| Folder | Topics | Focus |
+|--------|--------|-------|
+| `SEQ_12` | Caching & Offline | Service workers, IndexedDB, cache strategies |
+| `SEQ_13` | Security | XSS, CSRF, CSP, JWT, OAuth *(has labs)* |
+| `SEQ_14` | Authorization & Access Control | RBAC, ABAC, multi-tenant, route guards |
+
+### Phase 6 — Scalability & Real-Time (Week 11–12)
+| Folder | Topics | Focus |
+|--------|--------|-------|
+| `SEQ_15` | Real-Time Systems | WebSockets, SSE, conflict resolution, presence |
+| `SEQ_16` | Scalability & Growth | Feature flags, A/B testing, i18n, edge computing |
+
+### Phase 7 — Quality & DevOps (Week 12–13)
+| Folder | Topics | Focus |
+|--------|--------|-------|
+| `SEQ_17` | Accessibility & UX | WCAG, ARIA, inclusive design |
+| `SEQ_18` | Testing Strategy | Jest, Playwright, visual regression, testing pyramid |
+| `SEQ_19` | Observability | Error tracking, RUM, session replay, OpenTelemetry |
+| `SEQ_20` | CI/CD & Frontend DevOps | GitHub Actions, blue-green, canary, Docker |
+
+### Phase 8 — Enterprise (Optional)
+| Folder | Topics | Focus |
+|--------|--------|-------|
+| `SEQ_21` | Web Components & LWC | Custom elements, Shadow DOM, Salesforce LWC |
+| `SEQ_22` | SAP UI5 & Enterprise Patterns | SAPUI5, Fiori, OData, enterprise migration |
+
+### Phase 9 — System Design & Coding (Weeks 13–15)
+| Folder | Topics | Focus |
+|--------|--------|-------|
+| `SEQ_23` | Frontend System Design Foundations | HLD vs LLD, requirements, trade-offs |
+| `SEQ_24` | DSA for Frontend Engineers | Arrays, trees, graphs, LRU cache, EventEmitter |
+| `SEQ_25` | Practical System Design Problems | Autocomplete, chat UI, e-commerce, dashboards |
+| `SEQ_26` | Machine Coding ↔ Design Bridge | Component decomposition, evolving requirements |
+
+### Phase 10 — Interview Execution (Ongoing)
+| Folder | Topics | Focus |
+|--------|--------|-------|
+| `SEQ_27` | Interview Strategy | Pacing, communication, closing |
+| `SEQ_28` | FAANG-Level Expectations | Senior→Staff bar, production mindset, SLO/SLA |
+| `SEQ_29` | Behavioural & Leadership | STAR stories, company values, negotiation |
+
+---
+
+## Running the Labs
+
+SEQ_07 (Data Fetching) and SEQ_13 (Security) include interactive Node.js servers:
+
+```bash
+docker-compose up -d
+```
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| seq07-server | 4001 | Data fetching & API design labs |
+| seq13-server | 3001 | Security labs |
+| seq13 (attacker) | 3002 | Security attack simulation |
+| Redis | 6379 | Session store for SEQ_13 |
+
+```bash
+docker-compose down        # stop
+docker-compose up -d --build  # rebuild after changes
+```
+
+---
+
+## Study Approach
+
+1. Open `study-dashboard.html` — track progress visually
+2. Follow `PREPARATION_PLAN.md` — 1 topic/day, 1 hour
+3. Each topic file has: High-Level → Deep-Dive → Real-World Examples → Interview Q&A → Code
+4. Check off topics as you complete them (progress saved in browser localStorage)
+5. Export progress regularly: Dashboard → 📥 Export
 
 ================================================================
