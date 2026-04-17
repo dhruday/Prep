@@ -1,7 +1,7 @@
 # Frontend Interview Master Index
 **Hruday D — Senior Frontend Engineer**
 **Target: Microsoft · Adobe · Salesforce · Cisco**
-**27 Parts · 419 Topics · 3 Months**
+**29 Parts · 505 Topics · 3 Months**
 
 > ★ = Newly added topics for target company coverage
 
@@ -34,6 +34,7 @@
 12. Critical Rendering Path (CRP)
 13. HTML Parsing, CSSOM, Render Tree
 14. Browser Process Architecture — Renderer, GPU, Network processes ★
+475. DOM vs BOM — Document Object Model vs Browser Object Model ★
 
 ### ⚙️ Module 2.2: JavaScript Execution
 15. JavaScript Execution Model
@@ -47,6 +48,7 @@
 21. GPU vs CPU Rendering
 22. Browser Resource Prioritization
 23. Compositing Layers & will-change ★
+476. CSS Positioning Deep Dive — static, relative, absolute, fixed, sticky ★
 
 ### 💾 Module 2.4: Memory & Storage
 24. Memory Management in Browser
@@ -146,6 +148,7 @@
 78. REST API Consumption Patterns
 79. GraphQL in Frontend Systems
 80. tRPC & Type-Safe APIs ★
+477. gRPC in Frontend Systems ★
 
 ### 📜 Module 6.2: Lists & Streams
 81. Pagination Strategies
@@ -236,6 +239,7 @@
 132. IndexedDB
 133. LocalStorage vs SessionStorage
 134. Cache API & Workbox Library ★
+478. Cookies Deep Dive — SameSite, Secure, HttpOnly, Partitioned ★
 
 ### ♻️ Module 9.3: Cache Strategy
 135. Cache Invalidation
@@ -245,6 +249,8 @@
 139. Stale-While-Revalidate
 140. Cache Poisoning Awareness
 141. Background Sync API ★
+479. Progressive Web Apps (PWAs) — Architecture, Manifest, Install ★
+480. API Caching Strategies — SWR, React Query, HTTP Cache Layers ★
 
 ---
 
@@ -255,6 +261,8 @@
 143. WebSockets
 144. Server-Sent Events
 145. WebTransport API — Next-gen real-time ★
+481. Communication Patterns Overview — Choosing the Right Protocol ★
+482. Webhooks — Frontend Integration Patterns ★
 
 ### ⚡ Module 10.2: Real-Time UI
 146. Real-Time UI Updates
@@ -307,6 +315,8 @@
 173. CORS — Preflight, Credentialed Requests
 174. Prototype Pollution ★
 175. Supply Chain Attacks — npm package security ★
+483. HTTPS — TLS Handshake, Certificate Pinning, Mixed Content ★
+484. SSRF Awareness for Frontend Engineers ★
 
 ### 🔑 Module 12.2: Auth & Tokens
 176. Authentication Flows
@@ -324,6 +334,8 @@
 186. Token Refresh — Silent Refresh Pattern
 187. Preventing Data Leaks in Browser DevTools ★
 188. Subresource Integrity (SRI) ★
+485. Input Validation & Sanitization in Frontend ★
+486. Feature Policy / Permissions Policy ★
 
 ---
 
@@ -368,6 +380,7 @@
 208. Performance Monitoring
 209. Real User Monitoring (RUM)
 210. OpenTelemetry for Frontend ★
+487. Frontend Alerting — Thresholds, PagerDuty, Slack Integration ★
 
 ### 🧪 Module 14.2: Debugging UX
 211. User Analytics — Event Tracking, Funnels
@@ -413,6 +426,10 @@
 235. Rich Text Editor (contenteditable) ★
 236. Drag-and-Drop List ★
 237. Virtual Scrolling Component from Scratch ★
+488. Config-Driven UI ★
+489. Shimmer UI / Skeleton Screens ★
+490. Accordion Component ★
+491. Nested Comments (Reddit-Style) ★
 
 ### 🧩 Module 16.2: Large Systems
 238. E-Commerce Frontend
@@ -426,6 +443,15 @@
 246. Cisco-Style Network Monitoring Dashboard ★
 247. Salesforce-Style CRM Record View ★
 248. Adobe-Style Asset Manager ★
+492. Instagram — Photo Sharing Platform ★
+493. Video Streaming Platform (Netflix) ★
+494. Music Streaming Platform (Spotify) ★
+495. Live Commentary System (Cricbuzz) ★
+496. Email Client (Gmail) ★
+497. Diagram Tool (Excalidraw) ★
+498. Analytics Dashboard ★
+499. Google Sheets — Spreadsheet System ★
+500. Kanban Board (Trello/Jira) ★
 
 ---
 
@@ -570,6 +596,7 @@
 323. Unit vs Integration vs E2E — When to Use Which ★
 324. Testing Pyramid vs Testing Trophy vs Testing Honeycomb ★
 325. Cost of Tests at Each Level ★
+501. Test-Driven Development (TDD) in Frontend ★
 
 ### ⚡ Module 22.2: Unit & Component Testing
 326. Jest — Setup, Mocking, Spying, Snapshot ★
@@ -588,6 +615,7 @@
 335. Visual Regression Testing — Storybook, Chromatic, Percy ★
 336. Lighthouse CI in Build Pipeline ★
 337. Bundle Size Regression Testing ★
+502. Security Testing — OWASP ZAP, Snyk, npm audit ★
 
 ---
 
@@ -812,39 +840,51 @@
 
 ---
 
+## PART 2️⃣
+9️⃣ — Career & Personal Brand ★
+> Resume, branding, and LinkedIn presence — often overlooked but critical for landing interviews
+
+### 💼 Module 29.1: Career Strategy
+503. Resume Building for Frontend Engineers ★
+504. Personal Branding & Online Presence ★
+505. LinkedIn Optimization for Tech Interviews ★
+
+---
+
 ## Summary
 
 | Part | Title | Topics | Target |
 |------|-------|---------|--------|
 | 1 | Frontend System Design Foundations | 1–10 | All |
-| 2 | Browser & Web Platform Internals | 11–32 | Adobe, Microsoft |
+| 2 | Browser & Web Platform Internals | 11–32, 475–476 | Adobe, Microsoft |
 | 3 | Frontend Architecture Patterns | 33–46 | All |
 | 4 | Rendering Strategies | 47–62 | Microsoft, Adobe |
 | 5 | State Management | 63–77 | All |
-| 6 | Data Fetching & API Design | 78–94 | All |
+| 6 | Data Fetching & API Design | 78–94, 477 | All |
 | 7 | Performance Optimization | 95–113 | Adobe, Microsoft |
 | 8 | Assets & Resource Optimization | 114–127 | Adobe |
-| 9 | Caching & Offline | 128–141 | Cisco, Microsoft |
-| 10 | Real-Time Systems | 142–154 | Cisco, Microsoft |
+| 9 | Caching & Offline | 128–141, 478–480 | Cisco, Microsoft |
+| 10 | Real-Time Systems | 142–154, 481–482 | Cisco, Microsoft |
 | 11 | Scalability & Growth | 155–170 | Salesforce, Microsoft |
-| 12 | Security | 171–188 | All |
+| 12 | Security | 171–188, 483–486 | All |
 | 13 | Authorization & Access Control | 189–205 | Salesforce, Cisco |
-| 14 | Observability | 206–216 | Microsoft, Cisco |
+| 14 | Observability | 206–216, 487 | Microsoft, Cisco |
 | 15 | Accessibility & UX | 217–229 | Adobe, Microsoft |
-| 16 | Practical System Design Problems | 230–248 | All |
+| 16 | Practical System Design Problems | 230–248, 488–500 | All |
 | 17 | Machine Coding ↔ Design Bridge | 249–260 | All |
 | 18 | Interview Strategy | 261–271 | All |
 | 19 | FAANG-Level Expectations | 272–283 | All |
 | 20 ★ | TypeScript Deep Dive | 284–299 | Microsoft, Cisco, Adobe |
 | 21 ★ | DSA for Frontend Engineers | 300–322 | All |
-| 22 ★ | Testing Strategy | 323–337 | Adobe, Microsoft |
+| 22 ★ | Testing Strategy | 323–337, 501–502 | Adobe, Microsoft |
 | 23 ★ | CI/CD & Frontend DevOps | 338–351 | Cisco, Microsoft |
 | 24 ★ | Web Components & LWC | 352–363 | Salesforce, Cisco |
 | 25 ★ | Angular & RxJS Deep Dive | 364–385 | Cisco, Adobe |
 | 26 ★ | Behavioural & Leadership Round | 386–405 | Microsoft, All |
 | 27 ★ | SAP UI5 & Enterprise Frontend | 406–419 | All |
 | 28 ★ | React, Next.js & Redux Deep Dive | 420–474 | Adobe, Microsoft |
+| 29 ★ | Career & Personal Brand | 503–505 | All |
 
 ---
 
-**Total: 474 Topics · 28 Parts · Microsoft · Adobe · Salesforce · Cisco**
+**Total: 505 Topics · 29 Parts · Microsoft · Adobe · Salesforce · Cisco**

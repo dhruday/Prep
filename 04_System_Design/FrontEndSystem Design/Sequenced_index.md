@@ -1,7 +1,7 @@
 # Frontend Interview Master Index — Sequenced Study Order
 **Hruday D — Senior Frontend Engineer**
 **Target: Microsoft · Adobe · Salesforce · Cisco**
-**28 Parts · 474 Topics · Study in this exact sequence**
+**28 Parts · 517 Topics · Study in this exact sequence**
 
 > ★ = Newly added topics for target company coverage
 > Study each part completely before moving to the next.
@@ -88,10 +88,12 @@
 38. DNS Prefetch, Preconnect, Early Hints (103) ★
 39. QUIC Protocol Basics ★
 
-### 🕸️ Module 2.5: Worker Threads
+### �️ Module 2.5: Worker Threads
 40. Web Workers — Use Cases, Limitations, Communication
 41. Service Workers — Lifecycle, Fetch Interception, Push
 42. Worklets — Audio, Paint, Layout Worklets
+487. DOM vs BOM — Document Object Model vs Browser Object Model ★
+488. CSS Positioning Deep Dive — static, relative, absolute, fixed, sticky ★
 
 ---
 
@@ -278,6 +280,7 @@
 149. REST API Consumption Patterns
 150. GraphQL in Frontend Systems
 151. tRPC & Type-Safe APIs ★
+489. gRPC in Frontend Systems ★
 
 ### 📜 Module 7.2: Lists & Streams
 152. Pagination Strategies
@@ -434,6 +437,7 @@
 230. IndexedDB
 231. LocalStorage vs SessionStorage
 232. Cache API & Workbox Library ★
+490. Cookies Deep Dive — SameSite, Secure, HttpOnly, Partitioned ★
 
 ### ♻️ Module 12.3: Cache Strategy
 233. Cache Invalidation
@@ -443,6 +447,8 @@
 237. Stale-While-Revalidate
 238. Cache Poisoning Awareness
 239. Background Sync API ★
+491. Progressive Web Apps (PWAs) — Architecture, Manifest, Install ★
+492. API Caching Strategies — SWR, React Query, HTTP Cache Layers ★
 
 ---
 
@@ -455,6 +461,8 @@
 242. CORS — Preflight, Credentialed Requests
 243. Prototype Pollution ★
 244. Supply Chain Attacks — npm package security ★
+495. HTTPS — TLS Handshake, Certificate Pinning, Mixed Content ★
+496. SSRF Awareness for Frontend Engineers ★
 
 ### 🔑 Module 13.2: Auth & Tokens
 245. Authentication Flows
@@ -472,6 +480,8 @@
 255. Token Refresh — Silent Refresh Pattern
 256. Preventing Data Leaks in Browser DevTools ★
 257. Subresource Integrity (SRI) ★
+497. Input Validation & Sanitization in Frontend ★
+498. Feature Policy / Permissions Policy ★
 
 ---
 
@@ -523,6 +533,8 @@
 276. WebSockets
 277. Server-Sent Events
 278. WebTransport API — Next-gen real-time ★
+493. Communication Patterns Overview — Choosing the Right Protocol ★
+494. Webhooks — Frontend Integration Patterns ★
 
 ### ⚡ Module 15.2: Real-Time UI
 279. Real-Time UI Updates
@@ -605,6 +617,7 @@
 317. Unit vs Integration vs E2E — When to Use Which ★
 318. Testing Pyramid vs Testing Trophy vs Testing Honeycomb ★
 319. Cost of Tests at Each Level ★
+499. Test-Driven Development (TDD) in Frontend ★
 
 ### ⚡ Module 18.2: Unit & Component Testing
 320. Jest — Setup, Mocking, Spying, Snapshot ★
@@ -623,6 +636,7 @@
 329. Visual Regression Testing — Storybook, Chromatic, Percy ★
 330. Lighthouse CI in Build Pipeline ★
 331. Bundle Size Regression Testing ★
+500. Security Testing — OWASP ZAP, Snyk, npm audit ★
 
 ---
 
@@ -635,6 +649,7 @@
 334. Performance Monitoring
 335. Real User Monitoring (RUM)
 336. OpenTelemetry for Frontend ★
+501. Frontend Alerting — Thresholds, PagerDuty, Slack Integration ★
 
 ### 🧪 Module 19.2: Debugging UX
 337. User Analytics — Event Tracking, Funnels
@@ -802,6 +817,10 @@
 417. Date Picker with Accessibility ★
 418. Rich Text Editor (contenteditable) ★
 419. Virtual Scrolling Component from Scratch ★
+502. Config-Driven UI ★
+503. Shimmer UI / Skeleton Screens ★
+504. Accordion Component ★
+505. Nested Comments (Reddit-Style) ★
 
 ### 🧩 Module 25.2: Large System Designs
 420. Design Flipkart/Amazon Cart System — state, sync, persistence
@@ -816,6 +835,15 @@
 429. Design E-Commerce Frontend
 430. Design a Live Dashboard
 431. Design a Comment System
+506. Design Instagram — Photo Sharing Platform ★
+507. Design Video Streaming Platform (Netflix) ★
+508. Design Music Streaming Platform (Spotify) ★
+509. Design Live Commentary System (Cricbuzz) ★
+510. Design Email Client (Gmail) ★
+511. Design Diagram Tool (Excalidraw) ★
+512. Design Analytics Dashboard ★
+513. Design Google Sheets — Spreadsheet System ★
+514. Design Kanban Board (Trello/Jira) ★
 
 ---
 
@@ -922,6 +950,16 @@
 486. Using Levels.fyi Data in Negotiation ★
 
 ---
+
+## SEQUENCE 3️⃣0️⃣ — Career & Personal Brand ★
+> Resume, branding, and LinkedIn — critical for landing first-round interviews
+
+### 💼 Module 30.1: Career Strategy
+515. Resume Building for Frontend Engineers ★
+516. Personal Branding & Online Presence ★
+517. LinkedIn Optimization for Tech Interviews ★
+
+---
 ---
 
 # 📊 STUDY SEQUENCE SUMMARY
@@ -929,37 +967,38 @@
 | Sequence | Part | Phase | Week | Topics |
 |----------|------|-------|------|--------|
 | 1 | JavaScript Engine & Runtime | Foundation | 1 | 1–21 |
-| 2 | Browser & Web Platform Internals | Foundation | 1–2 | 22–42 |
+| 2 | Browser & Web Platform Internals | Foundation | 1–2 | 22–42, 487–488 |
 | 3 | TypeScript Deep Dive | Foundation | 2 | 43–58 |
 | 4 | Angular & RxJS Deep Dive | Frameworks | 3–4 | 59–80 |
 | 5 | React, Next.js & Redux Deep Dive | Frameworks | 4–5 | 81–135 |
 | 6 | State Management | State & Data | 5 | 136–148 |
-| 7 | Data Fetching & API Design | State & Data | 5 | 149–164 |
+| 7 | Data Fetching & API Design | State & Data | 5 | 149–164, 489 |
 | 8 | Performance Optimization | Perf & Arch | 6 | 165–181 |
 | 9 | Assets & Resource Optimization | Perf & Arch | 6 | 182–195 |
 | 10 | Frontend Architecture Patterns | Perf & Arch | 6–7 | 196–209 |
 | 11 | Rendering Strategies | Perf & Arch | 7 | 210–225 |
-| 12 | Caching & Offline | Reliability | 7 | 226–239 |
-| 13 | Security | Reliability | 7 | 240–257 |
+| 12 | Caching & Offline | Reliability | 7 | 226–239, 490–492 |
+| 13 | Security | Reliability | 7 | 240–257, 495–498 |
 | 14 | Authorization & Access Control | Reliability | 7–8 | 258–274 |
-| 15 | Real-Time Systems | Scale | 8 | 275–287 |
+| 15 | Real-Time Systems | Scale | 8 | 275–287, 493–494 |
 | 16 | Scalability & Growth | Scale | 8 | 288–303 |
 | 17 | Accessibility & UX | Quality | 8 | 304–316 |
-| 18 | Testing Strategy | Quality | 8 | 317–331 |
-| 19 | Observability | Quality | 8 | 332–342 |
+| 18 | Testing Strategy | Quality | 8 | 317–331, 499–500 |
+| 19 | Observability | Quality | 8 | 332–342, 501 |
 | 20 | CI/CD & Frontend DevOps | Quality | 8–9 | 343–356 |
 | 21 | Web Components & LWC | Company-Specific | 9 | 357–368 |
 | 22 | SAP UI5 & Enterprise Frontend | Company-Specific | 9 | 369–382 |
 | 23 | Frontend System Design Foundations | Interview | 9–10 | 383–392 |
 | 24 | DSA for Frontend Engineers | Interview | 9–10 | 393–410 |
-| 25 | Practical System Design Problems | Interview | 10–11 | 411–431 |
+| 25 | Practical System Design Problems | Interview | 10–11 | 411–431, 502–514 |
 | 26 | Machine Coding ↔ Design Bridge | Interview | 10–11 | 432–443 |
 | 27 | Interview Strategy | Interview | 11 | 444–454 |
 | 28 | FAANG-Level Expectations | Leadership | 11–12 | 455–466 |
 | 29 | Behavioural & Leadership Round | Leadership | 12 | 467–486 |
+| 30 | Career & Personal Brand | Leadership | 12 | 515–517 |
 
 ---
 
-**Total: 486 Topics · 29 Sequences · 10 Phases · 12 Weeks**
+**Total: 517 Topics · 30 Sequences · 10 Phases · 12 Weeks**
 **Apply Order: Cisco → Adobe → Microsoft → Salesforce**
 **First application: Week 12**
