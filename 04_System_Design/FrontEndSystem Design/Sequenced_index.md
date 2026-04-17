@@ -1,7 +1,7 @@
 # Frontend Interview Master Index — Sequenced Study Order
 **Hruday D — Senior Frontend Engineer**
 **Target: Microsoft · Adobe · Salesforce · Cisco**
-**28 Parts · 517 Topics · Study in this exact sequence**
+**28 Parts · 534 Topics · Study in this exact sequence**
 
 > ★ = Newly added topics for target company coverage
 > Study each part completely before moving to the next.
@@ -94,6 +94,8 @@
 42. Worklets — Audio, Paint, Layout Worklets
 487. DOM vs BOM — Document Object Model vs Browser Object Model ★
 488. CSS Positioning Deep Dive — static, relative, absolute, fixed, sticky ★
+518. Polyfills — Deep Dive, Writing Production-Grade Polyfills ★
+519. Webpage Rendering Cycle — Frame Lifecycle, Paint → Composite ★
 
 ---
 
@@ -463,6 +465,7 @@
 244. Supply Chain Attacks — npm package security ★
 495. HTTPS — TLS Handshake, Certificate Pinning, Mixed Content ★
 496. SSRF Awareness for Frontend Engineers ★
+520. SSJI — Server-Side JavaScript Injection ★
 
 ### 🔑 Module 13.2: Auth & Tokens
 245. Authentication Flows
@@ -535,6 +538,7 @@
 278. WebTransport API — Next-gen real-time ★
 493. Communication Patterns Overview — Choosing the Right Protocol ★
 494. Webhooks — Frontend Integration Patterns ★
+521. WebRTC — Peer-to-Peer Communication, Signalling, STUN/TURN ★
 
 ### ⚡ Module 15.2: Real-Time UI
 279. Real-Time UI Updates
@@ -595,6 +599,7 @@
 306. Keyboard Navigation — Focus Management, Tab Order
 307. Screen Reader Testing — NVDA, VoiceOver, JAWS ★
 308. Accessibility Tree — How Browsers Expose to Assistive Tech ★
+522. Focus Management — Trapping, Restoring, Programmatic Focus ★
 
 ### 🎨 Module 17.2: Inclusive Design
 309. Color Contrast — WCAG AA vs AAA ratios
@@ -607,6 +612,7 @@
 314. Accessibility as Non-Functional Requirement
 315. Performance Impact on Accessibility
 316. Accessibility Auditing Tools — axe, Lighthouse, Arc Toolkit ★
+523. How to Fix Accessibility — Systematic Remediation Guide ★
 
 ---
 
@@ -821,6 +827,10 @@
 503. Shimmer UI / Skeleton Screens ★
 504. Accordion Component ★
 505. Nested Comments (Reddit-Style) ★
+524. Image Slider — LLD with Accessibility ★
+525. YouTube Live Chat — Real-Time Chat LLD ★
+526. Real-Time Updates LLD — Notifications, Feeds, Scores ★
+527. Routing & Protected Routes — LLD ★
 
 ### 🧩 Module 25.2: Large System Designs
 420. Design Flipkart/Amazon Cart System — state, sync, persistence
@@ -854,6 +864,7 @@
 433. State vs Props
 434. Edge Case Handling
 435. Accessibility-First Component Design ★
+528. LLD Approach Guide — Structured Method for Machine Coding ★
 
 ### ⚙️ Module 26.2: Code Quality
 436. Performance-Aware Components
@@ -876,6 +887,8 @@
 445. Requirement Clarification Framework
 446. Architecture Drawing — Tools & Technique
 447. Time Boxing Each Section ★
+529. Time Breakups for System Design Rounds ★
+530. Why Candidates Fail LLD / Machine Coding Rounds ★
 
 ### 💬 Module 27.2: Communication
 448. Explaining Trade-offs Clearly
@@ -902,6 +915,10 @@
 455. Senior vs Staff Expectations
 456. Architecture Ownership
 457. Technical Vision & Roadmap Planning ★
+531. RADIO Framework — React, Angular, Design, Interpret, Optimize ★
+532. System Design Expectations — Senior Engineer ★
+533. System Design Expectations — Early Career ★
+534. System Design Skills on Resume ★
 
 ### 🤝 Module 28.2: Leadership
 458. Cross-Team Collaboration
@@ -967,7 +984,7 @@
 | Sequence | Part | Phase | Week | Topics |
 |----------|------|-------|------|--------|
 | 1 | JavaScript Engine & Runtime | Foundation | 1 | 1–21 |
-| 2 | Browser & Web Platform Internals | Foundation | 1–2 | 22–42, 487–488 |
+| 2 | Browser & Web Platform Internals | Foundation | 1–2 | 22–42, 487–488, 518–519 |
 | 3 | TypeScript Deep Dive | Foundation | 2 | 43–58 |
 | 4 | Angular & RxJS Deep Dive | Frameworks | 3–4 | 59–80 |
 | 5 | React, Next.js & Redux Deep Dive | Frameworks | 4–5 | 81–135 |
@@ -978,11 +995,11 @@
 | 10 | Frontend Architecture Patterns | Perf & Arch | 6–7 | 196–209 |
 | 11 | Rendering Strategies | Perf & Arch | 7 | 210–225 |
 | 12 | Caching & Offline | Reliability | 7 | 226–239, 490–492 |
-| 13 | Security | Reliability | 7 | 240–257, 495–498 |
+| 13 | Security | Reliability | 7 | 240–257, 495–498, 520 |
 | 14 | Authorization & Access Control | Reliability | 7–8 | 258–274 |
-| 15 | Real-Time Systems | Scale | 8 | 275–287, 493–494 |
+| 15 | Real-Time Systems | Scale | 8 | 275–287, 493–494, 521 |
 | 16 | Scalability & Growth | Scale | 8 | 288–303 |
-| 17 | Accessibility & UX | Quality | 8 | 304–316 |
+| 17 | Accessibility & UX | Quality | 8 | 304–316, 522–523 |
 | 18 | Testing Strategy | Quality | 8 | 317–331, 499–500 |
 | 19 | Observability | Quality | 8 | 332–342, 501 |
 | 20 | CI/CD & Frontend DevOps | Quality | 8–9 | 343–356 |
@@ -990,15 +1007,15 @@
 | 22 | SAP UI5 & Enterprise Frontend | Company-Specific | 9 | 369–382 |
 | 23 | Frontend System Design Foundations | Interview | 9–10 | 383–392 |
 | 24 | DSA for Frontend Engineers | Interview | 9–10 | 393–410 |
-| 25 | Practical System Design Problems | Interview | 10–11 | 411–431, 502–514 |
-| 26 | Machine Coding ↔ Design Bridge | Interview | 10–11 | 432–443 |
-| 27 | Interview Strategy | Interview | 11 | 444–454 |
-| 28 | FAANG-Level Expectations | Leadership | 11–12 | 455–466 |
+| 25 | Practical System Design Problems | Interview | 10–11 | 411–431, 502–514, 524–527 |
+| 26 | Machine Coding ↔ Design Bridge | Interview | 10–11 | 432–443, 528 |
+| 27 | Interview Strategy | Interview | 11 | 444–454, 529–530 |
+| 28 | FAANG-Level Expectations | Leadership | 11–12 | 455–466, 531–534 |
 | 29 | Behavioural & Leadership Round | Leadership | 12 | 467–486 |
 | 30 | Career & Personal Brand | Leadership | 12 | 515–517 |
 
 ---
 
-**Total: 517 Topics · 30 Sequences · 10 Phases · 12 Weeks**
+**Total: 534 Topics · 30 Sequences · 10 Phases · 12 Weeks**
 **Apply Order: Cisco → Adobe → Microsoft → Salesforce**
 **First application: Week 12**

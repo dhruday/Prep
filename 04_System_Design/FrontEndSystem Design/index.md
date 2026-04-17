@@ -1,7 +1,7 @@
 # Frontend Interview Master Index
 **Hruday D — Senior Frontend Engineer**
 **Target: Microsoft · Adobe · Salesforce · Cisco**
-**29 Parts · 505 Topics · 3 Months**
+**30 Parts · 522 Topics · 3 Months**
 
 > ★ = Newly added topics for target company coverage
 
@@ -35,6 +35,7 @@
 13. HTML Parsing, CSSOM, Render Tree
 14. Browser Process Architecture — Renderer, GPU, Network processes ★
 475. DOM vs BOM — Document Object Model vs Browser Object Model ★
+511. Polyfills — Deep Dive, Writing Production-Grade Polyfills ★
 
 ### ⚙️ Module 2.2: JavaScript Execution
 15. JavaScript Execution Model
@@ -49,6 +50,7 @@
 22. Browser Resource Prioritization
 23. Compositing Layers & will-change ★
 476. CSS Positioning Deep Dive — static, relative, absolute, fixed, sticky ★
+510. Webpage Rendering Cycle — Frame Lifecycle, Paint → Composite ★
 
 ### 💾 Module 2.4: Memory & Storage
 24. Memory Management in Browser
@@ -263,6 +265,7 @@
 145. WebTransport API — Next-gen real-time ★
 481. Communication Patterns Overview — Choosing the Right Protocol ★
 482. Webhooks — Frontend Integration Patterns ★
+506. WebRTC — Peer-to-Peer Communication, Signalling, STUN/TURN ★
 
 ### ⚡ Module 10.2: Real-Time UI
 146. Real-Time UI Updates
@@ -317,6 +320,7 @@
 175. Supply Chain Attacks — npm package security ★
 483. HTTPS — TLS Handshake, Certificate Pinning, Mixed Content ★
 484. SSRF Awareness for Frontend Engineers ★
+507. SSJI — Server-Side JavaScript Injection ★
 
 ### 🔑 Module 12.2: Auth & Tokens
 176. Authentication Flows
@@ -400,6 +404,7 @@
 219. Keyboard Navigation — Focus Management, Tab Order
 220. Screen Reader Testing — NVDA, VoiceOver, JAWS ★
 221. Accessibility Tree — How Browsers Expose to Assistive Tech ★
+508. Focus Management — Trapping, Restoring, Programmatic Focus ★
 
 ### 🎨 Module 15.2: Inclusive Design
 222. Color Contrast — WCAG AA vs AAA ratios
@@ -412,6 +417,7 @@
 227. Accessibility as Non-Functional Requirement
 228. Performance Impact on Accessibility
 229. Accessibility Auditing Tools — axe, Lighthouse, Arc Toolkit ★
+509. How to Fix Accessibility — Systematic Remediation Guide ★
 
 ---
 
@@ -430,6 +436,10 @@
 489. Shimmer UI / Skeleton Screens ★
 490. Accordion Component ★
 491. Nested Comments (Reddit-Style) ★
+512. Image Slider — LLD with Accessibility ★
+513. YouTube Live Chat — Real-Time Chat LLD ★
+514. Real-Time Updates LLD — Notifications, Feeds, Scores ★
+515. Routing & Protected Routes — LLD ★
 
 ### 🧩 Module 16.2: Large Systems
 238. E-Commerce Frontend
@@ -462,6 +472,7 @@
 250. State vs Props
 251. Edge Case Handling
 252. Accessibility-First Component Design ★
+517. LLD Approach Guide — Structured Method for Machine Coding ★
 
 ### ⚙️ Module 17.2: Code Quality
 253. Performance-Aware Components
@@ -484,6 +495,8 @@
 262. Requirement Clarification Framework
 263. Architecture Drawing — Tools & Technique
 264. Time Boxing Each Section ★
+518. Time Breakups for System Design Rounds ★
+519. Why Candidates Fail LLD / Machine Coding Rounds ★
 
 ### 💬 Module 18.2: Communication
 265. Explaining Trade-offs Clearly
@@ -504,6 +517,10 @@
 272. Senior vs Staff Expectations
 273. Architecture Ownership
 274. Technical Vision & Roadmap Planning ★
+516. RADIO Framework — React, Angular, Design, Interpret, Optimize ★
+520. System Design Expectations — Senior Engineer ★
+521. System Design Expectations — Early Career ★
+522. System Design Skills on Resume ★
 
 ### 🤝 Module 19.2: Leadership
 275. Cross-Team Collaboration
@@ -856,7 +873,7 @@
 | Part | Title | Topics | Target |
 |------|-------|---------|--------|
 | 1 | Frontend System Design Foundations | 1–10 | All |
-| 2 | Browser & Web Platform Internals | 11–32, 475–476 | Adobe, Microsoft |
+| 2 | Browser & Web Platform Internals | 11–32, 475–476, 510–511 | Adobe, Microsoft, Google |
 | 3 | Frontend Architecture Patterns | 33–46 | All |
 | 4 | Rendering Strategies | 47–62 | Microsoft, Adobe |
 | 5 | State Management | 63–77 | All |
@@ -864,16 +881,16 @@
 | 7 | Performance Optimization | 95–113 | Adobe, Microsoft |
 | 8 | Assets & Resource Optimization | 114–127 | Adobe |
 | 9 | Caching & Offline | 128–141, 478–480 | Cisco, Microsoft |
-| 10 | Real-Time Systems | 142–154, 481–482 | Cisco, Microsoft |
+| 10 | Real-Time Systems | 142–154, 481–482, 506 | Cisco, Microsoft, Google |
 | 11 | Scalability & Growth | 155–170 | Salesforce, Microsoft |
-| 12 | Security | 171–188, 483–486 | All |
+| 12 | Security | 171–188, 483–486, 507 | All |
 | 13 | Authorization & Access Control | 189–205 | Salesforce, Cisco |
 | 14 | Observability | 206–216, 487 | Microsoft, Cisco |
-| 15 | Accessibility & UX | 217–229 | Adobe, Microsoft |
-| 16 | Practical System Design Problems | 230–248, 488–500 | All |
-| 17 | Machine Coding ↔ Design Bridge | 249–260 | All |
-| 18 | Interview Strategy | 261–271 | All |
-| 19 | FAANG-Level Expectations | 272–283 | All |
+| 15 | Accessibility & UX | 217–229, 508–509 | Adobe, Microsoft, Google |
+| 16 | Practical System Design Problems | 230–248, 488–500, 512–515 | All |
+| 17 | Machine Coding ↔ Design Bridge | 249–260, 517 | All |
+| 18 | Interview Strategy | 261–271, 518–519 | All |
+| 19 | FAANG-Level Expectations | 272–283, 516, 520–522 | All, Google |
 | 20 ★ | TypeScript Deep Dive | 284–299 | Microsoft, Cisco, Adobe |
 | 21 ★ | DSA for Frontend Engineers | 300–322 | All |
 | 22 ★ | Testing Strategy | 323–337, 501–502 | Adobe, Microsoft |
@@ -884,7 +901,8 @@
 | 27 ★ | SAP UI5 & Enterprise Frontend | 406–419 | All |
 | 28 ★ | React, Next.js & Redux Deep Dive | 420–474 | Adobe, Microsoft |
 | 29 ★ | Career & Personal Brand | 503–505 | All |
+| 30 ★ | Google-Specific Additions | 506–522 | Google, All |
 
 ---
 
-**Total: 505 Topics · 29 Parts · Microsoft · Adobe · Salesforce · Cisco**
+**Total: 522 Topics · 30 Parts · Google · Microsoft · Adobe · Salesforce · Cisco**
