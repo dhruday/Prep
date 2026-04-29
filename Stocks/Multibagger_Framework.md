@@ -1,6 +1,6 @@
 # Multibagger Identification Framework
 
-## A Systematic Approach to 10x+ Returns in Small-Cap & Early-Stage Equities
+## A Systematic Approach to 10x+ Returns in Indian Small-Cap & Early-Stage Equities (INR-Based)
 
 ---
 
@@ -10,26 +10,26 @@
 
 | Signal | What to Look For | Data Source |
 |--------|------------------|-------------|
-| TAM Size | > $10B and growing > 15% CAGR | Industry reports (Gartner, Statista, Grand View Research) |
-| SAM/SOM | Company's serviceable market is still < 5% penetrated | Company filings, investor presentations |
+| TAM Size | > ₹80,000 Cr and growing > 15% CAGR | Industry reports (Gartner, Statista, Grand View Research, CRISIL) |
+| SAM/SOM | Company's serviceable market is still < 5% penetrated | Company filings (BSE/NSE), investor presentations, DRHP |
 | Market Stage | Industry in S-curve inflection (early adoption → early majority) | Adoption rate data, Google Trends, patent filings |
 
 **Scoring (0–15):**
 
 | Points | Criteria |
 |--------|----------|
-| 13–15 | TAM > $50B, < 2% penetration, 20%+ market CAGR |
-| 10–12 | TAM > $10B, < 5% penetration, 15%+ market CAGR |
-| 7–9 | TAM > $5B, < 10% penetration, 10%+ market CAGR |
-| 4–6 | TAM > $2B, moderate growth |
+| 13–15 | TAM > ₹4,00,000 Cr, < 2% penetration, 20%+ market CAGR |
+| 10–12 | TAM > ₹80,000 Cr, < 5% penetration, 15%+ market CAGR |
+| 7–9 | TAM > ₹40,000 Cr, < 10% penetration, 10%+ market CAGR |
+| 4–6 | TAM > ₹16,000 Cr, moderate growth |
 | 0–3 | Niche/saturated market |
 
 ### 1.2 Long-Term Tailwinds Checklist
 
 - [ ] Technology enablement (AI, cloud, electrification, biotech)
 - [ ] Demographic shift (aging population, rising middle class, urbanization)
-- [ ] Regulatory catalyst (mandates, subsidies, deregulation)
-- [ ] Behavioral shift (remote work, digital payments, health consciousness)
+- [ ] Regulatory catalyst (PLI schemes, Make in India, GST reforms, SEBI regulations)
+- [ ] Behavioral shift (UPI/digital payments, D2C adoption, health consciousness, premiumization)
 
 **Rule:** At least 2 of 4 tailwinds should be present for high conviction.
 
@@ -84,8 +84,8 @@ Target: Ratio > 1.5x (every 1% revenue growth → 1.5%+ profit growth)
 | Pledged Shares (% of promoter holding) | < 5% | > 20% |
 | Related Party Transactions (% of revenue) | < 2% | > 5% |
 | Insider Buying (last 12 months) | Net buyers | Consistent selling |
-| Board Independence | > 50% independent directors | Dominated by family/insiders |
-| Auditor Quality | Big 4 or reputed firm | Frequent auditor changes |
+| Board Independence | > 50% independent directors | Dominated by family/promoter group |
+| Auditor Quality | Big 4 or reputed Indian firm (SRB, Walker Chandiok, Deloitte, BSR) | Frequent auditor changes |
 
 ### 3.2 Qualitative Assessment
 
@@ -102,7 +102,7 @@ Target: Ratio > 1.5x (every 1% revenue growth → 1.5%+ profit growth)
 - Frequent changes in CFO or auditor
 - Opaque corporate structures or subsidiaries in tax havens
 - Compensation growing faster than profits
-- Issuing GDRs/FCCBs to unknown investors
+- Issuing GDRs/FCCBs/preferential warrants to unknown investors
 - Management giving overly promotional interviews without substance
 
 **Scoring (0–15):**
@@ -212,11 +212,11 @@ For each identified catalyst, assess:
 
 | Metric | "Undiscovered" Signal | Source |
 |--------|----------------------|--------|
-| Analyst Coverage | 0–2 analysts | Bloomberg, broker databases |
-| Institutional Ownership | < 10% of float | Quarterly shareholding filings |
-| Media Mentions (quarterly) | < 5 articles | Google News, financial media |
-| Trading Volume | Low liquidity, wide bid-ask spreads | Exchange data |
-| Index Inclusion | Not in any major index | Index methodology documents |
+| Analyst Coverage | 0–2 analysts | Bloomberg, Trendlyne, Tijori Finance |
+| Institutional Ownership (MF + FII) | < 10% of float | BSE/NSE quarterly shareholding patterns |
+| Media Mentions (quarterly) | < 5 articles | Google News, Moneycontrol, ET |
+| Trading Volume | Low liquidity, wide bid-ask spreads | NSE/BSE data |
+| Index Inclusion | Not in any Nifty/BSE index | NSE index methodology documents |
 
 ### 6.2 Mispricing Signals
 
@@ -259,13 +259,13 @@ For each identified catalyst, assess:
 Implied Fair Value = Forward Revenue × Target Net Margin × Justified P/E
 
 Example:
-  Revenue (next year) = $100M
+  Revenue (next year) = ₹800 Cr
   Target Net Margin (at scale, Year 5) = 15%
   Justified P/E (growth adjusted) = 25x
-  Implied Earnings Power = $15M
-  Implied Market Cap = $375M
+  Implied Earnings Power = ₹120 Cr
+  Implied Market Cap = ₹3,000 Cr
   
-  If current market cap = $150M → 2.5x upside to fair value
+  If current market cap = ₹1,200 Cr → 2.5x upside to fair value
 ```
 
 #### Method 2: Price-to-Sales with Comparables
@@ -281,15 +281,15 @@ Caution: P/S > 10x requires > 50% growth AND path to > 20% margins
 
 | Scenario | Revenue (Y5) | Margin (Y5) | Multiple | Implied Value | Probability |
 |----------|-------------|-------------|----------|---------------|-------------|
-| Bull | $500M | 20% | 30x | $3.0B | 25% |
-| Base | $300M | 15% | 20x | $900M | 50% |
-| Bear | $150M | 8% | 12x | $144M | 25% |
-| **Expected Value** | | | | **$1.236B** | |
+| Bull | ₹4,000 Cr | 20% | 30x | ₹24,000 Cr | 25% |
+| Base | ₹2,400 Cr | 15% | 20x | ₹7,200 Cr | 50% |
+| Bear | ₹1,200 Cr | 8% | 12x | ₹1,152 Cr | 25% |
+| **Expected Value** | | | | **₹9,888 Cr** | |
 
 ```
-Expected Value = (0.25 × $3.0B) + (0.50 × $900M) + (0.25 × $144M) = $1.236B
+Expected Value = (0.25 × ₹24,000 Cr) + (0.50 × ₹7,200 Cr) + (0.25 × ₹1,152 Cr) = ₹9,888 Cr
 
-If current market cap = $200M → ~6x expected upside
+If current market cap = ₹1,600 Cr → ~6x expected upside
 ```
 
 #### Method 4: Reverse DCF Sanity Check
@@ -479,7 +479,7 @@ Decision:
 STAGE 1: SCREENING (Quantitative Filters)
 │
 ├── Revenue growth > 20% CAGR (3Y)
-├── Market cap < $2B (small-cap universe)
+├── Market cap < ₹16,000 Cr (small-cap universe per SEBI definition)
 ├── Promoter holding > 30%
 ├── Debt/Equity < 1.0
 ├── Gross margin > 25% (or improving)
@@ -528,15 +528,15 @@ STAGE 4: MONITORING (Quarterly)
 
 | Purpose | Recommended Sources |
 |---------|-------------------|
-| Financial Data | SEC/SEBI filings, Screener.in, Tikr.com, Koyfin |
-| Ownership Data | Quarterly shareholding patterns, insider transaction filings |
-| Industry Research | Gartner, IBISWorld, Statista, industry associations |
-| Management Assessment | Earnings call transcripts (Seeking Alpha), AGM recordings |
-| Channel Checks | LinkedIn (hiring patterns), Glassdoor, trade shows |
-| Patent / IP | Google Patents, USPTO, national patent offices |
-| Neglect Screening | Bloomberg terminal, broker coverage lists |
-| News & Sentiment | Google News, Twitter/X (founder and industry accounts) |
-| Valuation Comps | Capital IQ, PitchBook, public peer filings |
+| Financial Data | BSE/NSE filings, Screener.in, Trendlyne, Tijori Finance, Tickertape |
+| Ownership Data | BSE/NSE quarterly shareholding patterns, SAST filings, insider trading disclosures |
+| Industry Research | CRISIL, ICRA, Statista, IBEF, industry associations |
+| Management Assessment | Earnings call transcripts (Screener.in, YouTube), AGM recordings, con-call transcripts |
+| Channel Checks | LinkedIn (hiring patterns), Glassdoor, trade shows, IndiaMart |
+| Patent / IP | Google Patents, Indian Patent Office (ipindia.gov.in) |
+| Neglect Screening | Trendlyne (analyst coverage), MF shareholding data |
+| News & Sentiment | Google News, Moneycontrol, ET, Twitter/X (founder and industry accounts) |
+| Valuation Comps | Screener.in peer comparison, Trendlyne, annual reports |
 
 ---
 
