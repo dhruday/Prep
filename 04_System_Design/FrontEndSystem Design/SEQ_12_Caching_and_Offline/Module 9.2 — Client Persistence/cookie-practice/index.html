@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cookie Deep Dive — Hands-On Practice</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    h1 { font-size: 1.6rem; margin-bottom: 4px; color: #f8fafc; }
+    h2 { font-size: 1rem; font-weight: 600; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: .05em; }
+
+    .subtitle { color: #64748b; font-size: .85rem; margin-bottom: 28px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .card.highlight { border-color: #6366f1; }
+
+    label { display: block; font-size: .82rem; color: #94a3b8; margin-bottom: 4px; }
+
+    input[type="text"], input[type="email"], input[type="password"], input[type="number"] {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      color: #f1f5f9;
+      padding: 8px 10px;
+      font-size: .875rem;
+      margin-bottom: 10px;
+      outline: none;
+    }
+
+    input:focus { border-color: #6366f1; }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: .875rem;
+      font-weight: 600;
+      transition: opacity .15s;
+    }
+    button:hover { opacity: .85; }
+    button:active { opacity: .7; }
+
+    .btn-primary   { background: #6366f1; color: #fff; }
+    .btn-danger    { background: #ef4444; color: #fff; }
+    .btn-success   { background: #22c55e; color: #fff; }
+    .btn-warning   { background: #f59e0b; color: #1a1a1a; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    .btn-info      { background: #06b6d4; color: #fff; }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+    pre.output {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: .78rem;
+      color: #a5f3fc;
+      white-space: pre-wrap;
+      word-break: break-all;
+      min-height: 50px;
+      margin-top: 12px;
+      max-height: 260px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .badge-green  { background: #166534; color: #86efac; }
+    .badge-red    { background: #7f1d1d; color: #fca5a5; }
+    .badge-yellow { background: #713f12; color: #fde68a; }
+    .badge-blue   { background: #1e3a5f; color: #93c5fd; }
+
+    .concept-tag {
+      display: inline-block;
+      background: #1e3a5f;
+      color: #93c5fd;
+      font-size: .7rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+
+    .divider { border: none; border-top: 1px solid #334155; margin: 14px 0; }
+
+    .info-note {
+      background: #172554;
+      border-left: 3px solid #3b82f6;
+      border-radius: 0 6px 6px 0;
+      padding: 8px 12px;
+      font-size: .8rem;
+      color: #93c5fd;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .warn-note {
+      background: #431407;
+      border-left: 3px solid #f97316;
+      border-radius: 0 6px 6px 0;
+      padding: 8px 12px;
+      font-size: .8rem;
+      color: #fdba74;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    #cookie-spy-list { list-style: none; }
+    #cookie-spy-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      border-bottom: 1px solid #1e293b;
+      font-size: .8rem;
+      gap: 8px;
+    }
+    #cookie-spy-list li span.key   { color: #f9a8d4; font-weight: 600; flex-shrink: 0; }
+    #cookie-spy-list li span.val   { color: #86efac; word-break: break-all; }
+
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin: 32px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #334155;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🍪 Cookie Deep Dive — Hands-On Practice</h1>
+<p class="subtitle">Open DevTools → Application → Cookies and Network tab while you practice below.</p>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section-title">Section 1 — Authentication Cookies</div>
+<div class="grid">
+
+  <!-- LOGIN -->
+  <div class="card highlight">
+    <span class="concept-tag">HttpOnly · Secure · SameSite · Signed</span>
+    <h2>1. Login (Set Cookies)</h2>
+
+    <div class="info-note">
+      <strong>What to observe:</strong> After login, check DevTools → Application → Cookies.<br>
+      <code>sid</code> shows "HttpOnly" ✓ — JS cannot read it.<br>
+      <code>csrf-token</code> and <code>prefs</code> are readable by JS.<br>
+      Check Network → the <code>Set-Cookie</code> response headers.
+    </div>
+
+    <label>Email</label>
+    <input type="email" id="login-email" value="alice@example.com" />
+    <label>Password</label>
+    <input type="password" id="login-password" value="pass123" />
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="doLogin()">Login</button>
+      <button class="btn-secondary" onclick="fillBob()">Use Bob's creds</button>
+    </div>
+    <pre class="output" id="out-login">// Response will appear here</pre>
+  </div>
+
+  <!-- CURRENT USER -->
+  <div class="card">
+    <span class="concept-tag">Session Validation · Signed Cookie</span>
+    <h2>2. Get Current User (Protected)</h2>
+
+    <div class="info-note">
+      <strong>Practice:</strong> Click before login → 401.<br>
+      Login then click → 200 with user info.<br>
+      Go to DevTools → Application → Cookies → manually edit <code>sid</code> value → click again → 401 "signature invalid".
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-success" onclick="getMe()">GET /api/me</button>
+    </div>
+    <pre class="output" id="out-me">// Response will appear here</pre>
+  </div>
+
+  <!-- LOGOUT -->
+  <div class="card">
+    <span class="concept-tag">Cookie Deletion · Max-Age=0</span>
+    <h2>3. Logout (Clear Cookies)</h2>
+
+    <div class="info-note">
+      <strong>What to observe:</strong> After logout, all three cookies disappear from DevTools.<br>
+      Server sends <code>Max-Age=0</code> to delete them — it does NOT need to know the cookie value.
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-danger" onclick="doLogout()">Logout</button>
+    </div>
+    <pre class="output" id="out-logout">// Response will appear here</pre>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section-title">Section 2 — CSRF Attack vs Defence</div>
+<div class="grid">
+
+  <!-- CSRF VALID TRANSFER -->
+  <div class="card highlight">
+    <span class="concept-tag">CSRF · Double Submit · X-CSRF-Token</span>
+    <h2>4. Transfer Money (CSRF-protected)</h2>
+
+    <div class="info-note">
+      <strong>How it works:</strong> Client reads <code>csrf-token</code> cookie (readable because NOT HttpOnly)
+      and sends it as <code>X-CSRF-Token</code> header.<br>
+      Server checks: cookie token === header token → passes.
+    </div>
+
+    <label>To account</label>
+    <input type="text" id="transfer-to" value="account-987" />
+    <label>Amount ($)</label>
+    <input type="number" id="transfer-amount" value="250" />
+
+    <div class="btn-row">
+      <button class="btn-success" onclick="doTransfer(true)">Valid Transfer (with CSRF header)</button>
+      <button class="btn-danger"  onclick="doTransfer(false)">Attack: No CSRF header → 403</button>
+    </div>
+    <pre class="output" id="out-transfer">// Response will appear here</pre>
+  </div>
+
+  <!-- COOKIE SPY -->
+  <div class="card">
+    <span class="concept-tag">document.cookie · HttpOnly Invisibility</span>
+    <h2>5. JS Cookie Spy</h2>
+
+    <div class="warn-note">
+      <strong>Key insight:</strong> <code>document.cookie</code> will NOT show <code>sid</code>
+      because it is <strong>HttpOnly</strong>.<br>
+      This is the entire defence against XSS token theft.
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-info" onclick="spyCookies()">Read document.cookie</button>
+    </div>
+
+    <ul id="cookie-spy-list" style="margin-top:12px;"></ul>
+
+    <div class="info-note" style="margin-top:12px;">
+      Open the browser console and type: <code>document.cookie</code><br>
+      You will NOT see <code>sid</code> — but open DevTools → Application → Cookies and you WILL see it listed there (browser shows it for debugging).
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section-title">Section 3 — Advanced</div>
+<div class="grid">
+
+  <!-- SERVER DEBUG -->
+  <div class="card">
+    <span class="concept-tag">Cookie Header · Server Visibility</span>
+    <h2>6. Cookie Debug (Server View)</h2>
+
+    <div class="info-note">
+      <strong>What to observe:</strong> The server sees ALL cookies including HttpOnly ones.
+      HttpOnly only blocks JS — not the Cookie request header.
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="debugCookies()">GET /api/cookies/debug</button>
+    </div>
+    <pre class="output" id="out-debug">// Response will appear here</pre>
+  </div>
+
+  <!-- PARTITIONED / CHIPS -->
+  <div class="card">
+    <span class="concept-tag">Partitioned · CHIPS · Third-Party</span>
+    <h2>7. Partitioned Cookie (CHIPS)</h2>
+
+    <div class="info-note">
+      <strong>What to observe:</strong> Check the <code>Set-Cookie</code> response header in Network tab.<br>
+      You'll see: <code>SameSite=None; Partitioned</code>.<br>
+      In a cross-site iframe, this cookie would be scoped per top-level site.
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-warning" onclick="setPartitioned()">Set Partitioned Cookie</button>
+    </div>
+    <pre class="output" id="out-partitioned">// Response will appear here</pre>
+  </div>
+
+  <!-- JS COOKIE MANIPULATION -->
+  <div class="card">
+    <span class="concept-tag">document.cookie · Write · Delete</span>
+    <h2>8. Manual Cookie Manipulation</h2>
+
+    <div class="info-note">
+      Write and delete cookies directly via JS — see them appear/disappear in DevTools in real time.
+    </div>
+
+    <label>Cookie name</label>
+    <input type="text" id="manual-name" value="my_pref" />
+    <label>Cookie value</label>
+    <input type="text" id="manual-value" value="hello_world" />
+
+    <div class="btn-row">
+      <button class="btn-success"  onclick="writeManualCookie()">Set Cookie</button>
+      <button class="btn-danger"   onclick="deleteManualCookie()">Delete Cookie</button>
+      <button class="btn-secondary" onclick="readAllManual()">Read All (JS visible)</button>
+    </div>
+    <pre class="output" id="out-manual">// Output will appear here</pre>
+  </div>
+
+  <!-- COOKIE CONSENT SIM -->
+  <div class="card">
+    <span class="concept-tag">GDPR · Consent · Conditional Loading</span>
+    <h2>9. Cookie Consent Simulation</h2>
+
+    <div class="info-note">
+      Simulates a GDPR consent banner. On "Accept All", consent is saved in a first-party cookie.
+      On revoke, non-essential cookies are deleted.
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-success"  onclick="acceptAllConsent()">Accept All</button>
+      <button class="btn-warning"  onclick="essentialOnlyConsent()">Essential Only</button>
+      <button class="btn-danger"   onclick="revokeConsent()">Revoke Consent</button>
+      <button class="btn-secondary" onclick="readConsent()">Read Consent State</button>
+    </div>
+    <pre class="output" id="out-consent">// Consent state will appear here</pre>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="section-title">Section 4 — Practice Challenges</div>
+<div class="grid">
+  <div class="card" style="grid-column: 1 / -1;">
+    <h2>Challenges — try these in DevTools</h2>
+    <ol style="line-height:2.2; padding-left:20px; font-size:.875rem; color:#cbd5e1;">
+      <li>Login, then open DevTools Console → type <code>document.cookie</code> — which cookies are missing? <strong>Why?</strong></li>
+      <li>After login, manually change the <code>sid</code> cookie value in DevTools → Application → Cookies. Then click "Get Current User". What error do you get?</li>
+      <li>Click "Attack: No CSRF header" for the transfer — what HTTP status and error message do you see?</li>
+      <li>Login → Logout → try "Get Current User" again → what happens?</li>
+      <li>Set a manual cookie with <code>Max-Age=5</code> in the console: <code>document.cookie = "test=hello; max-age=5"</code>. Watch it disappear from DevTools after 5 seconds.</li>
+      <li>Open Network tab → click "Login" → inspect the <code>Set-Cookie</code> response headers. Find all 3 cookies and their attributes.</li>
+      <li>What happens if you set <code>SameSite=None</code> without <code>Secure</code>? The browser will reject the cookie — try it in the console.</li>
+      <li>Read the <code>prefs</code> cookie in console: <code>JSON.parse(decodeURIComponent(document.cookie.match(/prefs=([^;]+)/)[1]))</code></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<script>
+// ─── Utilities ───────────────────────────────────────────────────────────────
+
+const BASE = "http://localhost:3000";
+
+async function call(method, path, body, includesCsrf = false) {
+  const headers = { "Content-Type": "application/json" };
+
+  if (includesCsrf) {
+    const csrfToken = getCookieByName("csrf-token");
+    if (csrfToken) {
+      headers["X-CSRF-Token"] = csrfToken;
+    }
+  }
+
+  const res = await fetch(BASE + path, {
+    method,
+    credentials: "include",     // Send cookies
+    headers,
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+
+  const data = await res.json();
+  return { status: res.status, data, ok: res.ok };
+}
+
+function out(id, status, data) {
+  const el = document.getElementById(id);
+  const badge = status >= 200 && status < 300
+    ? `<span class="badge badge-green">${status} OK</span>`
+    : `<span class="badge badge-red">${status} Error</span>`;
+
+  el.innerHTML = "";
+  // Insert status badge as text
+  const pre = document.getElementById(id);
+  pre.textContent = `// Status: ${status}\n\n${JSON.stringify(data, null, 2)}`;
+  pre.style.color = status >= 200 && status < 300 ? "#a5f3fc" : "#fca5a5";
+}
+
+function getCookieByName(name) {
+  const match = document.cookie.match(
+    new RegExp("(?:^|; )" + name.replace(/([.$?*|{}()[\]\\/+^])/g, "\\$1") + "=([^;]*)")
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+// ─── Handlers ────────────────────────────────────────────────────────────────
+
+async function doLogin() {
+  const email    = document.getElementById("login-email").value;
+  const password = document.getElementById("login-password").value;
+  const { status, data } = await call("POST", "/api/login", { email, password });
+  out("out-login", status, data);
+}
+
+function fillBob() {
+  document.getElementById("login-email").value    = "bob@example.com";
+  document.getElementById("login-password").value = "pass456";
+}
+
+async function getMe() {
+  const { status, data } = await call("GET", "/api/me");
+  out("out-me", status, data);
+}
+
+async function doLogout() {
+  const { status, data } = await call("POST", "/api/logout");
+  out("out-logout", status, data);
+}
+
+async function doTransfer(withCsrf) {
+  const to     = document.getElementById("transfer-to").value;
+  const amount = document.getElementById("transfer-amount").value;
+
+  if (withCsrf) {
+    // ✅ Correct: read csrf cookie and add as header
+    const { status, data } = await call("POST", "/api/transfer", { to, amount }, true);
+    out("out-transfer", status, data);
+  } else {
+    // ❌ Attack simulation: no CSRF header
+    const res = await fetch(BASE + "/api/transfer", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      // Note: X-CSRF-Token header intentionally OMITTED
+      body: JSON.stringify({ to, amount }),
+    });
+    const data = await res.json();
+    out("out-transfer", res.status, {
+      ...data,
+      _attackNote: "No X-CSRF-Token header sent — simulating cross-site request",
+    });
+  }
+}
+
+function spyCookies() {
+  const list = document.getElementById("cookie-spy-list");
+  list.innerHTML = "";
+
+  if (!document.cookie) {
+    list.innerHTML = '<li style="color:#f87171">No cookies readable by JS (or not logged in)</li>';
+    return;
+  }
+
+  const pairs = document.cookie.split("; ");
+  pairs.forEach((pair) => {
+    const idx = pair.indexOf("=");
+    const key = pair.slice(0, idx);
+    const val = decodeURIComponent(pair.slice(idx + 1));
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="key">${key}</span><span class="val">${val.length > 60 ? val.slice(0, 60) + "…" : val}</span>`;
+    list.appendChild(li);
+  });
+
+  const note = document.createElement("li");
+  note.style.cssText = "color:#fb923c; font-size:.75rem; flex-direction:column; align-items:flex-start;";
+  note.textContent = `⚠ sid is NOT listed above (HttpOnly). Total JS-visible: ${pairs.length}`;
+  list.appendChild(note);
+}
+
+async function debugCookies() {
+  const { status, data } = await call("GET", "/api/cookies/debug");
+  out("out-debug", status, data);
+}
+
+async function setPartitioned() {
+  const { status, data } = await call("POST", "/api/cookies/set-partitioned");
+  out("out-partitioned", status, data);
+}
+
+function writeManualCookie() {
+  const name  = document.getElementById("manual-name").value.trim();
+  const value = document.getElementById("manual-value").value.trim();
+  if (!name) return;
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=3600; SameSite=Lax`;
+  document.getElementById("out-manual").textContent =
+    `Set: ${name}=${value}\n\ndocument.cookie now:\n${document.cookie}`;
+}
+
+function deleteManualCookie() {
+  const name = document.getElementById("manual-name").value.trim();
+  if (!name) return;
+  document.cookie = `${name}=; path=/; max-age=0`;
+  document.getElementById("out-manual").textContent =
+    `Deleted: ${name}\n\ndocument.cookie now:\n${document.cookie || "(empty)"}`;
+}
+
+function readAllManual() {
+  document.getElementById("out-manual").textContent =
+    `document.cookie (JS-visible only):\n\n${document.cookie || "(no cookies visible to JS)"}`;
+}
+
+// ─── Cookie Consent ──────────────────────────────────────────────────────────
+
+const CONSENT_KEY     = "cookie_consent";
+const CONSENT_VERSION = "2.1";
+
+function saveConsent(prefs) {
+  const consent = {
+    essential: true,
+    ...prefs,
+    timestamp: new Date().toISOString(),
+    version: CONSENT_VERSION,
+  };
+  document.cookie =
+    `${CONSENT_KEY}=${encodeURIComponent(JSON.stringify(consent))}; ` +
+    `path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+  return consent;
+}
+
+function acceptAllConsent() {
+  const consent = saveConsent({ functional: true, analytics: true, advertising: true });
+  // Simulate conditionally loading analytics
+  console.log("[Consent] Analytics script would be loaded now");
+  document.getElementById("out-consent").textContent =
+    `✅ All consent accepted\n\n${JSON.stringify(consent, null, 2)}`;
+}
+
+function essentialOnlyConsent() {
+  const consent = saveConsent({ functional: false, analytics: false, advertising: false });
+  document.getElementById("out-consent").textContent =
+    `🔒 Essential only\n\n${JSON.stringify(consent, null, 2)}`;
+}
+
+function revokeConsent() {
+  // Delete all non-essential cookies
+  const essential = new Set([CONSENT_KEY, "sid", "csrf-token"]);
+  document.cookie.split(";").forEach((c) => {
+    const name = c.split("=")[0].trim();
+    if (!essential.has(name)) {
+      document.cookie = `${name}=; path=/; max-age=0`;
+    }
+  });
+  saveConsent({ functional: false, analytics: false, advertising: false });
+  document.getElementById("out-consent").textContent =
+    "🚫 Consent revoked — all non-essential cookies deleted\n\n" +
+    `Remaining JS-visible cookies:\n${document.cookie || "(none)"}`;
+}
+
+function readConsent() {
+  const raw = getCookieByName(CONSENT_KEY);
+  if (!raw) {
+    document.getElementById("out-consent").textContent = "No consent cookie found — show banner!";
+    return;
+  }
+  try {
+    const consent = JSON.parse(raw);
+    document.getElementById("out-consent").textContent =
+      `Current consent state:\n\n${JSON.stringify(consent, null, 2)}`;
+  } catch {
+    document.getElementById("out-consent").textContent = "Could not parse consent cookie";
+  }
+}
+</script>
+</body>
+</html>

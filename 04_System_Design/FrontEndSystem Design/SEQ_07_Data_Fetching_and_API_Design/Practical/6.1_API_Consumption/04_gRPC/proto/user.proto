@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+// ─── Package ────────────────────────────────────────────────────────────────
+// All messages live under the "user.v1" namespace. In generated TypeScript the
+// typeName property will be "user.v1.GetUserRequest", etc.
+package user.v1;
+
+// ─── Service ─────────────────────────────────────────────────────────────────
+// Three RPCs demonstrate every pattern gRPC-Web supports in the browser:
+//   1. Unary           — single request, single response
+//   2. Server streaming — single request, N responses until stream ends
+// (Client-streaming & bidi-streaming are NOT supported in gRPC-Web; see README)
+
+service UserService {
+
+  // ── Unary ────────────────────────────────────────────────────────────────
+  // Fetch a single user by ID.
+  // Special trigger IDs (see server/src/server.ts):
+  //   "error-not-found"   → Code.NOT_FOUND
+  //   "error-permission"  → Code.PERMISSION_DENIED
+  //   "error-unavailable" → Code.UNAVAILABLE
+  rpc GetUser (GetUserRequest) returns (User);
+
+  // ── Server Streaming ─────────────────────────────────────────────────────
+  // Stream users one-by-one (200 ms delay between each).
+  // Optional department filter: "engineering" | "design" | "product"
+  // Demonstrates: async iterator consumption, AbortController cancel.
+  rpc ListUsers (ListUsersRequest) returns (stream User);
+
+  // ── Server Streaming (metrics) ───────────────────────────────────────────
+  // Push fake CPU / memory stats at a configurable interval.
+  // Demonstrates: long-lived stream, cancel on React unmount.
+  rpc GetSystemStats (SystemStatsRequest) returns (stream SystemStat);
+}
+
+// ─── Request / Response Messages ─────────────────────────────────────────────
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message ListUsersRequest {
+  // Optional filter — empty string means "return all users"
+  string department = 1;
+  // Max users to stream; 0 means stream all matching users
+  int32  page_size  = 2;
+}
+
+message SystemStatsRequest {
+  // How often to push a stat tick (milliseconds). Default: 500
+  int32 interval_ms = 1;
+  // Total number of ticks to send. 0 means keep going until cancelled.
+  int32 count       = 2;
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  USER_ROLE_UNSPECIFIED = 0;
+  USER_ROLE_ADMIN       = 1;
+  USER_ROLE_MEMBER      = 2;
+  USER_ROLE_VIEWER      = 3;
+}
+
+// ─── Domain Messages ─────────────────────────────────────────────────────────
+
+message User {
+  string   id         = 1;
+  string   name       = 2;
+  string   email      = 3;
+  UserRole role       = 4;
+  string   department = 5;
+  repeated string tags = 6;
+}
+
+message SystemStat {
+  double cpu_percent  = 1;
+  double mem_percent  = 2;
+  // Unix epoch in milliseconds as double — avoids int64/bigint in browsers
+  double timestamp_ms = 3;
+}
