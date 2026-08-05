@@ -1,0 +1,2230 @@
+[
+  {
+    "id": "exp_gfg_001",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-sde-intern-on-campus-2024/",
+    "role": "SDE Intern",
+    "year": "2024",
+    "focus": "Full Stack",
+    "round_type": "DSA + Technical",
+    "dsa_questions": [
+      {
+        "title": "Binary Search on Answer",
+        "topic": "Array, Binary Search",
+        "difficulty": "Easy",
+        "algorithm": "Binary Search O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/koko-eating-bananas"
+      },
+      {
+        "title": "Basic Sorting Problem",
+        "topic": "Array, Sorting",
+        "difficulty": "Easy",
+        "algorithm": "Sort O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/sort-colors"
+      },
+      {
+        "title": "Greedy + Implementation",
+        "topic": "Array, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "Greedy O(n)",
+        "leetcode_link": "https://leetcode.com/problems/gas-station"
+      },
+      {
+        "title": "Implement Queue without stack or array",
+        "topic": "Linked List, Queue, Design",
+        "difficulty": "Medium",
+        "algorithm": "Linked-list based queue",
+        "leetcode_link": "https://leetcode.com/problems/design-circular-queue"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_002",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-wit-summit-intern-interview-experience-2024/",
+    "role": "SDE Intern (WIT)",
+    "year": "2024",
+    "focus": "Full Stack",
+    "round_type": "OA + Technical",
+    "dsa_questions": [
+      {
+        "title": "Array subsets",
+        "topic": "Array, Backtracking",
+        "difficulty": "Medium",
+        "algorithm": "Backtracking / bitmask",
+        "leetcode_link": "https://leetcode.com/problems/subsets"
+      },
+      {
+        "title": "BFS on Grid/Graph",
+        "topic": "Graph, BFS",
+        "difficulty": "Medium",
+        "algorithm": "BFS O(V+E)",
+        "leetcode_link": "https://leetcode.com/problems/rotting-oranges"
+      },
+      {
+        "title": "Dynamic Programming (DP) problem",
+        "topic": "Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/coin-change"
+      },
+      {
+        "title": "Stack problem (optimize approach)",
+        "topic": "Stack",
+        "difficulty": "Medium",
+        "algorithm": "Monotonic stack",
+        "leetcode_link": "https://leetcode.com/problems/asteroid-collision"
+      },
+      {
+        "title": "Priority Queue problem",
+        "topic": "Heap (Priority Queue)",
+        "difficulty": "Medium",
+        "algorithm": "Min/Max heap",
+        "leetcode_link": "https://leetcode.com/problems/kth-largest-element-in-an-array"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_003",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-for-technical-support-internship/",
+    "role": "Technical Support Intern",
+    "year": "2024",
+    "focus": "Backend",
+    "round_type": "OA + Technical",
+    "dsa_questions": [
+      {
+        "title": "Kadane's Algorithm (Maximum Subarray)",
+        "topic": "Array, DP",
+        "difficulty": "Medium",
+        "algorithm": "Kadane O(n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-subarray"
+      },
+      {
+        "title": "Kth Largest Element in an Array",
+        "topic": "Array, Heap",
+        "difficulty": "Medium",
+        "algorithm": "Min-heap size k / Quickselect",
+        "leetcode_link": "https://leetcode.com/problems/kth-largest-element-in-an-array"
+      },
+      {
+        "title": "Valid Palindrome",
+        "topic": "String, Two Pointers",
+        "difficulty": "Easy",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/valid-palindrome"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_004",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-internship-on-campus/",
+    "role": "SDE Intern",
+    "year": "2024",
+    "focus": "Full Stack",
+    "round_type": "Technical Screening + Hiring Manager",
+    "dsa_questions": [
+      {
+        "title": "Binary Search on two arrays (goals-per-match compare)",
+        "topic": "Array, Binary Search",
+        "difficulty": "Medium",
+        "algorithm": "Sort + binary search O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/count-negative-numbers-in-a-sorted-matrix"
+      },
+      {
+        "title": "Number of Islands",
+        "topic": "Graph, DFS, BFS, Matrix",
+        "difficulty": "Medium",
+        "algorithm": "DFS/BFS on grid",
+        "leetcode_link": "https://leetcode.com/problems/number-of-islands"
+      },
+      {
+        "title": "Merge Two Sorted Arrays",
+        "topic": "Array, Two Pointers",
+        "difficulty": "Easy",
+        "algorithm": "Two pointers O(n+m)",
+        "leetcode_link": "https://leetcode.com/problems/merge-sorted-array"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_005",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-for-smts/",
+    "role": "SMTS",
+    "year": "2024",
+    "focus": "Backend",
+    "round_type": "Onsite DSA + System Design",
+    "dsa_questions": [
+      {
+        "title": "Best Time to Buy and Sell Stock with Cooldown",
+        "topic": "Array, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP state machine",
+        "leetcode_link": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-cooldown"
+      },
+      {
+        "title": "Longest Common Substring/Subsequence (variant)",
+        "topic": "String, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "2D DP O(n*m)",
+        "leetcode_link": "https://leetcode.com/problems/longest-common-subsequence"
+      },
+      {
+        "title": "Kth Largest Element in an Array (optimize O(k*n) -> O(n log k))",
+        "topic": "Array, Heap",
+        "difficulty": "Medium",
+        "algorithm": "Min-heap of size k",
+        "leetcode_link": "https://leetcode.com/problems/kth-largest-element-in-an-array"
+      },
+      {
+        "title": "Design TinyURL",
+        "topic": "Design, Hash Table",
+        "difficulty": "Medium",
+        "algorithm": "Hash + base62 encode",
+        "leetcode_link": "https://leetcode.com/problems/encode-and-decode-tinyurl"
+      },
+      {
+        "title": "LFU Cache design",
+        "topic": "Design, Hash Table, Linked List",
+        "difficulty": "Hard",
+        "algorithm": "HashMap + freq linked lists",
+        "leetcode_link": "https://leetcode.com/problems/lfu-cache"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_006",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-for-mts/",
+    "role": "MTS",
+    "year": "2024",
+    "focus": "Backend",
+    "round_type": "Technical Rounds",
+    "dsa_questions": [
+      {
+        "title": "Meeting Rooms II",
+        "topic": "Array, Heap, Intervals",
+        "difficulty": "Medium",
+        "algorithm": "Sort + min-heap O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/meeting-rooms-ii"
+      },
+      {
+        "title": "Best Time to Buy and Sell Stock (Stock Management)",
+        "topic": "Array, DP",
+        "difficulty": "Easy",
+        "algorithm": "Track min so far O(n)",
+        "leetcode_link": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_007",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-2023/",
+    "role": "SDE",
+    "year": "2023",
+    "focus": "Full Stack",
+    "round_type": "OA + Technical",
+    "dsa_questions": [
+      {
+        "title": "Dynamic Programming problem",
+        "topic": "Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/longest-increasing-subsequence"
+      },
+      {
+        "title": "Binary Tree problem",
+        "topic": "Tree, DFS",
+        "difficulty": "Medium",
+        "algorithm": "DFS recursion",
+        "leetcode_link": "https://leetcode.com/problems/binary-tree-maximum-path-sum"
+      },
+      {
+        "title": "Competitive programming problem",
+        "topic": "Array, Math",
+        "difficulty": "Hard",
+        "algorithm": "Ad-hoc / math",
+        "leetcode_link": null
+      },
+      {
+        "title": "Decimal Value of Binary Linked List",
+        "topic": "Linked List, Math",
+        "difficulty": "Easy",
+        "algorithm": "Bit shift traversal O(n)",
+        "leetcode_link": "https://leetcode.com/problems/convert-binary-number-in-a-linked-list-to-integer"
+      },
+      {
+        "title": "Remove K consecutive identical characters from string",
+        "topic": "String, Stack",
+        "difficulty": "Medium",
+        "algorithm": "Stack of (char,count)",
+        "leetcode_link": "https://leetcode.com/problems/remove-all-adjacent-duplicates-in-string-ii"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_008",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-on-campus-4/",
+    "role": "SDE Intern",
+    "year": "2022",
+    "focus": "Full Stack",
+    "round_type": "OA + Technical + Hiring Manager",
+    "dsa_questions": [
+      {
+        "title": "Russian Doll Envelopes (max envelopes)",
+        "topic": "Array, Sorting, DP",
+        "difficulty": "Hard",
+        "algorithm": "Sort + LIS O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/russian-doll-envelopes"
+      },
+      {
+        "title": "Minimum steps to make array decreasing",
+        "topic": "Array, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "Greedy scan",
+        "leetcode_link": null
+      },
+      {
+        "title": "Number of subsequences of a string divisible by n",
+        "topic": "String, DP",
+        "difficulty": "Medium",
+        "algorithm": "DP mod counts",
+        "leetcode_link": null
+      },
+      {
+        "title": "0/1 Knapsack DP",
+        "topic": "Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "2D DP",
+        "leetcode_link": "https://leetcode.com/problems/partition-equal-subset-sum"
+      },
+      {
+        "title": "Validate IP Address",
+        "topic": "String",
+        "difficulty": "Medium",
+        "algorithm": "Parse and validate",
+        "leetcode_link": "https://leetcode.com/problems/validate-ip-address"
+      },
+      {
+        "title": "Dijkstra on Matrix (shortest path)",
+        "topic": "Graph, Shortest Path",
+        "difficulty": "Medium",
+        "algorithm": "Dijkstra with min-heap",
+        "leetcode_link": "https://leetcode.com/problems/path-with-minimum-effort"
+      },
+      {
+        "title": "Egg Drop (2 eggs / K floors)",
+        "topic": "Dynamic Programming, Math",
+        "difficulty": "Hard",
+        "algorithm": "DP or math (binary search on answer)",
+        "leetcode_link": "https://leetcode.com/problems/super-egg-drop"
+      },
+      {
+        "title": "Count occurrences of pattern in text (LPS/KMP)",
+        "topic": "String",
+        "difficulty": "Medium",
+        "algorithm": "KMP O(n+m)",
+        "leetcode_link": "https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string"
+      },
+      {
+        "title": "Count palindromic subsequences in a string",
+        "topic": "String, DP",
+        "difficulty": "Hard",
+        "algorithm": "2D DP",
+        "leetcode_link": "https://leetcode.com/problems/count-different-palindromic-subsequences"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_009",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-on-campus-5/",
+    "role": "SDE Intern",
+    "year": "2023",
+    "focus": "Full Stack",
+    "round_type": "OA + Technical",
+    "dsa_questions": [
+      {
+        "title": "Greedy problem",
+        "topic": "Array, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "Greedy",
+        "leetcode_link": "https://leetcode.com/problems/jump-game"
+      },
+      {
+        "title": "BFS on Matrix",
+        "topic": "Graph, BFS, Matrix",
+        "difficulty": "Medium",
+        "algorithm": "BFS O(m*n)",
+        "leetcode_link": "https://leetcode.com/problems/rotting-oranges"
+      },
+      {
+        "title": "Min-heap with DP",
+        "topic": "Heap, DP",
+        "difficulty": "Medium",
+        "algorithm": "Heap + DP",
+        "leetcode_link": "https://leetcode.com/problems/ipo"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_010",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-for-woman-in-technology/",
+    "role": "SDE Intern (WIT)",
+    "year": "2023",
+    "focus": "Full Stack",
+    "round_type": "OA + Technical",
+    "dsa_questions": [
+      {
+        "title": "Longest subsequence of [1..n-1] with product = 1 mod n",
+        "topic": "Math, Number Theory",
+        "difficulty": "Hard",
+        "algorithm": "Number theory / group theory",
+        "leetcode_link": null
+      },
+      {
+        "title": "Minimum jumps from either end to reach largest/smallest char",
+        "topic": "String, Two Pointers",
+        "difficulty": "Medium",
+        "algorithm": "Scan from both ends",
+        "leetcode_link": null
+      },
+      {
+        "title": "Book Allocation Problem",
+        "topic": "Array, Binary Search",
+        "difficulty": "Hard",
+        "algorithm": "Binary search on answer",
+        "leetcode_link": "https://leetcode.com/problems/split-array-largest-sum"
+      },
+      {
+        "title": "Smallest number with at least N trailing zeros in factorial",
+        "topic": "Math, Binary Search",
+        "difficulty": "Medium",
+        "algorithm": "Binary search / Legendre",
+        "leetcode_link": "https://leetcode.com/problems/preimage-size-of-factorial-zeroes-function"
+      },
+      {
+        "title": "Largest region of 1's in binary matrix",
+        "topic": "Graph, DFS, Matrix",
+        "difficulty": "Medium",
+        "algorithm": "DFS on grid",
+        "leetcode_link": "https://leetcode.com/problems/max-area-of-island"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_011",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-for-swe-intern/",
+    "role": "SWE Intern",
+    "year": "2021",
+    "focus": "Full Stack",
+    "round_type": "OA + Technical",
+    "dsa_questions": [
+      {
+        "title": "HashMap counting problem",
+        "topic": "Array, Hash Table",
+        "difficulty": "Easy",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/two-sum"
+      },
+      {
+        "title": "Split array into k subarrays minimizing max sum",
+        "topic": "Array, Binary Search, DP",
+        "difficulty": "Hard",
+        "algorithm": "Binary search on answer",
+        "leetcode_link": "https://leetcode.com/problems/split-array-largest-sum"
+      },
+      {
+        "title": "Minimum time to visit all special nodes of tree",
+        "topic": "Tree, DFS, Graph",
+        "difficulty": "Medium",
+        "algorithm": "DFS on tree",
+        "leetcode_link": null
+      },
+      {
+        "title": "Valid HTML tag matching (like valid parentheses)",
+        "topic": "String, Stack",
+        "difficulty": "Medium",
+        "algorithm": "Stack O(n)",
+        "leetcode_link": "https://leetcode.com/problems/valid-parentheses"
+      },
+      {
+        "title": "Find Median from Data Stream",
+        "topic": "Design, Heap",
+        "difficulty": "Hard",
+        "algorithm": "Two heaps",
+        "leetcode_link": "https://leetcode.com/problems/find-median-from-data-stream"
+      },
+      {
+        "title": "Search in infinite sorted array (binary lifting)",
+        "topic": "Array, Binary Search",
+        "difficulty": "Medium",
+        "algorithm": "Exponential + binary search",
+        "leetcode_link": null
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_012",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-for-sde-internship-2021-2/",
+    "role": "SDE Intern",
+    "year": "2021",
+    "focus": "Full Stack",
+    "round_type": "OA + Technical",
+    "dsa_questions": [
+      {
+        "title": "Delete minimum digits to make number divisible by 3",
+        "topic": "String, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "Digit-sum remainder + greedy",
+        "leetcode_link": null
+      },
+      {
+        "title": "Fibonacci-style recurrence with large constraints",
+        "topic": "Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP with modular arithmetic",
+        "leetcode_link": "https://leetcode.com/problems/fibonacci-number"
+      },
+      {
+        "title": "3D Dynamic Programming problem",
+        "topic": "Dynamic Programming",
+        "difficulty": "Hard",
+        "algorithm": "3D DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/cherry-pickup-ii"
+      },
+      {
+        "title": "Reverse a String",
+        "topic": "String, Two Pointers",
+        "difficulty": "Easy",
+        "algorithm": "Two pointers",
+        "leetcode_link": "https://leetcode.com/problems/reverse-string"
+      },
+      {
+        "title": "Remove Duplicates from Array",
+        "topic": "Array, Hash Table",
+        "difficulty": "Easy",
+        "algorithm": "HashSet O(n)",
+        "leetcode_link": "https://leetcode.com/problems/remove-duplicates-from-sorted-array"
+      },
+      {
+        "title": "Roman to Integer",
+        "topic": "String, Hash Table",
+        "difficulty": "Easy",
+        "algorithm": "Map + scan",
+        "leetcode_link": "https://leetcode.com/problems/roman-to-integer"
+      },
+      {
+        "title": "Mirror a Binary Tree (Invert Binary Tree)",
+        "topic": "Tree, DFS",
+        "difficulty": "Easy",
+        "algorithm": "Recursion",
+        "leetcode_link": "https://leetcode.com/problems/invert-binary-tree"
+      },
+      {
+        "title": "Longest common subsequence of s1 that is substring of s2",
+        "topic": "String, DP",
+        "difficulty": "Medium",
+        "algorithm": "2D DP",
+        "leetcode_link": "https://leetcode.com/problems/longest-common-subsequence"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_013",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-for-sde-intern-on-campus/",
+    "role": "SDE Intern",
+    "year": "2021",
+    "focus": "Full Stack",
+    "round_type": "OA + Technical",
+    "dsa_questions": [
+      {
+        "title": "Max houses in a village (connected 1's in binary matrix)",
+        "topic": "Graph, BFS, Matrix",
+        "difficulty": "Medium",
+        "algorithm": "BFS/DFS on grid",
+        "leetcode_link": "https://leetcode.com/problems/max-area-of-island"
+      },
+      {
+        "title": "Replace element with leftmost element of greater frequency, then sum",
+        "topic": "Array, Stack, Hash Table",
+        "difficulty": "Medium",
+        "algorithm": "Monotonic stack + freq map",
+        "leetcode_link": "https://leetcode.com/problems/next-greater-element-i"
+      },
+      {
+        "title": "3D Matrix multiplication (custom axes)",
+        "topic": "Matrix, Math",
+        "difficulty": "Medium",
+        "algorithm": "Reshape + matmul",
+        "leetcode_link": null
+      },
+      {
+        "title": "Next greater number with same set of digits",
+        "topic": "Array, Two Pointers, Math",
+        "difficulty": "Medium",
+        "algorithm": "Next permutation",
+        "leetcode_link": "https://leetcode.com/problems/next-permutation"
+      },
+      {
+        "title": "Rearrange characters so no two adjacent are same",
+        "topic": "String, Heap, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "Max-heap by frequency",
+        "leetcode_link": "https://leetcode.com/problems/reorganize-string"
+      },
+      {
+        "title": "Longest word chain (delete-one-char chain)",
+        "topic": "String, DP, Hash Table",
+        "difficulty": "Medium",
+        "algorithm": "Sort by length + DP with hash",
+        "leetcode_link": "https://leetcode.com/problems/longest-string-chain"
+      },
+      {
+        "title": "Divide two very large numbers stored in linked lists",
+        "topic": "Linked List, Math",
+        "difficulty": "Medium",
+        "algorithm": "Repeated subtraction / binary lifting",
+        "leetcode_link": null
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_014",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-set-3-campus/",
+    "role": "SDE Intern + FTE",
+    "year": "2019",
+    "focus": "Full Stack",
+    "round_type": "OA + Technical + GD",
+    "dsa_questions": [
+      {
+        "title": "Sieve of Eratosthenes",
+        "topic": "Math",
+        "difficulty": "Easy",
+        "algorithm": "Sieve O(n log log n)",
+        "leetcode_link": "https://leetcode.com/problems/count-primes"
+      },
+      {
+        "title": "Maximum sum no two adjacent (House Robber)",
+        "topic": "Array, DP",
+        "difficulty": "Medium",
+        "algorithm": "DP O(n)",
+        "leetcode_link": "https://leetcode.com/problems/house-robber"
+      },
+      {
+        "title": "Check if array of strings forms a circular chain",
+        "topic": "Graph, String",
+        "difficulty": "Medium",
+        "algorithm": "Eulerian circuit check",
+        "leetcode_link": null
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_015",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-off-campus/",
+    "role": "SDE",
+    "year": "2023",
+    "focus": "Full Stack",
+    "round_type": "OA + Technical + Design + HR",
+    "dsa_questions": [
+      {
+        "title": "Two ad-hoc DSA problems (moderate)",
+        "topic": "Array, Ad-hoc",
+        "difficulty": "Medium",
+        "algorithm": "Implementation",
+        "leetcode_link": null
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_016",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-on-campus-2021/",
+    "role": "SDE Intern",
+    "year": "2021",
+    "focus": "Full Stack",
+    "round_type": "OA",
+    "dsa_questions": [
+      {
+        "title": "Pizza crust + topping cost optimization",
+        "topic": "Array, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "Sort + greedy",
+        "leetcode_link": null
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_017",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-internship-interview-experience-on-campus-2021/",
+    "role": "SDE Intern",
+    "year": "2021",
+    "focus": "Full Stack",
+    "round_type": "OA",
+    "dsa_questions": [
+      {
+        "title": "n*m grid problem (matrix traversal)",
+        "topic": "Matrix, DP",
+        "difficulty": "Medium",
+        "algorithm": "DP on grid",
+        "leetcode_link": "https://leetcode.com/problems/minimum-path-sum"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_018",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-for-customer-success-agent-fteon-campus-2020/",
+    "role": "Customer Success Agent",
+    "year": "2020",
+    "focus": "Backend",
+    "round_type": "OA",
+    "dsa_questions": [
+      {
+        "title": "Search / prefix string filtering problem",
+        "topic": "String, Trie",
+        "difficulty": "Medium",
+        "algorithm": "Trie / hash",
+        "leetcode_link": "https://leetcode.com/problems/search-suggestions-system"
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_019",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-internship-experience-on-campus/",
+    "role": "SDE Intern",
+    "year": "2019",
+    "focus": "Full Stack",
+    "round_type": "OA",
+    "dsa_questions": [
+      {
+        "title": "Check if a matrix is symmetric",
+        "topic": "Matrix",
+        "difficulty": "Easy",
+        "algorithm": "Compare A[i][j] vs A[j][i]",
+        "leetcode_link": null
+      }
+    ]
+  },
+  {
+    "id": "exp_gfg_020",
+    "source_url": "https://www.geeksforgeeks.org/interview-experiences/salesforce-interview-experience-on-campus-2023/",
+    "role": "SDE",
+    "year": "2023",
+    "focus": "Full Stack",
+    "round_type": "Technical",
+    "dsa_questions": [
+      {
+        "title": "General DSA + system design mix (unspecified problems)",
+        "topic": "General DSA",
+        "difficulty": "Medium",
+        "algorithm": "N/A",
+        "leetcode_link": null
+      }
+    ]
+  },
+  {
+    "id": "exp_liquidslr_30d",
+    "source_url": "https://github.com/liquidslr/leetcode-company-wise-problems/tree/main/Salesforce",
+    "role": "SDE (Aggregate 30 days)",
+    "year": "2026",
+    "focus": "Full Stack",
+    "round_type": "OA / Onsite DSA (Aggregate)",
+    "dsa_questions": [
+      {
+        "title": "String Compression",
+        "topic": "Two Pointers, String",
+        "difficulty": "Medium",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/string-compression"
+      },
+      {
+        "title": "Time Needed to Rearrange a Binary String",
+        "topic": "String, Dynamic Programming, Simulation",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/time-needed-to-rearrange-a-binary-string"
+      },
+      {
+        "title": "Maximum Team Size with Overlapping Intervals",
+        "topic": "Array, Sorting, Intervals",
+        "difficulty": "Medium",
+        "algorithm": "Sort O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-team-size-with-overlapping-intervals"
+      },
+      {
+        "title": "Subarray Sum Equals K",
+        "topic": "Array, Hash Table, Prefix Sum",
+        "difficulty": "Medium",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/subarray-sum-equals-k"
+      },
+      {
+        "title": "LFU Cache",
+        "topic": "Hash Table, Linked List, Design, Doubly-Linked List",
+        "difficulty": "Hard",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/lfu-cache"
+      }
+    ]
+  },
+  {
+    "id": "exp_liquidslr_3mo",
+    "source_url": "https://github.com/liquidslr/leetcode-company-wise-problems/tree/main/Salesforce",
+    "role": "SDE (Aggregate 3 months)",
+    "year": "2026",
+    "focus": "Full Stack",
+    "round_type": "OA / Onsite DSA (Aggregate)",
+    "dsa_questions": [
+      {
+        "title": "String Compression",
+        "topic": "Two Pointers, String",
+        "difficulty": "Medium",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/string-compression"
+      },
+      {
+        "title": "Time Needed to Rearrange a Binary String",
+        "topic": "String, Dynamic Programming, Simulation",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/time-needed-to-rearrange-a-binary-string"
+      },
+      {
+        "title": "Maximum Team Size with Overlapping Intervals",
+        "topic": "Array, Sorting, Intervals",
+        "difficulty": "Medium",
+        "algorithm": "Sort O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-team-size-with-overlapping-intervals"
+      },
+      {
+        "title": "Subarray Sum Equals K",
+        "topic": "Array, Hash Table, Prefix Sum",
+        "difficulty": "Medium",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/subarray-sum-equals-k"
+      },
+      {
+        "title": "LFU Cache",
+        "topic": "Hash Table, Linked List, Design, Doubly-Linked List",
+        "difficulty": "Hard",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/lfu-cache"
+      },
+      {
+        "title": "Minimum Operations to Reduce an Integer to 0",
+        "topic": "Dynamic Programming, Greedy, Bit Manipulation",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/minimum-operations-to-reduce-an-integer-to-0"
+      },
+      {
+        "title": "Maximum Palindromes After Operations",
+        "topic": "Array, Hash Table, String, Greedy, Sorting, Counting",
+        "difficulty": "Medium",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-palindromes-after-operations"
+      },
+      {
+        "title": "Maximum Product of Three Numbers",
+        "topic": "Array, Math, Sorting",
+        "difficulty": "Easy",
+        "algorithm": "Sort O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-product-of-three-numbers"
+      }
+    ]
+  },
+  {
+    "id": "exp_liquidslr_6mo",
+    "source_url": "https://github.com/liquidslr/leetcode-company-wise-problems/tree/main/Salesforce",
+    "role": "SDE (Aggregate 6 months)",
+    "year": "2026",
+    "focus": "Full Stack",
+    "round_type": "OA / Onsite DSA (Aggregate)",
+    "dsa_questions": [
+      {
+        "title": "String Compression",
+        "topic": "Two Pointers, String",
+        "difficulty": "Medium",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/string-compression"
+      },
+      {
+        "title": "Time Needed to Rearrange a Binary String",
+        "topic": "String, Dynamic Programming, Simulation",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/time-needed-to-rearrange-a-binary-string"
+      },
+      {
+        "title": "Maximum Team Size with Overlapping Intervals",
+        "topic": "Array, Sorting, Intervals",
+        "difficulty": "Medium",
+        "algorithm": "Sort O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-team-size-with-overlapping-intervals"
+      },
+      {
+        "title": "Subarray Sum Equals K",
+        "topic": "Array, Hash Table, Prefix Sum",
+        "difficulty": "Medium",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/subarray-sum-equals-k"
+      },
+      {
+        "title": "LFU Cache",
+        "topic": "Hash Table, Linked List, Design, Doubly-Linked List",
+        "difficulty": "Hard",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/lfu-cache"
+      },
+      {
+        "title": "Minimum Operations to Reduce an Integer to 0",
+        "topic": "Dynamic Programming, Greedy, Bit Manipulation",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/minimum-operations-to-reduce-an-integer-to-0"
+      },
+      {
+        "title": "Maximum Palindromes After Operations",
+        "topic": "Array, Hash Table, String, Greedy, Sorting, Counting",
+        "difficulty": "Medium",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-palindromes-after-operations"
+      },
+      {
+        "title": "Minimum Removals to Balance Array",
+        "topic": "Array, Binary Search, Sliding Window, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/minimum-removals-to-balance-array"
+      },
+      {
+        "title": "Maximum Product of Three Numbers",
+        "topic": "Array, Math, Sorting",
+        "difficulty": "Easy",
+        "algorithm": "Sort O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-product-of-three-numbers"
+      },
+      {
+        "title": "LRU Cache",
+        "topic": "Hash Table, Linked List, Design, Doubly-Linked List",
+        "difficulty": "Medium",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/lru-cache"
+      },
+      {
+        "title": "Collect Coins in a Tree",
+        "topic": "Array, Tree, Graph Theory, Topological Sort",
+        "difficulty": "Hard",
+        "algorithm": "Topological sort / Kahn's",
+        "leetcode_link": "https://leetcode.com/problems/collect-coins-in-a-tree"
+      },
+      {
+        "title": "Strange Printer",
+        "topic": "String, Dynamic Programming",
+        "difficulty": "Hard",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/strange-printer"
+      },
+      {
+        "title": "Course Schedule",
+        "topic": "DFS, BFS, Graph Theory, Topological Sort",
+        "difficulty": "Medium",
+        "algorithm": "Topological sort / Kahn's",
+        "leetcode_link": "https://leetcode.com/problems/course-schedule"
+      },
+      {
+        "title": "Construct Binary Tree from Preorder and Inorder Traversal",
+        "topic": "Array, Hash Table, Divide and Conquer, Tree, Binary Tree",
+        "difficulty": "Medium",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal"
+      },
+      {
+        "title": "Time Taken to Cross the Door",
+        "topic": "Array, Queue, Simulation",
+        "difficulty": "Hard",
+        "algorithm": "Advanced technique",
+        "leetcode_link": "https://leetcode.com/problems/time-taken-to-cross-the-door"
+      },
+      {
+        "title": "Subarrays with K Different Integers",
+        "topic": "Array, Hash Table, Sliding Window, Counting",
+        "difficulty": "Hard",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/subarrays-with-k-different-integers"
+      },
+      {
+        "title": "Course Schedule II",
+        "topic": "DFS, BFS, Graph Theory, Topological Sort",
+        "difficulty": "Medium",
+        "algorithm": "Topological sort / Kahn's",
+        "leetcode_link": "https://leetcode.com/problems/course-schedule-ii"
+      },
+      {
+        "title": "Generate Parentheses",
+        "topic": "String, Dynamic Programming, Backtracking",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/generate-parentheses"
+      },
+      {
+        "title": "Group Anagrams",
+        "topic": "Array, Hash Table, String, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/group-anagrams"
+      },
+      {
+        "title": "Remove Stones to Minimize the Total",
+        "topic": "Array, Greedy, Heap (Priority Queue)",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/remove-stones-to-minimize-the-total"
+      },
+      {
+        "title": "Find Median from Data Stream",
+        "topic": "Two Pointers, Design, Sorting, Heap (Priority Queue), Data Stream",
+        "difficulty": "Hard",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/find-median-from-data-stream"
+      },
+      {
+        "title": "Minimum Replacements to Sort the Array",
+        "topic": "Array, Math, Greedy",
+        "difficulty": "Hard",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/minimum-replacements-to-sort-the-array"
+      },
+      {
+        "title": "Minimum Difficulty of a Job Schedule",
+        "topic": "Array, Dynamic Programming",
+        "difficulty": "Hard",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/minimum-difficulty-of-a-job-schedule"
+      },
+      {
+        "title": "Valid Parenthesis String",
+        "topic": "String, Dynamic Programming, Stack, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/valid-parenthesis-string"
+      },
+      {
+        "title": "Minimum Edge Reversals So Every Node Is Reachable",
+        "topic": "Dynamic Programming, DFS, BFS, Graph Theory",
+        "difficulty": "Hard",
+        "algorithm": "BFS O(V+E)",
+        "leetcode_link": "https://leetcode.com/problems/minimum-edge-reversals-so-every-node-is-reachable"
+      }
+    ]
+  },
+  {
+    "id": "exp_liquidslr_older",
+    "source_url": "https://github.com/liquidslr/leetcode-company-wise-problems/tree/main/Salesforce",
+    "role": "SDE (Aggregate 6+ months)",
+    "year": "2025",
+    "focus": "Full Stack",
+    "round_type": "OA / Onsite DSA (Aggregate)",
+    "dsa_questions": [
+      {
+        "title": "String Compression",
+        "topic": "Two Pointers, String",
+        "difficulty": "Medium",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/string-compression"
+      },
+      {
+        "title": "Time Needed to Rearrange a Binary String",
+        "topic": "String, Dynamic Programming, Simulation",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/time-needed-to-rearrange-a-binary-string"
+      },
+      {
+        "title": "LFU Cache",
+        "topic": "Hash Table, Linked List, Design, Doubly-Linked List",
+        "difficulty": "Hard",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/lfu-cache"
+      },
+      {
+        "title": "Minimum Operations to Reduce an Integer to 0",
+        "topic": "Dynamic Programming, Greedy, Bit Manipulation",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/minimum-operations-to-reduce-an-integer-to-0"
+      },
+      {
+        "title": "Maximum Product of Three Numbers",
+        "topic": "Array, Math, Sorting",
+        "difficulty": "Easy",
+        "algorithm": "Sort O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-product-of-three-numbers"
+      },
+      {
+        "title": "LRU Cache",
+        "topic": "Hash Table, Linked List, Design, Doubly-Linked List",
+        "difficulty": "Medium",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/lru-cache"
+      },
+      {
+        "title": "Subarrays with K Different Integers",
+        "topic": "Array, Hash Table, Sliding Window, Counting",
+        "difficulty": "Hard",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/subarrays-with-k-different-integers"
+      },
+      {
+        "title": "Course Schedule II",
+        "topic": "DFS, BFS, Graph Theory, Topological Sort",
+        "difficulty": "Medium",
+        "algorithm": "Topological sort / Kahn's",
+        "leetcode_link": "https://leetcode.com/problems/course-schedule-ii"
+      },
+      {
+        "title": "Group Anagrams",
+        "topic": "Array, Hash Table, String, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/group-anagrams"
+      },
+      {
+        "title": "Minimum Difficulty of a Job Schedule",
+        "topic": "Array, Dynamic Programming",
+        "difficulty": "Hard",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/minimum-difficulty-of-a-job-schedule"
+      },
+      {
+        "title": "Closest Equal Element Queries",
+        "topic": "Array, Hash Table, Binary Search",
+        "difficulty": "Medium",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/closest-equal-element-queries"
+      },
+      {
+        "title": "Subarray Product Less Than K",
+        "topic": "Array, Binary Search, Sliding Window, Prefix Sum",
+        "difficulty": "Medium",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/subarray-product-less-than-k"
+      },
+      {
+        "title": "Maximum Number of Occurrences of a Substring",
+        "topic": "Hash Table, String, Sliding Window",
+        "difficulty": "Medium",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-number-of-occurrences-of-a-substring"
+      },
+      {
+        "title": "Minimize Malware Spread",
+        "topic": "Array, Hash Table, DFS, BFS, Union-Find, Graph Theory",
+        "difficulty": "Hard",
+        "algorithm": "Union-Find / DSU",
+        "leetcode_link": "https://leetcode.com/problems/minimize-malware-spread"
+      },
+      {
+        "title": "Distinct Subsequences",
+        "topic": "String, Dynamic Programming",
+        "difficulty": "Hard",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/distinct-subsequences"
+      },
+      {
+        "title": "Power Grid Maintenance",
+        "topic": "Array, Hash Table, DFS, BFS, Union-Find, Graph Theory, Heap",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/power-grid-maintenance"
+      },
+      {
+        "title": "Longest Substring Without Repeating Characters",
+        "topic": "Hash Table, String, Sliding Window",
+        "difficulty": "Medium",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/longest-substring-without-repeating-characters"
+      },
+      {
+        "title": "Number of Islands",
+        "topic": "Array, DFS, BFS, Union-Find, Matrix",
+        "difficulty": "Medium",
+        "algorithm": "Union-Find / DSU",
+        "leetcode_link": "https://leetcode.com/problems/number-of-islands"
+      },
+      {
+        "title": "Smallest Substring With Identical Characters I",
+        "topic": "Array, Binary Search, Enumeration",
+        "difficulty": "Hard",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/smallest-substring-with-identical-characters-i"
+      },
+      {
+        "title": "Smallest Substring With Identical Characters II",
+        "topic": "String, Binary Search",
+        "difficulty": "Hard",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/smallest-substring-with-identical-characters-ii"
+      },
+      {
+        "title": "Split a String in Balanced Strings",
+        "topic": "String, Greedy, Counting",
+        "difficulty": "Easy",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/split-a-string-in-balanced-strings"
+      },
+      {
+        "title": "Minimum Time to Visit All Houses",
+        "topic": "Array, Prefix Sum",
+        "difficulty": "Medium",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/minimum-time-to-visit-all-houses"
+      },
+      {
+        "title": "Merge Intervals",
+        "topic": "Array, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "Sort O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/merge-intervals"
+      },
+      {
+        "title": "Palindromic Substrings",
+        "topic": "Two Pointers, String, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/palindromic-substrings"
+      },
+      {
+        "title": "Remove Adjacent Almost-Equal Characters",
+        "topic": "String, Dynamic Programming, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/remove-adjacent-almost-equal-characters"
+      },
+      {
+        "title": "Delete and Earn",
+        "topic": "Array, Hash Table, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/delete-and-earn"
+      },
+      {
+        "title": "Binary Tree Maximum Path Sum",
+        "topic": "Dynamic Programming, Tree, DFS, Binary Tree",
+        "difficulty": "Hard",
+        "algorithm": "DFS recursion",
+        "leetcode_link": "https://leetcode.com/problems/binary-tree-maximum-path-sum"
+      },
+      {
+        "title": "Longest Common Subsequence",
+        "topic": "String, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/longest-common-subsequence"
+      },
+      {
+        "title": "Best Time to Buy and Sell Stock",
+        "topic": "Array, Dynamic Programming",
+        "difficulty": "Easy",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock"
+      },
+      {
+        "title": "Number of Divisible Triplet Sums",
+        "topic": "Array, Hash Table",
+        "difficulty": "Medium",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/number-of-divisible-triplet-sums"
+      },
+      {
+        "title": "K-diff Pairs in an Array",
+        "topic": "Array, Hash Table, Two Pointers, Binary Search, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/k-diff-pairs-in-an-array"
+      },
+      {
+        "title": "Count Subarrays With Median K",
+        "topic": "Array, Hash Table, Prefix Sum",
+        "difficulty": "Hard",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/count-subarrays-with-median-k"
+      },
+      {
+        "title": "Longest Palindromic Substring",
+        "topic": "Two Pointers, String, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/longest-palindromic-substring"
+      },
+      {
+        "title": "Trapping Rain Water",
+        "topic": "Array, Two Pointers, Dynamic Programming, Stack, Monotonic Stack",
+        "difficulty": "Hard",
+        "algorithm": "Monotonic stack/queue O(n)",
+        "leetcode_link": "https://leetcode.com/problems/trapping-rain-water"
+      },
+      {
+        "title": "Minimum Number of Taps to Open to Water a Garden",
+        "topic": "Array, Dynamic Programming, Greedy",
+        "difficulty": "Hard",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/minimum-number-of-taps-to-open-to-water-a-garden"
+      },
+      {
+        "title": "Count Palindromic Subsequences",
+        "topic": "String, Dynamic Programming",
+        "difficulty": "Hard",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/count-palindromic-subsequences"
+      },
+      {
+        "title": "Number of Digit One",
+        "topic": "Math, Dynamic Programming, Recursion",
+        "difficulty": "Hard",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/number-of-digit-one"
+      },
+      {
+        "title": "Two Sum",
+        "topic": "Array, Hash Table",
+        "difficulty": "Easy",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/two-sum"
+      },
+      {
+        "title": "Reverse Nodes in k-Group",
+        "topic": "Linked List, Recursion",
+        "difficulty": "Hard",
+        "algorithm": "Linked list traversal",
+        "leetcode_link": "https://leetcode.com/problems/reverse-nodes-in-k-group"
+      },
+      {
+        "title": "All Nodes Distance K in Binary Tree",
+        "topic": "Hash Table, Tree, DFS, BFS, Binary Tree",
+        "difficulty": "Medium",
+        "algorithm": "BFS O(V+E)",
+        "leetcode_link": "https://leetcode.com/problems/all-nodes-distance-k-in-binary-tree"
+      },
+      {
+        "title": "Minimum Window Substring",
+        "topic": "Hash Table, String, Sliding Window",
+        "difficulty": "Hard",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/minimum-window-substring"
+      },
+      {
+        "title": "Min Stack",
+        "topic": "Stack, Design",
+        "difficulty": "Medium",
+        "algorithm": "Stack O(n)",
+        "leetcode_link": "https://leetcode.com/problems/min-stack"
+      },
+      {
+        "title": "Kth Largest Element in an Array",
+        "topic": "Array, Divide and Conquer, Sorting, Heap, Quickselect",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/kth-largest-element-in-an-array"
+      },
+      {
+        "title": "Top K Frequent Elements",
+        "topic": "Array, Hash Table, Divide and Conquer, Sorting, Heap, Bucket Sort, Counting, Quickselect",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/top-k-frequent-elements"
+      },
+      {
+        "title": "Asteroid Collision",
+        "topic": "Array, Stack, Simulation",
+        "difficulty": "Medium",
+        "algorithm": "Stack O(n)",
+        "leetcode_link": "https://leetcode.com/problems/asteroid-collision"
+      },
+      {
+        "title": "Sum of Nodes with Even-Valued Grandparent",
+        "topic": "Tree, DFS, BFS, Binary Tree",
+        "difficulty": "Medium",
+        "algorithm": "BFS O(V+E)",
+        "leetcode_link": "https://leetcode.com/problems/sum-of-nodes-with-even-valued-grandparent"
+      },
+      {
+        "title": "Divide Array Into Arrays With Max Difference",
+        "topic": "Array, Greedy, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/divide-array-into-arrays-with-max-difference"
+      },
+      {
+        "title": "Maximum Units on a Truck",
+        "topic": "Array, Greedy, Sorting",
+        "difficulty": "Easy",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-units-on-a-truck"
+      },
+      {
+        "title": "Word Search",
+        "topic": "Array, String, Backtracking, DFS, Matrix",
+        "difficulty": "Medium",
+        "algorithm": "DFS on grid O(m*n)",
+        "leetcode_link": "https://leetcode.com/problems/word-search"
+      },
+      {
+        "title": "Zigzag Conversion",
+        "topic": "String",
+        "difficulty": "Medium",
+        "algorithm": "Standard implementation",
+        "leetcode_link": "https://leetcode.com/problems/zigzag-conversion"
+      },
+      {
+        "title": "Report Spam Message",
+        "topic": "Array, Hash Table, String",
+        "difficulty": "Medium",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/report-spam-message"
+      },
+      {
+        "title": "Container With Most Water",
+        "topic": "Array, Two Pointers, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/container-with-most-water"
+      },
+      {
+        "title": "Coin Change",
+        "topic": "Array, Dynamic Programming, BFS",
+        "difficulty": "Medium",
+        "algorithm": "BFS O(V+E)",
+        "leetcode_link": "https://leetcode.com/problems/coin-change"
+      },
+      {
+        "title": "Search Suggestions System",
+        "topic": "Array, String, Binary Search, Trie, Sorting, Heap",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/search-suggestions-system"
+      },
+      {
+        "title": "Maximum Subarray",
+        "topic": "Array, Divide and Conquer, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/maximum-subarray"
+      },
+      {
+        "title": "Magnetic Force Between Two Balls",
+        "topic": "Array, Binary Search, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/magnetic-force-between-two-balls"
+      },
+      {
+        "title": "Median of Two Sorted Arrays",
+        "topic": "Array, Binary Search, Divide and Conquer",
+        "difficulty": "Hard",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/median-of-two-sorted-arrays"
+      },
+      {
+        "title": "Largest Number After Digit Swaps by Parity",
+        "topic": "Sorting, Heap",
+        "difficulty": "Easy",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/largest-number-after-digit-swaps-by-parity"
+      },
+      {
+        "title": "Koko Eating Bananas",
+        "topic": "Array, Binary Search",
+        "difficulty": "Medium",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/koko-eating-bananas"
+      },
+      {
+        "title": "Odd String Difference",
+        "topic": "Array, Hash Table, String",
+        "difficulty": "Easy",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/odd-string-difference"
+      },
+      {
+        "title": "3Sum",
+        "topic": "Array, Two Pointers, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/3sum"
+      },
+      {
+        "title": "Search in Rotated Sorted Array",
+        "topic": "Array, Binary Search",
+        "difficulty": "Medium",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/search-in-rotated-sorted-array"
+      },
+      {
+        "title": "Validate Binary Search Tree",
+        "topic": "Tree, DFS, Binary Search Tree, Binary Tree",
+        "difficulty": "Medium",
+        "algorithm": "DFS recursion",
+        "leetcode_link": "https://leetcode.com/problems/validate-binary-search-tree"
+      },
+      {
+        "title": "Word Break",
+        "topic": "Array, Hash Table, String, Dynamic Programming, Trie, Memoization",
+        "difficulty": "Medium",
+        "algorithm": "Trie",
+        "leetcode_link": "https://leetcode.com/problems/word-break"
+      },
+      {
+        "title": "Meeting Rooms II",
+        "topic": "Array, Two Pointers, Greedy, Sorting, Heap, Prefix Sum",
+        "difficulty": "Medium",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/meeting-rooms-ii"
+      },
+      {
+        "title": "Word Ladder",
+        "topic": "Hash Table, String, BFS",
+        "difficulty": "Hard",
+        "algorithm": "BFS O(V+E)",
+        "leetcode_link": "https://leetcode.com/problems/word-ladder"
+      },
+      {
+        "title": "Maximum Frequency Stack",
+        "topic": "Hash Table, Stack, Design, Ordered Set",
+        "difficulty": "Hard",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-frequency-stack"
+      },
+      {
+        "title": "Count the Number of Fair Pairs",
+        "topic": "Array, Two Pointers, Binary Search, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/count-the-number-of-fair-pairs"
+      },
+      {
+        "title": "Decode String",
+        "topic": "String, Stack, Recursion",
+        "difficulty": "Medium",
+        "algorithm": "Stack O(n)",
+        "leetcode_link": "https://leetcode.com/problems/decode-string"
+      },
+      {
+        "title": "Top K Frequent Words",
+        "topic": "Array, Hash Table, String, Trie, Sorting, Heap, Bucket Sort, Counting",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/top-k-frequent-words"
+      },
+      {
+        "title": "Verify Preorder Sequence in Binary Search Tree",
+        "topic": "Array, Stack, Tree, BST, Recursion, Monotonic Stack, Binary Tree",
+        "difficulty": "Medium",
+        "algorithm": "Monotonic stack/queue O(n)",
+        "leetcode_link": "https://leetcode.com/problems/verify-preorder-sequence-in-binary-search-tree"
+      },
+      {
+        "title": "Find Leaves of Binary Tree",
+        "topic": "Tree, DFS, Binary Tree",
+        "difficulty": "Medium",
+        "algorithm": "DFS recursion",
+        "leetcode_link": "https://leetcode.com/problems/find-leaves-of-binary-tree"
+      },
+      {
+        "title": "Longest Increasing Path in a Matrix",
+        "topic": "Array, DP, DFS, BFS, Graph Theory, Topological Sort, Memoization, Matrix",
+        "difficulty": "Hard",
+        "algorithm": "Topological sort / Kahn's",
+        "leetcode_link": "https://leetcode.com/problems/longest-increasing-path-in-a-matrix"
+      },
+      {
+        "title": "Minimum Absolute Difference",
+        "topic": "Array, Sorting",
+        "difficulty": "Easy",
+        "algorithm": "Sort O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/minimum-absolute-difference"
+      },
+      {
+        "title": "Gas Station",
+        "topic": "Array, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/gas-station"
+      },
+      {
+        "title": "Merge k Sorted Lists",
+        "topic": "Linked List, Divide and Conquer, Heap, Merge Sort",
+        "difficulty": "Hard",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/merge-k-sorted-lists"
+      },
+      {
+        "title": "Number of Visible People in a Queue",
+        "topic": "Array, Stack, Monotonic Stack",
+        "difficulty": "Hard",
+        "algorithm": "Monotonic stack/queue O(n)",
+        "leetcode_link": "https://leetcode.com/problems/number-of-visible-people-in-a-queue"
+      },
+      {
+        "title": "Max Consecutive Ones III",
+        "topic": "Array, Binary Search, Sliding Window, Prefix Sum",
+        "difficulty": "Medium",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/max-consecutive-ones-iii"
+      },
+      {
+        "title": "Optimal Account Balancing",
+        "topic": "Array, Dynamic Programming, Backtracking, Bit Manipulation, Bitmask",
+        "difficulty": "Hard",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/optimal-account-balancing"
+      },
+      {
+        "title": "Merge Two Sorted Lists",
+        "topic": "Linked List, Recursion",
+        "difficulty": "Easy",
+        "algorithm": "Linked list traversal",
+        "leetcode_link": "https://leetcode.com/problems/merge-two-sorted-lists"
+      },
+      {
+        "title": "All Possible Full Binary Trees",
+        "topic": "Dynamic Programming, Tree, Recursion, Memoization, Binary Tree",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/all-possible-full-binary-trees"
+      },
+      {
+        "title": "Sort Colors",
+        "topic": "Array, Two Pointers, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/sort-colors"
+      },
+      {
+        "title": "Boundary of Binary Tree",
+        "topic": "Tree, DFS, Binary Tree",
+        "difficulty": "Medium",
+        "algorithm": "DFS recursion",
+        "leetcode_link": "https://leetcode.com/problems/boundary-of-binary-tree"
+      },
+      {
+        "title": "Minimize Maximum Component Cost",
+        "topic": "Binary Search, Union-Find, Graph Theory, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "Union-Find / DSU",
+        "leetcode_link": "https://leetcode.com/problems/minimize-maximum-component-cost"
+      },
+      {
+        "title": "Valid Parentheses",
+        "topic": "String, Stack",
+        "difficulty": "Easy",
+        "algorithm": "Stack O(n)",
+        "leetcode_link": "https://leetcode.com/problems/valid-parentheses"
+      },
+      {
+        "title": "Remove All Adjacent Duplicates in String II",
+        "topic": "String, Stack",
+        "difficulty": "Medium",
+        "algorithm": "Stack O(n)",
+        "leetcode_link": "https://leetcode.com/problems/remove-all-adjacent-duplicates-in-string-ii"
+      },
+      {
+        "title": "Reconstruct Itinerary",
+        "topic": "Array, String, DFS, Graph Theory, Sorting, Heap, Eulerian Circuit",
+        "difficulty": "Hard",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/reconstruct-itinerary"
+      },
+      {
+        "title": "Missing Number",
+        "topic": "Array, Hash Table, Math, Binary Search, Bit Manipulation, Sorting",
+        "difficulty": "Easy",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/missing-number"
+      },
+      {
+        "title": "Rotting Oranges",
+        "topic": "Array, BFS, Matrix",
+        "difficulty": "Medium",
+        "algorithm": "BFS O(V+E)",
+        "leetcode_link": "https://leetcode.com/problems/rotting-oranges"
+      },
+      {
+        "title": "Path with Maximum Gold",
+        "topic": "Array, Backtracking, Matrix",
+        "difficulty": "Medium",
+        "algorithm": "Backtracking",
+        "leetcode_link": "https://leetcode.com/problems/path-with-maximum-gold"
+      },
+      {
+        "title": "Diameter of N-Ary Tree",
+        "topic": "Tree, DFS",
+        "difficulty": "Medium",
+        "algorithm": "DFS recursion",
+        "leetcode_link": "https://leetcode.com/problems/diameter-of-n-ary-tree"
+      },
+      {
+        "title": "Integer to Roman",
+        "topic": "Hash Table, Math, String",
+        "difficulty": "Medium",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/integer-to-roman"
+      },
+      {
+        "title": "Combination Sum",
+        "topic": "Array, Backtracking",
+        "difficulty": "Medium",
+        "algorithm": "Backtracking",
+        "leetcode_link": "https://leetcode.com/problems/combination-sum"
+      },
+      {
+        "title": "Maximal Square",
+        "topic": "Array, Dynamic Programming, Matrix",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/maximal-square"
+      },
+      {
+        "title": "Roman to Integer",
+        "topic": "Hash Table, Math, String",
+        "difficulty": "Easy",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/roman-to-integer"
+      },
+      {
+        "title": "Product of Array Except Self",
+        "topic": "Array, Prefix Sum",
+        "difficulty": "Medium",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/product-of-array-except-self"
+      },
+      {
+        "title": "Find Subarray With Bitwise OR Closest to K",
+        "topic": "Array, Binary Search, Bit Manipulation, Segment Tree",
+        "difficulty": "Hard",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/find-subarray-with-bitwise-or-closest-to-k"
+      },
+      {
+        "title": "Count Binary Substrings",
+        "topic": "Two Pointers, String",
+        "difficulty": "Easy",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/count-binary-substrings"
+      },
+      {
+        "title": "Check Whether Two Strings are Almost Equivalent",
+        "topic": "Hash Table, String, Counting",
+        "difficulty": "Easy",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/check-whether-two-strings-are-almost-equivalent"
+      },
+      {
+        "title": "Find the Minimum Area to Cover All Ones II",
+        "topic": "Array, Matrix, Enumeration",
+        "difficulty": "Hard",
+        "algorithm": "Advanced technique",
+        "leetcode_link": "https://leetcode.com/problems/find-the-minimum-area-to-cover-all-ones-ii"
+      },
+      {
+        "title": "Count the Number of Inversions",
+        "topic": "Array, Dynamic Programming",
+        "difficulty": "Hard",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/count-the-number-of-inversions"
+      },
+      {
+        "title": "Find the Minimum Area to Cover All Ones I",
+        "topic": "Array, Matrix",
+        "difficulty": "Medium",
+        "algorithm": "Standard implementation",
+        "leetcode_link": "https://leetcode.com/problems/find-the-minimum-area-to-cover-all-ones-i"
+      },
+      {
+        "title": "Beautiful Towers II",
+        "topic": "Array, Stack, Monotonic Stack",
+        "difficulty": "Medium",
+        "algorithm": "Monotonic stack/queue O(n)",
+        "leetcode_link": "https://leetcode.com/problems/beautiful-towers-ii"
+      },
+      {
+        "title": "Beautiful Towers I",
+        "topic": "Array, Stack, Monotonic Stack",
+        "difficulty": "Medium",
+        "algorithm": "Monotonic stack/queue O(n)",
+        "leetcode_link": "https://leetcode.com/problems/beautiful-towers-i"
+      },
+      {
+        "title": "Average Waiting Time",
+        "topic": "Array, Simulation",
+        "difficulty": "Medium",
+        "algorithm": "Standard implementation",
+        "leetcode_link": "https://leetcode.com/problems/average-waiting-time"
+      },
+      {
+        "title": "Maximum Number That Makes Result of Bitwise AND Zero",
+        "topic": "String, Greedy, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-number-that-makes-result-of-bitwise-and-zero"
+      },
+      {
+        "title": "Check If a Number Is Majority Element in a Sorted Array",
+        "topic": "Array, Binary Search",
+        "difficulty": "Easy",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/check-if-a-number-is-majority-element-in-a-sorted-array"
+      },
+      {
+        "title": "Matrix Similarity After Cyclic Shifts",
+        "topic": "Array, Math, Matrix, Simulation",
+        "difficulty": "Easy",
+        "algorithm": "Standard implementation",
+        "leetcode_link": "https://leetcode.com/problems/matrix-similarity-after-cyclic-shifts"
+      },
+      {
+        "title": "Maximum Height of a Triangle",
+        "topic": "Array, Enumeration",
+        "difficulty": "Easy",
+        "algorithm": "Standard implementation",
+        "leetcode_link": "https://leetcode.com/problems/maximum-height-of-a-triangle"
+      },
+      {
+        "title": "Height Checker",
+        "topic": "Array, Sorting, Counting Sort",
+        "difficulty": "Easy",
+        "algorithm": "Sort O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/height-checker"
+      },
+      {
+        "title": "Maximize Grid Happiness",
+        "topic": "Dynamic Programming, Bit Manipulation, Memoization, Bitmask",
+        "difficulty": "Hard",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/maximize-grid-happiness"
+      },
+      {
+        "title": "Equalize Strings by Adding or Removing Characters at Ends",
+        "topic": "String, Binary Search, DP, Sliding Window, Hash Function",
+        "difficulty": "Medium",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/equalize-strings-by-adding-or-removing-characters-at-ends"
+      },
+      {
+        "title": "Number of Self-Divisible Permutations",
+        "topic": "Array, Math, DP, Backtracking, Bit Manipulation, Number Theory, Bitmask",
+        "difficulty": "Medium",
+        "algorithm": "Backtracking",
+        "leetcode_link": "https://leetcode.com/problems/number-of-self-divisible-permutations"
+      },
+      {
+        "title": "Masking Personal Information",
+        "topic": "String",
+        "difficulty": "Medium",
+        "algorithm": "Standard implementation",
+        "leetcode_link": "https://leetcode.com/problems/masking-personal-information"
+      },
+      {
+        "title": "Maximum Product Subarray",
+        "topic": "Array, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/maximum-product-subarray"
+      },
+      {
+        "title": "Maximum Number of Ways to Partition an Array",
+        "topic": "Array, Hash Table, Counting, Enumeration, Prefix Sum",
+        "difficulty": "Hard",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-number-of-ways-to-partition-an-array"
+      },
+      {
+        "title": "Basic Calculator",
+        "topic": "Math, String, Stack, Recursion",
+        "difficulty": "Hard",
+        "algorithm": "Stack O(n)",
+        "leetcode_link": "https://leetcode.com/problems/basic-calculator"
+      },
+      {
+        "title": "K Closest Points to Origin",
+        "topic": "Array, Math, Divide and Conquer, Geometry, Sorting, Heap, Quickselect",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/k-closest-points-to-origin"
+      },
+      {
+        "title": "Exclusive Time of Functions",
+        "topic": "Array, Stack",
+        "difficulty": "Medium",
+        "algorithm": "Stack O(n)",
+        "leetcode_link": "https://leetcode.com/problems/exclusive-time-of-functions"
+      },
+      {
+        "title": "Shortest Distance to Target String in a Circular Array",
+        "topic": "Array, String",
+        "difficulty": "Easy",
+        "algorithm": "Standard implementation",
+        "leetcode_link": "https://leetcode.com/problems/shortest-distance-to-target-string-in-a-circular-array"
+      },
+      {
+        "title": "Longest Increasing Subsequence",
+        "topic": "Array, Binary Search, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/longest-increasing-subsequence"
+      },
+      {
+        "title": "Game of Life",
+        "topic": "Array, Matrix, Simulation",
+        "difficulty": "Medium",
+        "algorithm": "Standard implementation",
+        "leetcode_link": "https://leetcode.com/problems/game-of-life"
+      },
+      {
+        "title": "Maximum Earnings From Taxi",
+        "topic": "Array, Hash Table, Binary Search, DP, Sorting",
+        "difficulty": "Medium",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-earnings-from-taxi"
+      },
+      {
+        "title": "Maximum Number of Non-overlapping Palindrome Substrings",
+        "topic": "Two Pointers, String, DP, Greedy",
+        "difficulty": "Hard",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/maximum-number-of-non-overlapping-palindrome-substrings"
+      },
+      {
+        "title": "Path Sum III",
+        "topic": "Tree, DFS, Binary Tree",
+        "difficulty": "Medium",
+        "algorithm": "DFS recursion",
+        "leetcode_link": "https://leetcode.com/problems/path-sum-iii"
+      },
+      {
+        "title": "Candy",
+        "topic": "Array, Greedy",
+        "difficulty": "Hard",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/candy"
+      },
+      {
+        "title": "Minimum Equal Sum of Two Arrays After Replacing Zeros",
+        "topic": "Array, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/minimum-equal-sum-of-two-arrays-after-replacing-zeros"
+      },
+      {
+        "title": "Backspace String Compare",
+        "topic": "Two Pointers, String, Stack, Simulation",
+        "difficulty": "Easy",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/backspace-string-compare"
+      },
+      {
+        "title": "Least Number of Unique Integers after K Removals",
+        "topic": "Array, Hash Table, Greedy, Sorting, Counting",
+        "difficulty": "Medium",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/least-number-of-unique-integers-after-k-removals"
+      },
+      {
+        "title": "Finding the Number of Visible Mountains",
+        "topic": "Array, Stack, Sorting, Monotonic Stack",
+        "difficulty": "Medium",
+        "algorithm": "Monotonic stack/queue O(n)",
+        "leetcode_link": "https://leetcode.com/problems/finding-the-number-of-visible-mountains"
+      },
+      {
+        "title": "Design Snake Game",
+        "topic": "Array, Hash Table, Design, Queue, Simulation",
+        "difficulty": "Medium",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/design-snake-game"
+      },
+      {
+        "title": "First Missing Positive",
+        "topic": "Array, Hash Table",
+        "difficulty": "Hard",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/first-missing-positive"
+      },
+      {
+        "title": "Find Pivot Index",
+        "topic": "Array, Prefix Sum",
+        "difficulty": "Easy",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/find-pivot-index"
+      },
+      {
+        "title": "Encode and Decode TinyURL",
+        "topic": "Hash Table, String, Design, Hash Function",
+        "difficulty": "Medium",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/encode-and-decode-tinyurl"
+      },
+      {
+        "title": "Valid Palindrome",
+        "topic": "Two Pointers, String",
+        "difficulty": "Easy",
+        "algorithm": "Two pointers O(n)",
+        "leetcode_link": "https://leetcode.com/problems/valid-palindrome"
+      },
+      {
+        "title": "Max Chunks To Make Sorted II",
+        "topic": "Array, Stack, Greedy, Sorting, Monotonic Stack",
+        "difficulty": "Hard",
+        "algorithm": "Monotonic stack/queue O(n)",
+        "leetcode_link": "https://leetcode.com/problems/max-chunks-to-make-sorted-ii"
+      },
+      {
+        "title": "Bus Routes",
+        "topic": "Array, Hash Table, BFS",
+        "difficulty": "Hard",
+        "algorithm": "BFS O(V+E)",
+        "leetcode_link": "https://leetcode.com/problems/bus-routes"
+      },
+      {
+        "title": "Maximal Rectangle",
+        "topic": "Array, Dynamic Programming, Stack, Matrix, Monotonic Stack",
+        "difficulty": "Hard",
+        "algorithm": "Monotonic stack/queue O(n)",
+        "leetcode_link": "https://leetcode.com/problems/maximal-rectangle"
+      },
+      {
+        "title": "Reorganize String",
+        "topic": "Hash Table, String, Greedy, Sorting, Heap, Counting",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/reorganize-string"
+      },
+      {
+        "title": "House Robber III",
+        "topic": "Dynamic Programming, Tree, DFS, Binary Tree",
+        "difficulty": "Medium",
+        "algorithm": "DFS recursion",
+        "leetcode_link": "https://leetcode.com/problems/house-robber-iii"
+      },
+      {
+        "title": "Number of Operations to Make Network Connected",
+        "topic": "DFS, BFS, Union-Find, Graph Theory",
+        "difficulty": "Medium",
+        "algorithm": "Union-Find / DSU",
+        "leetcode_link": "https://leetcode.com/problems/number-of-operations-to-make-network-connected"
+      },
+      {
+        "title": "Kth Largest Element in a Stream",
+        "topic": "Tree, Design, BST, Heap, Binary Tree, Data Stream",
+        "difficulty": "Easy",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/kth-largest-element-in-a-stream"
+      },
+      {
+        "title": "Course Schedule III",
+        "topic": "Array, Greedy, Sorting, Heap",
+        "difficulty": "Hard",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/course-schedule-iii"
+      },
+      {
+        "title": "Find Duplicate Subtrees",
+        "topic": "Hash Table, Tree, DFS, Binary Tree",
+        "difficulty": "Medium",
+        "algorithm": "DFS recursion",
+        "leetcode_link": "https://leetcode.com/problems/find-duplicate-subtrees"
+      },
+      {
+        "title": "Network Delay Time",
+        "topic": "DFS, BFS, Graph Theory, Heap, Shortest Path",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/network-delay-time"
+      },
+      {
+        "title": "Find the Duplicate Number",
+        "topic": "Array, Two Pointers, Binary Search, Bit Manipulation",
+        "difficulty": "Medium",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/find-the-duplicate-number"
+      },
+      {
+        "title": "Minimum Window Subsequence",
+        "topic": "String, Dynamic Programming, Sliding Window",
+        "difficulty": "Hard",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/minimum-window-subsequence"
+      },
+      {
+        "title": "House Robber II",
+        "topic": "Array, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/house-robber-ii"
+      },
+      {
+        "title": "Design Twitter",
+        "topic": "Hash Table, Linked List, Design, Heap",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/design-twitter"
+      },
+      {
+        "title": "Maximum Path Quality of a Graph",
+        "topic": "Array, Backtracking, Graph Theory",
+        "difficulty": "Hard",
+        "algorithm": "Backtracking",
+        "leetcode_link": "https://leetcode.com/problems/maximum-path-quality-of-a-graph"
+      },
+      {
+        "title": "Partition Equal Subset Sum",
+        "topic": "Array, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/partition-equal-subset-sum"
+      },
+      {
+        "title": "Tree Diameter",
+        "topic": "Tree, DFS, BFS, Graph Theory, Topological Sort",
+        "difficulty": "Medium",
+        "algorithm": "Topological sort / Kahn's",
+        "leetcode_link": "https://leetcode.com/problems/tree-diameter"
+      },
+      {
+        "title": "Using a Robot to Print the Lexicographically Smallest String",
+        "topic": "Hash Table, String, Stack, Greedy",
+        "difficulty": "Medium",
+        "algorithm": "Greedy O(n log n)",
+        "leetcode_link": "https://leetcode.com/problems/using-a-robot-to-print-the-lexicographically-smallest-string"
+      },
+      {
+        "title": "Lexicographically Minimum String After Removing Stars",
+        "topic": "Hash Table, String, Stack, Greedy, Heap",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/lexicographically-minimum-string-after-removing-stars"
+      },
+      {
+        "title": "Shortest Bridge",
+        "topic": "Array, DFS, BFS, Matrix",
+        "difficulty": "Medium",
+        "algorithm": "DFS on grid O(m*n)",
+        "leetcode_link": "https://leetcode.com/problems/shortest-bridge"
+      },
+      {
+        "title": "Count Vowel Substrings of a String",
+        "topic": "Hash Table, String",
+        "difficulty": "Easy",
+        "algorithm": "HashMap O(n)",
+        "leetcode_link": "https://leetcode.com/problems/count-vowel-substrings-of-a-string"
+      },
+      {
+        "title": "Spiral Matrix",
+        "topic": "Array, Matrix, Simulation",
+        "difficulty": "Medium",
+        "algorithm": "Standard implementation",
+        "leetcode_link": "https://leetcode.com/problems/spiral-matrix"
+      },
+      {
+        "title": "Longest Substring Of All Vowels in Order",
+        "topic": "String, Sliding Window",
+        "difficulty": "Medium",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/longest-substring-of-all-vowels-in-order"
+      },
+      {
+        "title": "Minimum Array Sum",
+        "topic": "Array, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/minimum-array-sum"
+      },
+      {
+        "title": "Burst Balloons",
+        "topic": "Array, Dynamic Programming",
+        "difficulty": "Hard",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/burst-balloons"
+      },
+      {
+        "title": "Find K Closest Elements",
+        "topic": "Array, Two Pointers, Binary Search, Sliding Window, Sorting, Heap",
+        "difficulty": "Medium",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/find-k-closest-elements"
+      },
+      {
+        "title": "Coin Change II",
+        "topic": "Array, Dynamic Programming",
+        "difficulty": "Medium",
+        "algorithm": "DP tabulation",
+        "leetcode_link": "https://leetcode.com/problems/coin-change-ii"
+      },
+      {
+        "title": "Sort Characters By Frequency",
+        "topic": "Hash Table, String, Sorting, Heap, Bucket Sort, Counting",
+        "difficulty": "Medium",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/sort-characters-by-frequency"
+      },
+      {
+        "title": "Time Based Key-Value Store",
+        "topic": "Hash Table, String, Binary Search, Design",
+        "difficulty": "Medium",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/time-based-key-value-store"
+      },
+      {
+        "title": "Vertical Order Traversal of a Binary Tree",
+        "topic": "Hash Table, Tree, DFS, BFS, Sorting, Binary Tree",
+        "difficulty": "Hard",
+        "algorithm": "BFS O(V+E)",
+        "leetcode_link": "https://leetcode.com/problems/vertical-order-traversal-of-a-binary-tree"
+      },
+      {
+        "title": "Sliding Window Median",
+        "topic": "Array, Hash Table, Sliding Window, Heap",
+        "difficulty": "Hard",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/sliding-window-median"
+      },
+      {
+        "title": "Range Sum Query 2D - Immutable",
+        "topic": "Array, Design, Matrix, Prefix Sum",
+        "difficulty": "Medium",
+        "algorithm": "Prefix sum O(n)",
+        "leetcode_link": "https://leetcode.com/problems/range-sum-query-2d-immutable"
+      },
+      {
+        "title": "Partition Array Into Two Arrays to Minimize Sum Difference",
+        "topic": "Array, Two Pointers, Binary Search, DP, Bit Manipulation, Sorting, Ordered Set, Bitmask",
+        "difficulty": "Hard",
+        "algorithm": "Binary search O(log n)",
+        "leetcode_link": "https://leetcode.com/problems/partition-array-into-two-arrays-to-minimize-sum-difference"
+      },
+      {
+        "title": "Sliding Window Maximum",
+        "topic": "Array, Queue, Sliding Window, Heap, Monotonic Queue",
+        "difficulty": "Hard",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/sliding-window-maximum"
+      },
+      {
+        "title": "Largest Rectangle in Histogram",
+        "topic": "Array, Stack, Monotonic Stack",
+        "difficulty": "Hard",
+        "algorithm": "Monotonic stack/queue O(n)",
+        "leetcode_link": "https://leetcode.com/problems/largest-rectangle-in-histogram"
+      },
+      {
+        "title": "Longest Continuous Subarray With Absolute Diff <= Limit",
+        "topic": "Array, Queue, Sliding Window, Heap, Ordered Set, Monotonic Queue",
+        "difficulty": "Medium",
+        "algorithm": "Sliding window O(n)",
+        "leetcode_link": "https://leetcode.com/problems/longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit"
+      },
+      {
+        "title": "Last Stone Weight",
+        "topic": "Array, Heap",
+        "difficulty": "Easy",
+        "algorithm": "Heap O(n log k)",
+        "leetcode_link": "https://leetcode.com/problems/last-stone-weight"
+      }
+    ]
+  }
+]

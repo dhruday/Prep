@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Salesforce DSA Prep Tracker</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #263449;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-2: #0ea5e9;
+    --easy: #22c55e;
+    --medium: #f59e0b;
+    --hard: #ef4444;
+    --todo: #64748b;
+    --progress: #eab308;
+    --solved: #22c55e;
+    --skip: #7c3aed;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --panel-2: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px; line-height: 1.45; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+  }
+  .header-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0; }
+  .subtitle { color: var(--muted); font-size: 12px; }
+
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-left: auto; align-items: center; }
+  .stat {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 10px; font-size: 12px;
+  }
+  .stat b { color: var(--accent); font-size: 14px; margin-right: 4px; }
+
+  .progress-bar {
+    width: 220px; height: 8px; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 999px; overflow: hidden;
+    display: inline-block; vertical-align: middle;
+  }
+  .progress-bar > div {
+    height: 100%; background: linear-gradient(90deg, var(--solved), var(--accent));
+    width: 0%; transition: width .3s;
+  }
+
+  .tabs { display: flex; gap: 4px; margin-top: 10px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 8px 14px; cursor: pointer; border: 1px solid transparent;
+    border-bottom: none; border-radius: 6px 6px 0 0;
+    color: var(--muted); font-weight: 500;
+  }
+  .tab.active {
+    background: var(--panel-2); border-color: var(--border);
+    color: var(--text);
+    margin-bottom: -1px;
+  }
+
+  main { padding: 16px 20px 60px; max-width: 1400px; margin: 0 auto; }
+
+  .toolbar {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+    padding: 10px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .toolbar input[type=text], .toolbar select {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font-size: 13px;
+    font-family: inherit;
+  }
+  .toolbar input[type=text] { min-width: 240px; }
+  .toolbar button {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 12px; cursor: pointer; font-size: 13px;
+  }
+  .toolbar button:hover { background: var(--border); }
+  .toolbar .spacer { flex: 1; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border);
+    vertical-align: top; }
+  th { background: var(--panel-2); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--muted); position: sticky; top: 0; }
+  tr:last-child td { border-bottom: none; }
+  tr.done { opacity: 0.55; }
+
+  .rank { color: var(--muted); font-variant-numeric: tabular-nums; width: 40px; }
+  .title-cell { min-width: 240px; }
+  .title-cell .title { font-weight: 500; }
+  .topics { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .topic-tag {
+    font-size: 11px; padding: 2px 6px; border-radius: 4px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .diff { font-weight: 600; font-size: 12px; padding: 3px 8px;
+    border-radius: 4px; display: inline-block; }
+  .diff.Easy { background: rgba(34,197,94,.15); color: var(--easy); }
+  .diff.Medium { background: rgba(245,158,11,.15); color: var(--medium); }
+  .diff.Hard { background: rgba(239,68,68,.15); color: var(--hard); }
+
+  .num { font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); }
+
+  .status-picker { display: flex; gap: 2px; }
+  .status-picker button {
+    border: 1px solid var(--border); background: var(--panel-2);
+    color: var(--muted); font-size: 11px; padding: 3px 7px;
+    cursor: pointer; border-radius: 4px;
+  }
+  .status-picker button.active[data-s="todo"] { background: var(--todo); color: white; border-color: var(--todo); }
+  .status-picker button.active[data-s="progress"] { background: var(--progress); color: #1e293b; border-color: var(--progress); }
+  .status-picker button.active[data-s="solved"] { background: var(--solved); color: white; border-color: var(--solved); }
+  .status-picker button.active[data-s="skip"] { background: var(--skip); color: white; border-color: var(--skip); }
+
+  .notes-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 6px; }
+  .notes-btn.has-notes { color: var(--accent); }
+  .notes-row td { background: var(--panel-2); padding: 10px 16px; }
+  .notes-row textarea {
+    width: 100%; min-height: 60px; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; padding: 6px;
+    font-family: inherit; font-size: 13px; resize: vertical;
+  }
+
+  .algo-hint { color: var(--muted); font-size: 12px; margin-top: 2px; font-style: italic; }
+  .src-count { color: var(--muted); font-size: 12px; }
+
+  .experience-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 14px; overflow: hidden;
+  }
+  .experience-header {
+    background: var(--panel-2); padding: 10px 14px; border-bottom: 1px solid var(--border);
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+  .experience-header .id { font-family: monospace; color: var(--muted); font-size: 12px; }
+  .experience-header .role { font-weight: 600; }
+  .experience-header .meta { font-size: 12px; color: var(--muted); }
+  .experience-header a { margin-left: auto; font-size: 12px; }
+
+  .banner {
+    background: rgba(239,68,68,.1); border: 1px solid var(--hard);
+    color: var(--hard); padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;
+  }
+  .banner code { background: rgba(0,0,0,.2); padding: 2px 5px; border-radius: 3px; font-size: 13px; }
+
+  .empty { text-align: center; padding: 40px; color: var(--muted); }
+
+  .hidden { display: none !important; }
+
+  /* Filter chips for status */
+  .filter-chip {
+    padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--panel-2); color: var(--muted); font-size: 12px;
+    cursor: pointer;
+  }
+  .filter-chip.active { background: var(--accent-2); color: white; border-color: var(--accent-2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div>
+      <h1>Salesforce DSA Prep Tracker</h1>
+      <div class="subtitle">Progress saved locally in your browser</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="stat-solved">0</b>solved</div>
+      <div class="stat"><b id="stat-progress">0</b>in progress</div>
+      <div class="stat"><b id="stat-todo">0</b>to do</div>
+      <div class="stat"><b id="stat-total">0</b>total</div>
+      <div class="progress-bar"><div id="progress-fill"></div></div>
+      <div class="stat"><b id="stat-pct">0%</b></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-tab="bank">Question Bank</div>
+    <div class="tab" data-tab="index">Master Index (by Experience)</div>
+  </div>
+</header>
+
+<main>
+
+<div id="load-error" class="banner hidden">
+  <b>Could not load JSON files.</b>
+  If you opened this file directly (<code>file://</code>), most browsers block <code>fetch()</code>.
+  Serve this folder over HTTP instead:
+  <pre style="margin:8px 0 0;"><code>cd salesforce_prep &amp;&amp; python3 -m http.server 8000</code></pre>
+  Then open <a href="http://localhost:8000/">http://localhost:8000/</a>.
+</div>
+
+<!-- Question Bank tab -->
+<section id="tab-bank">
+  <div class="toolbar">
+    <input type="text" id="bank-search" placeholder="Search title, topic, algorithm..." />
+    <select id="bank-difficulty">
+      <option value="">All difficulties</option>
+      <option value="Easy">Easy</option>
+      <option value="Medium">Medium</option>
+      <option value="Hard">Hard</option>
+    </select>
+    <select id="bank-topic">
+      <option value="">All topics</option>
+    </select>
+    <select id="bank-sort">
+      <option value="rank">Sort: Rank (default)</option>
+      <option value="freq">Sort: Frequency</option>
+      <option value="score">Sort: Recency score</option>
+      <option value="title">Sort: Title A-Z</option>
+      <option value="diff">Sort: Difficulty</option>
+    </select>
+    <div class="filter-chip active" data-status="all">All</div>
+    <div class="filter-chip" data-status="todo">To do</div>
+    <div class="filter-chip" data-status="progress">In progress</div>
+    <div class="filter-chip" data-status="solved">Solved</div>
+    <div class="filter-chip" data-status="skip">Skip</div>
+    <div class="spacer"></div>
+    <button id="export-btn" title="Copy progress JSON to clipboard">Export</button>
+    <button id="import-btn" title="Paste progress JSON to restore">Import</button>
+    <button id="reset-btn" title="Clear all progress">Reset</button>
+  </div>
+
+  <table id="bank-table">
+    <thead>
+      <tr>
+        <th class="rank">#</th>
+        <th>Status</th>
+        <th>Problem</th>
+        <th>Difficulty</th>
+        <th class="num">Freq</th>
+        <th class="num">Score</th>
+        <th class="num">Last</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody id="bank-tbody"></tbody>
+  </table>
+  <div class="empty hidden" id="bank-empty">No questions match the current filters.</div>
+</section>
+
+<!-- Master Index tab -->
+<section id="tab-index" class="hidden">
+  <div class="toolbar">
+    <input type="text" id="idx-search" placeholder="Search role, year, focus, question title..." />
+    <select id="idx-year">
+      <option value="">All years</option>
+    </select>
+    <select id="idx-focus">
+      <option value="">All focuses</option>
+    </select>
+  </div>
+  <div id="idx-container"></div>
+  <div class="empty hidden" id="idx-empty">No experiences match the current filters.</div>
+</section>
+
+</main>
+
+<script>
+'use strict';
+
+const STORAGE_KEY = 'sfPrep.v1';
+const state = {
+  bank: [],
+  index: [],
+  progress: loadProgress(),
+  bankFilters: { search: '', diff: '', topic: '', status: 'all', sort: 'rank' },
+  idxFilters: { search: '', year: '', focus: '' },
+  openNotes: new Set(),
+};
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) { return {}; }
+}
+function saveProgress() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.progress));
+}
+
+// Key by leetcode_link when present, else canonical/title
+function keyFor(q) {
+  if (q.leetcode_link) return q.leetcode_link;
+  return 'title::' + (q.canonical_title || q.title || '');
+}
+function getEntry(k) {
+  return state.progress[k] || { status: 'todo', notes: '' };
+}
+function setStatus(k, status) {
+  const cur = getEntry(k);
+  if (cur.status === status && status !== 'todo') { status = 'todo'; }
+  const next = { ...cur, status };
+  if (status === 'todo' && !next.notes) delete state.progress[k];
+  else state.progress[k] = next;
+  saveProgress();
+  updateStats();
+}
+function setNotes(k, notes) {
+  const cur = getEntry(k);
+  const next = { ...cur, notes };
+  if (next.status === 'todo' && !notes) delete state.progress[k];
+  else state.progress[k] = next;
+  saveProgress();
+}
+
+function updateStats() {
+  const total = state.bank.length;
+  let solved = 0, progress = 0;
+  for (const q of state.bank) {
+    const s = getEntry(keyFor(q)).status;
+    if (s === 'solved') solved++;
+    else if (s === 'progress') progress++;
+  }
+  const todo = total - solved - progress;
+  const pct = total ? Math.round((solved / total) * 100) : 0;
+  document.getElementById('stat-solved').textContent = solved;
+  document.getElementById('stat-progress').textContent = progress;
+  document.getElementById('stat-todo').textContent = todo;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-pct').textContent = pct + '%';
+  document.getElementById('progress-fill').style.width = pct + '%';
+
+  // Also update row appearance in current table
+  document.querySelectorAll('#bank-tbody tr.q-row').forEach(row => {
+    const k = row.dataset.key;
+    const s = getEntry(k).status;
+    row.classList.toggle('done', s === 'solved' || s === 'skip');
+    row.querySelectorAll('.status-picker button').forEach(b => {
+      b.classList.toggle('active', b.dataset.s === s);
+    });
+    const nb = row.querySelector('.notes-btn');
+    if (nb) nb.classList.toggle('has-notes', !!getEntry(k).notes);
+  });
+}
+
+// ---------- Question Bank rendering ----------
+const DIFF_ORDER = { Easy: 0, Medium: 1, Hard: 2 };
+
+function renderBank() {
+  const tbody = document.getElementById('bank-tbody');
+  const { search, diff, topic, status, sort } = state.bankFilters;
+  const s = search.trim().toLowerCase();
+
+  let rows = state.bank.map((q, i) => ({ q, rank: i + 1 }));
+
+  rows = rows.filter(({ q }) => {
+    if (diff && q.difficulty !== diff) return false;
+    if (topic && !(q.topic || []).includes(topic)) return false;
+    if (status !== 'all') {
+      const st = getEntry(keyFor(q)).status;
+      if (st !== status) return false;
+    }
+    if (s) {
+      const hay = [
+        q.canonical_title, q.algorithm_hint, q.difficulty,
+        ...(q.topic || []),
+      ].join(' ').toLowerCase();
+      if (!hay.includes(s)) return false;
+    }
+    return true;
+  });
+
+  if (sort === 'freq') rows.sort((a, b) => (b.q.frequency||0) - (a.q.frequency||0));
+  else if (sort === 'score') rows.sort((a, b) => (b.q.recency_score||0) - (a.q.recency_score||0));
+  else if (sort === 'title') rows.sort((a, b) => (a.q.canonical_title||'').localeCompare(b.q.canonical_title||''));
+  else if (sort === 'diff') rows.sort((a, b) => (DIFF_ORDER[a.q.difficulty]??9) - (DIFF_ORDER[b.q.difficulty]??9));
+
+  document.getElementById('bank-empty').classList.toggle('hidden', rows.length > 0);
+  tbody.innerHTML = '';
+
+  const frag = document.createDocumentFragment();
+  for (const { q, rank } of rows) {
+    const k = keyFor(q);
+    const entry = getEntry(k);
+    const tr = document.createElement('tr');
+    tr.className = 'q-row';
+    tr.dataset.key = k;
+    if (entry.status === 'solved' || entry.status === 'skip') tr.classList.add('done');
+
+    const topicsHtml = (q.topic || []).map(t => `<span class="topic-tag">${escapeHtml(t)}</span>`).join('');
+    const titleHtml = q.leetcode_link
+      ? `<a href="${escapeAttr(q.leetcode_link)}" target="_blank" rel="noopener">${escapeHtml(q.canonical_title)}</a>`
+      : escapeHtml(q.canonical_title);
+
+    tr.innerHTML = `
+      <td class="rank">${rank}</td>
+      <td>
+        <div class="status-picker" data-key="${escapeAttr(k)}">
+          <button data-s="todo"     class="${entry.status==='todo'?'active':''}"     title="To do">·</button>
+          <button data-s="progress" class="${entry.status==='progress'?'active':''}" title="In progress">◐</button>
+          <button data-s="solved"   class="${entry.status==='solved'?'active':''}"   title="Solved">✓</button>
+          <button data-s="skip"     class="${entry.status==='skip'?'active':''}"     title="Skip">⤫</button>
+        </div>
+      </td>
+      <td class="title-cell">
+        <div class="title">${titleHtml}</div>
+        ${q.algorithm_hint ? `<div class="algo-hint">${escapeHtml(q.algorithm_hint)}</div>` : ''}
+        <div class="topics">${topicsHtml}</div>
+      </td>
+      <td><span class="diff ${q.difficulty}">${q.difficulty || '?'}</span></td>
+      <td class="num">${q.frequency ?? ''}</td>
+      <td class="num">${(q.recency_score ?? 0).toFixed(1)}</td>
+      <td class="num">${q.last_seen_year || ''}</td>
+      <td>
+        <button class="notes-btn ${entry.notes?'has-notes':''}" data-key="${escapeAttr(k)}" title="Toggle notes">✎</button>
+        <div class="src-count">${(q.sources||[]).length} src</div>
+      </td>
+    `;
+    frag.appendChild(tr);
+
+    if (state.openNotes.has(k)) {
+      frag.appendChild(buildNotesRow(k, entry.notes));
+    }
+  }
+  tbody.appendChild(frag);
+}
+
+function buildNotesRow(k, notes) {
+  const tr = document.createElement('tr');
+  tr.className = 'notes-row';
+  tr.dataset.key = k;
+  const td = document.createElement('td');
+  td.colSpan = 8;
+  const ta = document.createElement('textarea');
+  ta.placeholder = 'Your notes for this problem (approach, edge cases, template...)';
+  ta.value = notes || '';
+  ta.addEventListener('input', () => {
+    setNotes(k, ta.value);
+    const btn = document.querySelector(`#bank-tbody tr.q-row[data-key="${cssEscape(k)}"] .notes-btn`);
+    if (btn) btn.classList.toggle('has-notes', !!ta.value);
+  });
+  td.appendChild(ta);
+  tr.appendChild(td);
+  return tr;
+}
+
+function cssEscape(s) {
+  return String(s).replace(/["\\]/g, '\\$&');
+}
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+// ---------- Master Index rendering ----------
+function renderIndex() {
+  const container = document.getElementById('idx-container');
+  const { search, year, focus } = state.idxFilters;
+  const s = search.trim().toLowerCase();
+  container.innerHTML = '';
+
+  const filtered = state.index.filter(exp => {
+    if (year && exp.year !== year) return false;
+    if (focus && exp.focus !== focus) return false;
+    if (s) {
+      const hay = [
+        exp.role, exp.year, exp.focus, exp.round_type, exp.id,
+        ...(exp.dsa_questions || []).map(q => (q.title||'') + ' ' + (q.topic||'') + ' ' + (q.algorithm||''))
+      ].join(' ').toLowerCase();
+      if (!hay.includes(s)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('idx-empty').classList.toggle('hidden', filtered.length > 0);
+
+  const frag = document.createDocumentFragment();
+  for (const exp of filtered) {
+    const card = document.createElement('div');
+    card.className = 'experience-card';
+    card.innerHTML = `
+      <div class="experience-header">
+        <span class="id">${escapeHtml(exp.id)}</span>
+        <span class="role">${escapeHtml(exp.role)}</span>
+        <span class="meta">${escapeHtml(exp.year)} · ${escapeHtml(exp.focus||'')} · ${escapeHtml(exp.round_type||'')}</span>
+        <a href="${escapeAttr(exp.source_url)}" target="_blank" rel="noopener">Source ↗</a>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Status</th><th>Title</th><th>Topic</th><th>Difficulty</th><th>Algorithm</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    `;
+    const body = card.querySelector('tbody');
+    for (const q of (exp.dsa_questions || [])) {
+      const k = q.leetcode_link ? q.leetcode_link : ('title::' + (q.title || ''));
+      const entry = getEntry(k);
+      const tr = document.createElement('tr');
+      if (entry.status === 'solved' || entry.status === 'skip') tr.classList.add('done');
+      const titleHtml = q.leetcode_link
+        ? `<a href="${escapeAttr(q.leetcode_link)}" target="_blank" rel="noopener">${escapeHtml(q.title)}</a>`
+        : escapeHtml(q.title);
+      tr.innerHTML = `
+        <td>
+          <div class="status-picker" data-key="${escapeAttr(k)}">
+            <button data-s="todo"     class="${entry.status==='todo'?'active':''}"     title="To do">·</button>
+            <button data-s="progress" class="${entry.status==='progress'?'active':''}" title="In progress">◐</button>
+            <button data-s="solved"   class="${entry.status==='solved'?'active':''}"   title="Solved">✓</button>
+            <button data-s="skip"     class="${entry.status==='skip'?'active':''}"     title="Skip">⤫</button>
+          </div>
+        </td>
+        <td>${titleHtml}</td>
+        <td>${escapeHtml(q.topic || '')}</td>
+        <td><span class="diff ${q.difficulty}">${escapeHtml(q.difficulty || '?')}</span></td>
+        <td class="algo-hint" style="font-style:normal;">${escapeHtml(q.algorithm || '')}</td>
+      `;
+      body.appendChild(tr);
+    }
+    frag.appendChild(card);
+  }
+  container.appendChild(frag);
+}
+
+// ---------- Event delegation for status buttons ----------
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.status-picker button');
+  if (btn) {
+    const key = btn.parentElement.dataset.key;
+    setStatus(key, btn.dataset.s);
+    // Re-render current tab minimally
+    if (!document.getElementById('tab-bank').classList.contains('hidden')) {
+      // Just update this row visually
+      btn.parentElement.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('active', b.dataset.s === getEntry(key).status);
+      });
+      const row = btn.closest('tr.q-row');
+      if (row) {
+        const s = getEntry(key).status;
+        row.classList.toggle('done', s === 'solved' || s === 'skip');
+      }
+      // If filtering by status, re-render to hide/show
+      if (state.bankFilters.status !== 'all') renderBank();
+    } else {
+      const row = btn.closest('tr');
+      if (row) {
+        const s = getEntry(key).status;
+        row.classList.toggle('done', s === 'solved' || s === 'skip');
+      }
+    }
+    return;
+  }
+  const nb = e.target.closest('.notes-btn');
+  if (nb) {
+    const k = nb.dataset.key;
+    if (state.openNotes.has(k)) state.openNotes.delete(k);
+    else state.openNotes.add(k);
+    renderBank();
+    return;
+  }
+  const tab = e.target.closest('.tab');
+  if (tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+    const which = tab.dataset.tab;
+    document.getElementById('tab-bank').classList.toggle('hidden', which !== 'bank');
+    document.getElementById('tab-index').classList.toggle('hidden', which !== 'index');
+    if (which === 'index') renderIndex();
+    return;
+  }
+  const chip = e.target.closest('.filter-chip');
+  if (chip) {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c === chip));
+    state.bankFilters.status = chip.dataset.status;
+    renderBank();
+    return;
+  }
+});
+
+// ---------- Toolbar wiring ----------
+function wireBankToolbar() {
+  document.getElementById('bank-search').addEventListener('input', e => {
+    state.bankFilters.search = e.target.value; renderBank();
+  });
+  document.getElementById('bank-difficulty').addEventListener('change', e => {
+    state.bankFilters.diff = e.target.value; renderBank();
+  });
+  document.getElementById('bank-topic').addEventListener('change', e => {
+    state.bankFilters.topic = e.target.value; renderBank();
+  });
+  document.getElementById('bank-sort').addEventListener('change', e => {
+    state.bankFilters.sort = e.target.value; renderBank();
+  });
+
+  document.getElementById('export-btn').addEventListener('click', async () => {
+    const json = JSON.stringify(state.progress, null, 2);
+    try {
+      await navigator.clipboard.writeText(json);
+      alert('Progress copied to clipboard (' + Object.keys(state.progress).length + ' entries).');
+    } catch (e) {
+      prompt('Copy this JSON:', json);
+    }
+  });
+  document.getElementById('import-btn').addEventListener('click', () => {
+    const raw = prompt('Paste progress JSON:');
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed !== 'object' || parsed === null) throw new Error('not an object');
+      state.progress = parsed;
+      saveProgress();
+      renderBank();
+      updateStats();
+      alert('Imported ' + Object.keys(parsed).length + ' entries.');
+    } catch (e) {
+      alert('Invalid JSON: ' + e.message);
+    }
+  });
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (!confirm('Clear ALL progress? This cannot be undone.')) return;
+    state.progress = {};
+    saveProgress();
+    renderBank();
+    updateStats();
+  });
+}
+
+function wireIndexToolbar() {
+  document.getElementById('idx-search').addEventListener('input', e => {
+    state.idxFilters.search = e.target.value; renderIndex();
+  });
+  document.getElementById('idx-year').addEventListener('change', e => {
+    state.idxFilters.year = e.target.value; renderIndex();
+  });
+  document.getElementById('idx-focus').addEventListener('change', e => {
+    state.idxFilters.focus = e.target.value; renderIndex();
+  });
+}
+
+function populateSelects() {
+  // Topics from bank
+  const topics = new Set();
+  for (const q of state.bank) for (const t of (q.topic || [])) topics.add(t);
+  const topicSel = document.getElementById('bank-topic');
+  [...topics].sort().forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    topicSel.appendChild(opt);
+  });
+
+  // Years/focuses from index
+  const years = new Set(), focuses = new Set();
+  for (const e of state.index) {
+    if (e.year) years.add(e.year);
+    if (e.focus) focuses.add(e.focus);
+  }
+  const ySel = document.getElementById('idx-year');
+  [...years].sort().forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    ySel.appendChild(opt);
+  });
+  const fSel = document.getElementById('idx-focus');
+  [...focuses].sort().forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = f;
+    fSel.appendChild(opt);
+  });
+}
+
+// ---------- Bootstrap ----------
+async function loadData() {
+  try {
+    const [bankRes, idxRes] = await Promise.all([
+      fetch('salesforce_question_bank.json'),
+      fetch('salesforce_master_index.json'),
+    ]);
+    if (!bankRes.ok || !idxRes.ok) throw new Error('HTTP ' + bankRes.status + '/' + idxRes.status);
+    state.bank = await bankRes.json();
+    state.index = await idxRes.json();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('load-error').classList.remove('hidden');
+    return;
+  }
+  populateSelects();
+  wireBankToolbar();
+  wireIndexToolbar();
+  renderBank();
+  updateStats();
+}
+
+loadData();
+</script>
+</body>
+</html>
