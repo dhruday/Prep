@@ -67,8 +67,25 @@ class BinaryTree {
     }
 }
 
+
 function nodeDepths(root) {
-    // Write your code here
+    function calculateDepths(node, depth) {
+        // Empty node contributes nothing
+        if (node === null) {
+            return 0;
+        }
+
+        // Current node's depth
+        let totalDepth = depth;
+
+        // Add depths of left and right subtrees
+        totalDepth += calculateDepths(node.left, depth + 1);
+        totalDepth += calculateDepths(node.right, depth + 1);
+
+        return totalDepth;
+    }
+
+    return calculateDepths(root, 0);
 }
 
 // Test Cases

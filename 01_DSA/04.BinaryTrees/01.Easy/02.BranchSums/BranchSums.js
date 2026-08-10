@@ -63,8 +63,35 @@ class BinaryTree {
     }
 }
 
+
+
 function branchSums(root) {
-    // Write your code here
+    const sums = [];
+
+    function calculateBranchSum(node, runningSum) {
+        if (node === null) {
+            return;
+        }
+
+        // Add current node's value
+        const newSum = runningSum + node.value;
+
+        // If it's a leaf, we have completed one branch
+        if (node.left === null && node.right === null) {
+            sums.push(newSum);
+            return;
+        }
+
+        // Traverse left first
+        calculateBranchSum(node.left, newSum);
+
+        // Then traverse right
+        calculateBranchSum(node.right, newSum);
+    }
+
+    calculateBranchSum(root, 0);
+
+    return sums;
 }
 
 // Test Cases
