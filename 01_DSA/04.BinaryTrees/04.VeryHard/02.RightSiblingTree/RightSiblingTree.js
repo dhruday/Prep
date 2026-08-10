@@ -57,7 +57,33 @@ class BinaryTree {
 }
 
 function rightSiblingTree(root) {
-    // Write your code here
+    function transform(node, sibling) {
+        if (node === null) {
+            return;
+        }
+
+        // Save original children BEFORE changing node.right
+        const leftChild = node.left;
+        const rightChild = node.right;
+
+        // Right pointer now points to right sibling
+        node.right = sibling;
+
+        // Left child's sibling is the original right child
+        transform(leftChild, rightChild);
+
+        // Right child's sibling is the left child of
+        // the current node's sibling
+        if (sibling === null) {
+            transform(rightChild, null);
+        } else {
+            transform(rightChild, sibling.left);
+        }
+    }
+
+    transform(root, null);
+
+    return root;
 }
 
 // Test Cases

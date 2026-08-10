@@ -48,7 +48,75 @@ class BinaryTree {
 }
 
 function findNodesDistanceK(tree, target, k) {
-    // Write your code here
+    if (tree === null) {
+        return [];
+    }
+
+    // Map each node to its parent
+    const parentMap = new Map();
+
+    // Find the target node while building parent relationships
+    let targetNode = null;
+
+    function buildParentMap(node, parent) {
+        if (node === null) {
+            return;
+        }
+
+        if (node.value === target) {
+            targetNode = node;
+        }
+
+        if (parent !== null) {
+            parentMap.set(node, parent);
+        }
+
+        buildParentMap(node.left, node);
+        buildParentMap(node.right, node);
+    }
+
+    buildParentMap(tree, null);
+
+    // Target doesn't exist
+    if (targetNode === null) {
+        return [];
+    }
+
+    // BFS from target
+    const queue = [[targetNode, 0]];
+    const visited = new Set([targetNode]);
+    const result = [];
+
+    while (queue.length > 0) {
+        const [node, distance] = queue.shift();
+
+        if (distance === k) {
+            result.push(node.value);
+            continue;
+        }
+
+        // Go left
+        if (node.left !== null && !visited.has(node.left)) {
+            visited.add(node.left);
+            queue.push([node.left, distance + 1]);
+        }
+
+        // Go right
+        if (node.right !== null && !visited.has(node.right)) {
+            visited.add(node.right);
+            queue.push([node.right, distance + 1]);
+        }
+
+        // Go up to parent
+        const parent = parentMap.get(node);
+
+        if (parent !== undefined && !visited.has(parent)) {
+            visited.add(parent);
+            queue.push([parent, distance + 1]);
+        }
+    }
+
+    return result;
 }
 
 // Test Cases

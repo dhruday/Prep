@@ -48,7 +48,37 @@ class BinaryTree {
 }
 
 function maxPathSum(tree) {
-    // Write your code here
+    if (tree === null) {
+        return -Infinity;
+    }
+
+    let maxSum = -Infinity;
+
+    function getMaxPathSum(node) {
+        if (node === null) {
+            return 0;
+        }
+
+        // Best contribution from left and right.
+        // Ignore negative paths because they would only decrease the sum.
+        const leftSum = Math.max(0, getMaxPathSum(node.left));
+        const rightSum = Math.max(0, getMaxPathSum(node.right));
+
+        // Best path that passes THROUGH this node.
+        const pathThroughNode =
+            node.value + leftSum + rightSum;
+
+        // Update global maximum.
+        maxSum = Math.max(maxSum, pathThroughNode);
+
+        // Return the best single path that can be extended
+        // by the parent.
+        return node.value + Math.max(leftSum, rightSum);
+    }
+
+    getMaxPathSum(tree);
+
+    return maxSum;
 }
 
 // Test Cases

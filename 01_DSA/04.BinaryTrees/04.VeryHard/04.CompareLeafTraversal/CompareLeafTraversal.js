@@ -64,7 +64,51 @@ class BinaryTree {
 }
 
 function compareLeafTraversal(tree1, tree2) {
-    // Write your code here
+    const stack1 = [];
+    const stack2 = [];
+
+    if (tree1 !== null) stack1.push(tree1);
+    if (tree2 !== null) stack2.push(tree2);
+
+    while (stack1.length > 0 && stack2.length > 0) {
+        const leaf1 = getNextLeaf(stack1);
+        const leaf2 = getNextLeaf(stack2);
+
+        // One tree has no more leaves
+        if (leaf1 === null || leaf2 === null) {
+            return leaf1 === leaf2;
+        }
+
+        // Leaf values are different
+        if (leaf1.value !== leaf2.value) {
+            return false;
+        }
+    }
+
+    // Both trees must have exactly the same number of leaves
+    return stack1.length === 0 && stack2.length === 0;
+}
+
+function getNextLeaf(stack) {
+    while (stack.length > 0) {
+        const node = stack.pop();
+
+        // Found a leaf
+        if (node.left === null && node.right === null) {
+            return node;
+        }
+
+        // Push right first so left is processed first
+        if (node.right !== null) {
+            stack.push(node.right);
+        }
+
+        if (node.left !== null) {
+            stack.push(node.left);
+        }
+    }
+
+    return null;
 }
 
 // Test Cases

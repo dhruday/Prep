@@ -46,7 +46,44 @@ class BinaryTree {
 }
 
 function flattenBinaryTree(root) {
-    // Write your code here
+    if (root === null) {
+        return null;
+    }
+
+    let leftmostNode = null;
+    let previousNode = null;
+
+    function flatten(node) {
+        if (node === null) {
+            return;
+        }
+
+        // 1. Process left subtree
+        flatten(node.left);
+
+        // First node visited in inorder = leftmost node
+        if (leftmostNode === null) {
+            leftmostNode = node;
+        }
+
+        // Connect previous node <-> current node
+        if (previousNode !== null) {
+            previousNode.right = node;
+            node.left = previousNode;
+        }
+
+        previousNode = node;
+
+        // 2. Process right subtree
+        flatten(node.right);
+    }
+
+    flatten(root);
+
+    // Last node's right should be null
+    previousNode.right = null;
+
+    return leftmostNode;
 }
 
 // Test Cases

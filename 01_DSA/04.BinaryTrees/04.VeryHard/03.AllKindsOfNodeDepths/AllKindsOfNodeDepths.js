@@ -53,7 +53,45 @@ class BinaryTree {
 }
 
 function allKindsOfNodeDepths(root) {
-    // Write your code here
+    let totalDepths = 0;
+
+    function getTreeInfo(node) {
+        if (node === null) {
+            return {
+                numberOfNodes: 0,
+                depthSum: 0
+            };
+        }
+
+        const leftInfo = getTreeInfo(node.left);
+        const rightInfo = getTreeInfo(node.right);
+
+        // Number of nodes in this subtree
+        const numberOfNodes =
+            1 +
+            leftInfo.numberOfNodes +
+            rightInfo.numberOfNodes;
+
+        // Every node in the child subtree becomes
+        // one level deeper when viewed from current node.
+        const depthSum =
+            leftInfo.depthSum +
+            leftInfo.numberOfNodes +
+            rightInfo.depthSum +
+            rightInfo.numberOfNodes;
+
+        // Add this subtree's depth sum to the global answer
+        totalDepths += depthSum;
+
+        return {
+            numberOfNodes,
+            depthSum
+        };
+    }
+
+    getTreeInfo(root);
+
+    return totalDepths;
 }
 
 // Test Cases
