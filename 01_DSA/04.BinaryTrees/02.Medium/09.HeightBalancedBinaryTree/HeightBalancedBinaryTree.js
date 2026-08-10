@@ -52,7 +52,36 @@ class BinaryTree {
 }
 
 function heightBalancedBinaryTree(tree) {
-    // Write your code here
+    function getHeight(node) {
+        // Empty tree is balanced
+        if (node === null) {
+            return 0;
+        }
+
+        const leftHeight = getHeight(node.left);
+
+        // Left subtree is unbalanced
+        if (leftHeight === -1) {
+            return -1;
+        }
+
+        const rightHeight = getHeight(node.right);
+
+        // Right subtree is unbalanced
+        if (rightHeight === -1) {
+            return -1;
+        }
+
+        // Current node is unbalanced
+        if (Math.abs(leftHeight - rightHeight) > 1) {
+            return -1;
+        }
+
+        // Return height if subtree is balanced
+        return 1 + Math.max(leftHeight, rightHeight);
+    }
+
+    return getHeight(tree) !== -1;
 }
 
 // Test Cases

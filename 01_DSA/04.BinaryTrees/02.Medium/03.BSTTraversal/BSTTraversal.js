@@ -60,7 +60,6 @@ Solution Approaches:
    - More complex implementation
    - Same time and space complexity
 */
-
 class BST {
     constructor(value) {
         this.value = value;
@@ -70,15 +69,54 @@ class BST {
 }
 
 function inOrderTraverse(tree, array) {
-    // Write your code here
+    if (tree === null) {
+        return array;
+    }
+
+    // Left
+    inOrderTraverse(tree.left, array);
+
+    // Root
+    array.push(tree.value);
+
+    // Right
+    inOrderTraverse(tree.right, array);
+
+    return array;
 }
 
 function preOrderTraverse(tree, array) {
-    // Write your code here
+    if (tree === null) {
+        return array;
+    }
+
+    // Root
+    array.push(tree.value);
+
+    // Left
+    preOrderTraverse(tree.left, array);
+
+    // Right
+    preOrderTraverse(tree.right, array);
+
+    return array;
 }
 
 function postOrderTraverse(tree, array) {
-    // Write your code here
+    if (tree === null) {
+        return array;
+    }
+
+    // Left
+    postOrderTraverse(tree.left, array);
+
+    // Right
+    postOrderTraverse(tree.right, array);
+
+    // Root
+    array.push(tree.value);
+
+    return array;
 }
 
 // Test Cases

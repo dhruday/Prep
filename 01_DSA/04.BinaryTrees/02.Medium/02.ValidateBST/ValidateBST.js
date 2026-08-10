@@ -71,7 +71,38 @@ class BST {
 }
 
 function validateBst(tree) {
-    // Write your code here
+    function validate(node, minValue, maxValue) {
+        if (node === null) {
+            return true;
+        }
+
+        // Current node must stay within its allowed range
+        if (node.value < minValue || node.value >= maxValue) {
+            return false;
+        }
+
+        // Left subtree:
+        // values must be < current node
+        const isLeftValid = validate(
+            node.left,
+            minValue,
+            node.value
+        );
+
+        if (!isLeftValid) {
+            return false;
+        }
+
+        // Right subtree:
+        // values must be >= current node
+        return validate(
+            node.right,
+            node.value,
+            maxValue
+        );
+    }
+
+    return validate(tree, -Infinity, Infinity);
 }
 
 // Test Cases

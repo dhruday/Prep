@@ -72,15 +72,120 @@ class BST {
     }
 
     insert(value) {
-        // Write your code here
+        let currentNode = this;
+
+        while (true) {
+            if (value < currentNode.value) {
+                // Go left
+                if (currentNode.left === null) {
+                    currentNode.left = new BST(value);
+                    break;
+                }
+
+                currentNode = currentNode.left;
+            } else {
+                // Duplicates go to the right
+                if (currentNode.right === null) {
+                    currentNode.right = new BST(value);
+                    break;
+                }
+
+                currentNode = currentNode.right;
+            }
+        }
+
+        return this;
     }
 
     contains(value) {
-        // Write your code here
+        let currentNode = this;
+
+        while (currentNode !== null) {
+            if (value === currentNode.value) {
+                return true;
+            }
+
+            if (value < currentNode.value) {
+                currentNode = currentNode.left;
+            } else {
+                currentNode = currentNode.right;
+            }
+        }
+
+        return false;
     }
 
     remove(value) {
-        // Write your code here
+        let currentNode = this;
+        let parentNode = null;
+
+        while (currentNode !== null) {
+            if (value < currentNode.value) {
+                parentNode = currentNode;
+                currentNode = currentNode.left;
+
+            } else if (value > currentNode.value) {
+                parentNode = currentNode;
+                currentNode = currentNode.right;
+
+            } else {
+                // Found the node to remove
+
+                // CASE 1: Node has two children
+                if (currentNode.left !== null && currentNode.right !== null) {
+                    // Find the smallest value in the right subtree
+                    let successorParent = currentNode;
+                    let successor = currentNode.right;
+
+                    while (successor.left !== null) {
+                        successorParent = successor;
+                        successor = successor.left;
+                    }
+
+                    // Replace current node's value
+                    currentNode.value = successor.value;
+
+                    // Now remove the successor
+                    if (successorParent.left === successor) {
+                        successorParent.left = successor.right;
+                    } else {
+                        successorParent.right = successor.right;
+                    }
+
+                    break;
+                }
+
+                // CASE 2: Node has zero or one child
+                const child =
+                    currentNode.left !== null
+                        ? currentNode.left
+                        : currentNode.right;
+
+                // Removing the root node
+                if (parentNode === null) {
+                    // Single-node tree: do nothing
+                    if (child === null) {
+                        break;
+                    }
+
+                    // Root has one child
+                    currentNode.value = child.value;
+                    currentNode.left = child.left;
+                    currentNode.right = child.right;
+                }
+
+                // Removing a non-root node
+                else if (parentNode.left === currentNode) {
+                    parentNode.left = child;
+                } else {
+                    parentNode.right = child;
+                }
+
+                break;
+            }
+        }
+
+        return this;
     }
 }
 

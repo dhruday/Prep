@@ -64,7 +64,36 @@ class BST {
 }
 
 function findKthLargestValueInBst(tree, k) {
-    // Write your code here
+    let count = 0;
+    let result = null;
+
+    function reverseInOrder(node) {
+        if (node === null || result !== null) {
+            return;
+        }
+
+        // 1. Visit RIGHT first
+        reverseInOrder(node.right);
+
+        // 2. Visit ROOT
+        if (result !== null) {
+            return;
+        }
+
+        count++;
+
+        if (count === k) {
+            result = node.value;
+            return;
+        }
+
+        // 3. Visit LEFT
+        reverseInOrder(node.left);
+    }
+
+    reverseInOrder(tree);
+
+    return result;
 }
 
 // Test Cases

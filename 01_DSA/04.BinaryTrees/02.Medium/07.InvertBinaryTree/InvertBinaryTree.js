@@ -48,8 +48,22 @@ class BinaryTree {
     }
 }
 
+
 function invertBinaryTree(tree) {
-    // Write your code here
+    if (tree === null) {
+        return null;
+    }
+
+    // Swap left and right
+    const temp = tree.left;
+    tree.left = tree.right;
+    tree.right = temp;
+
+    // Recursively invert both subtrees
+    invertBinaryTree(tree.left);
+    invertBinaryTree(tree.right);
+
+    return tree;
 }
 
 // Test Cases

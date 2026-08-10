@@ -57,9 +57,41 @@ class BST {
 }
 
 function reconstructBst(preOrderTraversalValues) {
-    // Write your code here
-}
+    if (preOrderTraversalValues.length === 0) {
+        return null;
+    }
 
+    let currentIndex = 0;
+
+    function buildBst(lowerBound, upperBound) {
+        // No more values
+        if (currentIndex >= preOrderTraversalValues.length) {
+            return null;
+        }
+
+        const value = preOrderTraversalValues[currentIndex];
+
+        // Current value doesn't belong to this subtree
+        if (value < lowerBound || value >= upperBound) {
+            return null;
+        }
+
+        // Consume this value
+        currentIndex++;
+
+        const node = new BST(value);
+
+        // Build left subtree
+        node.left = buildBst(lowerBound, value);
+
+        // Build right subtree
+        node.right = buildBst(value, upperBound);
+
+        return node;
+    }
+
+    return buildBst(-Infinity, Infinity);
+}
 // Test Cases
 function runTests() {
     // Test Case 1: Sample from example

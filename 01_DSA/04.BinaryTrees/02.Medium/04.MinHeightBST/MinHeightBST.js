@@ -61,6 +61,7 @@ Solution Approaches:
    - Not optimal as it doesn't guarantee minimum height
 */
 
+
 class BST {
     constructor(value) {
         this.value = value;
@@ -86,7 +87,34 @@ class BST {
 }
 
 function minHeightBst(array) {
-    // Write your code here
+    return constructMinHeightBst(array, 0, array.length - 1);
+}
+
+function constructMinHeightBst(array, startIdx, endIdx) {
+    if (startIdx > endIdx) {
+        return null;
+    }
+
+    // Choose middle element as root
+    const midIdx = Math.floor((startIdx + endIdx) / 2);
+
+    const bst = new BST(array[midIdx]);
+
+    // Build left subtree from left half
+    bst.left = constructMinHeightBst(
+        array,
+        startIdx,
+        midIdx - 1
+    );
+
+    // Build right subtree from right half
+    bst.right = constructMinHeightBst(
+        array,
+        midIdx + 1,
+        endIdx
+    );
+
+    return bst;
 }
 
 // Test Cases

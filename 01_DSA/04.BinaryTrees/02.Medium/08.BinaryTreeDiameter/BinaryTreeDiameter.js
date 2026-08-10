@@ -38,7 +38,6 @@ Test Cases:
 7. Path through root
 8. Path not through root
 */
-
 class BinaryTree {
     constructor(value) {
         this.value = value;
@@ -48,7 +47,39 @@ class BinaryTree {
 }
 
 function binaryTreeDiameter(tree) {
-    // Write your code here
+    function getTreeInfo(node) {
+        if (node === null) {
+            return {
+                diameter: 0,
+                height: 0
+            };
+        }
+
+        const leftInfo = getTreeInfo(node.left);
+        const rightInfo = getTreeInfo(node.right);
+
+        // Longest downward path from current node
+        const height =
+            1 + Math.max(leftInfo.height, rightInfo.height);
+
+        // Longest path passing through current node
+        const diameterThroughNode =
+            leftInfo.height + rightInfo.height;
+
+        // Best diameter found anywhere in this subtree
+        const diameter = Math.max(
+            diameterThroughNode,
+            leftInfo.diameter,
+            rightInfo.diameter
+        );
+
+        return {
+            diameter,
+            height
+        };
+    }
+
+    return getTreeInfo(tree).diameter;
 }
 
 // Test Cases

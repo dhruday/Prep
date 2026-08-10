@@ -53,10 +53,52 @@ class AncestralTree {
     }
 }
 
-function getYoungestCommonAncestor(topAncestor, descendantOne, descendantTwo) {
-    // Write your code here
+function getYoungestCommonAncestor(
+    topAncestor,
+    descendantOne,
+    descendantTwo
+) {
+    const depthOne = getDepth(descendantOne, topAncestor);
+    const depthTwo = getDepth(descendantTwo, topAncestor);
+
+    // Find the depth difference
+    const depthDifference = Math.abs(depthOne - depthTwo);
+
+    // Move the deeper node up
+    if (depthOne > depthTwo) {
+        descendantOne = moveUpByK(descendantOne, depthDifference);
+    } else {
+        descendantTwo = moveUpByK(descendantTwo, depthDifference);
+    }
+
+    // Move both up until they meet
+    while (descendantOne !== descendantTwo) {
+        descendantOne = descendantOne.ancestor;
+        descendantTwo = descendantTwo.ancestor;
+    }
+
+    return descendantOne;
 }
 
+function getDepth(node, topAncestor) {
+    let depth = 0;
+
+    while (node !== topAncestor) {
+        node = node.ancestor;
+        depth++;
+    }
+
+    return depth;
+}
+
+function moveUpByK(node, k) {
+    while (k > 0) {
+        node = node.ancestor;
+        k--;
+    }
+
+    return node;
+}
 // Test Cases
 function runTests() {
     // Helper function to create ancestral tree from edges

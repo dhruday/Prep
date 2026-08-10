@@ -63,10 +63,42 @@ class BST {
     }
 }
 
-function findClosestValueInBst(tree, target) {
-    // Write your code here
+class BST {
+    constructor(value) {
+        this.value = value;
+        this.left = null;
+        this.right = null;
+    }
 }
 
+function findClosestValueInBst(tree, target) {
+    let currentNode = tree;
+    let closestValue = tree.value;
+
+    while (currentNode !== null) {
+        // If current node is closer, update closestValue
+        if (
+            Math.abs(currentNode.value - target) <
+            Math.abs(closestValue - target)
+        ) {
+            closestValue = currentNode.value;
+        }
+
+        // If we found the target exactly, we're done
+        if (currentNode.value === target) {
+            return currentNode.value;
+        }
+
+        // Use BST property to decide which direction to go
+        if (target < currentNode.value) {
+            currentNode = currentNode.left;
+        } else {
+            currentNode = currentNode.right;
+        }
+    }
+
+    return closestValue;
+}
 // Test Cases
 function runTests() {
     // Test Case 1: Basic tree from the example
