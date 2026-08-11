@@ -40,7 +40,40 @@ class LinkedList {
 }
 
 function linkedListPalindrome(head) {
-    // Write your code here
+    if (head === null || head.next === null) return true;
+
+    let slow = head;
+    let fast = head;
+    while (fast.next !== null && fast.next.next !== null) {
+        slow = slow.next;
+        fast = fast.next.next;
+    }
+
+    const reverse = node => {
+        let previous = null;
+        while (node !== null) {
+            const next = node.next;
+            node.next = previous;
+            previous = node;
+            node = next;
+        }
+        return previous;
+    };
+
+    const reversedHalf = reverse(slow.next);
+    let first = head;
+    let second = reversedHalf;
+    let isPalindrome = true;
+    while (second !== null) {
+        if (first.value !== second.value) {
+            isPalindrome = false;
+            break;
+        }
+        first = first.next;
+        second = second.next;
+    }
+    slow.next = reverse(reversedHalf);
+    return isPalindrome;
 }
 
 // Test Cases

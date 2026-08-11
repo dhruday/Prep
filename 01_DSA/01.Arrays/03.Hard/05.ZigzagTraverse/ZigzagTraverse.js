@@ -60,7 +60,35 @@ Solution Approaches:
 */
 
 function zigzagTraverse(array) {
-    // Write your code here
+    if (array.length === 0 || array[0].length === 0) return [];
+
+    const result = [];
+    let row = 0;
+    let column = 0;
+    let goingDown = true;
+
+    while (row < array.length && column < array[0].length) {
+        result.push(array[row][column]);
+        if (goingDown) {
+            if (column === 0 || row === array.length - 1) {
+                goingDown = false;
+                if (row === array.length - 1) column++;
+                else row++;
+            } else {
+                row++;
+                column--;
+            }
+        } else if (row === 0 || column === array[0].length - 1) {
+            goingDown = true;
+            if (column === array[0].length - 1) row++;
+            else column++;
+        } else {
+            row--;
+            column++;
+        }
+    }
+
+    return result;
 }
 
 // Test Cases

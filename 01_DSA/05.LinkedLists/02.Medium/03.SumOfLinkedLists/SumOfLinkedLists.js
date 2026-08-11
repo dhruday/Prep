@@ -44,7 +44,21 @@ class LinkedList {
 }
 
 function sumOfLinkedLists(linkedListOne, linkedListTwo) {
-    // Write your code here
+    const dummy = new LinkedList(0);
+    let tail = dummy;
+    let first = linkedListOne;
+    let second = linkedListTwo;
+    let carry = 0;
+
+    while (first !== null || second !== null || carry !== 0) {
+        const sum = (first ? first.value : 0) + (second ? second.value : 0) + carry;
+        tail.next = new LinkedList(sum % 10);
+        tail = tail.next;
+        carry = Math.floor(sum / 10);
+        first = first ? first.next : null;
+        second = second ? second.next : null;
+    }
+    return dummy.next || new LinkedList(0);
 }
 
 // Test Cases

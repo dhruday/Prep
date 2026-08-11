@@ -42,7 +42,20 @@ Solution Approaches:
 */
 
 function longestSubstringWithoutDuplication(string) {
-    // Write your code here
+    const lastSeen = new Map();
+    let start = 0;
+    let bestStart = 0;
+    let bestEnd = 0;
+    for (let index = 0; index < string.length; index++) {
+        const character = string[index];
+        if (lastSeen.has(character)) start = Math.max(start, lastSeen.get(character) + 1);
+        if (index + 1 - start > bestEnd - bestStart) {
+            bestStart = start;
+            bestEnd = index + 1;
+        }
+        lastSeen.set(character, index);
+    }
+    return string.slice(bestStart, bestEnd);
 }
 
 // Test Cases

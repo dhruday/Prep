@@ -43,7 +43,24 @@ Solution Approaches:
 */
 
 function heapSort(array) {
-    // Write your code here
+    const sorted = [...array];
+    const siftDown = (index, end) => {
+        while (index * 2 + 1 <= end) {
+            const left = index * 2 + 1;
+            const right = left + 1;
+            const largerChild = right <= end && sorted[right] > sorted[left] ? right : left;
+            if (sorted[index] >= sorted[largerChild]) return;
+            [sorted[index], sorted[largerChild]] = [sorted[largerChild], sorted[index]];
+            index = largerChild;
+        }
+    };
+
+    for (let index = Math.floor((sorted.length - 2) / 2); index >= 0; index--) siftDown(index, sorted.length - 1);
+    for (let end = sorted.length - 1; end > 0; end--) {
+        [sorted[0], sorted[end]] = [sorted[end], sorted[0]];
+        siftDown(0, end - 1);
+    }
+    return sorted;
 }
 
 // Test Cases

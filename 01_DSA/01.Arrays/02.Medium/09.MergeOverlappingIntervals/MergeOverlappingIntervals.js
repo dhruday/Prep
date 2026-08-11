@@ -41,7 +41,20 @@ Solution Approaches:
 */
 
 function mergeOverlappingIntervals(intervals) {
-    // Write your code here
+    if (intervals.length === 0) return [];
+
+    const sorted = intervals.map(interval => [...interval]).sort((a, b) => a[0] - b[0]);
+    const merged = [sorted[0]];
+
+    for (let index = 1; index < sorted.length; index++) {
+        const current = sorted[index];
+        const previous = merged[merged.length - 1];
+
+        if (current[0] <= previous[1]) previous[1] = Math.max(previous[1], current[1]);
+        else merged.push(current);
+    }
+
+    return merged;
 }
 
 // Test Cases

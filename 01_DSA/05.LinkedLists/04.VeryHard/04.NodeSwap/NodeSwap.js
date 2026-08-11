@@ -35,7 +35,17 @@ class LinkedList {
 }
 
 function nodeSwap(head) {
-    // Write your code here
+    const dummy = { next: head };
+    let previous = dummy;
+    while (previous.next !== null && previous.next.next !== null) {
+        const first = previous.next;
+        const second = first.next;
+        first.next = second.next;
+        second.next = first;
+        previous.next = second;
+        previous = first;
+    }
+    return dummy.next;
 }
 
 // Test Cases

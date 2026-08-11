@@ -41,7 +41,22 @@ Solution Approaches:
 */
 
 function searchForRange(array, target) {
-    // Write your code here
+    const findBoundary = findLeftBoundary => {
+        let left = 0;
+        let right = array.length - 1;
+        let boundary = -1;
+        while (left <= right) {
+            const middle = Math.floor((left + right) / 2);
+            if (array[middle] === target) {
+                boundary = middle;
+                if (findLeftBoundary) right = middle - 1;
+                else left = middle + 1;
+            } else if (array[middle] < target) left = middle + 1;
+            else right = middle - 1;
+        }
+        return boundary;
+    };
+    return [findBoundary(true), findBoundary(false)];
 }
 
 // Test Cases

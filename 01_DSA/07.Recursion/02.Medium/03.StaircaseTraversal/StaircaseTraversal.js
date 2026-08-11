@@ -28,7 +28,18 @@ Constraints:
 */
 
 function staircaseTraversal(height, maxSteps) {
-    // Write your code here
+    if (height < 0 || maxSteps <= 0) return 0;
+    const ways = new Array(height + 1).fill(0);
+    ways[0] = 1;
+    let windowSum = 0;
+    for (let currentHeight = 1; currentHeight <= height; currentHeight++) {
+        const startOfWindow = currentHeight - maxSteps - 1;
+        const endOfWindow = currentHeight - 1;
+        if (startOfWindow >= 0) windowSum -= ways[startOfWindow];
+        windowSum += ways[endOfWindow];
+        ways[currentHeight] = windowSum;
+    }
+    return ways[height];
 }
 
 // Test Cases

@@ -25,7 +25,21 @@ Constraints:
 */
 
 function levenshteinDistance(str1, str2) {
-    // Write your code here
+    let shorter = str1;
+    let longer = str2;
+    if (shorter.length > longer.length) [shorter, longer] = [longer, shorter];
+
+    let previous = Array.from({ length: shorter.length + 1 }, (_, index) => index);
+    for (let row = 1; row <= longer.length; row++) {
+        const current = [row];
+        for (let column = 1; column <= shorter.length; column++) {
+            current[column] = shorter[column - 1] === longer[row - 1]
+                ? previous[column - 1]
+                : 1 + Math.min(previous[column - 1], previous[column], current[column - 1]);
+        }
+        previous = current;
+    }
+    return previous[shorter.length];
 }
 
 // Test Cases

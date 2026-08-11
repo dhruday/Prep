@@ -37,7 +37,13 @@ class Node {
     }
 
     breadthFirstSearch(array) {
-        // Write your code here
+        const queue = [this];
+        for (let index = 0; index < queue.length; index++) {
+            const node = queue[index];
+            array.push(node.name);
+            queue.push(...node.children);
+        }
+        return array;
     }
 }
 

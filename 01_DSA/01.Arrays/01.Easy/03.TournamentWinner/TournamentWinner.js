@@ -54,7 +54,20 @@ Solution Approaches:
 */
 
 function tournamentWinner(competitions, results) {
-    // Write your code here
+    const scores = new Map();
+    let leadingTeam = "";
+
+    for (let index = 0; index < competitions.length; index++) {
+        const winner = competitions[index][results[index] === 1 ? 0 : 1];
+        const score = (scores.get(winner) || 0) + 3;
+        scores.set(winner, score);
+
+        if (score > (scores.get(leadingTeam) || 0)) {
+            leadingTeam = winner;
+        }
+    }
+
+    return leadingTeam;
 }
 
 // Test Cases

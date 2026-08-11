@@ -23,7 +23,13 @@ Constraints:
 */
 
 function getNthFib(n) {
-    // Write your code here
+    if (n <= 0) return 0;
+    let previous = 0;
+    let current = 1;
+    for (let index = 2; index <= n; index++) {
+        [previous, current] = [current, previous + current];
+    }
+    return current;
 }
 
 // Test Cases
@@ -31,7 +37,7 @@ function runTests() {
     const testCases = [
         {
             input: 6,
-            expected: 5,
+            expected: 8,
             description: "Sample test case"
         },
         {
@@ -51,22 +57,22 @@ function runTests() {
         },
         {
             input: 7,
-            expected: 8,
+            expected: 13,
             description: "Medium sized input"
         },
         {
             input: 10,
-            expected: 34,
+            expected: 55,
             description: "Larger input"
         },
         {
             input: 15,
-            expected: 377,
+            expected: 610,
             description: "Even larger input"
         },
         {
             input: 20,
-            expected: 4181,
+            expected: 6765,
             description: "Very large input"
         }
     ];

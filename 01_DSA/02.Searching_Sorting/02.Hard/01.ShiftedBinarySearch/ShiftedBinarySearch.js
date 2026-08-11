@@ -39,7 +39,22 @@ Solution Approaches:
 */
 
 function shiftedBinarySearch(array, target) {
-    // Write your code here
+    let left = 0;
+    let right = array.length - 1;
+    while (left <= right) {
+        const middle = Math.floor((left + right) / 2);
+        if (array[middle] === target) return middle;
+
+        if (array[left] <= array[middle]) {
+            if (target >= array[left] && target < array[middle]) right = middle - 1;
+            else left = middle + 1;
+        } else if (target > array[middle] && target <= array[right]) {
+            left = middle + 1;
+        } else {
+            right = middle - 1;
+        }
+    }
+    return -1;
 }
 
 // Test Cases

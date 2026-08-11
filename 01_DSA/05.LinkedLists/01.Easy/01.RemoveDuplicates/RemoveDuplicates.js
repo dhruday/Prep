@@ -39,7 +39,16 @@ class LinkedList {
 }
 
 function removeDuplicatesFromLinkedList(linkedList) {
-    // Write your code here
+    let current = linkedList;
+    while (current !== null) {
+        let nextDistinct = current.next;
+        while (nextDistinct !== null && nextDistinct.value === current.value) {
+            nextDistinct = nextDistinct.next;
+        }
+        current.next = nextDistinct;
+        current = nextDistinct;
+    }
+    return linkedList;
 }
 
 // Test Cases

@@ -79,7 +79,33 @@ function calendarMatching(
     dailyBounds2,
     meetingDuration
 ) {
-    // Write your code here
+    const toMinutes = time => {
+        const [hours, minutes] = time.split(":").map(Number);
+        return hours * 60 + minutes;
+    };
+    const toTime = minutes => `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`;
+    const withBounds = (calendar, bounds) => [
+        [0, toMinutes(bounds[0])],
+        ...calendar.map(([start, end]) => [toMinutes(start), toMinutes(end)]),
+        [toMinutes(bounds[1]), 24 * 60],
+    ];
+
+    const meetings = [...withBounds(calendar1, dailyBounds1), ...withBounds(calendar2, dailyBounds2)]
+        .sort((first, second) => first[0] - second[0]);
+    const merged = [];
+    for (const meeting of meetings) {
+        const previous = merged[merged.length - 1];
+        if (!previous || meeting[0] > previous[1]) merged.push([...meeting]);
+        else previous[1] = Math.max(previous[1], meeting[1]);
+    }
+
+    const available = [];
+    for (let index = 1; index < merged.length; index++) {
+        const start = merged[index - 1][1];
+        const end = merged[index][0];
+        if (end - start >= meetingDuration) available.push([toTime(start), toTime(end)]);
+    }
+    return available;
 }
 
 // Test Cases

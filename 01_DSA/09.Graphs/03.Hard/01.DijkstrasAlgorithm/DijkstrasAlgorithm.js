@@ -44,7 +44,54 @@ Constraints:
 */
 
 function dijkstrasAlgorithm(start, edges) {
-    // Write your code here
+    const vertexCount = Math.max(start, ...edges.flatMap(([from, to]) => [from, to])) + 1;
+    const graph = Array.from({ length: vertexCount }, () => []);
+    for (const [from, to, weight] of edges) graph[from].push([to, weight]);
+
+    const distances = new Array(vertexCount).fill(Infinity);
+    distances[start] = 0;
+    const heap = [[0, start]];
+    const push = entry => {
+        heap.push(entry);
+        let index = heap.length - 1;
+        while (index > 0) {
+            const parent = Math.floor((index - 1) / 2);
+            if (heap[parent][0] <= heap[index][0]) break;
+            [heap[parent], heap[index]] = [heap[index], heap[parent]];
+            index = parent;
+        }
+    };
+    const pop = () => {
+        const minimum = heap[0];
+        const last = heap.pop();
+        if (heap.length > 0) {
+            heap[0] = last;
+            let index = 0;
+            while (true) {
+                const left = index * 2 + 1;
+                const right = left + 1;
+                let smallest = index;
+                if (left < heap.length && heap[left][0] < heap[smallest][0]) smallest = left;
+                if (right < heap.length && heap[right][0] < heap[smallest][0]) smallest = right;
+                if (smallest === index) break;
+                [heap[index], heap[smallest]] = [heap[smallest], heap[index]];
+                index = smallest;
+            }
+        }
+        return minimum;
+    };
+
+    while (heap.length > 0) {
+        const [distance, vertex] = pop();
+        if (distance !== distances[vertex]) continue;
+        for (const [neighbor, weight] of graph[vertex]) {
+            const newDistance = distance + weight;
+            if (newDistance >= distances[neighbor]) continue;
+            distances[neighbor] = newDistance;
+            push([newDistance, neighbor]);
+        }
+    }
+    return distances.map(distance => distance === Infinity ? -1 : distance);
 }
 
 // Test Cases

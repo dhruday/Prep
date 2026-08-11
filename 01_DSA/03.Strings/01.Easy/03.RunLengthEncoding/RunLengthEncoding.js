@@ -47,7 +47,19 @@ Solution Approaches:
 */
 
 function runLengthEncoding(string) {
-    // Write your code here
+    if (string.length === 0) return "";
+
+    const encoded = [];
+    let runLength = 1;
+    for (let index = 1; index <= string.length; index++) {
+        if (index < string.length && string[index] === string[index - 1] && runLength < 9) {
+            runLength++;
+        } else {
+            encoded.push(String(runLength), string[index - 1]);
+            runLength = 1;
+        }
+    }
+    return encoded.join("");
 }
 
 // Test Cases

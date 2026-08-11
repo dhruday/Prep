@@ -33,7 +33,30 @@ Constraints:
 */
 
 function longestStringChain(strings) {
-    // Write your code here
+    const chains = new Map();
+    for (const string of strings) chains.set(string, { length: 1, previous: null });
+
+    const sorted = [...strings].sort((first, second) => first.length - second.length);
+    let longest = sorted[0] || null;
+    for (const string of sorted) {
+        const entry = chains.get(string);
+        for (let index = 0; index < string.length; index++) {
+            const predecessor = string.slice(0, index) + string.slice(index + 1);
+            const predecessorEntry = chains.get(predecessor);
+            if (predecessorEntry && predecessorEntry.length + 1 > entry.length) {
+                entry.length = predecessorEntry.length + 1;
+                entry.previous = predecessor;
+            }
+        }
+        if (entry.length > chains.get(longest).length) longest = string;
+    }
+
+    const chain = [];
+    while (longest !== null) {
+        chain.push(longest);
+        longest = chains.get(longest).previous;
+    }
+    return chain.reverse();
 }
 
 // Helper function to check if one string is a predecessor of another

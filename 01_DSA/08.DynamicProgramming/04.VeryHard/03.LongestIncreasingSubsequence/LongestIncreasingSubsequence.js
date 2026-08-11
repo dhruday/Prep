@@ -25,7 +25,27 @@ Constraints:
 */
 
 function longestIncreasingSubsequence(array) {
-    // Write your code here
+    if (array.length === 0) return [];
+
+    const tails = [];
+    const predecessors = new Array(array.length).fill(-1);
+    for (let index = 0; index < array.length; index++) {
+        let left = 0;
+        let right = tails.length;
+        while (left < right) {
+            const middle = Math.floor((left + right) / 2);
+            if (array[tails[middle]] < array[index]) left = middle + 1;
+            else right = middle;
+        }
+        if (left > 0) predecessors[index] = tails[left - 1];
+        tails[left] = index;
+    }
+
+    const sequence = [];
+    for (let index = tails[tails.length - 1]; index !== -1; index = predecessors[index]) {
+        sequence.push(array[index]);
+    }
+    return sequence.reverse();
 }
 
 // Helper function to verify if a sequence is strictly increasing

@@ -48,7 +48,20 @@ Solution Approaches:
 */
 
 function reverseWordsInString(string) {
-    // Write your code here
+    const characters = [...string].reverse();
+    let wordStart = 0;
+    for (let index = 0; index <= characters.length; index++) {
+        if (index !== characters.length && characters[index] !== " ") continue;
+        let left = wordStart;
+        let right = index - 1;
+        while (left < right) {
+            [characters[left], characters[right]] = [characters[right], characters[left]];
+            left++;
+            right--;
+        }
+        wordStart = index + 1;
+    }
+    return characters.join("");
 }
 
 // Test Cases

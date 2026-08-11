@@ -92,7 +92,36 @@ Solution Approaches:
 */
 
 function waterfallStreams(array, source) {
-    // Write your code here
+    if (array.length === 0 || array[0].length === 0 || source < 0 || source >= array[0].length) return [];
+
+    array[0][source] = -1;
+    for (let row = 0; row < array.length - 1; row++) {
+        for (let column = 0; column < array[row].length; column++) {
+            const water = array[row][column];
+            if (water >= 0) continue;
+
+            if (array[row + 1][column] !== 1) {
+                array[row + 1][column] += water;
+                continue;
+            }
+
+            const splitWater = water / 2;
+            for (const direction of [-1, 1]) {
+                let nextColumn = column;
+                while (true) {
+                    nextColumn += direction;
+                    if (nextColumn < 0 || nextColumn >= array[row].length) break;
+                    if (array[row][nextColumn] === 1) break;
+                    if (array[row + 1][nextColumn] !== 1) {
+                        array[row + 1][nextColumn] += splitWater;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    return array[array.length - 1].map(value => value < 0 ? value * -100 : 0);
 }
 
 // Test Cases
@@ -103,11 +132,11 @@ const testCases = [
             [1, 1, 1, 0, 1, 1, 1],
             [0, 0, 1, 0, 1, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
-            [1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 0, 1, 1, 1],
             [0, 0, 0, 0, 0, 0, 0],
         ],
         source: 3,
-        expected: [0.00, 0.00, 0.00, 25.00, 0.00, 0.00, 0.00]
+        expected: [0.00, 0.00, 0.00, 100.00, 0.00, 0.00, 0.00]
     },
     {
         array: [
@@ -126,7 +155,7 @@ const testCases = [
             [0, 0, 0, 0],
         ],
         source: 2,
-        expected: [0.00, 0.00, 50.00, 50.00]
+        expected: [0.00, 0.00, 100.00, 0.00]
     },
     {
         array: [

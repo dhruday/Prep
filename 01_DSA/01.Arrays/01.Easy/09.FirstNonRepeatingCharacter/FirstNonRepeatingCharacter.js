@@ -44,7 +44,14 @@ Solution Approaches:
 */
 
 function firstNonRepeatingCharacter(string) {
-    // Write your code here
+    const counts = new Map();
+    for (const character of string) counts.set(character, (counts.get(character) || 0) + 1);
+
+    for (let index = 0; index < string.length; index++) {
+        if (counts.get(string[index]) === 1) return index;
+    }
+
+    return -1;
 }
 
 // Test Cases

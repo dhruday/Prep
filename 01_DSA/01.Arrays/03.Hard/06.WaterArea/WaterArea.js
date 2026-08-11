@@ -56,7 +56,25 @@ Solution Approaches:
 */
 
 function waterArea(heights) {
-    // Write your code here
+    let left = 0;
+    let right = heights.length - 1;
+    let leftMax = 0;
+    let rightMax = 0;
+    let area = 0;
+
+    while (left < right) {
+        if (heights[left] < heights[right]) {
+            leftMax = Math.max(leftMax, heights[left]);
+            area += leftMax - heights[left];
+            left++;
+        } else {
+            rightMax = Math.max(rightMax, heights[right]);
+            area += rightMax - heights[right];
+            right--;
+        }
+    }
+
+    return area;
 }
 
 // Test Cases

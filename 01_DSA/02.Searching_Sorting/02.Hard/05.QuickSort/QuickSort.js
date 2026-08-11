@@ -49,7 +49,22 @@ Solution Approaches:
 */
 
 function quickSort(array) {
-    // Write your code here
+    const sorted = [...array];
+    const sortRange = (left, right) => {
+        if (left >= right) return;
+        const pivot = sorted[right];
+        let partition = left;
+        for (let index = left; index < right; index++) {
+            if (sorted[index] >= pivot) continue;
+            [sorted[index], sorted[partition]] = [sorted[partition], sorted[index]];
+            partition++;
+        }
+        [sorted[partition], sorted[right]] = [sorted[right], sorted[partition]];
+        sortRange(left, partition - 1);
+        sortRange(partition + 1, right);
+    };
+    sortRange(0, sorted.length - 1);
+    return sorted;
 }
 
 // Test Cases

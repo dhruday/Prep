@@ -26,7 +26,15 @@ Constraints:
 */
 
 function minNumberOfCoinsForChange(n, denoms) {
-    // Write your code here
+    if (n < 0) return -1;
+    const minimumCoins = new Array(n + 1).fill(Infinity);
+    minimumCoins[0] = 0;
+    for (const denomination of denoms) {
+        for (let amount = denomination; amount <= n; amount++) {
+            minimumCoins[amount] = Math.min(minimumCoins[amount], minimumCoins[amount - denomination] + 1);
+        }
+    }
+    return minimumCoins[n] === Infinity ? -1 : minimumCoins[n];
 }
 
 // Test Cases

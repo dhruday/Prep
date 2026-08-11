@@ -77,7 +77,25 @@ Solution Approaches:
 */
 
 function phoneNumberMnemonics(phoneNumber) {
-    // Write your code here
+    const letters = {
+        0: ["0"], 1: ["1"], 2: ["a", "b", "c"], 3: ["d", "e", "f"],
+        4: ["g", "h", "i"], 5: ["j", "k", "l"], 6: ["m", "n", "o"],
+        7: ["p", "q", "r", "s"], 8: ["t", "u", "v"], 9: ["w", "x", "y", "z"],
+    };
+    const mnemonics = [];
+    const current = new Array(phoneNumber.length);
+    const build = index => {
+        if (index === phoneNumber.length) {
+            mnemonics.push(current.join(""));
+            return;
+        }
+        for (const letter of letters[phoneNumber[index]] || []) {
+            current[index] = letter;
+            build(index + 1);
+        }
+    };
+    build(0);
+    return mnemonics;
 }
 
 // The digit-letter mapping

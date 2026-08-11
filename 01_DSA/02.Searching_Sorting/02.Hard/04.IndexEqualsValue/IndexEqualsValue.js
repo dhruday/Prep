@@ -45,7 +45,19 @@ Solution Approaches:
 */
 
 function indexEqualsValue(array) {
-    // Write your code here
+    let left = 0;
+    let right = array.length - 1;
+    let answer = -1;
+    while (left <= right) {
+        const middle = Math.floor((left + right) / 2);
+        if (array[middle] < middle) {
+            left = middle + 1;
+        } else {
+            if (array[middle] === middle) answer = middle;
+            right = middle - 1;
+        }
+    }
+    return answer;
 }
 
 // Test Cases

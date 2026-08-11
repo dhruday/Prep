@@ -39,7 +39,22 @@ class LinkedList {
 }
 
 function mergeLinkedLists(headOne, headTwo) {
-    // Write your code here
+    const dummy = new LinkedList(0);
+    let tail = dummy;
+    let first = headOne;
+    let second = headTwo;
+    while (first !== null && second !== null) {
+        if (first.value <= second.value) {
+            tail.next = first;
+            first = first.next;
+        } else {
+            tail.next = second;
+            second = second.next;
+        }
+        tail = tail.next;
+    }
+    tail.next = first || second;
+    return dummy.next;
 }
 
 // Test Cases

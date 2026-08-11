@@ -23,7 +23,20 @@ Constraints:
 */
 
 function minNumberOfJumps(array) {
-    // Write your code here
+    if (array.length <= 1) return 0;
+
+    let jumps = 0;
+    let currentRangeEnd = 0;
+    let furthestReach = 0;
+    for (let index = 0; index < array.length - 1; index++) {
+        furthestReach = Math.max(furthestReach, index + array[index]);
+        if (index !== currentRangeEnd) continue;
+        if (furthestReach === currentRangeEnd) return -1;
+        jumps++;
+        currentRangeEnd = furthestReach;
+        if (currentRangeEnd >= array.length - 1) return jumps;
+    }
+    return -1;
 }
 
 // Test Cases

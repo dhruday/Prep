@@ -39,7 +39,15 @@ Solution Approaches:
 */
 
 function isMonotonic(array) {
-    // Write your code here
+    let nonDecreasing = true;
+    let nonIncreasing = true;
+
+    for (let index = 1; index < array.length; index++) {
+        if (array[index] < array[index - 1]) nonDecreasing = false;
+        if (array[index] > array[index - 1]) nonIncreasing = false;
+    }
+
+    return nonDecreasing || nonIncreasing;
 }
 
 // Test Cases

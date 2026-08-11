@@ -28,7 +28,23 @@ Constraints:
 */
 
 function maxProfitWithKTransactions(prices, k) {
-    // Write your code here
+    if (prices.length === 0 || k <= 0) return 0;
+    if (k >= Math.floor(prices.length / 2)) {
+        return prices.reduce((profit, price, index) =>
+            index === 0 ? 0 : profit + Math.max(0, price - prices[index - 1]), 0);
+    }
+
+    let previous = new Array(prices.length).fill(0);
+    for (let transaction = 1; transaction <= k; transaction++) {
+        const current = new Array(prices.length).fill(0);
+        let maximumBalance = -prices[0];
+        for (let day = 1; day < prices.length; day++) {
+            maximumBalance = Math.max(maximumBalance, previous[day - 1] - prices[day - 1]);
+            current[day] = Math.max(current[day - 1], prices[day] + maximumBalance);
+        }
+        previous = current;
+    }
+    return previous[prices.length - 1];
 }
 
 // Test Cases

@@ -48,7 +48,20 @@ Solution Approaches:
 */
 
 function minimumCharactersForWords(words) {
-    // Write your code here
+    const maximumCounts = new Map();
+    for (const word of words) {
+        const counts = new Map();
+        for (const character of word) counts.set(character, (counts.get(character) || 0) + 1);
+        for (const [character, count] of counts) {
+            maximumCounts.set(character, Math.max(maximumCounts.get(character) || 0, count));
+        }
+    }
+
+    const characters = [];
+    for (const [character, count] of maximumCounts) {
+        for (let occurrence = 0; occurrence < count; occurrence++) characters.push(character);
+    }
+    return characters;
 }
 
 // Test Cases

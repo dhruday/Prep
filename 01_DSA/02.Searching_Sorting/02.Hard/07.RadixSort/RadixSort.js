@@ -48,7 +48,16 @@ Solution Approaches:
 */
 
 function radixSort(array) {
-    // Write your code here
+    if (array.length === 0) return [];
+
+    let sorted = [...array];
+    const maximum = Math.max(...sorted);
+    for (let digitPlace = 1; Math.floor(maximum / digitPlace) > 0; digitPlace *= 10) {
+        const buckets = Array.from({ length: 10 }, () => []);
+        for (const value of sorted) buckets[Math.floor(value / digitPlace) % 10].push(value);
+        sorted = buckets.flat();
+    }
+    return sorted;
 }
 
 // Test Cases

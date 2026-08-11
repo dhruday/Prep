@@ -76,7 +76,28 @@ Solution Approaches:
 */
 
 function maximumSumSubmatrix(matrix, size) {
-    // Write your code here
+    if (size <= 0 || matrix.length < size || matrix[0].length < size) return null;
+
+    const sums = Array.from({ length: matrix.length + 1 }, () => new Array(matrix[0].length + 1).fill(0));
+    for (let row = 1; row <= matrix.length; row++) {
+        for (let column = 1; column <= matrix[0].length; column++) {
+            sums[row][column] = matrix[row - 1][column - 1]
+                + sums[row - 1][column]
+                + sums[row][column - 1]
+                - sums[row - 1][column - 1];
+        }
+    }
+
+    let maximum = -Infinity;
+    for (let row = size; row <= matrix.length; row++) {
+        for (let column = size; column <= matrix[0].length; column++) {
+            const total = sums[row][column] - sums[row - size][column]
+                - sums[row][column - size] + sums[row - size][column - size];
+            maximum = Math.max(maximum, total);
+        }
+    }
+
+    return maximum;
 }
 
 // Test Cases
@@ -108,7 +129,7 @@ const testCases = [
             [1, -8, -8, 2]
         ],
         size: 3,
-        expected: 33
+        expected: 30
     },
     {
         matrix: [[1]],
@@ -130,7 +151,7 @@ const testCases = [
             [2, 4]
         ],
         size: 2,
-        expected: 19
+        expected: 17
     }
 ];
 

@@ -48,7 +48,37 @@ Solution Approaches:
 */
 
 function rightSmallerThan(array) {
-    // Write your code here
+    const counts = new Array(array.length).fill(0);
+    const indices = array.map((_, index) => index);
+
+    const mergeSort = values => {
+        if (values.length <= 1) return values;
+        const middle = Math.floor(values.length / 2);
+        const left = mergeSort(values.slice(0, middle));
+        const right = mergeSort(values.slice(middle));
+        const merged = [];
+        let leftIndex = 0;
+        let rightIndex = 0;
+        let movedFromRight = 0;
+
+        while (leftIndex < left.length && rightIndex < right.length) {
+            if (array[left[leftIndex]] <= array[right[rightIndex]]) {
+                counts[left[leftIndex]] += movedFromRight;
+                merged.push(left[leftIndex++]);
+            } else {
+                movedFromRight++;
+                merged.push(right[rightIndex++]);
+            }
+        }
+        while (leftIndex < left.length) {
+            counts[left[leftIndex]] += movedFromRight;
+            merged.push(left[leftIndex++]);
+        }
+        return merged.concat(right.slice(rightIndex));
+    };
+
+    mergeSort(indices);
+    return counts;
 }
 
 // Test Cases
@@ -75,7 +105,7 @@ const testCases = [
     },
     {
         array: [10, 5, 8, 3, 2, 7, 1, 9, 4, 6],
-        expected: [8, 4, 5, 2, 1, 3, 0, 1, 0, 0]
+        expected: [9, 4, 6, 2, 1, 3, 0, 2, 0, 0]
     }
 ];
 

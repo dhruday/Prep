@@ -38,7 +38,22 @@ Solution Approaches:
 */
 
 function findThreeLargestNumbers(array) {
-    // Write your code here
+    const largest = [-Infinity, -Infinity, -Infinity];
+
+    for (const number of array) {
+        if (number >= largest[2]) {
+            largest[0] = largest[1];
+            largest[1] = largest[2];
+            largest[2] = number;
+        } else if (number >= largest[1]) {
+            largest[0] = largest[1];
+            largest[1] = number;
+        } else if (number > largest[0]) {
+            largest[0] = number;
+        }
+    }
+
+    return largest;
 }
 
 // Test Cases

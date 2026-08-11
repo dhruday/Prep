@@ -56,7 +56,26 @@ Solution Approaches:
 */
 
 function multiStringSearch(bigString, smallStrings) {
-    // Write your code here
+    const root = Object.create(null);
+    for (const word of smallStrings) {
+        let node = root;
+        for (const character of word) {
+            if (!node[character]) node[character] = Object.create(null);
+            node = node[character];
+        }
+        node.word = word;
+    }
+
+    const found = new Set();
+    for (let start = 0; start < bigString.length; start++) {
+        let node = root;
+        for (let index = start; index < bigString.length; index++) {
+            node = node[bigString[index]];
+            if (!node) break;
+            if (node.word !== undefined) found.add(node.word);
+        }
+    }
+    return smallStrings.map(word => found.has(word));
 }
 
 // Test Cases

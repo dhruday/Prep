@@ -57,7 +57,20 @@ Solution Approaches:
 */
 
 function sunsetViews(buildings, direction) {
-    // Write your code here
+    const views = [];
+    const step = direction === "EAST" ? -1 : 1;
+    let index = direction === "EAST" ? buildings.length - 1 : 0;
+    let tallest = -Infinity;
+
+    while (index >= 0 && index < buildings.length) {
+        if (buildings[index] > tallest) {
+            views.push(index);
+            tallest = buildings[index];
+        }
+        index += step;
+    }
+
+    return direction === "EAST" ? views.reverse() : views;
 }
 
 // Test Cases

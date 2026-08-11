@@ -35,7 +35,19 @@ Test Cases:
 */
 
 function nextGreaterElement(array) {
-    // Write your code here
+    const result = new Array(array.length).fill(-1);
+    const candidates = [];
+    for (let index = 2 * array.length - 1; index >= 0; index--) {
+        const currentIndex = index % array.length;
+        while (candidates.length > 0 && array[candidates[candidates.length - 1]] <= array[currentIndex]) {
+            candidates.pop();
+        }
+        if (index < array.length && candidates.length > 0) {
+            result[currentIndex] = array[candidates[candidates.length - 1]];
+        }
+        candidates.push(currentIndex);
+    }
+    return result;
 }
 
 // Test Cases

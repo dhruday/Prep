@@ -44,7 +44,19 @@ Solution Approaches:
 */
 
 function mergeSort(array) {
-    // Write your code here
+    if (array.length <= 1) return [...array];
+
+    const middle = Math.floor(array.length / 2);
+    const left = mergeSort(array.slice(0, middle));
+    const right = mergeSort(array.slice(middle));
+    const merged = [];
+    let leftIndex = 0;
+    let rightIndex = 0;
+    while (leftIndex < left.length && rightIndex < right.length) {
+        if (left[leftIndex] <= right[rightIndex]) merged.push(left[leftIndex++]);
+        else merged.push(right[rightIndex++]);
+    }
+    return merged.concat(left.slice(leftIndex), right.slice(rightIndex));
 }
 
 // Test Cases

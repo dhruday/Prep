@@ -38,7 +38,17 @@ Solution Approaches:
 */
 
 function bubbleSort(array) {
-    // Write your code here
+    const sorted = [...array];
+    for (let unsortedEnd = sorted.length - 1; unsortedEnd > 0; unsortedEnd--) {
+        let swapped = false;
+        for (let index = 0; index < unsortedEnd; index++) {
+            if (sorted[index] <= sorted[index + 1]) continue;
+            [sorted[index], sorted[index + 1]] = [sorted[index + 1], sorted[index]];
+            swapped = true;
+        }
+        if (!swapped) break;
+    }
+    return sorted;
 }
 
 // Test Cases

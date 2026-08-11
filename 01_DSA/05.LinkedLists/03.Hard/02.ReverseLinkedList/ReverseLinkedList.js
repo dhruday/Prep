@@ -34,7 +34,15 @@ class LinkedList {
 }
 
 function reverseLinkedList(head) {
-    // Write your code here
+    let previous = null;
+    let current = head;
+    while (current !== null) {
+        const next = current.next;
+        current.next = previous;
+        previous = current;
+        current = next;
+    }
+    return previous;
 }
 
 // Test Cases

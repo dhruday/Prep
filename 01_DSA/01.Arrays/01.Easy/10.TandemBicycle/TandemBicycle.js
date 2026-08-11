@@ -53,7 +53,11 @@ Solution Approaches:
 */
 
 function tandemBicycle(redShirtSpeeds, blueShirtSpeeds, fastest) {
-    // Write your code here
+    const red = [...redShirtSpeeds].sort((a, b) => a - b);
+    const blue = [...blueShirtSpeeds].sort((a, b) => a - b);
+    if (fastest) blue.reverse();
+
+    return red.reduce((total, speed, index) => total + Math.max(speed, blue[index]), 0);
 }
 
 // Test Cases

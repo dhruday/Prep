@@ -53,7 +53,15 @@ Solution Approaches:
 */
 
 function classPhotos(redShirtHeights, blueShirtHeights) {
-    // Write your code here
+    if (redShirtHeights.length !== blueShirtHeights.length) return false;
+
+    const red = [...redShirtHeights].sort((a, b) => a - b);
+    const blue = [...blueShirtHeights].sort((a, b) => a - b);
+    const redInBack = red[0] > blue[0];
+
+    return red.every((height, index) =>
+        redInBack ? height > blue[index] : height < blue[index]
+    );
 }
 
 // Test Cases

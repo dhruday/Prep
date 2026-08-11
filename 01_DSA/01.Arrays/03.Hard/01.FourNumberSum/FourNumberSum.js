@@ -39,7 +39,31 @@ Solution Approaches:
 */
 
 function fourNumberSum(array, targetSum) {
-    // Write your code here
+    const pairsBySum = new Map();
+    const quadruplets = [];
+
+    for (let index = 1; index < array.length - 1; index++) {
+        for (let next = index + 1; next < array.length; next++) {
+            const currentSum = array[index] + array[next];
+            const complementaryPairs = pairsBySum.get(targetSum - currentSum) || [];
+            for (const pair of complementaryPairs) {
+                quadruplets.push([...pair, array[index], array[next]]);
+            }
+        }
+
+        for (let previous = 0; previous < index; previous++) {
+            const sum = array[previous] + array[index];
+            if (!pairsBySum.has(sum)) pairsBySum.set(sum, []);
+            pairsBySum.get(sum).push([array[previous], array[index]]);
+        }
+    }
+
+    return quadruplets.sort((first, second) => {
+        for (let index = 0; index < first.length; index++) {
+            if (first[index] !== second[index]) return first[index] - second[index];
+        }
+        return 0;
+    });
 }
 
 // Test Cases
@@ -62,7 +86,7 @@ const testCases = [
     {
         array: [-2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9],
         targetSum: 4,
-        expected: [[-2, -1, 1, 6], [-2, 1, 2, 3], [-2, -1, 2, 5], [-1, 1, 2, 2]]
+        expected: [[-2, -1, 1, 6], [-2, -1, 2, 5], [-2, -1, 3, 4], [-2, 1, 2, 3]]
     },
     {
         array: [1, 2, 3, 4, 5],

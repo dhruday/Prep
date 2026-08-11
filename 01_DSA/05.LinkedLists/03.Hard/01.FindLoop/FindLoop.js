@@ -38,7 +38,20 @@ class LinkedList {
 }
 
 function findLoop(head) {
-    // Write your code here
+    let slow = head;
+    let fast = head;
+    do {
+        if (fast === null || fast.next === null) return null;
+        slow = slow.next;
+        fast = fast.next.next;
+    } while (slow !== fast);
+
+    slow = head;
+    while (slow !== fast) {
+        slow = slow.next;
+        fast = fast.next;
+    }
+    return slow;
 }
 
 // Test Cases

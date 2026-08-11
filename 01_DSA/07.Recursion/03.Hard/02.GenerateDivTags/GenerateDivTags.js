@@ -38,7 +38,17 @@ Constraints:
 */
 
 function generateDivTags(numberOfTags) {
-    // Write your code here
+    const tags = [];
+    const build = (open, close, current) => {
+        if (close === numberOfTags) {
+            tags.push(current);
+            return;
+        }
+        if (open < numberOfTags) build(open + 1, close, `${current}<div>`);
+        if (close < open) build(open, close + 1, `${current}</div>`);
+    };
+    build(0, 0, "");
+    return tags;
 }
 
 // Test Cases

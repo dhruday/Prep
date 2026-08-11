@@ -23,7 +23,21 @@ Constraints:
 */
 
 function palindromePartitioningMinCuts(string) {
-    // Write your code here
+    if (string.length <= 1) return 0;
+
+    const cuts = Array.from({ length: string.length }, (_, index) => index);
+    const expand = (left, right) => {
+        while (left >= 0 && right < string.length && string[left] === string[right]) {
+            cuts[right] = Math.min(cuts[right], left === 0 ? 0 : cuts[left - 1] + 1);
+            left--;
+            right++;
+        }
+    };
+    for (let center = 0; center < string.length; center++) {
+        expand(center, center);
+        expand(center - 1, center);
+    }
+    return cuts[string.length - 1];
 }
 
 // Helper function to check if a string is a palindrome

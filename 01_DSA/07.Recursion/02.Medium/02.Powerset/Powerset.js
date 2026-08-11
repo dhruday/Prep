@@ -22,7 +22,14 @@ Constraints:
 */
 
 function powerset(array) {
-    // Write your code here
+    const subsets = [[]];
+    for (const value of array) {
+        const existingLength = subsets.length;
+        for (let index = 0; index < existingLength; index++) {
+            subsets.push([...subsets[index], value]);
+        }
+    }
+    return subsets;
 }
 
 // Test Cases

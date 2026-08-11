@@ -48,14 +48,47 @@ Solution Approaches:
 */
 
 function lineThroughPoints(points) {
-    // Write your code here
+    if (points.length <= 2) return points.length;
+
+    const gcd = (first, second) => {
+        first = Math.abs(first);
+        second = Math.abs(second);
+        while (second !== 0) [first, second] = [second, first % second];
+        return first;
+    };
+
+    let maximum = 1;
+    for (let first = 0; first < points.length; first++) {
+        const slopes = new Map();
+        for (let second = first + 1; second < points.length; second++) {
+            let deltaX = points[second][0] - points[first][0];
+            let deltaY = points[second][1] - points[first][1];
+            if (deltaX === 0) {
+                deltaY = 1;
+            } else if (deltaY === 0) {
+                deltaX = 1;
+            } else {
+                const divisor = gcd(deltaX, deltaY);
+                deltaX /= divisor;
+                deltaY /= divisor;
+                if (deltaX < 0) {
+                    deltaX *= -1;
+                    deltaY *= -1;
+                }
+            }
+            const slope = `${deltaY}:${deltaX}`;
+            slopes.set(slope, (slopes.get(slope) || 1) + 1);
+            maximum = Math.max(maximum, slopes.get(slope));
+        }
+    }
+    return maximum;
 }
 
 // Test Cases
 const testCases = [
     {
         points: [[1, 1], [2, 2], [3, 3], [0, 4], [-2, 6], [4, 0], [2, 1]],
-        expected: 3
+        expected: 4
     },
     {
         points: [[3, 3], [0, 0], [-1, -1], [2, 2]],
@@ -63,7 +96,7 @@ const testCases = [
     },
     {
         points: [[1, 1], [3, 2], [5, 3], [4, 1], [2, 3], [1, 4]],
-        expected: 3
+        expected: 4
     },
     {
         points: [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 5]],

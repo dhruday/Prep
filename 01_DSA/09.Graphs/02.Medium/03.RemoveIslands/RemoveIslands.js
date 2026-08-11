@@ -43,7 +43,45 @@ Constraints:
 */
 
 function removeIslands(matrix) {
-    // Write your code here
+    if (matrix.length === 0 || matrix[0].length === 0) return matrix;
+
+    const rows = matrix.length;
+    const columns = matrix[0].length;
+    const connectedToBorder = new Set();
+    const queue = [];
+    const enqueue = (row, column) => {
+        if (matrix[row][column] !== 1) return;
+        const key = `${row}:${column}`;
+        if (connectedToBorder.has(key)) return;
+        connectedToBorder.add(key);
+        queue.push([row, column]);
+    };
+
+    for (let row = 0; row < rows; row++) {
+        enqueue(row, 0);
+        enqueue(row, columns - 1);
+    }
+    for (let column = 0; column < columns; column++) {
+        enqueue(0, column);
+        enqueue(rows - 1, column);
+    }
+
+    for (let index = 0; index < queue.length; index++) {
+        const [row, column] = queue[index];
+        for (const [rowOffset, columnOffset] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nextRow = row + rowOffset;
+            const nextColumn = column + columnOffset;
+            if (nextRow < 0 || nextRow >= rows || nextColumn < 0 || nextColumn >= columns) continue;
+            enqueue(nextRow, nextColumn);
+        }
+    }
+
+    for (let row = 1; row < rows - 1; row++) {
+        for (let column = 1; column < columns - 1; column++) {
+            if (matrix[row][column] === 1 && !connectedToBorder.has(`${row}:${column}`)) matrix[row][column] = 0;
+        }
+    }
+    return matrix;
 }
 
 // Helper function to check if two matrices are equal

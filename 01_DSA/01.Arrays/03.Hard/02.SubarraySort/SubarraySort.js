@@ -40,7 +40,29 @@ Solution Approaches:
 */
 
 function subarraySort(array) {
-    // Write your code here
+    let minimumOutOfOrder = Infinity;
+    let maximumOutOfOrder = -Infinity;
+
+    const isOutOfOrder = index => {
+        const value = array[index];
+        if (index === 0) return value > array[index + 1];
+        if (index === array.length - 1) return value < array[index - 1];
+        return value > array[index + 1] || value < array[index - 1];
+    };
+
+    for (let index = 0; index < array.length; index++) {
+        if (!isOutOfOrder(index)) continue;
+        minimumOutOfOrder = Math.min(minimumOutOfOrder, array[index]);
+        maximumOutOfOrder = Math.max(maximumOutOfOrder, array[index]);
+    }
+
+    if (minimumOutOfOrder === Infinity) return [-1, -1];
+
+    let left = 0;
+    while (array[left] <= minimumOutOfOrder) left++;
+    let right = array.length - 1;
+    while (array[right] >= maximumOutOfOrder) right--;
+    return [left, right];
 }
 
 // Test Cases

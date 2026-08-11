@@ -49,7 +49,25 @@ Solution Approaches:
 */
 
 function quickselect(array, k) {
-    // Write your code here
+    if (k < 1 || k > array.length) return null;
+
+    const targetIndex = k - 1;
+    let left = 0;
+    let right = array.length - 1;
+    while (left <= right) {
+        const pivotIndex = right;
+        let insertionIndex = left;
+        for (let index = left; index < right; index++) {
+            if (array[index] >= array[pivotIndex]) continue;
+            [array[index], array[insertionIndex]] = [array[insertionIndex], array[index]];
+            insertionIndex++;
+        }
+        [array[insertionIndex], array[pivotIndex]] = [array[pivotIndex], array[insertionIndex]];
+        if (insertionIndex === targetIndex) return array[insertionIndex];
+        if (targetIndex < insertionIndex) right = insertionIndex - 1;
+        else left = insertionIndex + 1;
+    }
+    return null;
 }
 
 // Test Cases

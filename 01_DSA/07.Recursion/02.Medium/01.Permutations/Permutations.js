@@ -22,7 +22,20 @@ Constraints:
 */
 
 function getPermutations(array) {
-    // Write your code here
+    const permutations = [];
+    const build = (index, values) => {
+        if (index === values.length - 1) {
+            permutations.push([...values]);
+            return;
+        }
+        for (let swapIndex = index; swapIndex < values.length; swapIndex++) {
+            [values[index], values[swapIndex]] = [values[swapIndex], values[index]];
+            build(index + 1, values);
+            [values[index], values[swapIndex]] = [values[swapIndex], values[index]];
+        }
+    };
+    if (array.length > 0) build(0, [...array]);
+    return permutations;
 }
 
 // Test Cases

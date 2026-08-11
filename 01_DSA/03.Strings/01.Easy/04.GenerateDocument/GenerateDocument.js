@@ -57,7 +57,14 @@ Solution Approaches:
 */
 
 function generateDocument(characters, document) {
-    // Write your code here
+    const available = new Map();
+    for (const character of characters) available.set(character, (available.get(character) || 0) + 1);
+    for (const character of document) {
+        const count = available.get(character) || 0;
+        if (count === 0) return false;
+        available.set(character, count - 1);
+    }
+    return true;
 }
 
 // Test Cases

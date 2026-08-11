@@ -26,7 +26,30 @@ Constraints:
 */
 
 function longestCommonSubsequence(str1, str2) {
-    // Write your code here
+    const lengths = Array.from({ length: str1.length + 1 }, () => new Array(str2.length + 1).fill(0));
+    for (let first = 1; first <= str1.length; first++) {
+        for (let second = 1; second <= str2.length; second++) {
+            lengths[first][second] = str1[first - 1] === str2[second - 1]
+                ? lengths[first - 1][second - 1] + 1
+                : Math.max(lengths[first - 1][second], lengths[first][second - 1]);
+        }
+    }
+
+    const sequence = [];
+    let first = str1.length;
+    let second = str2.length;
+    while (first > 0 && second > 0) {
+        if (str1[first - 1] === str2[second - 1]) {
+            sequence.push(str1[first - 1]);
+            first--;
+            second--;
+        } else if (lengths[first - 1][second] >= lengths[first][second - 1]) {
+            first--;
+        } else {
+            second--;
+        }
+    }
+    return sequence.reverse();
 }
 
 // Test Cases
@@ -71,7 +94,7 @@ function runTests() {
         {
             str1: "SHINCHAN",
             str2: "NOHARAAA",
-            expected: ["N", "H", "A", "A"],
+            expected: ["N", "H", "A"],
             description: "Different length strings"
         },
         {

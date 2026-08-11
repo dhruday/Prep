@@ -41,7 +41,14 @@ Solution Approaches:
 */
 
 function nonConstructibleChange(coins) {
-    // Write your code here
+    let changeCreated = 0;
+
+    for (const coin of [...coins].sort((a, b) => a - b)) {
+        if (coin > changeCreated + 1) return changeCreated + 1;
+        changeCreated += coin;
+    }
+
+    return changeCreated + 1;
 }
 
 // Test Cases

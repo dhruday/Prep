@@ -24,7 +24,15 @@ Constraints:
 */
 
 function numberOfWaysToMakeChange(n, denoms) {
-    // Write your code here
+    if (n < 0) return 0;
+    const ways = new Array(n + 1).fill(0);
+    ways[0] = 1;
+    for (const denomination of denoms) {
+        for (let amount = denomination; amount <= n; amount++) {
+            ways[amount] += ways[amount - denomination];
+        }
+    }
+    return ways[n];
 }
 
 // Test Cases

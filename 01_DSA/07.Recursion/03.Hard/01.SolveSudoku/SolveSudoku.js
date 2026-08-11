@@ -48,7 +48,62 @@ Constraints:
 */
 
 function solveSudoku(board) {
-    // Write your code here
+    const rows = Array.from({ length: 9 }, () => new Set());
+    const columns = Array.from({ length: 9 }, () => new Set());
+    const boxes = Array.from({ length: 9 }, () => new Set());
+    const boxIndex = (row, column) => Math.floor(row / 3) * 3 + Math.floor(column / 3);
+
+    for (let row = 0; row < 9; row++) {
+        for (let column = 0; column < 9; column++) {
+            const value = board[row][column];
+            if (value === 0) continue;
+            rows[row].add(value);
+            columns[column].add(value);
+            boxes[boxIndex(row, column)].add(value);
+        }
+    }
+
+    const solve = () => {
+        let candidateCell = null;
+        let candidates = null;
+        for (let row = 0; row < 9; row++) {
+            for (let column = 0; column < 9; column++) {
+                if (board[row][column] !== 0) continue;
+                const possible = [];
+                for (let value = 1; value <= 9; value++) {
+                    if (!rows[row].has(value) && !columns[column].has(value) && !boxes[boxIndex(row, column)].has(value)) {
+                        possible.push(value);
+                    }
+                }
+                if (possible.length === 0) return false;
+                if (candidates === null || possible.length < candidates.length) {
+                    candidateCell = [row, column];
+                    candidates = possible;
+                    if (possible.length === 1) break;
+                }
+            }
+            if (candidates && candidates.length === 1) break;
+        }
+        if (candidateCell === null) return true;
+
+        const [row, column] = candidateCell;
+        const box = boxIndex(row, column);
+        for (const value of candidates) {
+            board[row][column] = value;
+            rows[row].add(value);
+            columns[column].add(value);
+            boxes[box].add(value);
+            if (solve()) return true;
+            board[row][column] = 0;
+            rows[row].delete(value);
+            columns[column].delete(value);
+            boxes[box].delete(value);
+        }
+        return false;
+    };
+
+    solve();
+    return board;
 }
 
 // Helper functions for testing

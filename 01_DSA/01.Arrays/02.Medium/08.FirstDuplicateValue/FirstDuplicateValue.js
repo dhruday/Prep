@@ -47,7 +47,12 @@ Solution Approaches:
 */
 
 function firstDuplicateValue(array) {
-    // Write your code here
+    const seen = new Set();
+    for (const value of array) {
+        if (seen.has(value)) return value;
+        seen.add(value);
+    }
+    return -1;
 }
 
 // Test Cases

@@ -27,8 +27,28 @@ Constraints:
 */
 
 function knapsackProblem(items, capacity) {
-    // Write your code here
-    // Return [maxValue, indicesOfItems]
+    const values = Array.from({ length: items.length + 1 }, () => new Array(capacity + 1).fill(0));
+    for (let itemIndex = 1; itemIndex <= items.length; itemIndex++) {
+        const [value, weight] = items[itemIndex - 1];
+        for (let currentCapacity = 0; currentCapacity <= capacity; currentCapacity++) {
+            values[itemIndex][currentCapacity] = values[itemIndex - 1][currentCapacity];
+            if (weight <= currentCapacity) {
+                values[itemIndex][currentCapacity] = Math.max(
+                    values[itemIndex][currentCapacity],
+                    values[itemIndex - 1][currentCapacity - weight] + value,
+                );
+            }
+        }
+    }
+
+    const chosenIndices = [];
+    let currentCapacity = capacity;
+    for (let itemIndex = items.length; itemIndex > 0; itemIndex--) {
+        if (values[itemIndex][currentCapacity] === values[itemIndex - 1][currentCapacity]) continue;
+        chosenIndices.push(itemIndex - 1);
+        currentCapacity -= items[itemIndex - 1][1];
+    }
+    return [values[items.length][capacity], chosenIndices.reverse()];
 }
 
 // Test Cases

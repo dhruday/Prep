@@ -31,7 +31,28 @@ Constraints:
 */
 
 function diskStacking(disks) {
-    // Write your code here
+    const sorted = disks.map(disk => [...disk]).sort((first, second) => first[2] - second[2]);
+    const heights = sorted.map(disk => disk[2]);
+    const sequences = new Array(sorted.length).fill(null);
+    let tallestIndex = 0;
+
+    for (let current = 0; current < sorted.length; current++) {
+        for (let previous = 0; previous < current; previous++) {
+            if (!canStack(sorted[previous], sorted[current])) continue;
+            if (heights[current] < heights[previous] + sorted[current][2]) {
+                heights[current] = heights[previous] + sorted[current][2];
+                sequences[current] = previous;
+            }
+        }
+        if (heights[current] > heights[tallestIndex]) tallestIndex = current;
+    }
+
+    const stack = [];
+    while (tallestIndex !== null) {
+        stack.push(sorted[tallestIndex]);
+        tallestIndex = sequences[tallestIndex];
+    }
+    return stack.reverse();
 }
 
 // Helper function to verify if one disk can be placed on top of another

@@ -51,7 +51,19 @@ Solution Approaches:
 */
 
 function minRewards(scores) {
-    // Write your code here
+    if (scores.length === 0) return 0;
+
+    const rewards = new Array(scores.length).fill(1);
+    for (let index = 1; index < scores.length; index++) {
+        if (scores[index] > scores[index - 1]) rewards[index] = rewards[index - 1] + 1;
+    }
+    for (let index = scores.length - 2; index >= 0; index--) {
+        if (scores[index] > scores[index + 1]) {
+            rewards[index] = Math.max(rewards[index], rewards[index + 1] + 1);
+        }
+    }
+
+    return rewards.reduce((total, reward) => total + reward, 0);
 }
 
 // Test Cases

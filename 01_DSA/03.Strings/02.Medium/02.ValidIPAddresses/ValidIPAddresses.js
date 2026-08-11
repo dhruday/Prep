@@ -73,7 +73,26 @@ Solution Approaches:
 */
 
 function validIPAddresses(string) {
-    // Write your code here
+    const addresses = [];
+    const isValidPart = part => part.length > 0
+        && part.length <= 3
+        && (part.length === 1 || part[0] !== "0")
+        && Number(part) <= 255;
+
+    for (let first = 1; first <= 3 && first < string.length; first++) {
+        for (let second = first + 1; second <= first + 3 && second < string.length; second++) {
+            for (let third = second + 1; third <= second + 3 && third < string.length; third++) {
+                const parts = [
+                    string.slice(0, first),
+                    string.slice(first, second),
+                    string.slice(second, third),
+                    string.slice(third),
+                ];
+                if (parts.every(isValidPart)) addresses.push(parts.join("."));
+            }
+        }
+    }
+    return addresses;
 }
 
 // Test Cases

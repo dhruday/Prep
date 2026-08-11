@@ -32,7 +32,18 @@ Constraints:
 */
 
 function numbersInPi(pi, numbers) {
-    // Write your code here
+    const numbersSet = new Set(numbers);
+    const minimumSpaces = new Array(pi.length + 1).fill(Infinity);
+    minimumSpaces[0] = -1;
+    for (let start = 0; start < pi.length; start++) {
+        if (minimumSpaces[start] === Infinity) continue;
+        for (let end = start + 1; end <= pi.length; end++) {
+            if (numbersSet.has(pi.slice(start, end))) {
+                minimumSpaces[end] = Math.min(minimumSpaces[end], minimumSpaces[start] + 1);
+            }
+        }
+    }
+    return minimumSpaces[pi.length] === Infinity ? -1 : minimumSpaces[pi.length];
 }
 
 // Test Cases

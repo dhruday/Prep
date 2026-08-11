@@ -28,7 +28,24 @@ Constraints:
 */
 
 function nonAttackingQueens(n) {
-    // Write your code here
+    if (n <= 0) return 0;
+    const allColumns = (1 << n) - 1;
+    const place = (columns, descendingDiagonals, ascendingDiagonals) => {
+        if (columns === allColumns) return 1;
+        let available = allColumns & ~(columns | descendingDiagonals | ascendingDiagonals);
+        let arrangements = 0;
+        while (available !== 0) {
+            const position = available & -available;
+            available -= position;
+            arrangements += place(
+                columns | position,
+                ((descendingDiagonals | position) << 1) & allColumns,
+                (ascendingDiagonals | position) >> 1,
+            );
+        }
+        return arrangements;
+    };
+    return place(0, 0, 0);
 }
 
 // Helper function to verify a board configuration

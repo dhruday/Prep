@@ -38,7 +38,17 @@ Solution Approaches:
 */
 
 function insertionSort(array) {
-    // Write your code here
+    const sorted = [...array];
+    for (let index = 1; index < sorted.length; index++) {
+        const value = sorted[index];
+        let insertionIndex = index - 1;
+        while (insertionIndex >= 0 && sorted[insertionIndex] > value) {
+            sorted[insertionIndex + 1] = sorted[insertionIndex];
+            insertionIndex--;
+        }
+        sorted[insertionIndex + 1] = value;
+    }
+    return sorted;
 }
 
 // Test Cases

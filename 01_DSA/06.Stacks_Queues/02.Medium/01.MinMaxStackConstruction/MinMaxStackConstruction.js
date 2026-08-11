@@ -43,27 +43,32 @@ Test Cases:
 
 class MinMaxStack {
     constructor() {
-        // Write your code here
+        this.stack = [];
     }
 
     peek() {
-        // Write your code here
+        return this.stack.length === 0 ? null : this.stack[this.stack.length - 1].value;
     }
 
     pop() {
-        // Write your code here
+        return this.stack.length === 0 ? null : this.stack.pop().value;
     }
 
     push(number) {
-        // Write your code here
+        const previous = this.stack[this.stack.length - 1];
+        this.stack.push({
+            value: number,
+            min: previous ? Math.min(number, previous.min) : number,
+            max: previous ? Math.max(number, previous.max) : number,
+        });
     }
 
     getMin() {
-        // Write your code here
+        return this.stack.length === 0 ? null : this.stack[this.stack.length - 1].min;
     }
 
     getMax() {
-        // Write your code here
+        return this.stack.length === 0 ? null : this.stack[this.stack.length - 1].max;
     }
 }
 

@@ -53,7 +53,36 @@ Solution Approaches:
 */
 
 function underscorifySubstring(string, substring) {
-    // Write your code here
+    if (substring.length === 0) return string;
+
+    const locations = [];
+    for (let start = 0; start <= string.length - substring.length;) {
+        const found = string.indexOf(substring, start);
+        if (found === -1) break;
+        locations.push([found, found + substring.length]);
+        start = found + 1;
+    }
+    if (locations.length === 0) return string;
+
+    const collapsed = [locations[0]];
+    for (let index = 1; index < locations.length; index++) {
+        const current = locations[index];
+        const previous = collapsed[collapsed.length - 1];
+        if (current[0] <= previous[1]) previous[1] = Math.max(previous[1], current[1]);
+        else collapsed.push(current);
+    }
+
+    let result = "";
+    let locationIndex = 0;
+    for (let index = 0; index < string.length; index++) {
+        if (locationIndex < collapsed.length && index === collapsed[locationIndex][0]) result += "_";
+        result += string[index];
+        if (locationIndex < collapsed.length && index + 1 === collapsed[locationIndex][1]) {
+            result += "_";
+            locationIndex++;
+        }
+    }
+    return result;
 }
 
 // Test Cases

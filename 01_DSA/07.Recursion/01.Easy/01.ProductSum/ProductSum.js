@@ -24,7 +24,11 @@ Constraints:
 */
 
 function productSum(array, multiplier = 1) {
-    // Write your code here
+    let sum = 0;
+    for (const value of array) {
+        sum += Array.isArray(value) ? productSum(value, multiplier + 1) : value;
+    }
+    return sum * multiplier;
 }
 
 // Test Cases

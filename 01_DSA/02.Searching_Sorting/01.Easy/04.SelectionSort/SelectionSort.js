@@ -39,7 +39,15 @@ Solution Approaches:
 */
 
 function selectionSort(array) {
-    // Write your code here
+    const sorted = [...array];
+    for (let start = 0; start < sorted.length - 1; start++) {
+        let smallest = start;
+        for (let index = start + 1; index < sorted.length; index++) {
+            if (sorted[index] < sorted[smallest]) smallest = index;
+        }
+        [sorted[start], sorted[smallest]] = [sorted[smallest], sorted[start]];
+    }
+    return sorted;
 }
 
 // Test Cases

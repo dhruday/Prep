@@ -47,7 +47,36 @@ class LinkedList {
 }
 
 function rearrangeLinkedList(head, k) {
-    // Write your code here
+    let smallerHead = null;
+    let smallerTail = null;
+    let equalHead = null;
+    let equalTail = null;
+    let greaterHead = null;
+    let greaterTail = null;
+
+    const append = (node, group) => {
+        node.next = null;
+        if (group.head === null) group.head = node;
+        else group.tail.next = node;
+        group.tail = node;
+    };
+    const smaller = { head: smallerHead, tail: smallerTail };
+    const equal = { head: equalHead, tail: equalTail };
+    const greater = { head: greaterHead, tail: greaterTail };
+
+    for (let node = head; node !== null;) {
+        const next = node.next;
+        if (node.value < k) append(node, smaller);
+        else if (node.value > k) append(node, greater);
+        else append(node, equal);
+        node = next;
+    }
+
+    const first = smaller.head || equal.head || greater.head;
+    const afterSmaller = equal.head || greater.head;
+    if (smaller.tail) smaller.tail.next = afterSmaller;
+    if (equal.tail) equal.tail.next = greater.head;
+    return first;
 }
 
 // Test Cases

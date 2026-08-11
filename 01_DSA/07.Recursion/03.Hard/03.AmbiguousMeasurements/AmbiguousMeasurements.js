@@ -35,7 +35,26 @@ Constraints:
 */
 
 function ambiguousMeasurements(measuringCups, targetLow, targetHigh) {
-    // Write your code here
+    const memo = new Map();
+    const canMeasure = (low, high) => {
+        const key = `${low}:${high}`;
+        if (memo.has(key)) return memo.get(key);
+        if (low <= 0 && high <= 0) return false;
+
+        for (const [cupLow, cupHigh] of measuringCups) {
+            if (low >= cupLow && high <= cupHigh) {
+                memo.set(key, true);
+                return true;
+            }
+            if (canMeasure(Math.max(0, low - cupLow), Math.max(0, high - cupHigh))) {
+                memo.set(key, true);
+                return true;
+            }
+        }
+        memo.set(key, false);
+        return false;
+    };
+    return canMeasure(targetLow, targetHigh);
 }
 
 // Test Cases

@@ -42,7 +42,24 @@ class LinkedList {
 }
 
 function shiftLinkedList(head, k) {
-    // Write your code here
+    if (head === null || head.next === null || k === 0) return head;
+
+    let tail = head;
+    let length = 1;
+    while (tail.next !== null) {
+        tail = tail.next;
+        length++;
+    }
+    const shift = ((k % length) + length) % length;
+    if (shift === 0) return head;
+
+    const newTailPosition = length - shift;
+    let newTail = head;
+    for (let position = 1; position < newTailPosition; position++) newTail = newTail.next;
+    const newHead = newTail.next;
+    newTail.next = null;
+    tail.next = head;
+    return newHead;
 }
 
 // Test Cases

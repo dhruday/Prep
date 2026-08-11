@@ -46,7 +46,21 @@ Solution Approaches:
 */
 
 function arrayOfProducts(array) {
-    // Write your code here
+    const products = new Array(array.length).fill(1);
+    let leftProduct = 1;
+
+    for (let index = 0; index < array.length; index++) {
+        products[index] = leftProduct;
+        leftProduct *= array[index];
+    }
+
+    let rightProduct = 1;
+    for (let index = array.length - 1; index >= 0; index--) {
+        products[index] *= rightProduct;
+        rightProduct *= array[index];
+    }
+
+    return products;
 }
 
 // Test Cases

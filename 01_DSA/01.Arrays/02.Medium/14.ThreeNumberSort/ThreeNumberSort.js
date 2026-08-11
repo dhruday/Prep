@@ -50,7 +50,15 @@ Solution Approaches:
 */
 
 function threeNumberSort(array, order) {
-    // Write your code here
+    const counts = new Map(order.map(value => [value, 0]));
+    for (const value of array) counts.set(value, (counts.get(value) || 0) + 1);
+
+    let index = 0;
+    for (const value of order) {
+        for (let count = 0; count < counts.get(value); count++) array[index++] = value;
+    }
+
+    return array;
 }
 
 // Test Cases

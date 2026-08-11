@@ -50,7 +50,12 @@ Solution Approaches:
 */
 
 function caesarCipherEncryptor(string, key) {
-    // Write your code here
+    const shift = ((key % 26) + 26) % 26;
+    return [...string].map(character => {
+        const code = character.charCodeAt(0);
+        const encrypted = code + shift;
+        return String.fromCharCode(encrypted <= 122 ? encrypted : encrypted - 26);
+    }).join("");
 }
 
 // Test Cases

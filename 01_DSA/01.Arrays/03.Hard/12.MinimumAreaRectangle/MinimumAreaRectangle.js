@@ -50,7 +50,21 @@ Solution Approaches:
 */
 
 function minimumAreaRectangle(points) {
-    // Write your code here
+    const pointSet = new Set(points.map(([x, y]) => `${x}:${y}`));
+    let minimumArea = Infinity;
+
+    for (let first = 0; first < points.length; first++) {
+        for (let second = first + 1; second < points.length; second++) {
+            const [x1, y1] = points[first];
+            const [x2, y2] = points[second];
+            if (x1 === x2 || y1 === y2) continue;
+            if (pointSet.has(`${x1}:${y2}`) && pointSet.has(`${x2}:${y1}`)) {
+                minimumArea = Math.min(minimumArea, Math.abs(x1 - x2) * Math.abs(y1 - y2));
+            }
+        }
+    }
+
+    return minimumArea === Infinity ? 0 : minimumArea;
 }
 
 // Test Cases

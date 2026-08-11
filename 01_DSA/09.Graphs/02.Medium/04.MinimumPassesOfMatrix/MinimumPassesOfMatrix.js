@@ -53,7 +53,37 @@ Constraints:
 */
 
 function minimumPassesOfMatrix(matrix) {
-    // Write your code here
+    if (matrix.length === 0 || matrix[0].length === 0) return 0;
+
+    const queue = [];
+    for (let row = 0; row < matrix.length; row++) {
+        for (let column = 0; column < matrix[0].length; column++) {
+            if (matrix[row][column] > 0) queue.push([row, column]);
+        }
+    }
+
+    let passes = 0;
+    let levelStart = 0;
+    while (levelStart < queue.length) {
+        const levelEnd = queue.length;
+        let converted = false;
+        for (let index = levelStart; index < levelEnd; index++) {
+            const [row, column] = queue[index];
+            for (const [rowOffset, columnOffset] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const nextRow = row + rowOffset;
+                const nextColumn = column + columnOffset;
+                if (nextRow < 0 || nextRow >= matrix.length || nextColumn < 0 || nextColumn >= matrix[0].length) continue;
+                if (matrix[nextRow][nextColumn] >= 0) continue;
+                matrix[nextRow][nextColumn] *= -1;
+                queue.push([nextRow, nextColumn]);
+                converted = true;
+            }
+        }
+        if (converted) passes++;
+        levelStart = levelEnd;
+    }
+
+    return matrix.some(row => row.some(value => value < 0)) ? -1 : passes;
 }
 
 // Helper function to create a deep copy of a matrix

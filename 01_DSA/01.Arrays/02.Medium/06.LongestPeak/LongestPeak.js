@@ -40,7 +40,26 @@ Solution Approaches:
 */
 
 function longestPeak(array) {
-    // Write your code here
+    let longest = 0;
+    let index = 1;
+
+    while (index < array.length - 1) {
+        const isPeak = array[index - 1] < array[index] && array[index] > array[index + 1];
+        if (!isPeak) {
+            index++;
+            continue;
+        }
+
+        let left = index - 2;
+        while (left >= 0 && array[left] < array[left + 1]) left--;
+        let right = index + 2;
+        while (right < array.length && array[right] < array[right - 1]) right++;
+
+        longest = Math.max(longest, right - left - 1);
+        index = right;
+    }
+
+    return longest;
 }
 
 // Test Cases

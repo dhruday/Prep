@@ -69,7 +69,17 @@ Solution Approaches:
 */
 
 function searchInSortedMatrix(matrix, target) {
-    // Write your code here
+    if (matrix.length === 0 || matrix[0].length === 0) return [-1, -1];
+
+    let row = 0;
+    let column = matrix[0].length - 1;
+    while (row < matrix.length && column >= 0) {
+        if (matrix[row][column] === target) return [row, column];
+        if (matrix[row][column] > target) column--;
+        else row++;
+    }
+
+    return [-1, -1];
 }
 
 // Test Cases

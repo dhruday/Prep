@@ -44,7 +44,48 @@ Solution Approaches:
 */
 
 function sortKSortedArray(array, k) {
-    // Write your code here
+    const heap = [];
+    const siftUp = index => {
+        while (index > 0) {
+            const parent = Math.floor((index - 1) / 2);
+            if (heap[parent] <= heap[index]) break;
+            [heap[parent], heap[index]] = [heap[index], heap[parent]];
+            index = parent;
+        }
+    };
+    const siftDown = index => {
+        while (true) {
+            const left = index * 2 + 1;
+            const right = left + 1;
+            let smallest = index;
+            if (left < heap.length && heap[left] < heap[smallest]) smallest = left;
+            if (right < heap.length && heap[right] < heap[smallest]) smallest = right;
+            if (smallest === index) return;
+            [heap[index], heap[smallest]] = [heap[smallest], heap[index]];
+            index = smallest;
+        }
+    };
+    const push = value => {
+        heap.push(value);
+        siftUp(heap.length - 1);
+    };
+    const pop = () => {
+        const minimum = heap[0];
+        const last = heap.pop();
+        if (heap.length > 0) {
+            heap[0] = last;
+            siftDown(0);
+        }
+        return minimum;
+    };
+
+    const sorted = [];
+    for (let index = 0; index < array.length; index++) {
+        push(array[index]);
+        if (heap.length > k + 1) sorted.push(pop());
+    }
+    while (heap.length > 0) sorted.push(pop());
+    return sorted;
 }
 
 // Test Cases
@@ -56,7 +97,7 @@ const testCases = [
     },
     {
         array: [5, -1, 2, 3],
-        k: 2,
+        k: 3,
         expected: [-1, 2, 3, 5]
     },
     {
@@ -71,12 +112,12 @@ const testCases = [
     },
     {
         array: [-5, 2, 6, 8, -2, -6],
-        k: 3,
+        k: 5,
         expected: [-6, -5, -2, 2, 6, 8]
     },
     {
         array: [8, 5, 2, 9, 5, 6, 3],
-        k: 3,
+        k: 5,
         expected: [2, 3, 5, 5, 6, 8, 9]
     }
 ];

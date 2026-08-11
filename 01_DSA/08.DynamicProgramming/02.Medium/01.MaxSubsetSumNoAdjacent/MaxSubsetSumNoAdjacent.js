@@ -22,7 +22,12 @@ Constraints:
 */
 
 function maxSubsetSumNoAdjacent(array) {
-    // Write your code here
+    let previousTwo = 0;
+    let previousOne = 0;
+    for (const value of array) {
+        [previousTwo, previousOne] = [previousOne, Math.max(previousOne, previousTwo + value)];
+    }
+    return previousOne;
 }
 
 // Test Cases

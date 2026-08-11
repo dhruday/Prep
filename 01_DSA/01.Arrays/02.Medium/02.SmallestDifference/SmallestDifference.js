@@ -43,7 +43,29 @@ Solution Approaches:
 */
 
 function smallestDifference(arrayOne, arrayTwo) {
-    // Write your code here
+    const first = [...arrayOne].sort((a, b) => a - b);
+    const second = [...arrayTwo].sort((a, b) => a - b);
+    let firstIndex = 0;
+    let secondIndex = 0;
+    let smallest = Infinity;
+    let pair = [];
+
+    while (firstIndex < first.length && secondIndex < second.length) {
+        const firstValue = first[firstIndex];
+        const secondValue = second[secondIndex];
+        const difference = Math.abs(firstValue - secondValue);
+
+        if (difference < smallest) {
+            smallest = difference;
+            pair = [firstValue, secondValue];
+        }
+        if (difference === 0) return pair;
+
+        if (firstValue < secondValue) firstIndex++;
+        else secondIndex++;
+    }
+
+    return pair;
 }
 
 // Test Cases

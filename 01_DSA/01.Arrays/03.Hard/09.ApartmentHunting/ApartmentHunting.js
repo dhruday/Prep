@@ -109,7 +109,35 @@ Solution Approaches:
 */
 
 function apartmentHunting(blocks, reqs) {
-    // Write your code here
+    if (blocks.length === 0 || reqs.length === 0) return 0;
+
+    const distances = reqs.map(requirement => {
+        const result = new Array(blocks.length).fill(Infinity);
+        let closest = Infinity;
+        for (let index = 0; index < blocks.length; index++) {
+            if (blocks[index][requirement]) closest = index;
+            result[index] = Math.abs(index - closest);
+        }
+        closest = Infinity;
+        for (let index = blocks.length - 1; index >= 0; index--) {
+            if (blocks[index][requirement]) closest = index;
+            result[index] = Math.min(result[index], Math.abs(index - closest));
+        }
+        return result;
+    });
+
+    let bestBlock = 0;
+    let shortestMaximumDistance = Infinity;
+    for (let index = 0; index < blocks.length; index++) {
+        const maximumDistance = distances.reduce((maximum, requirementDistances) =>
+            Math.max(maximum, requirementDistances[index]), 0);
+        if (maximumDistance < shortestMaximumDistance) {
+            shortestMaximumDistance = maximumDistance;
+            bestBlock = index;
+        }
+    }
+
+    return bestBlock;
 }
 
 // Test Cases

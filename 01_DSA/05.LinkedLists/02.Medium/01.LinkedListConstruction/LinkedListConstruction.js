@@ -45,35 +45,79 @@ class DoublyLinkedList {
     }
 
     setHead(node) {
-        // Write your code here
+        if (this.head === null) {
+            this.head = node;
+            this.tail = node;
+            return;
+        }
+        this.insertBefore(this.head, node);
     }
 
     setTail(node) {
-        // Write your code here
+        if (this.tail === null) {
+            this.setHead(node);
+            return;
+        }
+        this.insertAfter(this.tail, node);
     }
 
     insertBefore(node, nodeToInsert) {
-        // Write your code here
+        if (nodeToInsert === node) return;
+        this.remove(nodeToInsert);
+        nodeToInsert.prev = node.prev;
+        nodeToInsert.next = node;
+        if (node.prev === null) this.head = nodeToInsert;
+        else node.prev.next = nodeToInsert;
+        node.prev = nodeToInsert;
     }
 
     insertAfter(node, nodeToInsert) {
-        // Write your code here
+        if (nodeToInsert === node) return;
+        this.remove(nodeToInsert);
+        nodeToInsert.prev = node;
+        nodeToInsert.next = node.next;
+        if (node.next === null) this.tail = nodeToInsert;
+        else node.next.prev = nodeToInsert;
+        node.next = nodeToInsert;
     }
 
     insertAtPosition(position, nodeToInsert) {
-        // Write your code here
+        if (position <= 1) {
+            this.setHead(nodeToInsert);
+            return;
+        }
+        let node = this.head;
+        let currentPosition = 1;
+        while (node !== null && currentPosition++ !== position) node = node.next;
+        if (node === null) this.setTail(nodeToInsert);
+        else this.insertBefore(node, nodeToInsert);
     }
 
     removeNodesWithValue(value) {
-        // Write your code here
+        let node = this.head;
+        while (node !== null) {
+            const next = node.next;
+            if (node.value === value) this.remove(node);
+            node = next;
+        }
     }
 
     remove(node) {
-        // Write your code here
+        if (node === this.head) this.head = this.head.next;
+        if (node === this.tail) this.tail = this.tail.prev;
+        if (node.prev !== null) node.prev.next = node.next;
+        if (node.next !== null) node.next.prev = node.prev;
+        node.prev = null;
+        node.next = null;
     }
 
     containsNodeWithValue(value) {
-        // Write your code here
+        let node = this.head;
+        while (node !== null) {
+            if (node.value === value) return true;
+            node = node.next;
+        }
+        return false;
     }
 }
 
@@ -111,6 +155,15 @@ function runTests() {
         return current === list.head;
     }
 
+    function findNode(list, value) {
+        let current = list.head;
+        while (current !== null) {
+            if (current.value === value) return current;
+            current = current.next;
+        }
+        return null;
+    }
+
     const testCases = [
         {
             description: "Basic operations test",
@@ -134,18 +187,18 @@ function runTests() {
                     type: "insertBefore",
                     nodeValue: 6,
                     toInsertValue: 3,
-                    expected: [4, 1, 2, 3, 5, 6]
+                    expected: [4, 1, 2, 5, 3, 6]
                 },
                 {
                     type: "insertAfter",
                     nodeValue: 6,
                     toInsertValue: 3,
-                    expected: [4, 1, 2, 6, 3, 5]
+                    expected: [4, 1, 2, 5, 6, 3]
                 },
                 {
                     type: "removeValue",
                     value: 3,
-                    expected: [4, 1, 2, 6, 5]
+                    expected: [4, 1, 2, 5, 6]
                 }
             ]
         },
@@ -242,24 +295,26 @@ function runTests() {
                     break;
                     
                 case "setHead":
-                    list.setHead(new Node(operation.value));
+                    list.setHead(findNode(list, operation.value) || new Node(operation.value));
                     break;
                     
                 case "setTail":
-                    list.setTail(new Node(operation.value));
+                    list.setTail(findNode(list, operation.value) || new Node(operation.value));
                     break;
                     
-                case "insertBefore":
-                    let node = new Node(operation.nodeValue);
-                    let nodeToInsert = new Node(operation.toInsertValue);
+                case "insertBefore": {
+                    const node = findNode(list, operation.nodeValue);
+                    const nodeToInsert = findNode(list, operation.toInsertValue) || new Node(operation.toInsertValue);
                     list.insertBefore(node, nodeToInsert);
                     break;
+                }
                     
-                case "insertAfter":
-                    node = new Node(operation.nodeValue);
-                    nodeToInsert = new Node(operation.toInsertValue);
+                case "insertAfter": {
+                    const node = findNode(list, operation.nodeValue);
+                    const nodeToInsert = findNode(list, operation.toInsertValue) || new Node(operation.toInsertValue);
                     list.insertAfter(node, nodeToInsert);
                     break;
+                }
                     
                 case "insertAtPosition":
                     list.insertAtPosition(operation.position, new Node(operation.value));
@@ -269,10 +324,11 @@ function runTests() {
                     list.removeNodesWithValue(operation.value);
                     break;
                     
-                case "remove":
-                    const nodeToRemove = new Node(operation.value);
-                    list.remove(nodeToRemove);
+                case "remove": {
+                    const nodeToRemove = findNode(list, operation.value);
+                    if (nodeToRemove !== null) list.remove(nodeToRemove);
                     break;
+                }
                     
                 case "containsValue":
                     result = list.containsNodeWithValue(operation.value);

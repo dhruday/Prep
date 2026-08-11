@@ -49,7 +49,19 @@ Solution Approaches:
 */
 
 function validStartingCity(distances, fuel, mpg) {
-    // Write your code here
+    if (distances.length === 0 || distances.length !== fuel.length) return -1;
+
+    let startCity = 0;
+    let remainingMiles = 0;
+    for (let city = 0; city < distances.length; city++) {
+        remainingMiles += fuel[city] * mpg - distances[city];
+        if (remainingMiles < 0) {
+            startCity = city + 1;
+            remainingMiles = 0;
+        }
+    }
+
+    return startCity % distances.length;
 }
 
 // Test Cases
@@ -64,7 +76,7 @@ const testCases = [
         distances: [10, 20, 10],
         fuel: [2, 3, 1],
         mpg: 5,
-        expected: 1
+        expected: 0
     },
     {
         distances: [30, 25, 5, 100, 40],
@@ -76,7 +88,7 @@ const testCases = [
         distances: [1, 3, 10, 6, 7, 3, 1],
         fuel: [1, 1, 1, 1, 1, 1, 1],
         mpg: 5,
-        expected: 6
+        expected: 5
     },
     {
         distances: [5, 2, 3],

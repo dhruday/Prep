@@ -46,7 +46,21 @@ Constraints:
 */
 
 function cycleInGraph(edges) {
-    // Write your code here
+    const state = new Array(edges.length).fill(0);
+    const visit = vertex => {
+        if (state[vertex] === 1) return true;
+        if (state[vertex] === 2) return false;
+        state[vertex] = 1;
+        for (const neighbor of edges[vertex]) {
+            if (visit(neighbor)) return true;
+        }
+        state[vertex] = 2;
+        return false;
+    };
+    for (let vertex = 0; vertex < edges.length; vertex++) {
+        if (visit(vertex)) return true;
+    }
+    return false;
 }
 
 // Test Cases

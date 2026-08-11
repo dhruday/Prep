@@ -44,7 +44,27 @@ Solution Approaches:
 */
 
 function largestRange(array) {
-    // Write your code here
+    const unvisited = new Set(array);
+    let bestRange = [];
+    let bestLength = 0;
+
+    for (const number of array) {
+        if (!unvisited.has(number)) continue;
+        unvisited.delete(number);
+
+        let lower = number - 1;
+        while (unvisited.delete(lower)) lower--;
+        let upper = number + 1;
+        while (unvisited.delete(upper)) upper++;
+
+        const length = upper - lower - 1;
+        if (length > bestLength) {
+            bestLength = length;
+            bestRange = [lower + 1, upper - 1];
+        }
+    }
+
+    return bestRange;
 }
 
 // Test Cases

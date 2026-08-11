@@ -36,7 +36,15 @@ Solution Approaches:
 */
 
 function kadanesAlgorithm(array) {
-    // Write your code here
+    if (array.length === 0) return 0;
+
+    let bestEndingHere = array[0];
+    let bestSoFar = array[0];
+    for (let index = 1; index < array.length; index++) {
+        bestEndingHere = Math.max(array[index], bestEndingHere + array[index]);
+        bestSoFar = Math.max(bestSoFar, bestEndingHere);
+    }
+    return bestSoFar;
 }
 
 // Test Cases

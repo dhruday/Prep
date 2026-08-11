@@ -42,7 +42,24 @@ Solution Approaches:
 */
 
 function sortedSquaredArray(array) {
-    // Write your code here
+    const squares = new Array(array.length);
+    let left = 0;
+    let right = array.length - 1;
+
+    for (let index = array.length - 1; index >= 0; index--) {
+        const leftSquare = array[left] ** 2;
+        const rightSquare = array[right] ** 2;
+
+        if (leftSquare > rightSquare) {
+            squares[index] = leftSquare;
+            left++;
+        } else {
+            squares[index] = rightSquare;
+            right--;
+        }
+    }
+
+    return squares;
 }
 
 // Test Cases

@@ -34,7 +34,21 @@ class LinkedList {
 }
 
 function removeKthNodeFromEnd(head, k) {
-    // Write your code here
+    if (head === null || k <= 0) return head;
+
+    const dummy = { next: head };
+    let fast = dummy;
+    let slow = dummy;
+    for (let step = 0; step < k; step++) {
+        fast = fast.next;
+        if (fast === null) return head;
+    }
+    while (fast.next !== null) {
+        fast = fast.next;
+        slow = slow.next;
+    }
+    slow.next = slow.next.next;
+    return dummy.next;
 }
 
 // Test Cases
@@ -126,10 +140,10 @@ function runTests() {
         const linkedList = createLinkedList(testCase.list);
         
         // Remove kth node from end
-        removeKthNodeFromEnd(linkedList, testCase.k);
+        const result = removeKthNodeFromEnd(linkedList, testCase.k);
         
         // Convert result to array for comparison
-        const resultArray = linkedListToArray(linkedList);
+        const resultArray = linkedListToArray(result);
         
         // Compare with expected
         const passed = JSON.stringify(resultArray) === JSON.stringify(testCase.expected);

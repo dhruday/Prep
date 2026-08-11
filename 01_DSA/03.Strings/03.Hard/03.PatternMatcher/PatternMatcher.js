@@ -59,7 +59,37 @@ Solution Approaches:
 */
 
 function patternMatcher(pattern, string) {
-    // Write your code here
+    if (pattern.length > string.length) return [];
+
+    const patternWasSwitched = pattern[0] === "y";
+    const normalized = patternWasSwitched
+        ? [...pattern].map(character => character === "x" ? "y" : "x")
+        : [...pattern];
+    const counts = { x: 0, y: 0 };
+    let firstY = -1;
+    normalized.forEach((character, index) => {
+        counts[character]++;
+        if (character === "y" && firstY === -1) firstY = index;
+    });
+
+    if (counts.y === 0) {
+        if (string.length % counts.x !== 0) return [];
+        const x = string.slice(0, string.length / counts.x);
+        if (x.repeat(counts.x) !== string) return [];
+        return patternWasSwitched ? ["", x] : [x, ""];
+    }
+
+    for (let xLength = 1; xLength < string.length; xLength++) {
+        const remaining = string.length - xLength * counts.x;
+        if (remaining <= 0 || remaining % counts.y !== 0) continue;
+        const yLength = remaining / counts.y;
+        const x = string.slice(0, xLength);
+        const yStart = firstY * xLength;
+        const y = string.slice(yStart, yStart + yLength);
+        const candidate = normalized.map(character => character === "x" ? x : y).join("");
+        if (candidate === string) return patternWasSwitched ? [y, x] : [x, y];
+    }
+    return [];
 }
 
 // Test Cases

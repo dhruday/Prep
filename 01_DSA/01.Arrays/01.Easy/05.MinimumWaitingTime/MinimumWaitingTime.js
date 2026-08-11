@@ -44,7 +44,14 @@ Solution Approaches:
 */
 
 function minimumWaitingTime(queries) {
-    // Write your code here
+    const sortedQueries = [...queries].sort((a, b) => a - b);
+    let totalWaitingTime = 0;
+
+    for (let index = 0; index < sortedQueries.length; index++) {
+        totalWaitingTime += sortedQueries[index] * (sortedQueries.length - index - 1);
+    }
+
+    return totalWaitingTime;
 }
 
 // Test Cases

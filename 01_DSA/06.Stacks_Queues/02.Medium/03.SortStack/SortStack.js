@@ -33,7 +33,22 @@ Test Cases:
 */
 
 function sortStack(stack) {
-    // Write your code here
+    if (stack.length === 0) return stack;
+
+    const value = stack.pop();
+    sortStack(stack);
+
+    const insertInOrder = number => {
+        if (stack.length === 0 || stack[stack.length - 1] <= number) {
+            stack.push(number);
+            return;
+        }
+        const top = stack.pop();
+        insertInOrder(number);
+        stack.push(top);
+    };
+    insertInOrder(value);
+    return stack;
 }
 
 // Test Cases

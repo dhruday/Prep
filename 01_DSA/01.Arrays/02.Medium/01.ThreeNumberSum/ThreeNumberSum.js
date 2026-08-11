@@ -39,7 +39,31 @@ Solution Approaches:
 */
 
 function threeNumberSum(array, targetSum) {
-    // Write your code here
+    const numbers = [...array].sort((a, b) => a - b);
+    const triplets = [];
+
+    for (let first = 0; first < numbers.length - 2; first++) {
+        if (first > 0 && numbers[first] === numbers[first - 1]) continue;
+        let left = first + 1;
+        let right = numbers.length - 1;
+
+        while (left < right) {
+            const sum = numbers[first] + numbers[left] + numbers[right];
+            if (sum === targetSum) {
+                triplets.push([numbers[first], numbers[left], numbers[right]]);
+                left++;
+                right--;
+                while (left < right && numbers[left] === numbers[left - 1]) left++;
+                while (left < right && numbers[right] === numbers[right + 1]) right--;
+            } else if (sum < targetSum) {
+                left++;
+            } else {
+                right--;
+            }
+        }
+    }
+
+    return triplets;
 }
 
 // Test Cases
@@ -62,7 +86,7 @@ const testCases = [
     {
         array: [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
         targetSum: 7,
-        expected: [[-1, 1, 7], [-1, 2, 6], [-1, 3, 5], [0, 1, 6], [0, 2, 5], [0, 3, 4], [1, 2, 4]]
+        expected: [[-1, 0, 8], [-1, 1, 7], [-1, 2, 6], [-1, 3, 5], [0, 1, 6], [0, 2, 5], [0, 3, 4], [1, 2, 4]]
     }
 ];
 

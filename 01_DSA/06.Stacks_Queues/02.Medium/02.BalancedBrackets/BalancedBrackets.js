@@ -31,7 +31,14 @@ Test Cases:
 */
 
 function balancedBrackets(string) {
-    // Write your code here
+    const matchingOpen = { ")": "(", "]": "[", "}": "{" };
+    const opening = new Set(Object.values(matchingOpen));
+    const stack = [];
+    for (const character of string) {
+        if (opening.has(character)) stack.push(character);
+        else if (matchingOpen[character] && stack.pop() !== matchingOpen[character]) return false;
+    }
+    return stack.length === 0;
 }
 
 // Test Cases

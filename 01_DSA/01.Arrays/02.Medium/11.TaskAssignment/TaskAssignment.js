@@ -48,7 +48,26 @@ Solution Approaches:
 */
 
 function taskAssignment(k, tasks) {
-    // Write your code here
+    if (tasks.length !== k * 2) return [];
+
+    const taskIndicesByDuration = new Map();
+    tasks.forEach((duration, index) => {
+        if (!taskIndicesByDuration.has(duration)) taskIndicesByDuration.set(duration, []);
+        taskIndicesByDuration.get(duration).push(index);
+    });
+
+    const sortedDurations = [...tasks].sort((a, b) => a - b);
+    const assignments = [];
+    for (let index = 0; index < k; index++) {
+        const firstDuration = sortedDurations[index];
+        const secondDuration = sortedDurations[sortedDurations.length - 1 - index];
+        assignments.push([
+            taskIndicesByDuration.get(firstDuration).pop(),
+            taskIndicesByDuration.get(secondDuration).pop(),
+        ]);
+    }
+
+    return assignments;
 }
 
 // Test Cases

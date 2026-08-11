@@ -55,7 +55,13 @@ Solution Approaches:
 */
 
 function shortenPath(path) {
-    // Write your code here
+    const directories = [];
+    for (const token of path.split("/")) {
+        if (token === "" || token === ".") continue;
+        if (token === "..") directories.pop();
+        else directories.push(token);
+    }
+    return `/${directories.join("/")}`;
 }
 
 // Test Cases
