@@ -41,19 +41,19 @@ function squareOfZeroes(matrix) {
     const belowZeros = Array(n).fill().map(() => Array(n).fill(0));
     
     // Fill auxiliary arrays
-    for (let row = 0; row < n; row++) {
-        for (let col = 0; col < n; col++) {
+    for (let row = n - 1; row >= 0; row--) {
+        for (let col = n - 1; col >= 0; col--) {
             if (matrix[row][col] === 0) {
                 // Count continuous zeros to the right
                 rightZeros[row][col] = 1;
-                if (col > 0) {
-                    rightZeros[row][col] += rightZeros[row][col - 1];
+                if (col < n - 1) {
+                    rightZeros[row][col] += rightZeros[row][col + 1];
                 }
                 
                 // Count continuous zeros below
                 belowZeros[row][col] = 1;
-                if (row > 0) {
-                    belowZeros[row][col] += belowZeros[row - 1][col];
+                if (row < n - 1) {
+                    belowZeros[row][col] += belowZeros[row + 1][col];
                 }
             }
         }

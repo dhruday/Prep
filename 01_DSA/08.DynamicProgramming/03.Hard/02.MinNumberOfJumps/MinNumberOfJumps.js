@@ -44,7 +44,7 @@ function runTests() {
     const testCases = [
         {
             input: [3, 4, 2, 1, 2, 3, 7, 1, 1, 1, 3],
-            expected: 3,
+            expected: 4,
             description: "Sample test case"
         },
         {
@@ -79,7 +79,7 @@ function runTests() {
         },
         {
             input: [1, 2, 5, 2, 1, 1, 1, 1],
-            expected: 4,
+            expected: 3,
             description: "Optimal path not obvious"
         }
     ];

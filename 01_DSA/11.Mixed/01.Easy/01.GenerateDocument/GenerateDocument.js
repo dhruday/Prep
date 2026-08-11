@@ -71,7 +71,7 @@ function runTests() {
         {
             characters: "aheaolabbhb",
             document: "hello",
-            expected: true,
+            expected: false,
             description: "Extra characters available"
         },
         {

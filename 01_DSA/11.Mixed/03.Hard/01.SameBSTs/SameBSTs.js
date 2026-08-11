@@ -80,7 +80,7 @@ function runTests() {
         {
             arrayOne: [5, 2, 7],
             arrayTwo: [5, 7, 2],
-            expected: false,
+            expected: true,
             description: "Different order changes BST structure"
         },
         {

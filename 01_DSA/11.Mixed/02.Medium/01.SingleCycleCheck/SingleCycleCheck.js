@@ -71,12 +71,12 @@ function runTests() {
         },
         {
             array: [2, 2, -1],
-            expected: false,
+            expected: true,
             description: "Skips elements"
         },
         {
             array: [2, 2, 2],
-            expected: false,
+            expected: true,
             description: "Same jump value"
         },
         {
@@ -86,7 +86,7 @@ function runTests() {
         },
         {
             array: [-1, 2, 2],
-            expected: false,
+            expected: true,
             description: "Multiple cycles"
         }
     ];

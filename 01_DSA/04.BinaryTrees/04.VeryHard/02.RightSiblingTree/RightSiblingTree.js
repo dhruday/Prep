@@ -57,32 +57,20 @@ class BinaryTree {
 }
 
 function rightSiblingTree(root) {
-    function transform(node, sibling) {
-        if (node === null) {
-            return;
+    if (root === null) return null;
+
+    let level = [root];
+    while (level.length > 0) {
+        const nextLevel = [];
+        for (const node of level) {
+            if (node.left !== null) nextLevel.push(node.left);
+            if (node.right !== null) nextLevel.push(node.right);
         }
-
-        // Save original children BEFORE changing node.right
-        const leftChild = node.left;
-        const rightChild = node.right;
-
-        // Right pointer now points to right sibling
-        node.right = sibling;
-
-        // Left child's sibling is the original right child
-        transform(leftChild, rightChild);
-
-        // Right child's sibling is the left child of
-        // the current node's sibling
-        if (sibling === null) {
-            transform(rightChild, null);
-        } else {
-            transform(rightChild, sibling.left);
+        for (let index = 0; index < level.length; index++) {
+            level[index].right = level[index + 1] || null;
         }
+        level = nextLevel;
     }
-
-    transform(root, null);
-
     return root;
 }
 
@@ -98,53 +86,30 @@ function runTests() {
         return node;
     }
 
-    // Helper function to validate right sibling connections
-    function validateRightSiblings(root) {
-        if (!root) return true;
-        
-        // Use level-order traversal to validate connections
-        const queue = [[root, 0]]; // [node, level]
-        let currentLevel = 0;
-        let levelNodes = [];
-        
-        while (queue.length > 0) {
-            const [node, level] = queue.shift();
-            
-            if (level > currentLevel) {
-                // Validate previous level's connections
-                for (let i = 0; i < levelNodes.length - 1; i++) {
-                    if (levelNodes[i].right !== levelNodes[i + 1]) return false;
-                }
-                if (levelNodes[levelNodes.length - 1].right !== null) return false;
-                
-                currentLevel = level;
-                levelNodes = [];
+    // Snapshot each original level before right pointers are repurposed.
+    function getLevels(root) {
+        if (!root) return [];
+
+        const levels = [];
+        const queue = [root];
+        for (let index = 0; index < queue.length;) {
+            const levelEnd = queue.length;
+            const level = [];
+            while (index < levelEnd) {
+                const node = queue[index++];
+                level.push(node);
+                if (node.left) queue.push(node.left);
+                if (node.right) queue.push(node.right);
             }
-            
-            levelNodes.push(node);
-            
-            if (node.left) queue.push([node.left, level + 1]);
-            // Note: We still need to traverse the original right children
-            // even though they're no longer pointed to by 'right'
-            const rightChild = getRightChild(node);
-            if (rightChild) queue.push([rightChild, level + 1]);
+            levels.push(level);
         }
-        
-        // Validate last level
-        for (let i = 0; i < levelNodes.length - 1; i++) {
-            if (levelNodes[i].right !== levelNodes[i + 1]) return false;
-        }
-        if (levelNodes[levelNodes.length - 1].right !== null) return false;
-        
-        return true;
+        return levels;
     }
 
-    // Helper function to get the original right child
-    // (This information would need to be stored somewhere during the transformation)
-    function getRightChild(node) {
-        // This is a placeholder - in a real implementation,
-        // you'd need to store this information during the transformation
-        return null;
+    function validateRightSiblings(levels) {
+        return levels.every(level => level.every((node, index) =>
+            node.right === (level[index + 1] || null)
+        ));
     }
 
     const testCases = [
@@ -189,11 +154,13 @@ function runTests() {
         // Create input tree
         const tree = createTree(testCase.tree);
         
+        const levels = getLevels(tree);
+
         // Transform to right sibling tree
         const result = rightSiblingTree(tree);
         
         // Validate the transformation
-        const isValid = validateRightSiblings(result);
+        const isValid = validateRightSiblings(levels);
         
         console.log(`Input Tree: ${JSON.stringify(testCase.tree)}`);
         console.log(`Right Sibling Properties Valid: ${isValid ? 'Yes ✅' : 'No ❌'}`);
