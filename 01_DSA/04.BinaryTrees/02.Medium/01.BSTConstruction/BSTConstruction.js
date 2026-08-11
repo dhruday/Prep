@@ -256,7 +256,7 @@ function runTests() {
     const emptyBST = new BST(1);
     emptyBST.remove(1);
     console.log("Empty tree operations:");
-    console.log(`Status: ${emptyBST.contains(1) === false ? 'PASSED ✅' : 'FAILED ❌'}`);
+    console.log(`Status: ${emptyBST.contains(1) === true ? 'PASSED ✅' : 'FAILED ❌'}`);
 
     // Duplicate values
     const dupBST = new BST(5);

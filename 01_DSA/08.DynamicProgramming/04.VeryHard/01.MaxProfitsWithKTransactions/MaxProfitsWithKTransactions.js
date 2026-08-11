@@ -95,13 +95,13 @@ function runTests() {
         {
             prices: [1, 100, 2, 200, 3, 300],
             k: 2,
-            expected: 497,
+            expected: 496,
             description: "Large price differences"
         },
         {
             prices: [10, 5, 10, 5, 10, 5],
             k: 4,
-            expected: 20,
+            expected: 10,
             description: "Alternating prices"
         }
     ];

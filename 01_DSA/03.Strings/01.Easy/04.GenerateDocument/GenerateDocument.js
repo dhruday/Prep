@@ -77,7 +77,7 @@ const testCases = [
     {
         characters: "aheaolabbhb",
         document: "hello",
-        expected: true
+        expected: false
     },
     {
         characters: "aheaolabbhb",
@@ -102,7 +102,7 @@ const testCases = [
     {
         characters: "abcabc",
         document: "aabbcc",
-        expected: false
+        expected: true
     }
 ];
 

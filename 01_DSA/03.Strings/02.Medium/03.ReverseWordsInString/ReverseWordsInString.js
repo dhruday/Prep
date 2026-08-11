@@ -72,7 +72,7 @@ const testCases = [
     },
     {
         string: "   this      string     has a     lot    of    whitespace   ",
-        expected: "   whitespace    of    lot     a has      string      this   "
+        expected: "   whitespace    of    lot     a has     string      this   "
     },
     {
         string: "hello",

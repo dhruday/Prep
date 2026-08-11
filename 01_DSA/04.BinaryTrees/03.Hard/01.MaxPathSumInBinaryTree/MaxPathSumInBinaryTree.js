@@ -111,7 +111,7 @@ function runTests() {
         },
         {
             tree: [5, -3, 6, 2, -2, -1, 7],
-            expected: 17,
+            expected: 18,
             description: "Tree with negative values"
         },
         {
@@ -121,7 +121,7 @@ function runTests() {
         },
         {
             tree: [1, 2, 3, -4, 5, -6, 7, null, null, 8, 9],
-            expected: 24,
+            expected: 27,
             description: "Max path doesn't pass through root"
         },
         {

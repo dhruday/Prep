@@ -96,7 +96,7 @@ function runTests() {
 
     const testCases = [
         {
-            tree: [1, 3, 2, 7, 4, null, null, 8, null, null, 5, null, null, 9, null, null, null, null, null, null, 6],
+            tree: [1, 3, 2, 7, 4, null, null, 8, null, null, 5, null, null, null, null, 9, null, null, null, null, null, null, 6],
             expected: 6,
             description: "Sample tree from example"
         },

@@ -85,7 +85,7 @@ function runTests() {
         },
         {
             input: [-5, -4, -3, -2, -1],
-            expected: [-4, -3, -2, -1, -5],
+            expected: [-4, -3, -2, -1, -1],
             description: "Array with negative numbers"
         },
         {

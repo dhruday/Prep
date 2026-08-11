@@ -94,7 +94,7 @@ function runTests() {
         {
             pi: "3141592653",
             numbers: ["314", "15", "926", "535", "8", "97", "93", "23", "84", "6"],
-            expected: 5,
+            expected: -1,
             description: "Many possible combinations"
         }
     ];

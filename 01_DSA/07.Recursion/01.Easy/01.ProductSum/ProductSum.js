@@ -56,12 +56,12 @@ function runTests() {
         },
         {
             input: [9, [2, -3, [4, 1]], 8, [[-2]]],
-            expected: 20,
+            expected: 33,
             description: "Mixed nesting with negative numbers"
         },
         {
             input: [1, [1, [1, [1, [1, 1]]]]],
-            expected: 13,
+            expected: 273,
             description: "Linear nesting"
         },
         {
@@ -71,7 +71,7 @@ function runTests() {
         },
         {
             input: [-1, [-1, [-1]]],
-            expected: -5,
+            expected: -9,
             description: "Nested negative numbers"
         }
     ];

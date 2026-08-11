@@ -75,7 +75,7 @@ function runTests() {
         {
             items: [[1, 1], [4, 5], [5, 3], [6, 4]],
             capacity: 7,
-            expected: [11, [0, 2, 3]],
+            expected: [11, [2, 3]],
             description: "Multiple items fit"
         },
         {
@@ -87,19 +87,19 @@ function runTests() {
         {
             items: [[1, 1], [3, 4], [4, 5], [5, 7]],
             capacity: 7,
-            expected: [9, [0, 1, 2]],
+            expected: [5, [0, 2]],
             description: "Optimal solution not greedy"
         },
         {
             items: [[10, 5], [40, 20], [30, 15], [50, 25]],
             capacity: 60,
-            expected: [120, [0, 1, 2, 3]],
+            expected: [120, [1, 2, 3]],
             description: "Large values and weights"
         },
         {
             items: [[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]],
             capacity: 10,
-            expected: [9, [0, 1, 2, 3]],
+            expected: [8, [2, 4]],
             description: "Sequential weights"
         }
     ];

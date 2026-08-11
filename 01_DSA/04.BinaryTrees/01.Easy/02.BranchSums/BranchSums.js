@@ -128,7 +128,7 @@ function runTests() {
     const testCases = [
         {
             tree: tree1,
-            expected: [15, 16, 18, 10],
+            expected: [15, 16, 18, 11],
             description: "Full tree from example"
         },
         {

@@ -80,7 +80,7 @@ const testCases = [
     },
     {
         string: "A man, a plan, a canal: Panama",
-        expected: true
+        expected: false
     }
 ];
 

@@ -80,11 +80,11 @@ const testCases = [
     },
     {
         array: [-1, 1, 3, 5, 7],
-        expected: -1
+        expected: 1
     },
     {
         array: [-10, -5, 0, 5, 10],
-        expected: 5
+        expected: -1
     }
 ];
 

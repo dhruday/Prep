@@ -136,7 +136,7 @@ function runTests() {
             tree: [1, 2, 3, 4, 5, 6, 7, null, null, null, null, 8],
             target: 3,
             k: 2,
-            expected: [2, 7, 8],
+            expected: [2, 8],
             description: "Sample tree from example"
         },
         {
@@ -150,7 +150,7 @@ function runTests() {
             tree: [1, 2, 3, 4, 5, 6, 7],
             target: 7,
             k: 3,
-            expected: [2, 4, 5],
+            expected: [2],
             description: "Target is leaf node"
         },
         {

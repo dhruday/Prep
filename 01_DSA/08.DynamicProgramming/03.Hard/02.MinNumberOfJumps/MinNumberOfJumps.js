@@ -44,7 +44,7 @@ function runTests() {
     const testCases = [
         {
             input: [3, 4, 2, 1, 2, 3, 7, 1, 1, 1, 3],
-            expected: 4,
+            expected: 3,
             description: "Sample test case"
         },
         {

@@ -100,7 +100,7 @@ function runTests() {
 
     // Helper function to validate flattened tree
     function validateFlattenedTree(head) {
-        if (!head) return true;
+        if (!head) return [];
         
         let current = head;
         const values = [];

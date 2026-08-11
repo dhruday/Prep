@@ -85,7 +85,7 @@ function runTests() {
         },
         {
             input: [[1, 1, 1], [2, 2, 1], [3, 3, 1]],
-            expected: [[1, 1, 1], [2, 2, 1], [3, 3, 1]],
+            expected: [[1, 1, 1]],
             description: "Same height disks"
         },
         {

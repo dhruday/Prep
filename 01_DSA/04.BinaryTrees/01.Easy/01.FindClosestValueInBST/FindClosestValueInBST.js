@@ -63,14 +63,6 @@ class BST {
     }
 }
 
-class BST {
-    constructor(value) {
-        this.value = value;
-        this.left = null;
-        this.right = null;
-    }
-}
-
 function findClosestValueInBst(tree, target) {
     let currentNode = tree;
     let closestValue = tree.value;

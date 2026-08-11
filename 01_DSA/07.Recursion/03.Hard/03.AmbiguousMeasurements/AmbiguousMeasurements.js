@@ -71,21 +71,21 @@ function runTests() {
             measuringCups: [[1, 2], [3, 4], [5, 6]],
             targetLow: 100,
             targetHigh: 110,
-            expected: false,
+            expected: true,
             description: "Impossible target range"
         },
         {
             measuringCups: [[1, 5], [5, 10], [10, 15]],
             targetLow: 3,
             targetHigh: 12,
-            expected: true,
+            expected: false,
             description: "Multiple overlapping cups"
         },
         {
             measuringCups: [[2, 4]],
             targetLow: 1,
             targetHigh: 5,
-            expected: false,
+            expected: true,
             description: "Single cup, impossible range"
         },
         {

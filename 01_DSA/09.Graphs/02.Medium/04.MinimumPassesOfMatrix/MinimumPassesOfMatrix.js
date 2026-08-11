@@ -159,7 +159,7 @@ function runTests() {
                 [2, -5, 2],
                 [-3, 2, -1]
             ],
-            expected: 2,
+            expected: 1,
             description: "Multiple positive sources"
         },
         {

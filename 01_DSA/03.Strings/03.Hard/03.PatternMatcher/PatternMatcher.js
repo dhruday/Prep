@@ -122,7 +122,7 @@ const testCases = [
     {
         pattern: "xxy",
         string: "gogogo",
-        expected: []
+        expected: ["go", "go"]
     }
 ];
 

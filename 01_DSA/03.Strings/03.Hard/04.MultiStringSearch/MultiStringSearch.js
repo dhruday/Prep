@@ -93,7 +93,7 @@ const testCases = [
     {
         bigString: "Mary goes to the shopping center",
         smallStrings: ["to", "Mary", "centers", "shop", "shopping", "string", "kappa"],
-        expected: [true, true, false, false, true, false, false]
+        expected: [true, true, false, true, true, false, false]
     },
     {
         bigString: "adcb",

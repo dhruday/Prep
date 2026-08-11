@@ -117,12 +117,16 @@ function runTests() {
         // 2. It has the same length as the expected solution
         // 3. All numbers in the sequence appear in the original array
         // 4. The sequence follows the original order
-        const isValidSequence = isValid && correctLength && 
-            result.every(num => testCase.input.includes(num)) &&
-            result.every((num, idx) => {
-                if (idx === 0) return true;
-                return testCase.input.indexOf(result[idx]) > testCase.input.indexOf(result[idx - 1]);
-            });
+        let nextInputIndex = 0;
+        const isSubsequence = result.every(num => {
+            while (nextInputIndex < testCase.input.length && testCase.input[nextInputIndex] !== num) {
+                nextInputIndex++;
+            }
+            if (nextInputIndex === testCase.input.length) return false;
+            nextInputIndex++;
+            return true;
+        });
+        const isValidSequence = isValid && correctLength && isSubsequence;
         
         console.log(`Input: ${JSON.stringify(testCase.input)}`);
         console.log(`Expected Length: ${testCase.expected.length}`);

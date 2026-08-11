@@ -118,7 +118,7 @@ function runTests() {
             description: "Single node tree"
         },
         {
-            input: [1, 2, null, 3, null, 4],
+            input: [1, 2, null, 3, null, null, null, 4],
             expected: [1, null, 2, null, 3, null, 4],
             description: "Left-skewed tree"
         },

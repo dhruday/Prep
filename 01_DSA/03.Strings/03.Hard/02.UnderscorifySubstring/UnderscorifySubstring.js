@@ -100,7 +100,7 @@ const testCases = [
     {
         string: "test test test test",
         substring: "test",
-        expected: "_test test test test_"
+        expected: "_test_ _test_ _test_ _test_"
     },
     {
         string: "tttttttttttttt",
