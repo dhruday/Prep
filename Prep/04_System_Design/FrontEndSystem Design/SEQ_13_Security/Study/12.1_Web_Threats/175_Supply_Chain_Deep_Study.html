@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Supply Chain Attacks Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:1rem}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#ef4444;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #ef4444;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#ef4444;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Supply Chain Attacks Deep Study</h1>
+<p class="sub">Module 12.1 · Security Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Attack &amp; Defense</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. The npm Supply Chain Problem</h3>
+    <pre><span class="cm">// Average React app: 1,000-2,000 dependencies (direct + transitive)</span>
+<span class="cm">// Each dependency = code you trust to run in your app / user's browser</span>
+<span class="cm">//</span>
+<span class="cm">// Attack vectors:</span>
+<span class="cm">// 1. Compromised maintainer account → push malicious update</span>
+<span class="cm">//    (event-stream 2018: 1.5M weekly downloads, crypto wallet theft)</span>
+<span class="cm">// 2. Typosquatting → register crossenv instead of cross-env</span>
+<span class="cm">// 3. Dependency confusion → publish internal package name to npm public</span>
+<span class="cm">// 4. Install scripts → "postinstall": "node steal-env.js"</span>
+<span class="cm">// 5. Abandoned package takeover → request ownership transfer</span>
+<span class="cm">//</span>
+<span class="cm">// The trust model is fragile:</span>
+<span class="cm">//   npm install lodash → trusts lodash + all its deps</span>
+<span class="cm">//   → trusts all maintainers of those packages</span>
+<span class="cm">//   → trusts npm's infrastructure wasn't compromised</span>
+<span class="cm">//   → trusts the registry is serving the real package</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Attack Categories</h3>
+    <table>
+      <tr><th>Attack</th><th>How It Works</th><th>Famous Example</th></tr>
+      <tr><td>Account Takeover</td><td>Compromise maintainer's npm credentials</td><td>ua-parser-js (2021) — crypto miner injected</td></tr>
+      <tr><td>Typosquatting</td><td>Publish malicious package with similar name</td><td>crossenv (stole env vars), colourama</td></tr>
+      <tr><td>Dependency Confusion</td><td>Public package matches private name, higher version wins</td><td>Alex Birsan (2021) — hit Apple, Microsoft, Tesla</td></tr>
+      <tr><td>Malicious Update</td><td>Legitimate package pushes poisoned update</td><td>event-stream (2018) — flatmap-stream injected</td></tr>
+      <tr><td>Install Scripts</td><td>postinstall runs arbitrary code during npm install</td><td>eslint-scope (2018) — stole npm tokens</td></tr>
+      <tr><td>CDN Compromise</td><td>Tamper with files on CDN (unpkg, cdnjs)</td><td>cdnjs RCE vulnerability (2021)</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>3. SRI (Subresource Integrity)</h3>
+    <pre><span class="cm">// When loading scripts from CDN, verify file hasn't been tampered</span>
+<span class="cm">// Browser computes hash of downloaded file, compares to expected hash</span>
+
+&lt;script
+  src=<span class="str">"https://cdn.example.com/lib@3.0.0/dist/lib.min.js"</span>
+  integrity=<span class="str">"sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"</span>
+  crossorigin=<span class="str">"anonymous"</span>&gt;
+&lt;/script&gt;
+
+<span class="cm">// Generate hash: openssl dgst -sha384 -binary lib.min.js | base64</span>
+<span class="cm">// If CDN is compromised and file changes → hash mismatch → script blocked</span>
+<span class="cm">// Must include crossorigin="anonymous" for CORS-enabled resources</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>1. Dependency Confusion Attack (Deep Dive)</h3>
+    <pre><span class="cm">// Your company has private npm packages:</span>
+<span class="cm">//   @company/auth-utils (private registry, version 1.2.0)</span>
+<span class="cm">//</span>
+<span class="cm">// Attack: publish "auth-utils" (no scope) to public npm at version 99.0.0</span>
+<span class="cm">// If .npmrc is misconfigured, npm resolves: higher version wins</span>
+<span class="cm">// → installs public malicious 99.0.0 instead of private 1.2.0</span>
+<span class="cm">//</span>
+<span class="cm">// Defense:</span>
+<span class="cm">// 1. Always use scoped packages (@company/name)</span>
+<span class="cm">// 2. Configure .npmrc to route scopes to private registry:</span>
+<span class="cm">//    @company:registry=https://npm.company.com/</span>
+<span class="cm">// 3. "Register" your private names on public npm as empty placeholders</span>
+<span class="cm">// 4. Use package-lock.json (pins resolved URLs, not just versions)</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Defense: Lockfiles, Auditing &amp; Signing</h3>
+    <pre><span class="cm">// LOCKFILE: pins exact versions + integrity hashes</span>
+<span class="cm">// package-lock.json / yarn.lock / pnpm-lock.yaml</span>
+<span class="cm">// ✅ Always commit lockfiles to version control</span>
+<span class="cm">// ✅ Use npm ci (not npm install) in CI — fails if lock doesn't match</span>
+
+<span class="cm">// AUDIT: scan for known vulnerabilities</span>
+npm audit                   <span class="cm">// Check for CVEs</span>
+npm audit --production      <span class="cm">// Skip devDependencies</span>
+npx audit-ci --critical     <span class="cm">// Fail CI on critical vulns</span>
+
+<span class="cm">// SIGNING: npm provenance (2023)</span>
+<span class="cm">// Packages published via GitHub Actions can include provenance</span>
+<span class="cm">// → cryptographic proof of: who built it, from which commit, with what workflow</span>
+<span class="cm">// npm publish --provenance</span>
+<span class="cm">// Visible on npmjs.com as a green verified badge</span>
+
+<span class="cm">// SOCKET.DEV / SNYK: continuous monitoring for suspicious package behavior</span>
+<span class="cm">// Catches: install scripts, network calls, env var access, obfuscated code</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: How would you design a secure dependency management pipeline for a frontend team?</div>
+      <div class="a">Multi-layered approach: (1) Lockfiles committed and enforced — CI uses npm ci which fails if lock is stale, ensuring reproducible builds. (2) Pin exact versions in package.json (no ^ or ~) for sensitive packages. (3) npm audit in CI — configure audit-ci to fail the build on high/critical vulnerabilities. (4) Renovate/Dependabot for automated dependency updates with CI checks. (5) Ignore install scripts for untrusted packages (--ignore-scripts with explicit allow list). (6) Private registry proxy (Artifactory/Verdaccio) that caches packages and blocks known-malicious ones. (7) SRI hashes on all CDN-loaded scripts. (8) Socket.dev or Snyk integration that flags behavioral anomalies (new install scripts, env access, network calls) in PRs. (9) CODEOWNERS on package.json — require security team approval for new dependencies. (10) Regular dependency review: trim unused packages, audit transitive deps.</div>
+      <div class="followup">Follow-up: How do you handle the case where a critical vulnerability is found in a deep transitive dependency?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q2: Explain the event-stream incident and its lessons.</div>
+      <div class="a">event-stream was a popular npm package (1.5M weekly downloads). The original maintainer had lost interest and handed ownership to a contributor who asked for it. That new maintainer added a dependency (flatmap-stream) which contained obfuscated code targeting the Copay Bitcoin wallet app. The malicious code only activated in the Copay build environment and stole wallet credentials. Lessons: (1) The "trust chain problem" — you trust not just the package but all its maintainers, present and future. (2) Transitive dependency attacks are stealthy — the malicious code was one level deep, not in event-stream itself. (3) npm's social model (anyone can request transfer) is a vulnerability. (4) Targeted attacks are hard to detect — the payload only ran in one specific app. Mitigations inspired: npm 2FA enforcement for popular packages, GitHub's npm provenance, Socket.dev behavioral analysis.</div>
+      <div class="followup">Follow-up: How does npm provenance solve this? What are its limitations?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q3: What is SRI and when would you NOT use it?</div>
+      <div class="a">SRI (Subresource Integrity) lets you specify a cryptographic hash of the expected file content in the script/link tag. The browser downloads the resource, computes the hash, and blocks execution if it doesn't match. I use it for all CDN-loaded scripts — it protects against CDN compromise, MITM (if somehow TLS fails), and cache poisoning. When NOT to use: (1) When loading from first-party same-origin (SRI adds overhead for no security benefit). (2) When the resource URL is versioned AND immutable (e.g., npm CDN with exact version — the URL changes per version). (3) When using dynamic imports that frequently change — you'd need to update hashes in the HTML on every change. (4) Some analytics/widget scripts that are intentionally updated by the third party. In those cases, I prefer CSP with strict script-src instead of SRI.</div>
+      <div class="followup">Follow-up: Can SRI protect against a compromised build pipeline?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>1. npm Configuration Hardening</h3>
+    <pre><span class="cm">// .npmrc — project level</span>
+<span class="str">engine-strict</span>=<span class="kw">true</span>
+<span class="str">ignore-scripts</span>=<span class="kw">true</span>          <span class="cm">// Block install scripts by default</span>
+<span class="str">audit</span>=<span class="kw">true</span>                    <span class="cm">// Audit on every install</span>
+<span class="str">fund</span>=<span class="kw">false</span>
+<span class="str">@company:registry</span>=https://npm.company.com/  <span class="cm">// Private scope routing</span>
+
+<span class="cm">// Allow-list specific packages that need install scripts:</span>
+<span class="cm">// .npmrc: (npm 9.4+)</span>
+<span class="cm">// allow-scripts[esbuild]=true</span>
+<span class="cm">// allow-scripts[sharp]=true</span>
+
+<span class="cm">// package.json — pin versions</span>
+{
+  <span class="str">"dependencies"</span>: {
+    <span class="str">"react"</span>: <span class="str">"18.2.0"</span>,       <span class="cm">// No ^ or ~</span>
+    <span class="str">"@company/auth"</span>: <span class="str">"2.1.0"</span>  <span class="cm">// Scoped for private</span>
+  }
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. CI Pipeline Supply Chain Checks</h3>
+    <pre><span class="cm"># GitHub Actions workflow</span>
+- name: Install (strict)
+  run: npm ci --ignore-scripts
+
+- name: Run allowed install scripts
+  run: npx allow-scripts
+
+- name: Security audit
+  run: npx audit-ci --critical
+
+- name: Check for new dependencies
+  run: |
+    git diff HEAD~1 package.json |
+    grep '"dependencies"' &amp;&amp;
+    echo "⚠️ New dependency added — requires security review"
+
+- name: License check
+  run: npx license-checker --failOn "GPL-3.0"
+
+- name: SRI hash generation
+  run: npx ssri $(cat dist/vendor.js) --algorithms sha384</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Defense Layer Checklist</h3>
+    <pre>✅ Commit lockfiles (package-lock.json / yarn.lock)
+✅ Use npm ci in CI (not npm install)
+✅ Pin exact versions for critical dependencies
+✅ Run npm audit in CI pipeline (fail on high/critical)
+✅ Use --ignore-scripts with explicit allow-list
+✅ Scope private packages (@company/name)
+✅ Route scoped packages to private registry in .npmrc
+✅ SRI hashes on all CDN &lt;script&gt; and &lt;link&gt; tags
+✅ Dependabot/Renovate for automated updates
+✅ CODEOWNERS on package.json changes
+✅ Socket.dev or Snyk for behavioral analysis
+✅ Require 2FA for npm publish permissions
+✅ Use npm provenance (--provenance) for published packages
+✅ Regular dependency trimming (remove unused)
+✅ Review transitive dependencies (npm ls --all)</pre>
+  </div>
+
+  <div class="card">
+    <h3>Notable Incidents Timeline</h3>
+    <table>
+      <tr><th>Year</th><th>Incident</th><th>Impact</th></tr>
+      <tr><td>2016</td><td>left-pad unpublished</td><td>Broke thousands of builds worldwide</td></tr>
+      <tr><td>2018</td><td>event-stream compromise</td><td>Targeted Copay wallet — crypto theft</td></tr>
+      <tr><td>2018</td><td>eslint-scope</td><td>Stole npm tokens via postinstall</td></tr>
+      <tr><td>2021</td><td>ua-parser-js</td><td>Crypto miner + password stealer injected</td></tr>
+      <tr><td>2021</td><td>Dependency confusion</td><td>Hit Apple, Microsoft, Tesla internal systems</td></tr>
+      <tr><td>2021</td><td>colors / faker</td><td>Maintainer protest — infinite loop injected</td></tr>
+      <tr><td>2022</td><td>node-ipc</td><td>Protestware — geo-targeted file deletion</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

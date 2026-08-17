@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Avoiding Unnecessary Re-Renders Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2e1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Avoiding Unnecessary Re-Renders Deep Study</h1>
+<p class="sub">Module 7.3 · Rendering Performance · React Optimization Patterns</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Why Components Re-Render</div>
+  <div class="tab" onclick="setTab(1)">Prevention Patterns</div>
+  <div class="tab" onclick="setTab(2)">Context Optimization</div>
+  <div class="tab" onclick="setTab(3)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. Three Reasons a React Component Re-Renders</h3>
+    <pre><span class="cm">// A component re-renders when:</span>
+<span class="cm">//</span>
+<span class="cm">// 1. Its STATE changes (useState, useReducer)</span>
+<span class="cm">//    setState(newValue) → React schedules re-render</span>
+<span class="cm">//    Note: setState(sameValue) does NOT re-render (with primitives)</span>
+<span class="cm">//    BUT: setState({...obj}) ALWAYS re-renders (new reference)</span>
+<span class="cm">//</span>
+<span class="cm">// 2. Its PARENT re-renders</span>
+<span class="cm">//    Parent re-renders → ALL children re-render</span>
+<span class="cm">//    Even if the child's PROPS haven't changed!</span>
+<span class="cm">//    This is the #1 source of wasted renders</span>
+<span class="cm">//</span>
+<span class="cm">// 3. CONTEXT it consumes changes</span>
+<span class="cm">//    useContext(MyContext) → re-renders when context value changes</span>
+<span class="cm">//    Even if you only use 1 field and a DIFFERENT field changed!</span>
+<span class="cm">//    This is the #2 source of wasted renders</span>
+<span class="cm">//</span>
+<span class="cm">// DOES NOT re-render when:</span>
+<span class="cm">// ✗ Props change (props change BECAUSE parent re-rendered)</span>
+<span class="cm">// ✗ useRef changes (ref mutations don't trigger renders)</span>
+<span class="cm">// ✗ Direct DOM manipulation (React doesn't know about it)</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. The Cascade Problem</h3>
+    <pre><span class="cm">// One state change at root → entire tree re-renders</span>
+<span class="cm">//</span>
+<span class="cm">// App (state: theme) ← setState triggers re-render</span>
+<span class="cm">// ├── Header        ← re-renders (parent changed)</span>
+<span class="cm">// │   ├── Logo      ← re-renders (parent changed)</span>
+<span class="cm">// │   └── NavBar    ← re-renders (parent changed)</span>
+<span class="cm">// │       ├── Link  ← re-renders (parent changed)</span>
+<span class="cm">// │       └── Link  ← re-renders (parent changed)</span>
+<span class="cm">// ├── Main          ← re-renders (parent changed)</span>
+<span class="cm">// │   ├── ProductList (100 items) ← all 100 re-render!</span>
+<span class="cm">// │   └── Sidebar   ← re-renders</span>
+<span class="cm">// └── Footer        ← re-renders</span>
+<span class="cm">//</span>
+<span class="cm">// A single theme toggle → 105+ component re-renders</span>
+<span class="cm">// Most are WASTED — their output is identical</span>
+<span class="cm">//</span>
+<span class="cm">// React still reconciles (diffs) everything</span>
+<span class="cm">// Finding "nothing changed" still costs CPU time</span>
+<span class="cm">// With 100+ components, this can take 50-200ms</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Detecting Wasted Renders</h3>
+    <pre><span class="cm">// Tool 1: React DevTools Profiler</span>
+<span class="cm">// Settings → "Highlight updates when component renders"</span>
+<span class="cm">// Blue border = re-rendered. Yellow/red = expensive render.</span>
+<span class="cm">//</span>
+<span class="cm">// Tool 2: React DevTools Profiler (record mode)</span>
+<span class="cm">// Click Record → interact → Stop</span>
+<span class="cm">// See flame graph: which components rendered and why</span>
+<span class="cm">// "Why did this render?": Shows state change, props change, or parent</span>
+<span class="cm">//</span>
+<span class="cm">// Tool 3: Custom hook for development</span>
+<span class="kw">function</span> <span class="fn">useRenderCount</span>(name) {
+  <span class="kw">const</span> count = <span class="fn">useRef</span>(<span class="num">0</span>);
+  count.current++;
+  <span class="kw">if</span> (process.env.NODE_ENV === <span class="str">'development'</span>) {
+    console.log(<span class="str">`[${name}] renders: ${count.current}`</span>);
+  }
+}
+
+<span class="cm">// Tool 4: React.Profiler component</span>
+&lt;React.Profiler id=<span class="str">"ProductList"</span> onRender={(id, phase, duration) =&gt; {
+  <span class="kw">if</span> (duration &gt; <span class="num">16</span>) console.warn(<span class="str">`${id}: ${duration}ms (${phase})`</span>);
+}}&gt;
+  &lt;ProductList /&gt;
+&lt;/React.Profiler&gt;</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Pattern 1: State Colocation (Move State Down)</h3>
+    <pre><span class="cm">// ❌ BEFORE: State at root → entire tree re-renders</span>
+<span class="kw">function</span> <span class="fn">App</span>() {
+  <span class="kw">const</span> [search, setSearch] = <span class="fn">useState</span>(<span class="str">''</span>);
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      &lt;input value={search} onChange={e =&gt; setSearch(e.target.value)} /&gt;
+      &lt;ExpensiveComponent /&gt; <span class="cm">{/* Re-renders on every keystroke! */}</span>
+      &lt;AnotherExpensive /&gt;   <span class="cm">{/* Also re-renders! */}</span>
+    &lt;/div&gt;
+  );
+}
+
+<span class="cm">// ✅ AFTER: Extract state into its own component</span>
+<span class="kw">function</span> <span class="fn">SearchInput</span>() {
+  <span class="kw">const</span> [search, setSearch] = <span class="fn">useState</span>(<span class="str">''</span>);
+  <span class="kw">return</span> &lt;input value={search} onChange={e =&gt; setSearch(e.target.value)} /&gt;;
+}
+
+<span class="kw">function</span> <span class="fn">App</span>() {
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      &lt;SearchInput /&gt;         <span class="cm">{/* Only this re-renders on keystroke */}</span>
+      &lt;ExpensiveComponent /&gt;  <span class="cm">{/* Unaffected! */}</span>
+      &lt;AnotherExpensive /&gt;    <span class="cm">{/* Unaffected! */}</span>
+    &lt;/div&gt;
+  );
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>Pattern 2: Children as Props (Composition)</h3>
+    <pre><span class="cm">// ❌ BEFORE: Scrolling state re-renders children</span>
+<span class="kw">function</span> <span class="fn">ScrollTracker</span>() {
+  <span class="kw">const</span> [scrollY, setScrollY] = <span class="fn">useState</span>(<span class="num">0</span>);
+  <span class="fn">useEffect</span>(() =&gt; {
+    <span class="kw">const</span> handler = () =&gt; setScrollY(window.scrollY);
+    window.addEventListener(<span class="str">'scroll'</span>, handler);
+    <span class="kw">return</span> () =&gt; window.removeEventListener(<span class="str">'scroll'</span>, handler);
+  }, []);
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      &lt;ScrollIndicator y={scrollY} /&gt;
+      &lt;ExpensiveContent /&gt;  <span class="cm">{/* Re-renders on scroll! */}</span>
+    &lt;/div&gt;
+  );
+}
+
+<span class="cm">// ✅ AFTER: Accept children as props</span>
+<span class="kw">function</span> <span class="fn">ScrollTracker</span>({ children }) {
+  <span class="kw">const</span> [scrollY, setScrollY] = <span class="fn">useState</span>(<span class="num">0</span>);
+  <span class="fn">useEffect</span>(() =&gt; {
+    <span class="kw">const</span> handler = () =&gt; setScrollY(window.scrollY);
+    window.addEventListener(<span class="str">'scroll'</span>, handler);
+    <span class="kw">return</span> () =&gt; window.removeEventListener(<span class="str">'scroll'</span>, handler);
+  }, []);
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      &lt;ScrollIndicator y={scrollY} /&gt;
+      {children}  <span class="cm">{/* children was created by PARENT — doesn't re-render! */}</span>
+    &lt;/div&gt;
+  );
+}
+
+<span class="cm">// Usage:</span>
+&lt;ScrollTracker&gt;
+  &lt;ExpensiveContent /&gt;  <span class="cm">{/* Created in parent scope → stable reference */}</span>
+&lt;/ScrollTracker&gt;</pre>
+  </div>
+
+  <div class="card">
+    <h3>Pattern 3: React.memo + Stable References</h3>
+    <pre><span class="cm">// React.memo skips re-render if props are shallowly equal</span>
+<span class="cm">// But only works if props are actually STABLE</span>
+
+<span class="cm">// ❌ Memo defeated by inline objects/functions:</span>
+<span class="kw">function</span> <span class="fn">Parent</span>() {
+  <span class="kw">const</span> [count, setCount] = <span class="fn">useState</span>(<span class="num">0</span>);
+  <span class="kw">return</span> (
+    &lt;MemoChild
+      style={{ color: <span class="str">'red'</span> }}     <span class="cm">{/* New object every render! */}</span>
+      onClick={() =&gt; <span class="fn">doSomething</span>()} <span class="cm">{/* New function every render! */}</span>
+      items={[<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>]}             <span class="cm">{/* New array every render! */}</span>
+    /&gt;
+  );
+}
+
+<span class="cm">// ✅ Stable references with useMemo/useCallback:</span>
+<span class="kw">function</span> <span class="fn">Parent</span>() {
+  <span class="kw">const</span> [count, setCount] = <span class="fn">useState</span>(<span class="num">0</span>);
+  <span class="kw">const</span> style = <span class="fn">useMemo</span>(() =&gt; ({ color: <span class="str">'red'</span> }), []);
+  <span class="kw">const</span> handleClick = <span class="fn">useCallback</span>(() =&gt; <span class="fn">doSomething</span>(), []);
+  <span class="kw">const</span> items = <span class="fn">useMemo</span>(() =&gt; [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>], []);
+  <span class="kw">return</span> &lt;MemoChild style={style} onClick={handleClick} items={items} /&gt;;
+}</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Context Optimization Strategies</h3>
+    <pre><span class="cm">// Problem: Context changes re-render ALL consumers</span>
+<span class="cm">// Even if they only use a part of the context that didn't change</span>
+
+<span class="cm">// ❌ Monolithic context — everything in one:</span>
+<span class="kw">const</span> AppContext = <span class="fn">createContext</span>({ user: <span class="kw">null</span>, theme: <span class="str">'light'</span>, cart: [] });
+<span class="cm">// Changing cart re-renders components that only need theme!</span>
+
+<span class="cm">// ✅ Strategy 1: Split contexts by update frequency</span>
+<span class="kw">const</span> UserContext = <span class="fn">createContext</span>(<span class="kw">null</span>);    <span class="cm">// Rarely changes</span>
+<span class="kw">const</span> ThemeContext = <span class="fn">createContext</span>(<span class="str">'light'</span>); <span class="cm">// Changes on toggle</span>
+<span class="kw">const</span> CartContext = <span class="fn">createContext</span>([]);       <span class="cm">// Changes often</span>
+
+<span class="cm">// ✅ Strategy 2: Memoize context value</span>
+<span class="kw">function</span> <span class="fn">CartProvider</span>({ children }) {
+  <span class="kw">const</span> [items, setItems] = <span class="fn">useState</span>([]);
+  <span class="kw">const</span> value = <span class="fn">useMemo</span>(() =&gt; ({ items, setItems }), [items]);
+  <span class="kw">return</span> &lt;CartContext.Provider value={value}&gt;{children}&lt;/CartContext.Provider&gt;;
+}
+
+<span class="cm">// ✅ Strategy 3: Selector pattern with useSyncExternalStore</span>
+<span class="kw">function</span> <span class="fn">useCartItemCount</span>() {
+  <span class="kw">const</span> { items } = <span class="fn">useContext</span>(CartContext);
+  <span class="kw">return</span> items.length; <span class="cm">// Component still re-renders when items change</span>
+}
+<span class="cm">// For true selectors: use Zustand, Jotai, or useSyncExternalStore</span>
+
+<span class="cm">// ✅ Strategy 4: use(context) in React 19 with memo</span>
+<span class="cm">// React 19: use(context) inside memo'd components</span>
+<span class="cm">// enables granular subscription (upcoming improvement)</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: A React app feels sluggish when typing in a search input. How do you diagnose and fix it?</div>
+      <div class="a">Step 1: Open React DevTools Profiler, enable "Highlight updates when components render." Type in the search input and observe which components flash (re-render). If the entire page lights up on each keystroke, the search state is too high in the tree. Step 2: Check where the state lives. If search state is in a parent that also renders expensive children, those children re-render on every keystroke. Fix: move the search state into a dedicated SearchInput component (state colocation). Step 3: If search results need to be below, use composition — keep the search input as a self-contained component, and use debounced callback to update parent state only after the user stops typing (300ms). Step 4: For the results list, use React.memo + startTransition to mark the filtering as a non-urgent update — React will keep the input responsive and defer the expensive list re-render. Step 5: If the list is large, add virtualization. This combination gives instant input feedback + deferred filtered results + minimal re-renders.</div>
+      <div class="followup">Follow-up: How does React 18's automatic batching help here?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: Explain state colocation vs React.memo. When do you prefer one over the other?</div>
+      <div class="a">State colocation means moving state closer to where it's used — extract the stateful part into its own component so only that component re-renders. It's a structural change, zero runtime overhead, and it's the preferred approach. React.memo wraps a component to skip re-rendering when props haven't changed — it adds runtime overhead (shallow comparison every render) but doesn't require restructuring. Prefer colocation when: the state is only relevant to one part of the UI (search input, hover state, toggle). The component boundaries naturally separate concerns. Prefer memo when: you can't restructure (state genuinely needed at parent level), a child is expensive and receives stable-ish props, or you're in a list with many items. Best practice: try colocation first (it's free), then composition (children as props), and only then reach for React.memo as a last resort.</div>
+      <div class="followup">Follow-up: How does the React Compiler eliminate the need for manual memoization?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Anti-Render Checklist</h3>
+    <pre>✅ State colocated (as low in tree as possible)
+✅ Composition pattern for stateful wrappers (children as props)
+✅ React.memo on list items and expensive components
+✅ Stable references via useMemo/useCallback for memo'd children
+✅ Context split by update frequency (auth vs theme vs cart)
+✅ Context values memoized with useMemo
+✅ startTransition for non-urgent state updates
+✅ React DevTools Profiler used to verify optimizations
+✅ No inline objects/arrays/functions passed to memo'd children
+✅ Consider Zustand/Jotai for granular subscriptions over Context</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>198 – Route Guards: Angular & React Router</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#f472b6}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover,.btn-act{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+.step{padding:8px 12px;border-radius:8px;font-size:.75rem;margin-bottom:6px;border:1px solid #2d3551;display:flex;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+<h1>🛤️ Route Guards: Angular & React Router ★</h1>
+<p class="sub">Topic 198 · Part 13 / Module 13.3 — Frontend Authorization Design · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Guard Simulator</div>
+  <div class="tab" onclick="setTab(2)">Angular vs React</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Angular guard pipeline — Match → Load → Activate → Child</h3>
+    <div style="font-size:.78rem">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div class="step" style="border-color:#a78bfa44;background:#0f1117"><div style="background:#a78bfa22;border:1px solid #a78bfa44;padding:2px 8px;border-radius:4px;color:#a78bfa;white-space:nowrap;font-size:.7rem">1. CanMatch[]</div><div style="color:#94a3b8">Filters route candidates — returns false to try next matching route</div></div>
+        <div style="color:#475569;text-align:center;font-size:.7rem">↓</div>
+        <div class="step" style="border-color:#f59e0b44;background:#0f1117"><div style="background:#f59e0b22;border:1px solid #f59e0b44;padding:2px 8px;border-radius:4px;color:#f59e0b;white-space:nowrap;font-size:.7rem">2. CanLoad[]</div><div style="color:#94a3b8"><strong style="color:#f59e0b">Prevents JS bundle download</strong> — strongest guard for lazy modules</div></div>
+        <div style="color:#475569;text-align:center;font-size:.7rem">↓</div>
+        <div class="step" style="border-color:#60a5fa44;background:#0f1117"><div style="background:#60a5fa22;border:1px solid #60a5fa44;padding:2px 8px;border-radius:4px;color:#60a5fa;white-space:nowrap;font-size:.7rem">3. CanActivate[]</div><div style="color:#94a3b8">Auth/permission check before component instantiation</div></div>
+        <div style="color:#475569;text-align:center;font-size:.7rem">↓</div>
+        <div class="step" style="border-color:#10b98144;background:#0f1117"><div style="background:#10b98122;border:1px solid #10b98144;padding:2px 8px;border-radius:4px;color:#10b981;white-space:nowrap;font-size:.7rem">4. CanActivateChild[]</div><div style="color:#94a3b8">Per-child route permission check</div></div>
+        <div style="color:#475569;text-align:center;font-size:.7rem">↓</div>
+        <div class="step" style="border-color:#10b98177"><div style="color:#10b981;font-size:.8rem">✅ Component renders</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Route navigation guard simulator</h3>
+    <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:.78rem;color:#94a3b8">User:</span>
+      <button id="rb-anon" onclick="setUser('anon','')">🔒 Anonymous</button>
+      <button id="rb-viewer" class="btn-act" onclick="setUser('viewer','invoice:read')">👁️ Viewer</button>
+      <button id="rb-approver" onclick="setUser('approver','invoice:read invoice:approve')">✅ Approver</button>
+      <button id="rb-admin-u" onclick="setUser('admin','invoice:read invoice:approve admin:access')">⚙️ Admin</button>
+    </div>
+    <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:.78rem;color:#94a3b8">Navigate to:</span>
+      <button onclick="runGuardSim('/dashboard', [], false)">🏠 /dashboard</button>
+      <button onclick="runGuardSim('/invoices', ['invoice:read'], false)">📋 /invoices</button>
+      <button onclick="runGuardSim('/invoices/approve', ['invoice:approve'], false)">✅ /invoices/approve</button>
+      <button onclick="runGuardSim('/admin', ['admin:access'], true)">⚙️ /admin (lazy)</button>
+    </div>
+    <div id="guardSimResult" style="font-size:.78rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Angular vs React Router guard comparison</h3>
+    <table>
+      <tr><th>Feature</th><th>Angular (v14+)</th><th>React Router v6</th></tr>
+      <tr><td>Primary type</td><td>CanActivateFn (functional)</td><td>&lt;ProtectedRoute&gt; wrapper</td></tr>
+      <tr><td>Prevent bundle</td><td>canLoad / canMatch</td><td>Manual lazy + guard check</td></tr>
+      <tr><td>Redirect</td><td>router.createUrlTree()</td><td>&lt;Navigate replace /&gt;</td></tr>
+      <tr><td>Async guard</td><td>Return Observable/Promise</td><td>loader() async function</td></tr>
+      <tr><td>Data dependency</td><td>Resolver + guard</td><td>loader() combines both</td></tr>
+      <tr><td>History on deny</td><td>UrlTree (preserves)</td><td>&lt;Navigate replace&gt;</td></tr>
+      <tr><td>Composition</td><td>Array [g1, g2, g3]</td><td>Nested route elements</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3>Return value matters — false vs UrlTree</h3>
+    <table>
+      <tr><th>Return value</th><th>Effect</th><th>Browser history</th><th>Use this?</th></tr>
+      <tr><td>true</td><td>Navigation proceeds</td><td>Normal</td><td style="color:#10b981">✅ Yes</td></tr>
+      <tr><td>false</td><td>Navigation cancelled</td><td style="color:#ef4444">Broken — stuck</td><td style="color:#ef4444">❌ Never</td></tr>
+      <tr><td>UrlTree</td><td>Redirects to new route</td><td style="color:#10b981">Preserved</td><td style="color:#10b981">✅ Yes</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Angular functional guard with composition</h3>
+    <pre><span class="kw">export const</span> <span class="fn">authGuard</span>: <span class="dec">CanActivateFn</span> = (route, state) => {
+  <span class="kw">const</span> auth = <span class="fn">inject</span>(<span class="dec">AuthService</span>);
+  <span class="kw">const</span> router = <span class="fn">inject</span>(<span class="dec">Router</span>);
+  <span class="kw">return</span> auth.<span class="fn">isAuthenticated</span>()
+    ? <span class="kw">true</span>
+    : router.<span class="fn">createUrlTree</span>([<span class="str">'/login'</span>], { queryParams: { returnUrl: state.url } });
+};
+
+<span class="kw">export const</span> <span class="fn">permissionGuard</span>: <span class="dec">CanActivateFn</span> = (route, state) => {
+  <span class="kw">const</span> required: <span class="dec">string</span>[] = route.data[<span class="str">'permissions'</span>] ?? [];
+  <span class="kw">const</span> auth = <span class="fn">inject</span>(<span class="dec">AuthService</span>);
+  <span class="kw">const</span> router = <span class="fn">inject</span>(<span class="dec">Router</span>);
+  <span class="kw">return</span> required.<span class="fn">every</span>(p => auth.<span class="fn">hasPermission</span>(p))
+    ? <span class="kw">true</span>
+    : router.<span class="fn">createUrlTree</span>([<span class="str">'/forbidden'</span>]);
+};
+
+<span class="cm">// Compose in route config:</span>
+{ path: <span class="str">'invoices/approve'</span>, component: <span class="dec">InvoiceApprovalComponent</span>,
+  canActivate: [<span class="fn">authGuard</span>, <span class="fn">permissionGuard</span>],
+  data: { permissions: [<span class="str">'invoice:approve'</span>] } }</pre>
+  </div>
+  <div class="card">
+    <h3>React Router v6 — ProtectedRoute + loader</h3>
+    <pre><span class="kw">const</span> <span class="dec">ProtectedRoute</span> = ({ requiredPermission }) => {
+  <span class="kw">const</span> { isAuthenticated, <span class="fn">hasPermission</span> } = <span class="fn">useAuth</span>();
+  <span class="kw">if</span> (!isAuthenticated)
+    <span class="kw">return</span> &lt;<span class="dec">Navigate</span> to={<span class="str">`/login?returnUrl=${location.pathname}`</span>} replace /&gt;;
+  <span class="kw">if</span> (requiredPermission && !<span class="fn">hasPermission</span>(requiredPermission))
+    <span class="kw">return</span> &lt;<span class="dec">Navigate</span> to=<span class="str">"/forbidden"</span> replace /&gt;;
+  <span class="kw">return</span> &lt;<span class="dec">Outlet</span> /&gt;;
+};
+
+<span class="cm">// loader for data-dependent authorization (ownership checks)</span>
+<span class="kw">export const</span> <span class="fn">invoiceLoader</span> = <span class="kw">async</span> ({ params }) => {
+  <span class="kw">const</span> session = <span class="kw">await</span> <span class="fn">getSession</span>();
+  <span class="kw">if</span> (!session) <span class="kw">throw</span> <span class="fn">redirect</span>(<span class="str">'/login'</span>);
+  <span class="kw">const</span> invoice = <span class="kw">await</span> api.<span class="fn">getInvoice</span>(params.id);
+  <span class="kw">if</span> (invoice.ownerId !== session.userId) <span class="kw">throw</span> <span class="fn">redirect</span>(<span class="str">'/forbidden'</span>);
+  <span class="kw">return</span> invoice;
+};</pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+let currentUser = 'viewer';
+let currentPerms = new Set(['invoice:read']);
+
+function setUser(user, permsStr) {
+  currentUser = user;
+  currentPerms = new Set(permsStr ? permsStr.split(' ') : []);
+  ['anon','viewer','approver','admin-u'].forEach(u => {
+    const b = document.getElementById(`rb-${u}`);
+    if (b) b.className = u === (user === 'admin' ? 'admin-u' : user) ? 'btn-act' : '';
+  });
+  document.getElementById('guardSimResult').innerHTML = '';
+}
+
+function runGuardSim(path, requiredPerms, isLazy) {
+  const isAuthed = currentUser !== 'anon';
+  const hasPerms = requiredPerms.every(p => currentPerms.has(p));
+
+  const guards = [
+    isLazy ? { name: 'CanLoad[] — prevent bundle download', pass: isAuthed && hasPerms } : null,
+    { name: 'CanActivate[] — auth check', pass: isAuthed },
+    requiredPerms.length > 0 ? { name: 'CanActivate[] — permission check', pass: hasPerms } : null,
+  ].filter(Boolean);
+
+  const stepsHtml = guards.map(g => `
+    <div class="step" style="border-color:${g.pass ? '#10b98144' : '#ef444444'}">
+      <span style="font-size:.7rem;color:${g.pass ? '#10b981' : '#ef4444'}">${g.pass ? '✅' : '⛔'}</span>
+      <span style="color:#94a3b8;font-size:.73rem">${g.name}</span>
+    </div>
+  `).join('<div style="text-align:center;color:#475569;font-size:.7rem">↓</div>');
+
+  const finalFail = guards.find(g => !g.pass);
+  const allowed = !finalFail;
+
+  let redirectTarget = '';
+  if (!isAuthed) redirectTarget = `/login?returnUrl=${path}`;
+  else if (!hasPerms) redirectTarget = '/forbidden';
+
+  document.getElementById('guardSimResult').innerHTML = `
+    <div style="color:#94a3b8;font-size:.78rem;margin-bottom:8px">
+      <strong style="color:#e2e8f0">${currentUser}</strong> navigating to <strong style="color:#60a5fa">${path}</strong>
+    </div>
+    ${stepsHtml}
+    <div style="margin-top:8px;padding:10px 14px;border-radius:8px;background:${allowed ? '#14532d22' : '#450a0a22'};border:1px solid ${allowed ? '#10b98155' : '#ef444455'}">
+      <div style="font-weight:700;color:${allowed ? '#10b981' : '#ef4444'};font-size:.85rem">
+        ${allowed ? `✅ Component rendered: ${path}` : `⛔ UrlTree redirect → ${redirectTarget}`}
+      </div>
+      ${!isAuthed ? '<div style="color:#94a3b8;font-size:.7rem;margin-top:2px">returnUrl preserved as query param for post-login redirect</div>' : ''}
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — PKCE (Proof Key for Code Exchange)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 02 — PKCE Deep Dive</h1>
+<p class="sub">Module 12.2 · Proof Key for Code Exchange — preventing authorization code interception</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">How PKCE Works</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Attack Scenarios</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>PKCE Mechanism</h3>
+    <pre><span class="cm">// PKCE prevents authorization code interception attacks</span>
+<span class="cm">// Required by OAuth 2.1 for ALL client types</span>
+
+<span class="cm">// Step 1: Generate verifier (random string, 43-128 chars)</span>
+<span class="kw">const</span> verifier = generateRandomString(128);
+<span class="cm">// e.g., "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"</span>
+
+<span class="cm">// Step 2: Create challenge (SHA-256 hash of verifier)</span>
+<span class="kw">const</span> challenge = base64url(SHA256(verifier));
+<span class="cm">// e.g., "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"</span>
+
+<span class="cm">// Step 3: Send challenge with auth request</span>
+<span class="cm">// GET /authorize?...&code_challenge=E9Mel...&code_challenge_method=S256</span>
+
+<span class="cm">// Step 4: Send verifier with token exchange</span>
+<span class="cm">// POST /token { code, code_verifier: "dBjftJeZ4CVP..." }</span>
+
+<span class="cm">// Step 5: Auth server verifies: SHA256(verifier) === stored challenge</span>
+<span class="cm">// If match → issue tokens. If not → reject.</span>
+
+<span class="cm">// Why it works:</span>
+<span class="cm">// Attacker intercepts code but doesn't have the verifier</span>
+<span class="cm">// Challenge was sent earlier and is a ONE-WAY hash</span>
+<span class="cm">// Attacker can't derive verifier from challenge (SHA-256)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Generate PKCE Pair</h3>
+    <button onclick="generatePKCE()">🔑 Generate Code Verifier + Challenge</button>
+    <div class="output" id="pkce-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 Verify PKCE</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Simulate the auth server verifying the code_verifier:</p>
+    <input id="test-verifier" placeholder="Paste verifier here" style="width:100%;padding:8px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem;margin:4px 0">
+    <input id="test-challenge" placeholder="Paste challenge here" style="width:100%;padding:8px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem;margin:4px 0">
+    <button onclick="verifyPKCE()">✅ Verify</button>
+    <button onclick="verifyTampered()">⚠️ Verify with Wrong Verifier</button>
+    <div class="output" id="verify-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Without PKCE: Code Interception Attack</h3>
+    <pre><span class="cm">// Attack scenario (mobile + custom URL scheme):</span>
+
+<span class="cm">// 1. Legitimate app registers: myapp://callback</span>
+<span class="cm">// 2. Malicious app ALSO registers: myapp://callback</span>
+<span class="cm">//    (Android/iOS allow multiple handlers for same scheme)</span>
+
+<span class="cm">// 3. User initiates OAuth login in legitimate app</span>
+<span class="cm">// 4. Auth server redirects: myapp://callback?code=AUTHORIZATION_CODE</span>
+<span class="cm">// 5. OS shows chooser, or malicious app intercepts the redirect</span>
+<span class="cm">// 6. Malicious app has the code!</span>
+
+<span class="cm">// Without PKCE:</span>
+<span class="cm">// Malicious app exchanges code → gets access_token → account takeover!</span>
+
+<span class="cm">// With PKCE:</span>
+<span class="cm">// Malicious app has code but NOT the code_verifier</span>
+<span class="cm">// Token exchange fails → attack prevented ✅</span>
+
+<span class="cm">// Web equivalent: malicious browser extension intercepts redirect</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — PKCE</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Is PKCE necessary for confidential clients (those with a client_secret)?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Yes, per OAuth 2.1 (draft) PKCE is required for ALL clients. Even confidential clients benefit: (1) Defense in depth — if client_secret is compromised, PKCE still protects. (2) Prevents authorization code injection (attacker replays a stolen code). (3) Simplifies security analysis — one flow for all client types. Google's OAuth requires PKCE for all new client registrations. Auth0, Okta, and Azure AD all recommend PKCE universally.</p>
+      <p><strong style="color:#60a5fa">Q: What's the difference between plain and S256 code_challenge_method?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px"><code>plain</code>: challenge = verifier (no hashing). Vulnerable if the authorization request is intercepted (attacker gets the verifier directly). <code>S256</code>: challenge = SHA-256(verifier). Even if intercepted, attacker can't reverse the hash. ALWAYS use S256. The spec allows plain as a fallback for environments without SHA-256, but in practice every modern browser and server supports S256.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function generateRandomString(length){
+  const arr=new Uint8Array(length);
+  crypto.getRandomValues(arr);
+  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'').slice(0,length);
+}
+
+async function sha256Base64url(str){
+  const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function generatePKCE(){
+  const el=document.getElementById('pkce-result');
+  const verifier=generateRandomString(128);
+  const challenge=await sha256Base64url(verifier);
+  document.getElementById('test-verifier').value=verifier;
+  document.getElementById('test-challenge').value=challenge;
+  el.textContent=`PKCE Code Verifier (keep secret!):\n${verifier}\n\nPKCE Code Challenge (SHA-256, base64url):\n${challenge}\n\nMethod: S256\n\nAuthorization URL includes:\n  code_challenge=${challenge}\n  code_challenge_method=S256\n\nToken exchange includes:\n  code_verifier=${verifier}\n\nAuth server verifies:\n  SHA-256("${verifier.slice(0,20)}...") === "${challenge}"\n  ✅ Match → issue tokens`;
+}
+
+async function verifyPKCE(){
+  const el=document.getElementById('verify-result');
+  const verifier=document.getElementById('test-verifier').value;
+  const challenge=document.getElementById('test-challenge').value;
+  if(!verifier||!challenge){el.textContent='Generate PKCE pair first';return}
+  const computed=await sha256Base64url(verifier);
+  const match=computed===challenge;
+  el.textContent=`Verification:\n  code_verifier: ${verifier.slice(0,30)}...\n  Expected challenge: ${challenge}\n  Computed SHA-256: ${computed}\n\n  Match: ${match?'✅ VALID — tokens issued':'❌ INVALID — rejected'}`;
+}
+
+async function verifyTampered(){
+  const el=document.getElementById('verify-result');
+  const challenge=document.getElementById('test-challenge').value;
+  const fakeVerifier='attacker-does-not-know-the-real-verifier-'+crypto.randomUUID();
+  const computed=await sha256Base64url(fakeVerifier);
+  el.textContent=`Attacker's Verification Attempt:\n  Stolen code: ✅ (intercepted from redirect)\n  Fake verifier: ${fakeVerifier.slice(0,30)}...\n  Expected challenge: ${challenge}\n  Computed SHA-256: ${computed}\n\n  Match: ❌ REJECTED — SHA-256 doesn't match!\n\n✅ PKCE prevented the attack.\nThe attacker has the code but can't complete the token exchange\nwithout the original code_verifier.`;
+}
+</script>
+</body></html>

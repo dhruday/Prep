@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 04 — npm audit & Dependency Scanning</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟡 Lab 04 — npm audit & Dependency Scanning</h1>
+<p class="sub">Module 12.1 · Automated vulnerability discovery and remediation</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Tools Overview</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">SBOM</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Scanning Tool Comparison</h3>
+    <table>
+      <tr><th>Tool</th><th>Type</th><th>Strengths</th><th>Cost</th></tr>
+      <tr><td><strong>npm audit</strong></td><td>Built-in</td><td>Free, always available, respects lockfile</td><td>Free</td></tr>
+      <tr><td><strong>Snyk</strong></td><td>SCA</td><td>Largest vuln DB, auto-fix PRs, container scanning</td><td>Free tier / Paid</td></tr>
+      <tr><td><strong>Dependabot</strong></td><td>GitHub</td><td>Auto PRs for version bumps, free for GitHub repos</td><td>Free</td></tr>
+      <tr><td><strong>Socket.dev</strong></td><td>Behavioral</td><td>Detects suspicious behavior, not just CVEs</td><td>Free tier / Paid</td></tr>
+      <tr><td><strong>Renovate</strong></td><td>Auto-update</td><td>Flexible config, monorepo support, grouping</td><td>Free (open source)</td></tr>
+      <tr><td><strong>OWASP DC</strong></td><td>SCA</td><td>Language-agnostic, NVD database, CI integrations</td><td>Free (open source)</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Simulated npm audit Report</h3>
+    <button onclick="simulateAudit()">⚡ Run Simulated Audit</button>
+    <div class="output" id="audit-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 CVSS Score Analyzer</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Enter a CVSS vector to understand the severity:</p>
+    <input id="cvss" value="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" style="width:100%;padding:8px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem">
+    <button onclick="parseCVSS()">🔍 Parse CVSS</button>
+    <div class="output" id="cvss-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Software Bill of Materials (SBOM)</h3>
+    <pre><span class="cm">// SBOM = Complete inventory of all software components</span>
+<span class="cm">// Required by US Executive Order 14028 (2021) for government software</span>
+<span class="cm">// Two main formats:</span>
+
+<span class="cm">// 1. CycloneDX (OWASP) — JSON/XML format:</span>
+{
+  <span class="str">"bomFormat"</span>: <span class="str">"CycloneDX"</span>,
+  <span class="str">"specVersion"</span>: <span class="str">"1.4"</span>,
+  <span class="str">"components"</span>: [
+    {
+      <span class="str">"type"</span>: <span class="str">"library"</span>,
+      <span class="str">"name"</span>: <span class="str">"express"</span>,
+      <span class="str">"version"</span>: <span class="str">"4.18.2"</span>,
+      <span class="str">"purl"</span>: <span class="str">"pkg:npm/express@4.18.2"</span>
+    }
+  ]
+}
+
+<span class="cm">// 2. SPDX (Linux Foundation)</span>
+<span class="cm">// Generate: npx @cyclonedx/cyclonedx-npm --output-file sbom.json</span>
+<span class="cm">// Or: npm sbom --sbom-format=cyclonedx (npm 9.5+)</span>
+
+<span class="cm">// Why SBOM matters:</span>
+<span class="cm">// • Know EXACTLY what's in production</span>
+<span class="cm">// • When a CVE drops, instantly know if you're affected</span>
+<span class="cm">// • Legal compliance for license auditing</span>
+<span class="cm">// • Supply chain transparency</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Dependency Management</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: A critical CVE is published for a transitive dependency (dep of a dep). Your lockfile pins the vulnerable version. What do you do?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Step 1: Run npm ls vulnerable-package to find which direct deps use it. Step 2: Check if the direct dep has a new version with the fix (npm outdated). Step 3a: If yes, update the direct dep (npm update direct-dep). Step 3b: If no, use npm overrides (npm 8.3+) to force the patched version. Step 4: Run tests to verify nothing breaks. Step 5: If override breaks things, consider forking the direct dep temporarily with the patched transitive dep. At Google: Bazel's dependency management pins transitive deps explicitly, making this faster to fix.</p>
+      <p><strong style="color:#60a5fa">Q: npm audit reports 50 vulnerabilities. How do you prioritize?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">1. Filter by severity: Focus critical/high first. 2. Check if they're in dependencies vs devDependencies (devDeps don't affect production). 3. Check exploitability: Is the vulnerable code path actually reachable in your app? 4. CVSS score + EPSS (Exploit Prediction Scoring System) for likelihood of exploitation. 5. Use npm audit --production to see only production vulnerabilities. Most npm audit noise is from devDeps or unreachable code paths.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function simulateAudit(){
+  const el=document.getElementById('audit-result');
+  const vulns=[
+    {pkg:'lodash',ver:'4.17.11',severity:'Critical',cvss:9.1,cve:'CVE-2019-10744',title:'Prototype Pollution',fix:'>=4.17.12'},
+    {pkg:'minimist',ver:'0.0.8',severity:'High',cvss:7.5,cve:'CVE-2020-7598',title:'Prototype Pollution via CLI args',fix:'>=1.2.6'},
+    {pkg:'express',ver:'4.17.0',severity:'High',cvss:7.5,cve:'CVE-2022-24999',title:'Open Redirect',fix:'>=4.17.3'},
+    {pkg:'json5',ver:'1.0.1',severity:'Medium',cvss:5.3,cve:'CVE-2022-46175',title:'Prototype Pollution',fix:'>=1.0.2'},
+    {pkg:'semver',ver:'5.7.0',severity:'Low',cvss:3.1,cve:'CVE-2022-25883',title:'ReDoS',fix:'>=5.7.2'},
+  ];
+  el.textContent=`# npm audit report\n${'='.repeat(50)}\n\n`;
+  vulns.forEach(v=>{
+    const color=v.severity==='Critical'?'🔴':v.severity==='High'?'🟠':v.severity==='Medium'?'🟡':'🟢';
+    el.textContent+=`${color} ${v.severity.padEnd(10)} ${v.pkg}@${v.ver}\n`;
+    el.textContent+=`  ${v.title} — ${v.cve} (CVSS ${v.cvss})\n`;
+    el.textContent+=`  Fix: npm update ${v.pkg} to ${v.fix}\n\n`;
+  });
+  el.textContent+=`${'='.repeat(50)}\n${vulns.length} vulnerabilities (${vulns.filter(v=>v.severity==='Critical').length} critical, ${vulns.filter(v=>v.severity==='High').length} high, ${vulns.filter(v=>v.severity==='Medium').length} moderate, ${vulns.filter(v=>v.severity==='Low').length} low)\n\nTo fix: npm audit fix (auto-fix) or npm audit fix --force (breaking changes)`;
+}
+
+function parseCVSS(){
+  const el=document.getElementById('cvss-result');
+  const vec=document.getElementById('cvss').value;
+  const parts=Object.fromEntries(vec.split('/').slice(1).map(p=>p.split(':')));
+  const labels={
+    AV:{N:'Network',A:'Adjacent',L:'Local',P:'Physical'},
+    AC:{L:'Low',H:'High'},
+    PR:{N:'None',L:'Low',H:'High'},
+    UI:{N:'None',R:'Required'},
+    S:{U:'Unchanged',C:'Changed'},
+    C:{N:'None',L:'Low',H:'High'},
+    I:{N:'None',L:'Low',H:'High'},
+    A:{N:'None',L:'Low',H:'High'}
+  };
+  const names={AV:'Attack Vector',AC:'Attack Complexity',PR:'Privileges Required',UI:'User Interaction',S:'Scope',C:'Confidentiality',I:'Integrity',A:'Availability'};
+  let out=`CVSS Vector Analysis:\n${vec}\n${'='.repeat(50)}\n\n`;
+  Object.entries(parts).forEach(([k,v])=>{
+    const name=names[k]||k;
+    const label=labels[k]?.[v]||v;
+    const risk=v==='N'&&(k==='AV'||k==='PR'||k==='UI')?'⚠️':v==='H'&&(k==='C'||k==='I'||k==='A')?'⚠️':'✅';
+    out+=`${risk} ${name.padEnd(22)} ${label}\n`;
+  });
+  const allHigh=parts.C==='H'&&parts.I==='H'&&parts.A==='H'&&parts.AV==='N'&&parts.AC==='L'&&parts.PR==='N';
+  out+=`\nOverall: ${allHigh?'🔴 CRITICAL (9.8-10.0) — Trivially exploitable, full compromise':'Varies based on vector'}`;
+  el.textContent=out;
+}
+</script>
+</body></html>

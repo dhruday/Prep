@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — JWT Structure & Anatomy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:500px;overflow:auto;white-space:pre-wrap;margin-top:8px}textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 01 — JWT Structure & Anatomy</h1>
+<p class="sub">Module 12.2 · Header.Payload.Signature — understanding the three parts</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">JWT Structure</div>
+  <div class="tab" onclick="setTab(1)">Decoder Lab</div>
+  <div class="tab" onclick="setTab(2)">Claims Deep Dive</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Three Parts of a JWT</h3>
+    <pre><span class="cm">// A JWT is three Base64URL-encoded sections separated by dots:</span>
+<span class="cm">// HEADER.PAYLOAD.SIGNATURE</span>
+
+<span class="cm">// 1. HEADER — algorithm & token type</span>
+{
+  <span class="str">"alg"</span>: <span class="str">"RS256"</span>,     <span class="cm">// signing algorithm</span>
+  <span class="str">"typ"</span>: <span class="str">"JWT"</span>,       <span class="cm">// token type</span>
+  <span class="str">"kid"</span>: <span class="str">"abc123"</span>     <span class="cm">// key ID (for key rotation)</span>
+}
+
+<span class="cm">// 2. PAYLOAD — claims (data)</span>
+{
+  <span class="str">"sub"</span>: <span class="str">"user123"</span>,       <span class="cm">// subject (who)</span>
+  <span class="str">"iss"</span>: <span class="str">"myapp.com"</span>,     <span class="cm">// issuer (who created)</span>
+  <span class="str">"aud"</span>: <span class="str">"api.myapp.com"</span>, <span class="cm">// audience (intended for)</span>
+  <span class="str">"exp"</span>: 1678886400,       <span class="cm">// expiration (Unix timestamp)</span>
+  <span class="str">"iat"</span>: 1678882800,       <span class="cm">// issued at</span>
+  <span class="str">"role"</span>: <span class="str">"admin"</span>         <span class="cm">// custom claim</span>
+}
+
+<span class="cm">// 3. SIGNATURE — integrity proof</span>
+<span class="cm">// HMAC-SHA256 or RSA-SHA256 of:</span>
+<span class="cm">//   base64url(header) + "." + base64url(payload)</span>
+<span class="cm">// Anyone can READ a JWT. Only the signer can CREATE a valid one.</span>
+
+<span class="cm">// ⚠️ JWT is NOT encrypted — it's just base64 encoded!</span>
+<span class="cm">// Anyone can decode it. Never put secrets in the payload.</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 JWT Decoder</h3>
+    <button onclick="getJWT()">📥 Get JWT from Server</button>
+    <button onclick="decodeJWT()">🔍 Decode JWT Below</button>
+    <textarea id="jwt-input" rows="3" style="margin-top:8px">Paste a JWT here or click "Get JWT from Server"</textarea>
+    <div class="output" id="jwt-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 Size Analysis</h3>
+    <button onclick="analyzeSize()">📊 Analyze JWT Size</button>
+    <div class="output" id="size-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Registered Claims (RFC 7519)</h3>
+    <pre><span class="cm">// Registered claims have defined semantics:</span>
+
+<span class="str">"iss"</span> <span class="cm">// Issuer — who created the token</span>
+       <span class="cm">// Verify: matches expected issuer</span>
+
+<span class="str">"sub"</span> <span class="cm">// Subject — who the token is about</span>
+       <span class="cm">// Usually a user ID. NEVER use email (can change).</span>
+
+<span class="str">"aud"</span> <span class="cm">// Audience — who should accept this token</span>
+       <span class="cm">// Prevents token reuse across different APIs</span>
+       <span class="cm">// Can be string or array: ["api.myapp.com", "admin.myapp.com"]</span>
+
+<span class="str">"exp"</span> <span class="cm">// Expiration — when token becomes invalid</span>
+       <span class="cm">// Unix timestamp. Typical: 15 min for access, 7 days for refresh</span>
+
+<span class="str">"nbf"</span> <span class="cm">// Not Before — token not valid before this time</span>
+       <span class="cm">// Use for scheduled activation</span>
+
+<span class="str">"iat"</span> <span class="cm">// Issued At — when token was created</span>
+       <span class="cm">// Useful for detecting old tokens</span>
+
+<span class="str">"jti"</span> <span class="cm">// JWT ID — unique identifier for this token</span>
+       <span class="cm">// Use for revocation tracking and replay prevention</span>
+
+<span class="cm">// Custom claims — your app-specific data:</span>
+<span class="str">"role"</span>, <span class="str">"permissions"</span>, <span class="str">"org_id"</span>, <span class="str">"tenant"</span>
+<span class="cm">// Keep minimal — every claim adds to token size</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — JWT</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Why shouldn't you put sensitive data in a JWT payload?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">JWTs are signed, not encrypted. The payload is just Base64URL-encoded — anyone can decode it with atob(). If a JWT leaks (via logs, URL, referrer, XSS), all claims are readable. Never include: passwords, SSNs, credit card numbers, API keys, internal IDs that reveal architecture. If you need encrypted tokens, use JWE (JSON Web Encryption), but it adds complexity and size. Better approach: Keep JWTs minimal (sub, exp, role). Look up sensitive data server-side using the sub claim.</p>
+      <p><strong style="color:#60a5fa">Q: JWT vs opaque session token — when to use which?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">JWT: Stateless, self-contained. Good for: microservices (no shared session store), serverless, API-to-API. Tradeoffs: Can't revoke instantly (until expiry), larger payload (1KB+ vs 32 bytes), claims are visible. Opaque token: Random string that maps to server-side session. Good for: monoliths, when you need instant revocation, when claims change frequently. Tradeoffs: Requires session store (Redis), every request needs a lookup. Google's approach: Short-lived JWTs (5 min) + server-side session for revocation. The JWT carries role/permissions for microservices, but the session store is the source of truth for revocation.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function getJWT(){
+  try{
+    const resp=await fetch('http://localhost:3001/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'alice',password:'Password123!'})});
+    const data=await resp.json();
+    if(data.token){document.getElementById('jwt-input').value=data.token;decodeJWT()}
+    else document.getElementById('jwt-result').textContent='Login failed: '+JSON.stringify(data);
+  }catch(e){document.getElementById('jwt-result').textContent='Server not running? Start with: cd server && node server.js\n\nError: '+e.message}
+}
+
+function decodeJWT(){
+  const el=document.getElementById('jwt-result');
+  const token=document.getElementById('jwt-input').value.trim();
+  try{
+    const parts=token.split('.');
+    if(parts.length!==3){el.textContent='Not a valid JWT (expected 3 dot-separated parts)';return}
+    const header=JSON.parse(atob(parts[0].replace(/-/g,'+').replace(/_/g,'/')));
+    const payload=JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+    el.textContent=`JWT Decoded Successfully!\n${'='.repeat(50)}\n\n`;
+    el.textContent+=`🔵 HEADER:\n${JSON.stringify(header,null,2)}\n\n`;
+    el.textContent+=`🟢 PAYLOAD:\n${JSON.stringify(payload,null,2)}\n\n`;
+    el.textContent+=`🔴 SIGNATURE:\n${parts[2].slice(0,50)}...\n\n`;
+    el.textContent+=`⏰ Timing:\n`;
+    if(payload.iat)el.textContent+=`  Issued: ${new Date(payload.iat*1000).toISOString()}\n`;
+    if(payload.exp){
+      const exp=new Date(payload.exp*1000);
+      const remaining=Math.round((payload.exp*1000-Date.now())/1000);
+      el.textContent+=`  Expires: ${exp.toISOString()} (${remaining>0?remaining+'s remaining':'EXPIRED'})\n`;
+    }
+    el.textContent+=`\n📏 Size: ${token.length} bytes (${parts[0].length}+${parts[1].length}+${parts[2].length})`;
+  }catch(e){el.textContent='Decode error: '+e.message}
+}
+
+function analyzeSize(){
+  const el=document.getElementById('size-result');
+  const token=document.getElementById('jwt-input').value.trim();
+  if(!token||token.split('.').length!==3){el.textContent='Paste a valid JWT first';return}
+  const parts=token.split('.');
+  const total=token.length;
+  const cookieMax=4096;
+  el.textContent=`JWT Size Analysis:\n${'='.repeat(40)}\n\n`;
+  el.textContent+=`Header:    ${parts[0].length} bytes (${(parts[0].length/total*100).toFixed(1)}%)\n`;
+  el.textContent+=`Payload:   ${parts[1].length} bytes (${(parts[1].length/total*100).toFixed(1)}%)\n`;
+  el.textContent+=`Signature: ${parts[2].length} bytes (${(parts[2].length/total*100).toFixed(1)}%)\n`;
+  el.textContent+=`Total:     ${total} bytes\n\n`;
+  el.textContent+=`Cookie limit: ${cookieMax} bytes\n`;
+  el.textContent+=`Fits in cookie: ${total<cookieMax?'✅ Yes':'❌ No — consider splitting or reducing claims'}\n\n`;
+  el.textContent+=`Comparison:\n`;
+  el.textContent+=`  UUID session token:  36 bytes\n`;
+  el.textContent+=`  This JWT:           ${total} bytes\n`;
+  el.textContent+=`  JWT overhead:       ${(total/36).toFixed(0)}x larger\n\n`;
+  el.textContent+=`Tip: Every custom claim adds ~30-100 bytes.\nKeep JWTs minimal for performance (sent with every request).`;
+}
+</script>
+</body></html>

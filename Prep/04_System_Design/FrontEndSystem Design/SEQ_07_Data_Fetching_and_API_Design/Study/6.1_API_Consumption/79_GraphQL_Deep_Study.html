@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GraphQL Deep Study — From Specification to Production at Scale</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#60a5fa;margin-bottom:10px}.card h3.warn{color:#f59e0b}.card h3.bad{color:#ef4444}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#60a5fa;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #60a5fa;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#60a5fa;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}</style>
+</head>
+<body>
+
+<h1>GraphQL Deep Study — From Specification to Production at Scale</h1>
+<div class="sub">Module 6.1 · FAANG Interview Deep Dive</div>
+
+<div class="tabs">
+  <div class="tab active">Deep Theory</div>
+  <div class="tab">Architecture Patterns</div>
+  <div class="tab">FAANG Interview</div>
+  <div class="tab">Code Walkthrough</div>
+  <div class="tab">Cheat Sheet</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 1 — DEEP THEORY                                                    -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="panel active">
+
+  <div class="card">
+    <h3>1. GraphQL Execution Pipeline — Parse → Validate → Execute → Serialize</h3>
+    <p>Every GraphQL request passes through a deterministic four-phase pipeline defined in the spec (June 2018+). Understanding each phase is critical for debugging, performance tuning, and security hardening.</p>
+    <pre>
+<span class="cm">// The four phases inside graphql-js execute()</span>
+<span class="kw">Phase 1 — Parse</span>
+  Source text → AST (DocumentNode)
+  Lexer tokenises the raw string, parser builds the tree.
+  Errors here = <span class="str">SyntaxError</span> (malformed query).
+  Cost: O(n) where n = query length. Cached via persisted queries.
+
+<span class="kw">Phase 2 — Validate</span>
+  AST + Schema → validation errors[]
+  Runs ~30 built-in rules (FieldsOnCorrectType, KnownFragmentNames,
+  NoUnusedVariables, UniqueOperationNames, etc.)
+  Custom rules inject here: depth-limiting, complexity analysis.
+  Cost: O(fields × rules). Run ONCE per unique query.
+
+<span class="kw">Phase 3 — Execute</span>
+  AST + Schema + Resolvers + rootValue + context → data | errors
+  Walks the AST depth-first. For each field:
+    1. Resolve field value (call resolver or use default)
+    2. Complete value (coerce scalars, recurse objects, iterate lists)
+  Mutations execute root fields SERIALLY (spec §6.3.1).
+  Queries execute root fields in PARALLEL (implementation-dependent).
+
+<span class="kw">Phase 4 — Serialize</span>
+  Result map → JSON string
+  Custom scalars call serialize(). Errors get positions attached.
+  Extensions field (tracing, cache hints) appended here.</pre>
+    <div class="info">💡 At Meta, the parse + validate phases are entirely eliminated in production through Relay's persisted queries. The server receives only a query ID + variables, looks up a pre-validated AST, and jumps directly to execute.</div>
+  </div>
+
+  <div class="card">
+    <h3>2. Resolver Tree Traversal — Depth-First Execution Model</h3>
+    <p>GraphQL resolvers form an implicit tree that mirrors the query shape. The execution engine walks this tree depth-first, resolving parent fields before children. This creates the N+1 problem and motivates DataLoader.</p>
+    <pre>
+<span class="cm">// Query</span>
+query {
+  users {          <span class="cm">← resolver: Query.users → User[]</span>
+    name           <span class="cm">← resolver: User.name (default)</span>
+    posts {        <span class="cm">← resolver: User.posts → Post[] (N calls!)</span>
+      title        <span class="cm">← resolver: Post.title (default)</span>
+      comments {   <span class="cm">← resolver: Post.comments → Comment[] (N×M calls!!)</span>
+        body
+      }
+    }
+  }
+}
+
+<span class="kw">Execution order:</span>
+1. Query.users()          → [User1, User2, ..., UserN]
+2. User.posts(User1)      → [Post1a, Post1b]    ← called N times
+   User.posts(User2)      → [Post2a]
+   ...
+3. Post.comments(Post1a)  → [Comment1, ...]      ← called Σ(posts) times
+   Post.comments(Post1b)  → [...]
+   ...
+
+<span class="kw">Without DataLoader:</span> 1 + N + N*M database calls
+<span class="kw">With DataLoader:</span>    1 + 1 + 1 = 3 batched calls (one per level)</pre>
+  </div>
+
+  <div class="card">
+    <h3>3. DataLoader — Tick-Coalescing Batch Strategy</h3>
+    <p>DataLoader collects all `.load(key)` calls within a single tick of the event loop, then dispatches a single batch function. This is the standard solution to the N+1 problem in GraphQL servers.</p>
+    <pre>
+<span class="cm">// How DataLoader coalesces within one event loop tick</span>
+
+<span class="kw">Microtask queue view:</span>
+┌─────────────────────────────────────────────────────┐
+│ Tick 1: Resolvers call loader.load(id) for N users  │
+│   load(1) → enqueue key 1                          │
+│   load(2) → enqueue key 2                          │
+│   load(5) → enqueue key 5                          │
+│                                                     │
+│ End of tick: process.nextTick / Promise.resolve()   │
+│   → batchFn([1, 2, 5]) fires ONCE                  │
+│   → SQL: SELECT * FROM posts WHERE user_id IN(1,2,5)│
+│   → Results mapped back to individual promises      │
+└─────────────────────────────────────────────────────┘
+
+<span class="kw">Key implementation details:</span>
+• Scheduling uses <span class="fn">process.nextTick</span> (Node) or <span class="fn">Promise.resolve().then()</span>
+• Keys are de-duplicated by identity (Map) — load(1) twice = 1 batch key
+• Cache is per-request (new DataLoader per context) to avoid stale data
+• <span class="str">maxBatchSize</span> splits large batches (default: Infinity)
+• Results array MUST match keys array 1:1 in length and order</pre>
+    <div class="info">💡 DataLoader was created at Facebook specifically for GraphQL. It's language-agnostic in concept — Java has <code>java-dataloader</code>, Go has <code>dataloaden</code>. The pattern: collect keys → batch fetch → distribute results.</div>
+  </div>
+
+  <div class="card">
+    <h3>4. Type System Deep Dive — Scalars, Enums, Interfaces, Unions, Input Types, Directives</h3>
+    <pre>
+<span class="kw">Scalar Types</span> — Leaf nodes. Built-in: Int, Float, String, Boolean, ID
+  Custom: <span class="fn">scalar DateTime</span> — must define serialize/parseValue/parseLiteral
+  Used for: dates, JSON blobs, URLs, email validation
+
+<span class="kw">Enum Types</span> — Finite set of allowed values
+  <span class="fn">enum Role { ADMIN EDITOR VIEWER }</span>
+  Serialised as strings in JSON. Internal values can differ (mapper).
+
+<span class="kw">Interface Types</span> — Abstract types with guaranteed fields
+  <span class="fn">interface Node { id: ID! }</span>
+  Implementing types MUST define all interface fields.
+  Resolved via <span class="str">__resolveType</span> or <span class="str">isTypeOf</span>.
+  Critical for Relay's Global Object Identification pattern.
+
+<span class="kw">Union Types</span> — "one of" without shared fields
+  <span class="fn">union SearchResult = User | Post | Comment</span>
+  Queried via inline fragments: <span class="str">... on User { name }</span>
+  Must have __resolveType. Cannot have fields of their own.
+
+<span class="kw">Input Types</span> — Structured arguments
+  <span class="fn">input CreateUserInput { name: String! email: String! }</span>
+  Cannot have fields that return object types (no cycles).
+  Validated at the validate phase before resolvers run.
+
+<span class="kw">Directives</span> — Metadata annotations
+  Built-in: <span class="str">@skip(if: Boolean!)</span>, <span class="str">@include(if: Boolean!)</span>, <span class="str">@deprecated</span>
+  Custom: <span class="str">@auth(requires: Role)</span>, <span class="str">@cacheControl(maxAge: Int)</span>
+  Schema directives transform the schema at build time (SchemaTransformer).
+  Query directives modify execution at runtime.</pre>
+  </div>
+
+  <div class="card">
+    <h3>5. Subscription WebSocket Protocol — graphql-ws</h3>
+    <pre>
+<span class="kw">Protocol: graphql-transport-ws (newer) vs subscriptions-transport-ws (legacy)</span>
+
+<span class="cm">// Connection lifecycle (graphql-transport-ws)</span>
+Client → Server: <span class="str">{ type: "connection_init", payload: { authToken } }</span>
+Server → Client: <span class="str">{ type: "connection_ack" }</span>    <span class="cm">// within connectionInitWaitTimeout</span>
+
+Client → Server: <span class="str">{ id: "1", type: "subscribe", payload: { query, variables } }</span>
+Server → Client: <span class="str">{ id: "1", type: "next", payload: { data: {...} } }</span>  <span class="cm">// repeated</span>
+Server → Client: <span class="str">{ id: "1", type: "complete" }</span>  <span class="cm">// stream ended</span>
+
+Client → Server: <span class="str">{ id: "1", type: "complete" }</span>  <span class="cm">// client unsubscribes</span>
+
+<span class="kw">Key differences from legacy protocol:</span>
+• Single WebSocket per client (multiplexed via id)
+• Proper acknowledgement flow — no race conditions
+• Server can send <span class="str">"error"</span> per subscription (not connection-level)
+• Lazy connections: WS opens only on first subscribe
+• Supports <span class="fn">keep-alive</span> via ping/pong frames (not GQL messages)</pre>
+  </div>
+
+  <div class="card">
+    <h3>6. Persisted Queries &amp; Automatic Persisted Queries (APQ)</h3>
+    <pre>
+<span class="kw">Persisted Queries (Relay-style)</span>
+  Build time: compiler extracts all queries → generates ID (SHA256 hash)
+  Deployed: server has allowlist map { queryId → AST }
+  Runtime: client sends <span class="str">{ id: "abc123", variables: {} }</span>
+  Benefits: no parse/validate, smaller payload, query allowlisting (security)
+
+<span class="kw">Automatic Persisted Queries (Apollo APQ)</span>
+  No build step required. Uses a negotiate protocol:
+  1. Client sends: <span class="str">{ extensions: { persistedQuery: { sha256Hash: "abc" } } }</span>
+  2. Server checks cache:
+     → HIT:  execute cached query
+     → MISS: respond <span class="str">PersistedQueryNotFound</span>
+  3. Client retries with full query text + hash
+  4. Server stores hash → query, executes
+  5. Subsequent requests use hash only
+
+<span class="kw">Trade-offs:</span>
+  Persisted: max security (allowlist), max perf, requires build pipeline
+  APQ: zero config, gradual, but no allowlisting on first request</pre>
+  </div>
+
+  <div class="card">
+    <h3 class="warn">7. Query Complexity &amp; Depth Limiting — Security</h3>
+    <pre>
+<span class="kw">Depth Limiting</span>
+  Rejects queries exceeding a max nesting depth.
+  Implementation: walk AST, track depth counter on SelectionSet entry.
+  Typical limit: depth ≤ 10 (GitHub API uses 10).
+
+<span class="kw">Query Complexity Analysis</span>
+  Assigns cost to each field, sums total, rejects if over budget.
+
+  <span class="fn">type Query {</span>
+    <span class="fn">users(first: Int!): [User!]! @cost(complexity: 2, multipliers: ["first"])</span>
+  <span class="fn">}</span>
+
+  Example: users(first: 50) { posts(first: 20) { title } }
+  Complexity = 2*50 + 1*50*20 = 100 + 1000 = 1100
+  Budget: 1000 → REJECTED
+
+<span class="kw">Additional protections:</span>
+  • Query allowlisting (persisted queries only)
+  • Timeout per resolver (resolve-level cancellation)
+  • Rate limiting (token bucket per client + per complexity score)
+  • Disable introspection in production
+  • Batch attack prevention: limit concurrent operations in a document</pre>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 2 — ARCHITECTURE PATTERNS                                          -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="panel">
+
+  <div class="card">
+    <h3>1. Apollo Normalized Cache — __typename + id → __ref</h3>
+    <p>Apollo Client's InMemoryCache stores a flat, normalized lookup table. Every entity with <code>__typename</code> and <code>id</code> (or a custom <code>keyFields</code>) gets a unique cache key. References replace nested objects.</p>
+    <pre>
+<span class="cm">// Query result</span>
+{
+  "data": {
+    "user": {
+      "__typename": "User",
+      "id": "42",
+      "name": "Alice",
+      "posts": [
+        { "__typename": "Post", "id": "100", "title": "GraphQL at Scale" },
+        { "__typename": "Post", "id": "101", "title": "Federation Deep Dive" }
+      ]
+    }
+  }
+}
+
+<span class="cm">// Normalized cache store</span>
+{
+  <span class="str">"User:42"</span>: {
+    "__typename": "User",
+    "id": "42",
+    "name": "Alice",
+    "posts": [
+      { <span class="kw">"__ref": "Post:100"</span> },
+      { <span class="kw">"__ref": "Post:101"</span> }
+    ]
+  },
+  <span class="str">"Post:100"</span>: {
+    "__typename": "Post",
+    "id": "100",
+    "title": "GraphQL at Scale"
+  },
+  <span class="str">"Post:101"</span>: {
+    "__typename": "Post",
+    "id": "101",
+    "title": "Federation Deep Dive"
+  },
+  <span class="str">"ROOT_QUERY"</span>: {
+    "user": { "__ref": "User:42" }
+  }
+}
+
+<span class="kw">Why this matters:</span>
+• Updating Post:100 title in ANY query automatically updates ALL queries
+  referencing that post — single source of truth.
+• Avoids data duplication across dozens of queries.
+• Enables optimistic UI: write to cache → render → await server confirm.</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Cache Policies — Choosing the Right Fetch Strategy</h3>
+    <pre>
+<span class="kw">cache-first</span> (default)
+  Check cache → if complete, return cached data (no network).
+  If cache miss or incomplete → fetch from network → write to cache.
+  Best for: relatively static data (user profiles, config).
+
+<span class="kw">network-only</span>
+  Always fetch from network. Still writes to cache for future reads.
+  Best for: real-time data (notifications, live feeds).
+
+<span class="kw">cache-and-network</span>
+  Return cached data immediately (fast paint), THEN fetch from network.
+  If server data differs, re-render with updated data.
+  Best for: lists that need fast UX but should show fresh data.
+
+<span class="kw">no-cache</span>
+  Always fetch from network. Does NOT write result to cache.
+  Best for: sensitive data, one-off lookups, search results.
+
+<span class="kw">cache-only</span>
+  Read from cache ONLY. Errors if data not in cache.
+  Best for: offline mode, reading data written by another query.
+
+<span class="kw">Decision heuristic:</span>
+  "How stale can this data be?"
+    → 0 seconds: network-only
+    → seconds–minutes: cache-and-network
+    → minutes–hours: cache-first
+    → never fetched independently: cache-only
+    → must not be cached at all: no-cache</pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Fragment Colocation — Components Own Their Data</h3>
+    <pre>
+<span class="cm">// Each component declares EXACTLY what data it needs</span>
+
+<span class="cm">// UserAvatar.tsx</span>
+<span class="kw">export const</span> USER_AVATAR_FRAGMENT = gql`
+  <span class="fn">fragment UserAvatarFields on User</span> {
+    id
+    avatarUrl
+    displayName
+  }
+`;
+
+<span class="cm">// UserBio.tsx</span>
+<span class="kw">export const</span> USER_BIO_FRAGMENT = gql`
+  <span class="fn">fragment UserBioFields on User</span> {
+    id
+    bio
+    joinedDate
+  }
+`;
+
+<span class="cm">// UserProfile.tsx — parent composes fragments</span>
+<span class="kw">const</span> USER_PROFILE_QUERY = gql`
+  query UserProfile($id: ID!) {
+    user(id: $id) {
+      <span class="fn">...UserAvatarFields</span>
+      <span class="fn">...UserBioFields</span>
+    }
+  }
+  ${USER_AVATAR_FRAGMENT}
+  ${USER_BIO_FRAGMENT}
+`;
+
+<span class="kw">Benefits:</span>
+1. Adding a field to UserAvatar automatically includes it in the query.
+2. Removing UserAvatar component → its fragment unused → tree-shaken.
+3. Each component can derive TypeScript types from its own fragment.
+4. No over-fetching: the query is the union of all active fragments.
+5. Relay enforces this pattern via its compiler — it's not optional.</pre>
+    <div class="info">💡 At Meta, fragment colocation is mandatory. The Relay compiler statically validates that every component reads only from its declared fragment. This guarantee enables safe, automated query optimizations across thousands of components.</div>
+  </div>
+
+  <div class="card">
+    <h3>4. Federation vs Schema Stitching</h3>
+    <pre>
+<span class="kw">Schema Stitching (Legacy)</span>
+  Gateway merges schemas from multiple services using type merging.
+  Gateway knows about ALL schemas — single point of coupling.
+  Resolvers delegated via <span class="fn">delegateToSchema()</span>.
+  Problem: gateway grows complex, hard to version independently.
+
+<span class="kw">Apollo Federation (v2)</span>
+  Each service ("subgraph") owns its types and extends shared entities.
+  The gateway ("router") composes subgraphs into a supergraph.
+  Services are independently deployable.
+
+  <span class="cm">// Users subgraph</span>
+  <span class="fn">type User @key(fields: "id")</span> {
+    id: ID!
+    name: String!
+    email: String!
+  }
+
+  <span class="cm">// Posts subgraph — extends User</span>
+  <span class="fn">type User @key(fields: "id")</span> {
+    id: ID!
+    posts: [Post!]!       <span class="cm">← added by Posts service</span>
+  }
+
+  <span class="fn">type Post @key(fields: "id")</span> {
+    id: ID!
+    title: String!
+    author: User!
+  }
+
+<span class="kw">Query plan (federation):</span>
+  query { user(id: "42") { name posts { title } } }
+
+  1. Router → Users subgraph: Fetch { name } for User:42
+  2. Router → Posts subgraph: Fetch { posts { title } } for User:42
+  3. Router merges results and returns unified response
+
+<span class="kw">Federation v2 improvements:</span>
+  • @shareable — multiple subgraphs can resolve the same field
+  • @override — migrate fields between subgraphs incrementally
+  • @inaccessible — hide fields from the public API
+  • @tag — metadata for schema governance tooling</pre>
+  </div>
+
+  <div class="card">
+    <h3>5. Gateway Architecture — Routing, Query Planning, Error Handling</h3>
+    <pre>
+<span class="kw">Apollo Router (Rust-based, Federation v2)</span>
+
+┌──────────┐     ┌──────────────────────────────┐
+│  Client   │────▶│        Apollo Router          │
+└──────────┘     │  1. Parse + Validate           │
+                 │  2. Query Plan (from supergraph)│
+                 │  3. Parallel subgraph fetches   │
+                 │  4. Merge results               │
+                 │  5. Serialize response           │
+                 └──────┬──────┬──────┬────────────┘
+                        │      │      │
+                   ┌────▼─┐ ┌─▼───┐ ┌▼─────┐
+                   │Users │ │Posts│ │Notif │  ← Subgraphs
+                   └──────┘ └─────┘ └──────┘
+
+<span class="kw">Query Planning:</span>
+  Supergraph SDL is composed at build time (rover compose).
+  Router generates a query plan = DAG of fetches to subgraphs.
+  Parallel fetches when subgraphs are independent.
+  Sequential when data dependencies exist (entity references).
+
+<span class="kw">Error handling:</span>
+  Partial data: if Posts subgraph fails, user.name still returned.
+  Errors array contains per-subgraph errors with path information.
+  Router-level: timeout, retry, circuit breaker per subgraph.
+
+<span class="kw">Performance:</span>
+  Apollo Router is ~10x faster than Node.js gateway (no GC pauses).
+  Supports response caching, query deduplication, coprocessors.</pre>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 3 — FAANG INTERVIEW                                                -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="panel">
+
+  <div class="card">
+    <h3>FAANG GraphQL Interview — 6 Deep Q&amp;A</h3>
+
+    <div class="qa">
+      <div class="q">Q1: What is the N+1 problem in GraphQL and how does DataLoader solve it?</div>
+      <div class="a">In GraphQL, resolvers are executed per-field. When a list query returns N parent items, each parent triggers its own child resolver — producing 1 (parent) + N (children) database queries. DataLoader solves this by collecting all `.load(key)` calls enqueued during a single tick of the Node.js event loop, deduplicating keys, and dispatching a single batch function. The batch function issues one query (e.g., `WHERE id IN (...)`) and maps results back to the individual promises in key order. A fresh DataLoader instance is created per request to prevent cross-request cache pollution.</div>
+      <div class="followup">Follow-up: What happens if you forget to create a new DataLoader per request?</div>
+      <div class="a">The DataLoader's internal memoization cache persists across requests, meaning User A could see User B's data from a previous request's cached result. This is both a correctness bug and a security vulnerability. Always scope DataLoader to the request context object.</div>
+      <div class="followup">Follow-up: Can DataLoader batch across different resolvers at the same depth?</div>
+      <div class="a">Yes. DataLoader batches by event loop tick, not by resolver identity. If `User.posts` and `User.comments` both call `postLoader.load(id)` in the same tick, their keys are combined into one batch. The key insight: batching is temporal (same tick), not structural (same resolver).</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: Explain how Apollo's normalized cache works. Why is normalization important?</div>
+      <div class="a">Apollo's InMemoryCache stores entities in a flat lookup table keyed by `__typename:id` (e.g., `User:42`). When a query result contains nested objects with `__typename` and `id`, Apollo replaces them with `__ref` pointers. This creates a single source of truth — if a Post's title is updated via any query or mutation, every component displaying that Post sees the update without refetching. Without normalization, Apollo would store raw query shapes, causing data duplication and stale reads when the same entity appears in multiple queries.</div>
+      <div class="followup">Follow-up: How do you handle entities without an `id` field?</div>
+      <div class="a">Configure `typePolicies` with custom `keyFields`. For example, a `Coordinate` type might use `keyFields: ["latitude", "longitude"]`, producing cache key `Coordinate:{"latitude":40.7,"longitude":-74.0}`. If an entity truly has no identity, it's stored inline (not normalized) — but this means updates won't propagate.</div>
+      <div class="followup">Follow-up: What's the difference between cache.modify and cache.writeFragment?</div>
+      <div class="a">`writeFragment` writes a fragment-shaped object and triggers normalization (it can create new cache entries). `cache.modify` directly mutates existing cache fields using modifier functions — it's lower-level, bypasses merge functions, and cannot create new entities. Use `modify` for surgical updates (removing items from lists), `writeFragment` for upserting entities.</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q3: When should a team choose GraphQL over REST? When should REST be preferred?</div>
+      <div class="a"><strong>Choose GraphQL when:</strong> multiple consumer platforms need different data shapes (mobile vs web vs TV), UI is component-driven with deep nesting, product iteration is rapid (schema evolves without endpoint proliferation), and the team can invest in schema governance and tooling. <strong>Choose REST when:</strong> caching requirements are simple (HTTP cache headers work well), the API surface is simple with 1:1 resource mapping, the team is small without GraphQL expertise, file uploads are a primary concern, or the workload is primarily CRUD with no complex data relationships.</div>
+      <div class="followup">Follow-up: Can GraphQL and REST coexist? How?</div>
+      <div class="a">Absolutely. A common pattern is a GraphQL gateway that wraps existing REST services using RESTDataSource. The gateway provides a unified graph to clients while REST services remain unchanged. This is the "GraphQL as a BFF (Backend for Frontend)" pattern — clients speak GraphQL, the gateway speaks REST to backends.</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q4: How do you implement field-level authorization in GraphQL?</div>
+      <div class="a">There are three primary approaches: <strong>1) Resolver-level guards</strong> — check permissions in each resolver, return null or throw for unauthorized access. Simplest but scatters auth logic. <strong>2) Schema directive (@auth)</strong> — declare `@auth(requires: ADMIN)` on fields; a directive transformer wraps the resolver with a permission check. Declarative and auditable. <strong>3) Middleware/plugin layer</strong> — intercept field resolution in Apollo's `willResolveField` plugin hook. Centralised but can be opaque. Best practice: implement authorization in the business/data layer (not the GraphQL layer) so it's enforced regardless of access path — GraphQL resolvers delegate to service methods that enforce auth.</div>
+      <div class="followup">Follow-up: How does field-level auth interact with introspection?</div>
+      <div class="a">Introspection exposes the full schema including protected fields. Options: disable introspection in production, run a schema-level transform that strips @auth fields from the introspection result, or accept that discoverability ≠ accessibility (knowing a field exists doesn't mean you can read it). GitHub's API takes the latter approach.</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q5: How do you prevent abuse through expensive GraphQL queries in production?</div>
+      <div class="a">Layered defense: <strong>1) Depth limiting</strong> — reject queries nested beyond N levels (typically 10). <strong>2) Complexity analysis</strong> — assign costs to fields (with multipliers for lists), compute total cost, reject queries over budget. <strong>3) Persisted queries / allowlisting</strong> — only accept known query hashes. <strong>4) Timeout</strong> — per-resolver and per-request timeouts. <strong>5) Rate limiting</strong> — combine traditional rate limiting (requests/sec) with complexity-weighted rate limiting (total complexity/minute). <strong>6) Disable introspection</strong> — prevents attackers from mapping the schema.</div>
+      <div class="followup">Follow-up: How does GitHub implement complexity analysis on their public GraphQL API?</div>
+      <div class="a">GitHub assigns a point cost per node (1 point) and per connection, with `first`/`last` arguments as multipliers. Total budget: 5,000 points per query. They expose `rateLimit { cost remaining }` in every response so clients can self-adjust. The formula is recursive: a connection with `first: 100` containing a sub-connection with `first: 50` costs 100 + 100*50 = 5,100 (over budget).</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q6: What is fragment colocation and why is it critical at scale?</div>
+      <div class="a">Fragment colocation places a GraphQL fragment definition next to the component that consumes its data. The parent page query composes all child fragments using the spread operator. Benefits: <strong>1) Data contract</strong> — each component declares exactly what it needs. <strong>2) Safety</strong> — adding/removing a field in a component automatically updates the query. <strong>3) Type safety</strong> — TypeScript types are generated per-fragment, not per-query. <strong>4) Refactoring</strong> — delete a component, its fragment goes with it. <strong>5) Perf</strong> — Relay's compiler can optimize fragments (e.g., @defer a slow fragment). At Meta scale (100K+ components), colocation is the only way to prevent over-fetching and maintain the data layer.</div>
+      <div class="followup">Follow-up: How does Relay enforce colocation differently from Apollo?</div>
+      <div class="a">Relay's compiler makes colocation mandatory — it forbids reading fragment data outside the component that declared it (`useFragment` enforces this). Apollo is permissive — fragments are opt-in sugar and any component can read any cached data. Relay's strictness enables compiler-level optimisations: automatic query flattening, @defer insertion, and dead-field elimination — none of which Apollo can do because it can't guarantee ownership.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 4 — CODE WALKTHROUGH                                               -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="panel">
+
+  <div class="card">
+    <h3>1. Apollo Client Link Chain — Auth → Retry → Error → HTTP</h3>
+    <pre>
+<span class="kw">import</span> { ApolloClient, InMemoryCache, <span class="fn">from</span>, HttpLink } <span class="kw">from</span> <span class="str">'@apollo/client'</span>;
+<span class="kw">import</span> { setContext } <span class="kw">from</span> <span class="str">'@apollo/client/link/context'</span>;
+<span class="kw">import</span> { RetryLink } <span class="kw">from</span> <span class="str">'@apollo/client/link/retry'</span>;
+<span class="kw">import</span> { onError } <span class="kw">from</span> <span class="str">'@apollo/client/link/error'</span>;
+
+<span class="cm">// 1. Auth link — injects token into every request</span>
+<span class="kw">const</span> authLink = setContext(<span class="kw">async</span> (_, { headers }) =&gt; {
+  <span class="kw">const</span> token = <span class="kw">await</span> getAccessToken(); <span class="cm">// async token refresh</span>
+  <span class="kw">return</span> {
+    headers: {
+      ...headers,
+      authorization: token ? <span class="str">`Bearer ${token}`</span> : <span class="str">''</span>,
+    },
+  };
+});
+
+<span class="cm">// 2. Retry link — exponential backoff on network errors</span>
+<span class="kw">const</span> retryLink = <span class="kw">new</span> RetryLink({
+  delay: { initial: 300, max: 5000, jitter: <span class="kw">true</span> },
+  attempts: {
+    max: 3,
+    retryIf: (error) =&gt; !!error &amp;&amp; error.statusCode !== 401,
+  },
+});
+
+<span class="cm">// 3. Error link — global error handling + token refresh</span>
+<span class="kw">const</span> errorLink = onError(({ graphQLErrors, networkError, operation, forward }) =&gt; {
+  <span class="kw">if</span> (graphQLErrors) {
+    <span class="kw">for</span> (<span class="kw">const</span> err <span class="kw">of</span> graphQLErrors) {
+      <span class="kw">if</span> (err.extensions?.code === <span class="str">'UNAUTHENTICATED'</span>) {
+        <span class="cm">// Refresh token and retry the failed operation</span>
+        <span class="kw">return</span> refreshToken().flatMap(() =&gt; forward(operation));
+      }
+      console.error(<span class="str">`[GraphQL Error]`</span>, err.message, err.path);
+    }
+  }
+  <span class="kw">if</span> (networkError) {
+    console.error(<span class="str">`[Network Error]`</span>, networkError);
+  }
+});
+
+<span class="cm">// 4. HTTP link — the terminating link</span>
+<span class="kw">const</span> httpLink = <span class="kw">new</span> HttpLink({
+  uri: <span class="str">'https://api.example.com/graphql'</span>,
+  credentials: <span class="str">'include'</span>,
+});
+
+<span class="cm">// Compose: auth → retry → error → http</span>
+<span class="kw">const</span> client = <span class="kw">new</span> ApolloClient({
+  link: <span class="fn">from</span>([authLink, retryLink, errorLink, httpLink]),
+  cache: <span class="kw">new</span> InMemoryCache(),
+});</pre>
+    <div class="info">💡 Links form a chain like Express middleware. Each link can modify the operation (e.g., add headers), handle errors, retry, or pass to the next link via `forward(operation)`. The HttpLink is always last (terminating link).</div>
+  </div>
+
+  <div class="card">
+    <h3>2. TypedDocumentNode — End-to-End Type Safety</h3>
+    <pre>
+<span class="cm">// Generated by GraphQL Code Generator (codegen.ts)</span>
+<span class="cm">// TypedDocumentNode carries both the result type AND variables type</span>
+
+<span class="cm">// __generated__/UserProfile.ts</span>
+<span class="kw">import</span> { TypedDocumentNode } <span class="kw">from</span> <span class="str">'@graphql-typed-document-node/core'</span>;
+
+<span class="kw">export type</span> UserProfileQuery = {
+  user: {
+    __typename: <span class="str">'User'</span>;
+    id: <span class="kw">string</span>;
+    name: <span class="kw">string</span>;
+    email: <span class="kw">string</span>;
+    posts: Array&lt;{
+      __typename: <span class="str">'Post'</span>;
+      id: <span class="kw">string</span>;
+      title: <span class="kw">string</span>;
+    }&gt;;
+  } | <span class="kw">null</span>;
+};
+
+<span class="kw">export type</span> UserProfileQueryVariables = {
+  userId: <span class="kw">string</span>;
+};
+
+<span class="kw">export const</span> UserProfileDocument: TypedDocumentNode&lt;
+  UserProfileQuery,
+  UserProfileQueryVariables
+&gt; = gql`
+  query UserProfile($userId: ID!) {
+    user(id: $userId) {
+      id
+      name
+      email
+      posts { id title }
+    }
+  }
+`;
+
+<span class="cm">// In component — fully typed, zero `as` casts</span>
+<span class="kw">const</span> { data, loading } = useQuery(UserProfileDocument, {
+  variables: { userId: <span class="str">'42'</span> },
+  <span class="cm">// TS error if you pass { userId: 123 } (number, not string)</span>
+});
+<span class="cm">// data.user?.name is typed as string</span>
+<span class="cm">// data.user?.posts[0].title is typed as string</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Cache Update After Mutation — cache.modify &amp; writeFragment</h3>
+    <pre>
+<span class="cm">// Scenario: user creates a new post, we need to add it to the cached list</span>
+
+<span class="kw">const</span> [createPost] = useMutation(CREATE_POST_MUTATION, {
+  <span class="cm">// Option A: cache.modify — surgical update to an existing entity</span>
+  update(cache, { data: { createPost: newPost } }) {
+    cache.modify({
+      id: cache.identify({ __typename: <span class="str">'User'</span>, id: newPost.authorId }),
+      fields: {
+        posts(existingPostRefs = [], { toReference }) {
+          <span class="kw">const</span> newPostRef = toReference({
+            __typename: <span class="str">'Post'</span>,
+            id: newPost.id,
+          });
+          <span class="kw">return</span> [newPostRef, ...existingPostRefs];
+        },
+      },
+    });
+  },
+});
+
+<span class="cm">// Option B: writeFragment — write the post entity + update the list</span>
+<span class="kw">const</span> [createPost2] = useMutation(CREATE_POST_MUTATION, {
+  update(cache, { data: { createPost: newPost } }) {
+    <span class="cm">// Step 1: Write the new post into the cache</span>
+    cache.writeFragment({
+      fragment: gql`
+        <span class="fn">fragment NewPost on Post</span> { id title createdAt author { id } }
+      `,
+      data: newPost,
+    });
+
+    <span class="cm">// Step 2: Read the existing list, append, and write back</span>
+    <span class="kw">const</span> existing = cache.readQuery({ query: GET_USER_POSTS, variables: { userId } });
+    <span class="kw">if</span> (existing) {
+      cache.writeQuery({
+        query: GET_USER_POSTS,
+        variables: { userId },
+        data: { userPosts: [newPost, ...existing.userPosts] },
+      });
+    }
+  },
+});</pre>
+  </div>
+
+  <div class="card">
+    <h3>4. Optimistic Response with Rollback</h3>
+    <pre>
+<span class="cm">// Optimistic UI: update the cache BEFORE the server responds</span>
+<span class="cm">// If the mutation fails, Apollo automatically rolls back</span>
+
+<span class="kw">const</span> [toggleLike] = useMutation(TOGGLE_LIKE_MUTATION, {
+  <span class="cm">// optimisticResponse provides a "fake" result immediately</span>
+  optimisticResponse: {
+    __typename: <span class="str">'Mutation'</span>,
+    toggleLike: {
+      __typename: <span class="str">'Post'</span>,
+      id: postId,
+      likeCount: isLiked ? currentLikes - 1 : currentLikes + 1,
+      isLikedByViewer: !isLiked,
+    },
+  },
+  <span class="cm">// update runs TWICE:</span>
+  <span class="cm">//   1. Immediately with optimisticResponse data</span>
+  <span class="cm">//   2. Again with actual server response (replacing optimistic)</span>
+  update(cache, { data: { toggleLike: post } }) {
+    cache.modify({
+      id: cache.identify(post),
+      fields: {
+        likeCount() { <span class="kw">return</span> post.likeCount; },
+        isLikedByViewer() { <span class="kw">return</span> post.isLikedByViewer; },
+      },
+    });
+  },
+  <span class="cm">// onError: Apollo automatically removes optimistic data</span>
+  <span class="cm">// and restores the cache to its pre-optimistic state</span>
+  onError(err) {
+    console.error(<span class="str">'Like toggle failed, rolled back'</span>, err);
+    showToast(<span class="str">'Action failed. Please try again.'</span>);
+  },
+});
+
+<span class="kw">Rollback mechanism:</span>
+  1. Apollo snapshots the cache before applying optimistic data
+  2. Optimistic data is layered ON TOP as a separate "optimistic layer"
+  3. On success: optimistic layer replaced with real data (usually identical)
+  4. On failure: optimistic layer removed, cache reverts to snapshot
+  5. Multiple optimistic updates stack as independent layers</pre>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 5 — CHEAT SHEET                                                    -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="panel">
+
+  <div class="card">
+    <h3>GraphQL vs REST — Comparison (8 Criteria)</h3>
+    <table>
+      <tr><th>Criteria</th><th>GraphQL</th><th>REST</th></tr>
+      <tr><td>Data Fetching</td><td>Single request, client specifies exact fields</td><td>Multiple endpoints, server decides response shape</td></tr>
+      <tr><td>Over/Under-fetching</td><td>Eliminated — client gets exactly what it requests</td><td>Common — endpoints return fixed schemas</td></tr>
+      <tr><td>Versioning</td><td>No versions — add fields, deprecate old ones</td><td>URL versioning (/v1/, /v2/) or header-based</td></tr>
+      <tr><td>Caching</td><td>Complex — requires normalized client cache, no HTTP cache by default</td><td>Simple — HTTP cache headers (ETag, Cache-Control)</td></tr>
+      <tr><td>Error Handling</td><td>Always 200 OK, errors in response body `errors[]`</td><td>HTTP status codes (4xx, 5xx) with error body</td></tr>
+      <tr><td>Tooling</td><td>Rich introspection, type generation, playground</td><td>OpenAPI/Swagger, Postman, well-understood</td></tr>
+      <tr><td>File Upload</td><td>Not in spec — needs multipart extension or separate endpoint</td><td>Native multipart/form-data support</td></tr>
+      <tr><td>Real-time</td><td>Subscriptions via WebSocket (built into spec)</td><td>SSE / WebSocket / polling (separate implementation)</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Cache Policy Decision Tree</h3>
+    <pre>
+                      ┌───────────────────────┐
+                      │ Can data be stale at all?│
+                      └────────┬──────────────┘
+                               │
+                     ┌─── NO ──┴── YES ───┐
+                     │                     │
+              <span class="kw">network-only</span>        ┌──────┴──────────┐
+                                │Must it be cached?│
+                                └──┬──────────────┘
+                                   │
+                         ┌── NO ───┴── YES ──────────┐
+                         │                            │
+                    <span class="kw">no-cache</span>              ┌─────────┴─────────┐
+                                          │ Needs fast first   │
+                                          │ paint + freshness? │
+                                          └──┬────────────────┘
+                                             │
+                                   ┌── YES ──┴── NO ────┐
+                                   │                     │
+                          <span class="kw">cache-and-network</span>       <span class="kw">cache-first</span></pre>
+  </div>
+
+  <div class="card">
+    <h3 class="warn">N+1 Problem Checklist</h3>
+    <pre>
+<span class="kw">☐</span> Identified: Every list field with a child resolver is a potential N+1
+<span class="kw">☐</span> DataLoader per resource: userLoader, postLoader, commentLoader
+<span class="kw">☐</span> DataLoader per request: <span class="fn">new DataLoader()</span> in context factory
+<span class="kw">☐</span> Batch function returns: results.length === keys.length (same order)
+<span class="kw">☐</span> Database query uses: <span class="str">WHERE id IN (...)</span> or equivalent batch fetch
+<span class="kw">☐</span> Caching: DataLoader deduplicates keys within a request automatically
+<span class="kw">☐</span> Monitoring: log batch sizes — if always 1, DataLoader isn't batching
+<span class="kw">☐</span> Max batch size: set <span class="fn">maxBatchSize</span> if DB has IN clause limits (e.g., 1000)
+<span class="kw">☐</span> Nested N+1: DataLoaders needed at EVERY depth level, not just the first</pre>
+  </div>
+
+  <div class="card">
+    <h3 class="bad">Security Checklist</h3>
+    <pre>
+<span class="kw">☐</span> Depth limiting: max depth ≤ 10 (configurable)
+<span class="kw">☐</span> Complexity analysis: field costs × list multipliers, budget enforced
+<span class="kw">☐</span> Persisted queries: in prod, only allow known query hashes
+<span class="kw">☐</span> Introspection: DISABLED in production
+<span class="kw">☐</span> Rate limiting: per-client AND per-complexity (weighted)
+<span class="kw">☐</span> Timeouts: per-resolver (5s) and per-request (30s)
+<span class="kw">☐</span> Input validation: max string lengths, list size limits (first/last ≤ 100)
+<span class="kw">☐</span> Authorization: enforced in business layer, not just GraphQL resolvers
+<span class="kw">☐</span> Batching attacks: limit operations per document to 1 (or small number)
+<span class="kw">☐</span> Error masking: never leak stack traces or internal details in errors[]
+<span class="kw">☐</span> CORS: restrict allowed origins for the GraphQL endpoint
+<span class="kw">☐</span> CSRF: use custom header requirement (e.g., X-GraphQL-Operation)</pre>
+  </div>
+
+  <div class="card">
+    <h3>Quick Reference — Key Apollo APIs</h3>
+    <table>
+      <tr><th>API</th><th>Purpose</th><th>When to Use</th></tr>
+      <tr><td><code>useQuery</code></td><td>Fetch data on mount</td><td>Default for page data</td></tr>
+      <tr><td><code>useLazyQuery</code></td><td>Fetch on demand</td><td>Search, user-triggered</td></tr>
+      <tr><td><code>useMutation</code></td><td>Write + cache update</td><td>Create, update, delete</td></tr>
+      <tr><td><code>useSubscription</code></td><td>Real-time stream</td><td>Chat, notifications</td></tr>
+      <tr><td><code>cache.modify</code></td><td>Surgical field update</td><td>Add/remove list items</td></tr>
+      <tr><td><code>cache.writeFragment</code></td><td>Write entity to cache</td><td>Upsert from mutation</td></tr>
+      <tr><td><code>cache.evict</code></td><td>Remove entity</td><td>After deletion mutations</td></tr>
+      <tr><td><code>cache.gc()</code></td><td>Garbage collect orphans</td><td>After evict calls</td></tr>
+      <tr><td><code>fetchMore</code></td><td>Pagination</td><td>Infinite scroll, load more</td></tr>
+      <tr><td><code>refetch</code></td><td>Re-execute query</td><td>Pull-to-refresh</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');tabs.forEach((t,i)=>t.addEventListener('click',()=>{tabs.forEach((t2,j)=>{t2.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}));
+</script>
+
+</body>
+</html>

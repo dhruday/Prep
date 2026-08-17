@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 04 — Data Masking & Sanitization</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟠 Lab 04 — Data Masking & Sanitization</h1>
+<p class="sub">Module 12.3 · Masking PII in UI, logs, and API responses</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Masking Patterns</div>
+  <div class="tab" onclick="setTab(1)">Masking Lab</div>
+  <div class="tab" onclick="setTab(2)">API Response Filtering</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Data Masking Strategies</h3>
+    <pre><span class="cm">// Masking = showing partial data for recognition without full exposure</span>
+
+<span class="cm">// Credit Card: 4111 1111 1111 1111 → •••• •••• •••• 1111</span>
+<span class="cm">// SSN: 123-45-6789 → •••-••-6789</span>
+<span class="cm">// Email: alice@example.com → a***e@example.com</span>
+<span class="cm">// Phone: +1 (555) 123-4567 → +1 (555) •••-4567</span>
+<span class="cm">// Bank Account: 1234567890 → ••••••7890</span>
+
+<span class="cm">// Key principles:</span>
+<span class="cm">// 1. Show enough to IDENTIFY (last 4 digits)</span>
+<span class="cm">// 2. Hide enough to PROTECT (mask everything else)</span>
+<span class="cm">// 3. Mask on the SERVER, not just the client</span>
+<span class="cm">//    (client masking is cosmetic, not security)</span>
+<span class="cm">// 4. Log the MASKED version, never the full value</span>
+<span class="cm">// 5. Full value only when explicitly needed (and audited)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Interactive Masking</h3>
+    <button onclick="demoMasking()">🎭 Mask Sample Data</button>
+    <button onclick="demoUnmasking()">👁️ Progressive Disclosure Demo</button>
+    <div class="output" id="mask-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Server-Side Response Filtering</h3>
+    <pre><span class="cm">// ❌ Bad: Send full user object</span>
+app.get(<span class="str">'/api/user/:id'</span>, (req, res) =&gt; {
+  <span class="kw">const</span> user = db.getUser(req.params.id);
+  res.json(user); <span class="cm">// Includes password hash, SSN, internal IDs!</span>
+});
+
+<span class="cm">// ✅ Good: Explicit field selection</span>
+app.get(<span class="str">'/api/user/:id'</span>, (req, res) =&gt; {
+  <span class="kw">const</span> user = db.getUser(req.params.id);
+  res.json({
+    id: user.publicId,          <span class="cm">// not internal DB ID</span>
+    name: user.name,
+    email: maskEmail(user.email),
+    phone: maskPhone(user.phone),
+    memberSince: user.createdAt
+    <span class="cm">// ❌ Omitted: passwordHash, ssn, internalId, role</span>
+  });
+});
+
+<span class="cm">// Middleware pattern for consistent masking:</span>
+<span class="kw">function</span> <span class="fn">sanitizeResponse</span>(data, allowedFields) {
+  <span class="kw">if</span> (Array.isArray(data)) {
+    <span class="kw">return</span> data.map(item =&gt; sanitizeResponse(item, allowedFields));
+  }
+  <span class="kw">return</span> Object.fromEntries(
+    Object.entries(data)
+      .filter(([key]) =&gt; allowedFields.includes(key))
+  );
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Data Masking</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: When should masking happen on the frontend vs backend?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Always server-side. Frontend masking is cosmetic — the full value is still in the network response, in memory, and accessible via DevTools. Backend approach: (1) Default: API returns masked values. SSN → •••-••-6789. (2) "Reveal" action: Separate API endpoint that requires re-authentication and logs an audit event. GET /api/user/42/ssn with step-up auth. (3) Never send the full value in the initial page load. (4) For display-only data: mask server-side, no need for reveal. (5) For editable data: use "edit mode" that fetches the real value with elevated auth. Google's approach: Fields are classified by sensitivity level (public, internal, restricted, secret). Each level has different masking rules and access controls applied at the API layer.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function maskCC(cc){return '•••• •••• •••• '+cc.replace(/\D/g,'').slice(-4)}
+function maskSSN(ssn){return '•••-••-'+ssn.replace(/\D/g,'').slice(-4)}
+function maskEmail(e){const[name,domain]=e.split('@');return name[0]+'•'.repeat(Math.max(name.length-2,1))+name.slice(-1)+'@'+domain}
+function maskPhone(p){const digits=p.replace(/\D/g,'');return p.replace(digits.slice(-7,digits.length-4),'•••')}
+function maskAccount(a){return '•'.repeat(a.length-4)+a.slice(-4)}
+
+function demoMasking(){
+  const el=document.getElementById('mask-result');
+  const data=[
+    {label:'Credit Card',raw:'4111 1111 1111 1111',masked:maskCC('4111 1111 1111 1111')},
+    {label:'SSN',raw:'123-45-6789',masked:maskSSN('123-45-6789')},
+    {label:'Email',raw:'alice.smith@google.com',masked:maskEmail('alice.smith@google.com')},
+    {label:'Phone',raw:'+1 (555) 123-4567',masked:maskPhone('+1 (555) 123-4567')},
+    {label:'Bank Account',raw:'1234567890',masked:maskAccount('1234567890')},
+  ];
+  el.textContent=`Data Masking Examples:\n${'='.repeat(50)}\n\n`;
+  data.forEach(d=>{
+    el.textContent+=`${d.label}:\n  Raw:    ${d.raw}\n  Masked: ${d.masked}\n\n`;
+  });
+  el.textContent+='The masked version shows enough to identify but not enough to exploit.';
+}
+
+function demoUnmasking(){
+  const el=document.getElementById('mask-result');
+  el.textContent=`Progressive Disclosure Pattern:\n${'='.repeat(50)}\n\n`;
+  el.textContent+=`1. Initial load: API returns masked data\n`;
+  el.textContent+=`   GET /api/user/42 → { ssn: "•••-••-6789" }\n\n`;
+  el.textContent+=`2. User clicks "Show SSN"\n`;
+  el.textContent+=`   → Modal: "Please re-enter your password"\n`;
+  el.textContent+=`   → User authenticates (step-up auth)\n\n`;
+  el.textContent+=`3. Authenticated reveal request:\n`;
+  el.textContent+=`   POST /api/user/42/reveal-ssn\n`;
+  el.textContent+=`   Headers: Authorization: Bearer <step-up-token>\n`;
+  el.textContent+=`   → 200: { ssn: "123-45-6789" }\n\n`;
+  el.textContent+=`4. Server logs audit event:\n`;
+  el.textContent+=`   { action: "ssn_revealed", user: 42, viewer: "admin@corp.com",\n`;
+  el.textContent+=`     timestamp: "${new Date().toISOString()}", ip: "..." }\n\n`;
+  el.textContent+=`5. Auto-hide after 30 seconds:\n`;
+  el.textContent+=`   setTimeout(() => mask(), 30000);\n\n`;
+  el.textContent+=`✅ Full value is never in the initial page load\n`;
+  el.textContent+=`✅ Every reveal is authenticated and audited\n`;
+  el.textContent+=`✅ Auto-hide minimizes exposure window`;
+}
+</script>
+</body></html>

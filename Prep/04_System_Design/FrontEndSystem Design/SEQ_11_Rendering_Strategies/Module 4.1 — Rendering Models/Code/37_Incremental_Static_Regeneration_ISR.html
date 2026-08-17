@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 37 – Incremental Static Regeneration (ISR)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.green{color:#10b981}.red{color:#ef4444}.amber{color:#f59e0b}
+.req-row{display:flex;align-items:center;gap:10px;font-size:.8rem;margin:6px 0;padding:8px;border-radius:6px;background:#0f1117;border:1px solid #2d3551}
+</style>
+</head>
+<body>
+<h1>⏱️ Incremental Static Regeneration (ISR)</h1>
+<p class="sub">Topic 37 · Module 4.1 — Rendering Models · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">How ISR Works</div>
+  <div class="tab" onclick="setTab(1)">Stale-While-Revalidate Demo</div>
+  <div class="tab" onclick="setTab(2)">ISR vs SSG vs SSR</div>
+  <div class="tab" onclick="setTab(3)">Next.js Code</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>ISR — Best of SSG + SSR</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:14px">ISR combines SSG's performance (CDN-cached HTML) with SSR's freshness. Pages are pre-built, then re-generated in the background after a <code>revalidate</code> TTL. Users always get a fast cached response.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;padding:12px;border-radius:8px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">SSG</div>
+        <div style="color:#94a3b8">Built once at deploy. Never updates without full rebuild. Fastest. No freshness.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #4ade80;padding:12px;border-radius:8px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">ISR ✅</div>
+        <div style="color:#94a3b8">Pre-built at deploy + background regeneration after TTL. Fast + fresh.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;padding:12px;border-radius:8px">
+        <div style="color:#f59e0b;font-weight:700;margin-bottom:6px">SSR</div>
+        <div style="color:#94a3b8">New HTML every request. Always fresh. Higher TTFB. Server cost per request.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Stale-While-Revalidate — request simulation (revalidate = 60s)</h3>
+    <div style="font-size:.78rem;color:#94a3b8;margin-bottom:10px">Click "Send request" to simulate user visits over time.</div>
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <button onclick="sendReq()" style="padding:8px 18px;background:#1e3a5f;color:#60a5fa;border:1px solid #60a5fa;border-radius:8px;cursor:pointer;font-size:.82rem">Send Request</button>
+      <button onclick="resetSim()" style="padding:8px 18px;background:#1e2130;color:#94a3b8;border:1px solid #2d3551;border-radius:8px;cursor:pointer;font-size:.82rem">Reset</button>
+      <span style="display:flex;align-items:center;font-size:.8rem;color:#94a3b8">Cache age: <strong id="cache-age" style="color:#f59e0b;margin-left:6px">0s</strong></span>
+    </div>
+    <div id="req-log"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Comparison Table</h3>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+        <thead><tr style="background:#2d3551;color:#e2e8f0">
+          <th style="padding:8px 12px;text-align:left">Aspect</th>
+          <th style="padding:8px 12px;text-align:left">SSG</th>
+          <th style="padding:8px 12px;text-align:left;color:#10b981">ISR</th>
+          <th style="padding:8px 12px;text-align:left">SSR</th>
+        </tr></thead>
+        <tbody>
+          ${[
+            ['TTFB','⚡ ~20ms','⚡ ~20ms','🐌 100-500ms'],
+            ['Data freshness','Stale (rebuild)','Configurable TTL','Always fresh'],
+            ['Server cost','None (CDN)','Low (bg regen)','High (per request)'],
+            ['Personalisation','None','None','Full'],
+            ['Build time','Slow (all pages)','Incremental','None'],
+            ['SEO','Excellent','Excellent','Excellent'],
+          ].map(r=>`<tr style="border-bottom:1px solid #2d3551">${r.map((c,i)=>`<td style="padding:8px 12px;color:${i===2?'#10b981':'#94a3b8'}">${c}</td>`).join('')}</tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Next.js App Router — ISR with revalidate</h3>
+    <pre><span class="cm">// app/products/[id]/page.tsx</span>
+
+<span class="cm">// Revalidate every 60 seconds (page will seem SSG until TTL expires)</span>
+<span class="kw">export const</span> revalidate = <span class="attr">60</span>;
+
+<span class="kw">export async function</span> <span class="attr">generateStaticParams</span>() {
+  <span class="kw">const</span> products = <span class="kw">await</span> <span class="attr">getTopProducts</span>(); <span class="cm">// pre-build top 100</span>
+  <span class="kw">return</span> products.<span class="attr">map</span>(p =&gt; ({ id: p.id }));
+}
+
+<span class="kw">export default async function</span> <span class="attr">ProductPage</span>({ params }) {
+  <span class="cm">// This fetch is cached + revalidated per revalidate TTL</span>
+  <span class="kw">const</span> product = <span class="kw">await</span> fetch(<span class="str">`/api/products/${params.id}`</span>, {
+    next: { revalidate: <span class="attr">60</span> }, <span class="cm">// per-fetch revalidate override</span>
+  }).then(r =&gt; r.json());
+
+  <span class="kw">return</span> &lt;<span class="attr">ProductDetail</span> product={product} /&gt;;
+}
+
+<span class="cm">// On-demand revalidation (e.g. after CMS webhook):</span>
+<span class="cm">// import { revalidatePath } from 'next/cache'</span>
+<span class="cm">// revalidatePath('/products/widget-a');</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+let cacheAge=0,reqs=0;
+const REVALIDATE=60;
+
+function sendReq(){
+  reqs++;
+  cacheAge+=Math.floor(Math.random()*25)+5;
+  document.getElementById('cache-age').textContent=cacheAge+'s';
+  const log=document.getElementById('req-log');
+  let status,color,note;
+  if(cacheAge<=REVALIDATE){
+    status='CACHE HIT'; color='#10b981';
+    note=`Served stale HTML from CDN. Cache age: ${cacheAge}s < ${REVALIDATE}s TTL.`;
+  } else if(cacheAge<=REVALIDATE+10){
+    status='STALE + REVALIDATING'; color='#f59e0b';
+    note=`Cache expired (${cacheAge}s > ${REVALIDATE}s). Serving stale immediately, background regen triggered.`;
+    cacheAge=0;
+  } else {
+    status='FRESH CACHE'; color='#60a5fa';
+    note=`Background regen completed. Serving newly generated HTML.`;
+    cacheAge=5;
+  }
+  document.getElementById('cache-age').textContent=cacheAge+'s';
+  log.innerHTML=`<div class="req-row"><span style="color:#475569">#${reqs}</span><span style="background:${color}22;color:${color};padding:2px 8px;border-radius:4px;font-weight:700">${status}</span><span style="color:#94a3b8">${note}</span></div>`+log.innerHTML;
+}
+function resetSim(){cacheAge=0;reqs=0;document.getElementById('cache-age').textContent='0s';document.getElementById('req-log').innerHTML='';}
+</script>
+</body>
+</html>

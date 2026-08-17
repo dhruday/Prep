@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Salesforce DSA Prep Tracker</title>
+<script src="study_data.js"></script>
+<style>
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --panel-2: #263449;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-2: #0ea5e9;
+    --easy: #22c55e;
+    --medium: #f59e0b;
+    --hard: #ef4444;
+    --todo: #64748b;
+    --progress: #eab308;
+    --solved: #22c55e;
+    --skip: #7c3aed;
+    --must: #ef4444;
+    --high: #f59e0b;
+    --important: #38bdf8;
+    --stretch: #64748b;
+    --code-bg: #0d1117;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --panel-2: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --code-bg: #1e293b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px; line-height: 1.55; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Header ── */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+  }
+  .header-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 18px; margin: 0; }
+  .subtitle { color: var(--muted); font-size: 12px; }
+
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-left: auto; align-items: center; }
+  .stat { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 12px; }
+  .stat b { color: var(--accent); font-size: 14px; margin-right: 4px; }
+
+  .progress-bar { width: 220px; height: 8px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; display: inline-block; vertical-align: middle; }
+  .progress-bar > div { height: 100%; background: linear-gradient(90deg, var(--solved), var(--accent)); width: 0%; transition: width .3s; }
+
+  .tabs { display: flex; gap: 4px; margin-top: 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .tab { padding: 8px 14px; cursor: pointer; border: 1px solid transparent; border-bottom: none; border-radius: 6px 6px 0 0; color: var(--muted); font-weight: 500; white-space: nowrap; }
+  .tab.active { background: var(--panel-2); border-color: var(--border); color: var(--text); margin-bottom: -1px; }
+
+  main { padding: 16px 20px 80px; max-width: 1400px; margin: 0 auto; }
+
+  /* ── Toolbar ── */
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; align-items: center; }
+  .toolbar input[type=text], .toolbar select { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; font-family: inherit; }
+  .toolbar input[type=text] { min-width: 200px; }
+  .toolbar button { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+  .toolbar button:hover { background: var(--border); }
+  .toolbar .spacer { flex: 1; }
+
+  /* ── Bank Table ── */
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--panel-2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+  tr.done { opacity: 0.55; }
+
+  .rank { color: var(--muted); font-variant-numeric: tabular-nums; width: 40px; }
+  .title-cell { min-width: 240px; }
+  .title-cell .title { font-weight: 500; }
+  .topics { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .topic-tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); }
+  .diff { font-weight: 600; font-size: 12px; padding: 3px 8px; border-radius: 4px; display: inline-block; }
+  .diff.Easy { background: rgba(34,197,94,.15); color: var(--easy); }
+  .diff.Medium { background: rgba(245,158,11,.15); color: var(--medium); }
+  .diff.Hard { background: rgba(239,68,68,.15); color: var(--hard); }
+
+  .num { font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); }
+
+  .status-picker { display: flex; gap: 2px; }
+  .status-picker button { border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); font-size: 11px; padding: 3px 7px; cursor: pointer; border-radius: 4px; }
+  .status-picker button.active[data-s="todo"] { background: var(--todo); color: white; border-color: var(--todo); }
+  .status-picker button.active[data-s="progress"] { background: var(--progress); color: #1e293b; border-color: var(--progress); }
+  .status-picker button.active[data-s="solved"] { background: var(--solved); color: white; border-color: var(--solved); }
+  .status-picker button.active[data-s="skip"] { background: var(--skip); color: white; border-color: var(--skip); }
+
+  .notes-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 6px; }
+  .notes-btn.has-notes { color: var(--accent); }
+  .notes-row td { background: var(--panel-2); padding: 10px 16px; }
+  .notes-row textarea { width: 100%; min-height: 60px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px; font-family: inherit; font-size: 13px; resize: vertical; }
+
+  .algo-hint { color: var(--muted); font-size: 12px; margin-top: 2px; font-style: italic; }
+  .src-count { color: var(--muted); font-size: 12px; }
+
+  /* ── Priority Badges ── */
+  .priority-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; display: inline-block; margin-top: 3px; }
+  .priority-must { background: rgba(239,68,68,.15); color: var(--must); border: 1px solid rgba(239,68,68,.3); }
+  .priority-high { background: rgba(245,158,11,.15); color: var(--high); border: 1px solid rgba(245,158,11,.3); }
+  .priority-important { background: rgba(56,189,248,.15); color: var(--important); border: 1px solid rgba(56,189,248,.3); }
+  .priority-stretch { background: rgba(100,116,139,.15); color: var(--stretch); border: 1px solid rgba(100,116,139,.3); }
+
+  /* ── Experience cards ── */
+  .experience-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
+  .experience-header { background: var(--panel-2); padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .experience-header .id { font-family: monospace; color: var(--muted); font-size: 12px; }
+  .experience-header .role { font-weight: 600; }
+  .experience-header .meta { font-size: 12px; color: var(--muted); }
+  .experience-header a { margin-left: auto; font-size: 12px; }
+
+  .banner { background: rgba(239,68,68,.1); border: 1px solid var(--hard); color: var(--hard); padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; }
+  .banner code { background: rgba(0,0,0,.2); padding: 2px 5px; border-radius: 3px; font-size: 13px; }
+  .empty { text-align: center; padding: 40px; color: var(--muted); }
+  .hidden { display: none !important; }
+
+  .filter-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .filter-chip.active { background: var(--accent-2); color: white; border-color: var(--accent-2); }
+
+  /* ── Study Guide ── */
+  #tab-study { }
+
+  .study-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; align-items: center; }
+  .study-toolbar input[type=text], .study-toolbar select { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; font-family: inherit; }
+  .study-toolbar input[type=text] { min-width: 220px; }
+  .study-toolbar button { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  .study-toolbar button:hover { background: var(--border); }
+  .study-toolbar .spacer { flex: 1; }
+
+  .problem-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
+
+  .problem-card-header {
+    background: var(--panel-2); padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .problem-card-header .prob-num { color: var(--muted); font-size: 13px; min-width: 30px; }
+  .problem-card-header .prob-title { font-weight: 700; font-size: 15px; flex: 1; }
+  .problem-card-header .prob-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .lc-link { font-size: 12px; padding: 3px 8px; border-radius: 4px; background: rgba(56,189,248,.15); color: var(--accent); border: 1px solid rgba(56,189,248,.3); white-space: nowrap; text-decoration: none; }
+  .lc-link:hover { background: rgba(56,189,248,.3); text-decoration: none; }
+
+  .expand-all-btn { font-size: 12px; padding: 3px 8px; border-radius: 4px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--border); cursor: pointer; }
+  .expand-all-btn:hover { background: var(--border); }
+
+  .problem-sections { padding: 0; }
+
+  .section-item { border-bottom: 1px solid var(--border); }
+  .section-item:last-child { border-bottom: none; }
+
+  .section-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; cursor: pointer;
+    user-select: none; background: none; border: none;
+    width: 100%; text-align: left; color: var(--text);
+    font-family: inherit; font-size: 13px; font-weight: 600;
+  }
+  .section-header:hover { background: rgba(255,255,255,0.03); }
+  .section-icon { color: var(--muted); font-size: 11px; min-width: 12px; transition: transform 0.2s; }
+  .section-header[aria-expanded="true"] .section-icon { transform: rotate(90deg); }
+  .section-label { flex: 1; }
+
+  .section-body {
+    padding: 0 16px 14px 38px;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease, padding 0.2s ease;
+  }
+  .section-body.open { max-height: 4000px; padding: 4px 16px 14px 38px; }
+
+  .section-body p { margin: 6px 0; color: var(--text); line-height: 1.65; }
+  .section-body ul, .section-body ol { margin: 6px 0 6px 0; padding-left: 20px; }
+  .section-body li { margin: 4px 0; line-height: 1.6; }
+  .section-body strong { color: var(--accent); }
+  .section-body em { color: var(--muted); }
+  .section-body code { background: var(--code-bg); padding: 2px 5px; border-radius: 3px; font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; color: #93c5fd; }
+
+  .code-block {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px; margin: 10px 0;
+    overflow-x: auto; font-family: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    font-size: 12.5px; line-height: 1.6; white-space: pre; color: #e2e8f0;
+  }
+
+  .example-block { background: var(--panel-2); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 10px 0; font-family: monospace; font-size: 12.5px; white-space: pre-wrap; line-height: 1.6; }
+
+  .complexity-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+  .complexity-table th, .complexity-table td { padding: 6px 10px; border: 1px solid var(--border); text-align: left; }
+  .complexity-table th { background: var(--panel-2); color: var(--muted); font-size: 11px; text-transform: uppercase; }
+  .complexity-table .good { color: var(--easy); }
+  .complexity-table .ok { color: var(--medium); }
+  .complexity-table .bad { color: var(--hard); }
+
+  .quick-revision { background: linear-gradient(135deg, rgba(56,189,248,.08), rgba(14,165,233,.05)); border: 1px solid rgba(56,189,248,.25); border-radius: 8px; padding: 14px; margin: 8px 0; }
+  .quick-revision .qr-row { display: flex; gap: 8px; margin: 5px 0; flex-wrap: wrap; }
+  .qr-label { color: var(--muted); font-size: 12px; min-width: 120px; }
+  .qr-value { color: var(--text); font-size: 12px; font-weight: 500; }
+
+  .interview-box { background: rgba(34,197,94,.07); border: 1px solid rgba(34,197,94,.25); border-radius: 8px; padding: 14px; margin: 8px 0; font-style: italic; color: var(--text); line-height: 1.7; }
+
+  .mistake-item { display: flex; gap: 8px; margin: 6px 0; align-items: flex-start; }
+  .mistake-x { color: var(--hard); font-weight: bold; }
+
+  .followup-item { background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin: 6px 0; }
+  .followup-q { font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+  .followup-a { color: var(--muted); font-size: 13px; }
+
+  .clue-box { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.3); border-radius: 6px; padding: 10px 14px; margin: 8px 0; }
+  .clue-box strong { color: var(--medium); }
+
+  /* ── Pattern Library ── */
+  #tab-patterns { }
+
+  .pattern-intro { color: var(--muted); margin-bottom: 16px; font-size: 13px; }
+  .pattern-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .pattern-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .pattern-card h3 { margin: 0 0 10px; font-size: 14px; color: var(--accent); }
+  .pattern-card .trigger { font-size: 12px; background: var(--panel-2); border-radius: 4px; padding: 4px 8px; margin: 3px 0; display: block; border-left: 3px solid var(--accent); }
+  .pattern-card .think { font-size: 12px; color: var(--muted); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+  .pattern-card .think strong { color: var(--medium); }
+
+  .pattern-table-wrap { overflow-x: auto; margin-bottom: 24px; }
+  .pattern-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 13px; }
+  .pattern-table th { background: var(--panel-2); padding: 10px 14px; text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+  .pattern-table td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .pattern-table tr:last-child td { border-bottom: none; }
+  .pattern-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .pattern-table .trigger-col { color: var(--text); }
+  .pattern-table .pattern-col { color: var(--accent); font-weight: 600; }
+  .pattern-table .why-col { color: var(--muted); }
+
+  h2.section-title { font-size: 18px; margin: 24px 0 10px; color: var(--text); }
+  h2.section-title span { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div>
+      <h1>Salesforce DSA Prep Tracker</h1>
+      <div class="subtitle">Progress saved locally · Study guide + pattern library included</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="stat-solved">0</b>solved</div>
+      <div class="stat"><b id="stat-progress">0</b>in progress</div>
+      <div class="stat"><b id="stat-todo">0</b>to do</div>
+      <div class="stat"><b id="stat-total">0</b>total</div>
+      <div class="progress-bar"><div id="progress-fill"></div></div>
+      <div class="stat"><b id="stat-pct">0%</b></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" data-tab="bank">Question Bank</div>
+    <div class="tab" data-tab="study">Study Guide</div>
+    <div class="tab" data-tab="patterns">Pattern Library</div>
+    <div class="tab" data-tab="index">Master Index</div>
+  </div>
+</header>
+
+<main>
+
+<div id="load-error" class="banner hidden">
+  <b>Could not load JSON files.</b>
+  If you opened this file directly (<code>file://</code>), most browsers block <code>fetch()</code>.
+  Serve this folder over HTTP instead:
+  <pre style="margin:8px 0 0;"><code>cd salesforce_prep &amp;&amp; python3 -m http.server 8000</code></pre>
+  Then open <a href="http://localhost:8000/">http://localhost:8000/</a>.
+</div>
+
+<!-- ═══════════════════════════ QUESTION BANK ═══════════════════════════ -->
+<section id="tab-bank">
+  <div class="toolbar">
+    <input type="text" id="bank-search" placeholder="Search title, topic, algorithm..." />
+    <select id="bank-difficulty">
+      <option value="">All difficulties</option>
+      <option value="Easy">Easy</option>
+      <option value="Medium">Medium</option>
+      <option value="Hard">Hard</option>
+    </select>
+    <select id="bank-topic">
+      <option value="">All topics</option>
+    </select>
+    <select id="bank-priority">
+      <option value="">All priorities</option>
+      <option value="must">🔥 Must Know</option>
+      <option value="high">⭐ High Priority</option>
+      <option value="important">📘 Important</option>
+      <option value="stretch">🚀 Stretch</option>
+    </select>
+    <select id="bank-sort">
+      <option value="rank">Sort: Rank (default)</option>
+      <option value="freq">Sort: Frequency</option>
+      <option value="score">Sort: Recency score</option>
+      <option value="title">Sort: Title A-Z</option>
+      <option value="diff">Sort: Difficulty</option>
+    </select>
+    <div class="filter-chip active" data-status="all">All</div>
+    <div class="filter-chip" data-status="todo">To do</div>
+    <div class="filter-chip" data-status="progress">In progress</div>
+    <div class="filter-chip" data-status="solved">Solved</div>
+    <div class="filter-chip" data-status="skip">Skip</div>
+    <div class="spacer"></div>
+    <button id="export-btn" title="Copy progress JSON to clipboard">Export</button>
+    <button id="import-btn" title="Paste progress JSON to restore">Import</button>
+    <button id="reset-btn" title="Clear all progress">Reset</button>
+  </div>
+
+  <table id="bank-table">
+    <thead>
+      <tr>
+        <th class="rank">#</th>
+        <th>Status</th>
+        <th>Problem</th>
+        <th>Difficulty</th>
+        <th class="num">Freq</th>
+        <th class="num">Score</th>
+        <th class="num">Last</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody id="bank-tbody"></tbody>
+  </table>
+  <div class="empty hidden" id="bank-empty">No questions match the current filters.</div>
+</section>
+
+<!-- ═══════════════════════════ STUDY GUIDE ═══════════════════════════ -->
+<section id="tab-study" class="hidden">
+  <div class="study-toolbar">
+    <input type="text" id="study-search" placeholder="Search problems..." />
+    <select id="study-difficulty">
+      <option value="">All difficulties</option>
+      <option value="Easy">Easy</option>
+      <option value="Medium">Medium</option>
+      <option value="Hard">Hard</option>
+    </select>
+    <select id="study-priority">
+      <option value="">All priorities</option>
+      <option value="must">🔥 Must Know</option>
+      <option value="high">⭐ High Priority</option>
+      <option value="important">📘 Important</option>
+      <option value="stretch">🚀 Stretch</option>
+    </select>
+    <select id="study-pattern">
+      <option value="">All patterns</option>
+    </select>
+    <div class="spacer"></div>
+    <button id="study-expand-all">Expand All</button>
+    <button id="study-collapse-all">Collapse All</button>
+  </div>
+  <div id="study-container"></div>
+  <div class="empty hidden" id="study-empty">No problems match the current filters.</div>
+</section>
+
+<!-- ═══════════════════════════ PATTERN LIBRARY ═══════════════════════════ -->
+<section id="tab-patterns" class="hidden">
+  <h2 class="section-title">DSA <span>Pattern Recognition</span> Guide</h2>
+  <p class="pattern-intro">Use this table to quickly identify which algorithm to reach for. Read the problem clue → match to a pattern → apply the standard technique.</p>
+
+  <div class="pattern-table-wrap">
+    <table class="pattern-table">
+      <thead>
+        <tr>
+          <th>If the problem says...</th>
+          <th>Think about...</th>
+          <th>Why</th>
+        </tr>
+      </thead>
+      <tbody id="pattern-table-body">
+        <tr><td class="trigger-col">Subarray + target sum / count subarrays</td><td class="pattern-col">Prefix Sum + HashMap</td><td class="why-col">Track cumulative sums; complement lookup in O(1)</td></tr>
+        <tr><td class="trigger-col">Top K elements / K most frequent</td><td class="pattern-col">Min-Heap of size K</td><td class="why-col">Keep K largest; evict the smallest as you go</td></tr>
+        <tr><td class="trigger-col">Kth largest / smallest</td><td class="pattern-col">Heap or Quickselect</td><td class="why-col">Heap: O(n log k); Quickselect: O(n) avg</td></tr>
+        <tr><td class="trigger-col">Cache with eviction (LRU / LFU)</td><td class="pattern-col">HashMap + Doubly Linked List</td><td class="why-col">O(1) lookup + O(1) ordered eviction</td></tr>
+        <tr><td class="trigger-col">Connected grid cells / flood fill</td><td class="pattern-col">DFS or BFS on grid</td><td class="why-col">Visit all reachable cells from a starting cell</td></tr>
+        <tr><td class="trigger-col">Shortest path in unweighted graph</td><td class="pattern-col">BFS</td><td class="why-col">BFS guarantees shortest hop-count path</td></tr>
+        <tr><td class="trigger-col">Shortest path weighted graph</td><td class="pattern-col">Dijkstra (min-heap)</td><td class="why-col">Greedy expansion of cheapest frontier node</td></tr>
+        <tr><td class="trigger-col">Prerequisites / course ordering / dependencies</td><td class="pattern-col">Topological Sort (Kahn's BFS)</td><td class="why-col">Process nodes with in-degree 0 first; detect cycles</td></tr>
+        <tr><td class="trigger-col">All combinations / permutations / subsets</td><td class="pattern-col">Backtracking</td><td class="why-col">Explore all branches, prune invalid paths early</td></tr>
+        <tr><td class="trigger-col">Overlapping intervals / scheduling</td><td class="pattern-col">Sort + Heap or Sweep Line</td><td class="why-col">Sort by start; use heap to track active intervals</td></tr>
+        <tr><td class="trigger-col">Maximum contiguous subarray sum</td><td class="pattern-col">Kadane's Algorithm</td><td class="why-col">Keep running sum; reset when it goes negative</td></tr>
+        <tr><td class="trigger-col">Repeated overlapping subproblems</td><td class="pattern-col">Dynamic Programming</td><td class="why-col">Memoize or tabulate to avoid recomputation</td></tr>
+        <tr><td class="trigger-col">Matching opening/closing brackets</td><td class="pattern-col">Stack</td><td class="why-col">Push opens; pop and verify on close</td></tr>
+        <tr><td class="trigger-col">Search in sorted data</td><td class="pattern-col">Binary Search</td><td class="why-col">Eliminate half the search space each step; O(log n)</td></tr>
+        <tr><td class="trigger-col">At most / exactly K distinct elements in window</td><td class="pattern-col">Sliding Window</td><td class="why-col">Expand right, shrink left to maintain invariant</td></tr>
+        <tr><td class="trigger-col">Next greater / smaller element</td><td class="pattern-col">Monotonic Stack</td><td class="why-col">Maintain stack of decreasing elements; pop on found</td></tr>
+        <tr><td class="trigger-col">Connected components / union queries</td><td class="pattern-col">Union-Find (DSU)</td><td class="why-col">Near O(1) amortized union and find operations</td></tr>
+        <tr><td class="trigger-col">Anagram grouping / character frequency</td><td class="pattern-col">HashMap with sorted key or freq array</td><td class="why-col">Sort chars as key; group equal signatures</td></tr>
+        <tr><td class="trigger-col">Stream / online median</td><td class="pattern-col">Two Heaps (max + min)</td><td class="why-col">Max-heap for lower half, min-heap for upper half</td></tr>
+        <tr><td class="trigger-col">Binary tree reconstruction / traversal</td><td class="pattern-col">DFS + HashMap for inorder index</td><td class="why-col">Preorder gives root; inorder splits left/right subtrees</td></tr>
+        <tr><td class="trigger-col">String split / rearrange / compress</td><td class="pattern-col">Two Pointers or Greedy</td><td class="why-col">In-place write pointer + read pointer pattern</td></tr>
+        <tr><td class="trigger-col">Minimum steps to reach / transform</td><td class="pattern-col">BFS or DP</td><td class="why-col">BFS for fewest steps; DP for overlapping subproblems</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="section-title">Pattern <span>Deep Dives</span></h2>
+  <div class="pattern-grid" id="pattern-cards"></div>
+</section>
+
+<!-- ═══════════════════════════ MASTER INDEX ═══════════════════════════ -->
+<section id="tab-index" class="hidden">
+  <div class="toolbar">
+    <input type="text" id="idx-search" placeholder="Search role, year, focus, question title..." />
+    <select id="idx-year">
+      <option value="">All years</option>
+    </select>
+    <select id="idx-focus">
+      <option value="">All focuses</option>
+    </select>
+  </div>
+  <div id="idx-container"></div>
+  <div class="empty hidden" id="idx-empty">No experiences match the current filters.</div>
+</section>
+
+</main>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════
+   PRIORITY SYSTEM
+═══════════════════════════════════════════════════════════ */
+function getPriority(q) {
+  const s = q.recency_score || 0;
+  if (s >= 15) return 'must';
+  if (s >= 5)  return 'high';
+  if (s >= 2.5) return 'important';
+  return 'stretch';
+}
+function priorityLabel(p) {
+  return { must: '🔥 Must Know', high: '⭐ High Priority', important: '📘 Important', stretch: '🚀 Stretch' }[p] || '';
+}
+function priorityClass(p) {
+  return { must: 'priority-must', high: 'priority-high', important: 'priority-important', stretch: 'priority-stretch' }[p] || '';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STORAGE
+═══════════════════════════════════════════════════════════ */
+const STORAGE_KEY = 'sfPrep.v1';
+const state = {
+  bank: [],
+  index: [],
+  progress: loadProgress(),
+  bankFilters: { search: '', diff: '', topic: '', status: 'all', sort: 'rank', priority: '' },
+  idxFilters: { search: '', year: '', focus: '' },
+  studyFilters: { search: '', diff: '', priority: '', pattern: '' },
+  openNotes: new Set(),
+};
+
+function loadProgress() {
+  try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : {}; }
+  catch(e) { return {}; }
+}
+function saveProgress() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.progress)); }
+function keyFor(q) { return q.leetcode_link ? q.leetcode_link : ('title::' + (q.canonical_title || q.title || '')); }
+function getEntry(k) { return state.progress[k] || { status: 'todo', notes: '' }; }
+function setStatus(k, status) {
+  const cur = getEntry(k);
+  if (cur.status === status && status !== 'todo') status = 'todo';
+  const next = { ...cur, status };
+  if (status === 'todo' && !next.notes) delete state.progress[k];
+  else state.progress[k] = next;
+  saveProgress(); updateStats();
+}
+function setNotes(k, notes) {
+  const cur = getEntry(k);
+  const next = { ...cur, notes };
+  if (next.status === 'todo' && !notes) delete state.progress[k];
+  else state.progress[k] = next;
+  saveProgress();
+}
+function updateStats() {
+  const total = state.bank.length;
+  let solved = 0, progress = 0;
+  for (const q of state.bank) {
+    const s = getEntry(keyFor(q)).status;
+    if (s === 'solved') solved++;
+    else if (s === 'progress') progress++;
+  }
+  const pct = total ? Math.round((solved / total) * 100) : 0;
+  document.getElementById('stat-solved').textContent = solved;
+  document.getElementById('stat-progress').textContent = progress;
+  document.getElementById('stat-todo').textContent = total - solved - progress;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-pct').textContent = pct + '%';
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.querySelectorAll('#bank-tbody tr.q-row').forEach(row => {
+    const k = row.dataset.key;
+    const s = getEntry(k).status;
+    row.classList.toggle('done', s === 'solved' || s === 'skip');
+    row.querySelectorAll('.status-picker button').forEach(b => b.classList.toggle('active', b.dataset.s === s));
+    const nb = row.querySelector('.notes-btn');
+    if (nb) nb.classList.toggle('has-notes', !!getEntry(k).notes);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   QUESTION BANK
+═══════════════════════════════════════════════════════════ */
+const DIFF_ORDER = { Easy: 0, Medium: 1, Hard: 2 };
+
+function renderBank() {
+  const tbody = document.getElementById('bank-tbody');
+  const { search, diff, topic, status, sort, priority } = state.bankFilters;
+  const s = search.trim().toLowerCase();
+
+  let rows = state.bank.map((q, i) => ({ q, rank: i + 1 }));
+  rows = rows.filter(({ q }) => {
+    if (diff && q.difficulty !== diff) return false;
+    if (topic && !(q.topic || []).includes(topic)) return false;
+    if (priority && getPriority(q) !== priority) return false;
+    if (status !== 'all' && getEntry(keyFor(q)).status !== status) return false;
+    if (s) {
+      const hay = [q.canonical_title, q.algorithm_hint, q.difficulty, ...(q.topic || [])].join(' ').toLowerCase();
+      if (!hay.includes(s)) return false;
+    }
+    return true;
+  });
+
+  if (sort === 'freq')  rows.sort((a,b) => (b.q.frequency||0) - (a.q.frequency||0));
+  else if (sort === 'score') rows.sort((a,b) => (b.q.recency_score||0) - (a.q.recency_score||0));
+  else if (sort === 'title') rows.sort((a,b) => (a.q.canonical_title||'').localeCompare(b.q.canonical_title||''));
+  else if (sort === 'diff')  rows.sort((a,b) => (DIFF_ORDER[a.q.difficulty]??9) - (DIFF_ORDER[b.q.difficulty]??9));
+
+  document.getElementById('bank-empty').classList.toggle('hidden', rows.length > 0);
+  tbody.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  for (const { q, rank } of rows) {
+    const k = keyFor(q);
+    const entry = getEntry(k);
+    const p = getPriority(q);
+    const tr = document.createElement('tr');
+    tr.className = 'q-row';
+    tr.dataset.key = k;
+    if (entry.status === 'solved' || entry.status === 'skip') tr.classList.add('done');
+    const topicsHtml = (q.topic || []).map(t => `<span class="topic-tag">${escapeHtml(t)}</span>`).join('');
+    const titleHtml = q.leetcode_link
+      ? `<a href="${escapeAttr(q.leetcode_link)}" target="_blank" rel="noopener">${escapeHtml(q.canonical_title)}</a>`
+      : escapeHtml(q.canonical_title);
+    const lcBtn = q.leetcode_link
+      ? `<a class="lc-link" href="${escapeAttr(q.leetcode_link)}" target="_blank" rel="noopener">LC ↗</a>` : '';
+    tr.innerHTML = `
+      <td class="rank">${rank}</td>
+      <td>
+        <div class="status-picker" data-key="${escapeAttr(k)}">
+          <button data-s="todo"     class="${entry.status==='todo'?'active':''}"     title="To do">·</button>
+          <button data-s="progress" class="${entry.status==='progress'?'active':''}" title="In progress">◐</button>
+          <button data-s="solved"   class="${entry.status==='solved'?'active':''}"   title="Solved">✓</button>
+          <button data-s="skip"     class="${entry.status==='skip'?'active':''}"     title="Skip">⤫</button>
+        </div>
+      </td>
+      <td class="title-cell">
+        <div class="title">${titleHtml} ${lcBtn}</div>
+        ${q.algorithm_hint ? `<div class="algo-hint">${escapeHtml(q.algorithm_hint)}</div>` : ''}
+        <span class="priority-badge ${priorityClass(p)}">${priorityLabel(p)}</span>
+        <div class="topics">${topicsHtml}</div>
+      </td>
+      <td><span class="diff ${q.difficulty}">${q.difficulty || '?'}</span></td>
+      <td class="num">${q.frequency ?? ''}</td>
+      <td class="num">${(q.recency_score ?? 0).toFixed(1)}</td>
+      <td class="num">${q.last_seen_year || ''}</td>
+      <td>
+        <button class="notes-btn ${entry.notes?'has-notes':''}" data-key="${escapeAttr(k)}" title="Toggle notes">✎</button>
+        <div class="src-count">${(q.sources||[]).length} src</div>
+      </td>`;
+    frag.appendChild(tr);
+    if (state.openNotes.has(k)) frag.appendChild(buildNotesRow(k, entry.notes));
+  }
+  tbody.appendChild(frag);
+}
+
+function buildNotesRow(k, notes) {
+  const tr = document.createElement('tr');
+  tr.className = 'notes-row'; tr.dataset.key = k;
+  const td = document.createElement('td'); td.colSpan = 8;
+  const ta = document.createElement('textarea');
+  ta.placeholder = 'Your notes (approach, edge cases, template...)';
+  ta.value = notes || '';
+  ta.addEventListener('input', () => {
+    setNotes(k, ta.value);
+    const btn = document.querySelector(`#bank-tbody tr.q-row[data-key="${CSS.escape(k)}"] .notes-btn`);
+    if (btn) btn.classList.toggle('has-notes', !!ta.value);
+  });
+  td.appendChild(ta); tr.appendChild(td); return tr;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STUDY GUIDE
+═══════════════════════════════════════════════════════════ */
+const SD = (typeof STUDY_DATA !== 'undefined') ? STUDY_DATA : {};
+
+function getStudyData(q) {
+  return SD[q.id] || SD[q.leetcode_link] || null;
+}
+
+function renderStudyGuide() {
+  const container = document.getElementById('study-container');
+  const { search, diff, priority, pattern } = state.studyFilters;
+  const s = search.trim().toLowerCase();
+
+  const filtered = state.bank.filter(q => {
+    if (diff && q.difficulty !== diff) return false;
+    if (priority && getPriority(q) !== priority) return false;
+    const sd = getStudyData(q);
+    if (pattern && (!sd || sd.patternName !== pattern)) return false;
+    if (s) {
+      const hay = [q.canonical_title, q.algorithm_hint, ...(q.topic||[])].join(' ').toLowerCase();
+      if (!hay.includes(s)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('study-empty').classList.toggle('hidden', filtered.length > 0);
+  container.innerHTML = '';
+
+  const frag = document.createDocumentFragment();
+  filtered.forEach((q, i) => {
+    const sd = getStudyData(q);
+    const card = buildProblemCard(q, i + 1, sd);
+    frag.appendChild(card);
+  });
+  container.appendChild(frag);
+}
+
+function buildProblemCard(q, num, sd) {
+  const p = getPriority(q);
+  const card = document.createElement('div');
+  card.className = 'problem-card';
+  card.dataset.id = q.id;
+
+  const lcLink = q.leetcode_link
+    ? `<a class="lc-link" href="${escapeAttr(q.leetcode_link)}" target="_blank" rel="noopener">Open in LeetCode ↗</a>` : '';
+
+  const lcNum = q.leetcode_link ? extractLCNum(q.leetcode_link) : '';
+
+  card.innerHTML = `
+    <div class="problem-card-header">
+      <span class="prob-num">${num}.</span>
+      <span class="prob-title">${escapeHtml(q.canonical_title)}</span>
+      <div class="prob-meta">
+        ${lcNum ? `<span style="color:var(--muted);font-size:12px">LC #${lcNum}</span>` : ''}
+        <span class="diff ${q.difficulty}">${q.difficulty}</span>
+        <span class="priority-badge ${priorityClass(p)}">${priorityLabel(p)}</span>
+        ${sd && sd.patternName ? `<span class="topic-tag" style="color:var(--accent)">${escapeHtml(sd.patternName)}</span>` : ''}
+        ${lcLink}
+        <button class="expand-all-btn" data-card-id="${escapeAttr(q.id)}">Expand All</button>
+      </div>
+    </div>
+    <div class="problem-sections" id="sections-${escapeAttr(q.id)}"></div>`;
+
+  const sectionsDiv = card.querySelector('.problem-sections');
+
+  if (sd) {
+    const sections = [
+      { key: 'understanding', label: '📖 Problem Understanding' },
+      { key: 'pattern',       label: '🔍 Pattern Recognition' },
+      { key: 'whenToUse',     label: '🎯 When to Use This Pattern' },
+      { key: 'algorithm',     label: '⚙️ Algorithm' },
+      { key: 'whyWorks',      label: '💡 Why Does It Work?' },
+      { key: 'example',       label: '📊 Step-by-Step Example' },
+      { key: 'code',          label: '💻 Code (JavaScript)' },
+      { key: 'codeWalkthrough', label: '🔎 Code Walkthrough' },
+      { key: 'complexity',    label: '⏱ Time & Space Complexity' },
+      { key: 'bruteVsOpt',    label: '📈 Brute Force vs Optimized' },
+      { key: 'followUps',     label: '❓ Interview Follow-Up Questions' },
+      { key: 'mistakes',      label: '⚠️ Common Mistakes' },
+      { key: 'interview60s',  label: '🎤 Interview Explanation (60s)' },
+      { key: 'quickRevision', label: '🧠 Quick Revision' },
+    ];
+    for (const sec of sections) {
+      if (!sd[sec.key]) continue;
+      sectionsDiv.appendChild(buildSection(sec.label, sd[sec.key], sec.key, q.id));
+    }
+  } else {
+    // No study data — show placeholder with problem info
+    sectionsDiv.appendChild(buildSection('📖 Problem Understanding', buildPlaceholder(q), 'understanding', q.id));
+  }
+
+  return card;
+}
+
+function buildSection(label, content, key, cardId) {
+  const item = document.createElement('div');
+  item.className = 'section-item';
+  const sectionId = `sec-${cardId}-${key}`;
+  item.innerHTML = `
+    <button class="section-header" aria-expanded="false" aria-controls="${sectionId}">
+      <span class="section-icon">▶</span>
+      <span class="section-label">${escapeHtml(label)}</span>
+    </button>
+    <div class="section-body" id="${sectionId}" role="region"></div>`;
+  const body = item.querySelector('.section-body');
+  if (typeof content === 'string') {
+    body.innerHTML = content;
+  } else if (content instanceof Node) {
+    body.appendChild(content);
+  }
+  item.querySelector('.section-header').addEventListener('click', function() {
+    const expanded = this.getAttribute('aria-expanded') === 'true';
+    this.setAttribute('aria-expanded', String(!expanded));
+    body.classList.toggle('open', !expanded);
+  });
+  return item;
+}
+
+function buildPlaceholder(q) {
+  const topics = (q.topic || []).map(t => `<code>${escapeHtml(t)}</code>`).join(', ');
+  return `<p><strong>${escapeHtml(q.canonical_title)}</strong> — Algorithm: <strong>${escapeHtml(q.algorithm_hint || 'N/A')}</strong></p>
+<p>Topics: ${topics || 'N/A'}</p>
+<p>Difficulty: <strong class="diff ${q.difficulty}" style="font-size:13px">${q.difficulty}</strong> &nbsp; Frequency: <strong>${q.frequency}</strong> &nbsp; Recency Score: <strong>${q.recency_score}</strong></p>
+${q.leetcode_link ? `<p><a href="${escapeAttr(q.leetcode_link)}" target="_blank" rel="noopener">Open on LeetCode ↗</a> to review this problem.</p>` : ''}`;
+}
+
+function extractLCNum(url) {
+  const m = url.match(/problems\/([^/]+)/);
+  if (!m) return '';
+  // Can't reliably get number from slug alone; return empty
+  return '';
+}
+
+// Expand All / Collapse All for a single card
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-card-id]');
+  if (btn && btn.classList.contains('expand-all-btn')) {
+    const cardId = btn.dataset.cardId;
+    const sections = document.getElementById('sections-' + cardId);
+    if (!sections) return;
+    const headers = sections.querySelectorAll('.section-header');
+    const allExpanded = [...headers].every(h => h.getAttribute('aria-expanded') === 'true');
+    headers.forEach(h => {
+      h.setAttribute('aria-expanded', String(!allExpanded));
+      const body = document.getElementById(h.getAttribute('aria-controls'));
+      if (body) body.classList.toggle('open', !allExpanded);
+    });
+    btn.textContent = allExpanded ? 'Expand All' : 'Collapse All';
+    return;
+  }
+});
+
+function studyExpandAll(expand) {
+  document.querySelectorAll('#study-container .section-header').forEach(h => {
+    h.setAttribute('aria-expanded', String(expand));
+    const body = document.getElementById(h.getAttribute('aria-controls'));
+    if (body) body.classList.toggle('open', expand);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PATTERN LIBRARY
+═══════════════════════════════════════════════════════════ */
+const PATTERN_CARDS = [
+  {
+    title: 'Prefix Sum + HashMap',
+    triggers: ['Count subarrays with sum = K', 'Array has negative numbers', 'Target sum queries'],
+    think: 'prefixSum[i] - prefixSum[j] = K → look for prefixSum[i] - K in map. Initialize map with {0:1}.',
+  },
+  {
+    title: 'Sliding Window',
+    triggers: ['Longest/shortest subarray with condition', 'At most K distinct elements', 'Minimum window containing all chars'],
+    think: 'Two pointers L and R. Expand R to grow window, shrink L to restore invariant. Works only on non-negative numbers for fixed sums.',
+  },
+  {
+    title: 'Two Pointers',
+    triggers: ['Sorted array + pair with target', 'In-place array manipulation', 'Palindrome check'],
+    think: 'Start from both ends or use read/write pointer. O(n) instead of O(n²) nested loop.',
+  },
+  {
+    title: 'Heap (Priority Queue)',
+    triggers: ['Top K frequent', 'Kth largest', 'Merge K sorted lists', 'Running median'],
+    think: 'Min-heap of size K for top K largest. Max-heap for smallest K. Two heaps for median.',
+  },
+  {
+    title: 'Monotonic Stack',
+    triggers: ['Next greater/smaller element', 'Largest rectangle', 'Trapping rainwater'],
+    think: 'Maintain stack in increasing or decreasing order. Pop when invariant is violated — the popped element found its answer.',
+  },
+  {
+    title: 'BFS on Grid/Graph',
+    triggers: ['Shortest path', 'Multi-source spread (rotting oranges)', 'Reachability in unweighted graph'],
+    think: 'Level-by-level expansion. Use a deque. Track visited. For multi-source BFS, enqueue all sources at start.',
+  },
+  {
+    title: 'Topological Sort',
+    triggers: ['Prerequisites / ordering with dependencies', 'Detect cycle in directed graph', 'Scheduling tasks'],
+    think: 'Build in-degree array. Queue all nodes with in-degree 0. Process queue, reduce neighbors\' in-degree. If output size < total nodes → cycle exists.',
+  },
+  {
+    title: 'HashMap + Doubly Linked List',
+    triggers: ['LRU cache', 'LFU cache', 'O(1) get + O(1) ordered eviction'],
+    think: 'HashMap for O(1) lookup. DLL for O(1) move-to-front or remove. Sentinel head/tail nodes avoid null checks.',
+  },
+  {
+    title: 'Dynamic Programming',
+    triggers: ['Optimal substructure', 'Overlapping subproblems', 'Count ways / minimum cost'],
+    think: 'Define state clearly (dp[i] means...). Find recurrence. Identify base cases. Optimize space if possible.',
+  },
+  {
+    title: 'Binary Search on Answer',
+    triggers: ['Minimize the maximum / maximize the minimum', 'Feasibility check is easy, finding answer is hard'],
+    think: 'Binary search on the answer space. Write isValid(mid) function. Search lo..hi where answer is monotonic.',
+  },
+  {
+    title: 'Backtracking',
+    triggers: ['All combinations / permutations', 'Constraint satisfaction', 'Generate all valid strings'],
+    think: 'Choose → Recurse → Unchoose. Prune early with constraints. Use index to avoid duplicates in combinations.',
+  },
+  {
+    title: 'Union-Find (DSU)',
+    triggers: ['Connected components', 'Detect cycle in undirected graph', 'Dynamic connectivity'],
+    think: 'find() with path compression. union() by rank. Near O(1) amortized per operation.',
+  },
+];
+
+function renderPatternCards() {
+  const grid = document.getElementById('pattern-cards');
+  PATTERN_CARDS.forEach(pc => {
+    const card = document.createElement('div');
+    card.className = 'pattern-card';
+    card.innerHTML = `<h3>${escapeHtml(pc.title)}</h3>
+      ${pc.triggers.map(t => `<span class="trigger">📌 ${escapeHtml(t)}</span>`).join('')}
+      <div class="think">💬 <strong>Key insight:</strong> ${escapeHtml(pc.think)}</div>`;
+    grid.appendChild(card);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MASTER INDEX
+═══════════════════════════════════════════════════════════ */
+function renderIndex() {
+  const container = document.getElementById('idx-container');
+  const { search, year, focus } = state.idxFilters;
+  const s = search.trim().toLowerCase();
+  container.innerHTML = '';
+  const filtered = state.index.filter(exp => {
+    if (year && exp.year !== year) return false;
+    if (focus && exp.focus !== focus) return false;
+    if (s) {
+      const hay = [exp.role, exp.year, exp.focus, exp.round_type, exp.id,
+        ...(exp.dsa_questions||[]).map(q => (q.title||'') + ' ' + (q.topic||'') + ' ' + (q.algorithm||''))
+      ].join(' ').toLowerCase();
+      if (!hay.includes(s)) return false;
+    }
+    return true;
+  });
+  document.getElementById('idx-empty').classList.toggle('hidden', filtered.length > 0);
+  const frag = document.createDocumentFragment();
+  for (const exp of filtered) {
+    const card = document.createElement('div');
+    card.className = 'experience-card';
+    card.innerHTML = `
+      <div class="experience-header">
+        <span class="id">${escapeHtml(exp.id)}</span>
+        <span class="role">${escapeHtml(exp.role)}</span>
+        <span class="meta">${escapeHtml(exp.year)} · ${escapeHtml(exp.focus||'')} · ${escapeHtml(exp.round_type||'')}</span>
+        <a href="${escapeAttr(exp.source_url)}" target="_blank" rel="noopener">Source ↗</a>
+      </div>
+      <table><thead><tr><th>Status</th><th>Title</th><th>Topic</th><th>Difficulty</th><th>Algorithm</th></tr></thead><tbody></tbody></table>`;
+    const body = card.querySelector('tbody');
+    for (const q of (exp.dsa_questions||[])) {
+      const k = q.leetcode_link ? q.leetcode_link : ('title::' + (q.title||''));
+      const entry = getEntry(k);
+      const tr = document.createElement('tr');
+      if (entry.status === 'solved' || entry.status === 'skip') tr.classList.add('done');
+      const titleHtml = q.leetcode_link
+        ? `<a href="${escapeAttr(q.leetcode_link)}" target="_blank" rel="noopener">${escapeHtml(q.title)}</a>`
+        : escapeHtml(q.title);
+      tr.innerHTML = `
+        <td><div class="status-picker" data-key="${escapeAttr(k)}">
+          <button data-s="todo" class="${entry.status==='todo'?'active':''}" title="To do">·</button>
+          <button data-s="progress" class="${entry.status==='progress'?'active':''}" title="In progress">◐</button>
+          <button data-s="solved" class="${entry.status==='solved'?'active':''}" title="Solved">✓</button>
+          <button data-s="skip" class="${entry.status==='skip'?'active':''}" title="Skip">⤫</button>
+        </div></td>
+        <td>${titleHtml}</td>
+        <td>${escapeHtml(q.topic||'')}</td>
+        <td><span class="diff ${q.difficulty}">${escapeHtml(q.difficulty||'?')}</span></td>
+        <td class="algo-hint" style="font-style:normal">${escapeHtml(q.algorithm||'')}</td>`;
+      body.appendChild(tr);
+    }
+    frag.appendChild(card);
+  }
+  container.appendChild(frag);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EVENT DELEGATION
+═══════════════════════════════════════════════════════════ */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.status-picker button');
+  if (btn) {
+    const key = btn.parentElement.dataset.key;
+    setStatus(key, btn.dataset.s);
+    if (!document.getElementById('tab-bank').classList.contains('hidden')) {
+      btn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.s === getEntry(key).status));
+      const row = btn.closest('tr.q-row');
+      if (row) row.classList.toggle('done', ['solved','skip'].includes(getEntry(key).status));
+      if (state.bankFilters.status !== 'all') renderBank();
+    } else {
+      const row = btn.closest('tr');
+      if (row) row.classList.toggle('done', ['solved','skip'].includes(getEntry(key).status));
+    }
+    return;
+  }
+  const nb = e.target.closest('.notes-btn');
+  if (nb) {
+    const k = nb.dataset.key;
+    if (state.openNotes.has(k)) state.openNotes.delete(k);
+    else state.openNotes.add(k);
+    renderBank(); return;
+  }
+  const tab = e.target.closest('.tab');
+  if (tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+    const which = tab.dataset.tab;
+    document.getElementById('tab-bank').classList.toggle('hidden', which !== 'bank');
+    document.getElementById('tab-study').classList.toggle('hidden', which !== 'study');
+    document.getElementById('tab-patterns').classList.toggle('hidden', which !== 'patterns');
+    document.getElementById('tab-index').classList.toggle('hidden', which !== 'index');
+    if (which === 'index') renderIndex();
+    if (which === 'study') renderStudyGuide();
+    if (which === 'patterns') renderPatternCards();
+    return;
+  }
+  const chip = e.target.closest('.filter-chip');
+  if (chip) {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c === chip));
+    state.bankFilters.status = chip.dataset.status;
+    renderBank(); return;
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════
+   TOOLBAR WIRING
+═══════════════════════════════════════════════════════════ */
+function wireBankToolbar() {
+  document.getElementById('bank-search').addEventListener('input', e => { state.bankFilters.search = e.target.value; renderBank(); });
+  document.getElementById('bank-difficulty').addEventListener('change', e => { state.bankFilters.diff = e.target.value; renderBank(); });
+  document.getElementById('bank-topic').addEventListener('change', e => { state.bankFilters.topic = e.target.value; renderBank(); });
+  document.getElementById('bank-priority').addEventListener('change', e => { state.bankFilters.priority = e.target.value; renderBank(); });
+  document.getElementById('bank-sort').addEventListener('change', e => { state.bankFilters.sort = e.target.value; renderBank(); });
+  document.getElementById('export-btn').addEventListener('click', async () => {
+    const json = JSON.stringify(state.progress, null, 2);
+    try { await navigator.clipboard.writeText(json); alert('Progress copied (' + Object.keys(state.progress).length + ' entries).'); }
+    catch(e) { prompt('Copy this JSON:', json); }
+  });
+  document.getElementById('import-btn').addEventListener('click', () => {
+    const raw = prompt('Paste progress JSON:'); if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed !== 'object' || parsed === null) throw new Error('not an object');
+      state.progress = parsed; saveProgress(); renderBank(); updateStats();
+      alert('Imported ' + Object.keys(parsed).length + ' entries.');
+    } catch(e) { alert('Invalid JSON: ' + e.message); }
+  });
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (!confirm('Clear ALL progress? Cannot be undone.')) return;
+    state.progress = {}; saveProgress(); renderBank(); updateStats();
+  });
+}
+
+function wireStudyToolbar() {
+  document.getElementById('study-search').addEventListener('input', e => { state.studyFilters.search = e.target.value; renderStudyGuide(); });
+  document.getElementById('study-difficulty').addEventListener('change', e => { state.studyFilters.diff = e.target.value; renderStudyGuide(); });
+  document.getElementById('study-priority').addEventListener('change', e => { state.studyFilters.priority = e.target.value; renderStudyGuide(); });
+  document.getElementById('study-pattern').addEventListener('change', e => { state.studyFilters.pattern = e.target.value; renderStudyGuide(); });
+  document.getElementById('study-expand-all').addEventListener('click', () => studyExpandAll(true));
+  document.getElementById('study-collapse-all').addEventListener('click', () => studyExpandAll(false));
+}
+
+function wireIndexToolbar() {
+  document.getElementById('idx-search').addEventListener('input', e => { state.idxFilters.search = e.target.value; renderIndex(); });
+  document.getElementById('idx-year').addEventListener('change', e => { state.idxFilters.year = e.target.value; renderIndex(); });
+  document.getElementById('idx-focus').addEventListener('change', e => { state.idxFilters.focus = e.target.value; renderIndex(); });
+}
+
+function populateSelects() {
+  const topics = new Set();
+  for (const q of state.bank) for (const t of (q.topic||[])) topics.add(t);
+  const topicSel = document.getElementById('bank-topic');
+  [...topics].sort().forEach(t => {
+    const opt = document.createElement('option'); opt.value = t; opt.textContent = t; topicSel.appendChild(opt);
+  });
+
+  // Study guide pattern filter
+  const patterns = new Set();
+  for (const q of state.bank) {
+    const sd = getStudyData(q);
+    if (sd && sd.patternName) patterns.add(sd.patternName);
+  }
+  const patSel = document.getElementById('study-pattern');
+  [...patterns].sort().forEach(p => {
+    const opt = document.createElement('option'); opt.value = p; opt.textContent = p; patSel.appendChild(opt);
+  });
+
+  const years = new Set(), focuses = new Set();
+  for (const e of state.index) { if (e.year) years.add(e.year); if (e.focus) focuses.add(e.focus); }
+  const ySel = document.getElementById('idx-year');
+  [...years].sort().forEach(y => { const opt = document.createElement('option'); opt.value = y; opt.textContent = y; ySel.appendChild(opt); });
+  const fSel = document.getElementById('idx-focus');
+  [...focuses].sort().forEach(f => { const opt = document.createElement('option'); opt.value = f; opt.textContent = f; fSel.appendChild(opt); });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════ */
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+/* ═══════════════════════════════════════════════════════════
+   BOOTSTRAP
+═══════════════════════════════════════════════════════════ */
+async function loadData() {
+  try {
+    const [bankRes, idxRes] = await Promise.all([
+      fetch('salesforce_question_bank.json'),
+      fetch('salesforce_master_index.json'),
+    ]);
+    if (!bankRes.ok || !idxRes.ok) throw new Error('HTTP ' + bankRes.status + '/' + idxRes.status);
+    state.bank = await bankRes.json();
+    state.index = await idxRes.json();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('load-error').classList.remove('hidden');
+    return;
+  }
+  populateSelects();
+  wireBankToolbar();
+  wireStudyToolbar();
+  wireIndexToolbar();
+  renderBank();
+  updateStats();
+}
+
+loadData();
+</script>
+</body>
+</html>

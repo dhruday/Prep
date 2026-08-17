@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 05 — CSP Nonce for XSS Prevention</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🛡️ Lab 05 — CSP Nonce for XSS Prevention</h1>
+<p class="sub">Module 12.1 · Web Threats · Content Security Policy as a safety net</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3 class="safe">CSP as XSS Defense-in-Depth</h3>
+    <p style="font-size:.83rem;color:#94a3b8">Content Security Policy (CSP) is a <strong>defense-in-depth</strong> layer. Even if XSS payload reaches the DOM, CSP blocks its execution. The nonce-based approach allows only scripts with the correct server-generated nonce to execute.</p>
+    <pre><span class="cm">// Server sends this header with EVERY response:</span>
+Content-Security-Policy: script-src <span class="str">'nonce-abc123randomvalue'</span> <span class="str">'strict-dynamic'</span>
+
+<span class="cm">// Legitimate scripts have the nonce:</span>
+&lt;script <span class="str">nonce="abc123randomvalue"</span>&gt;console.log(<span class="str">'allowed'</span>)&lt;/script&gt;
+
+<span class="cm">// Injected XSS scripts don't know the nonce:</span>
+&lt;script&gt;alert(<span class="str">'blocked by CSP!'</span>)&lt;/script&gt;  <span class="cm">← blocked</span>
+
+<span class="cm">// Event handlers are also blocked:</span>
+&lt;img src=x <span class="danger">onerror</span>=alert(1)&gt;  <span class="cm">← blocked (inline event handlers)</span></pre>
+  </div>
+  <div class="card">
+    <h3>Nonce vs Hash vs unsafe-inline</h3>
+    <table>
+      <tr><th>Approach</th><th>Security</th><th>Maintenance</th><th>Use When</th></tr>
+      <tr><td style="color:#10b981">nonce-based</td><td>🟢 High</td><td>Medium (server generates nonce per request)</td><td>Server-rendered apps (SSR)</td></tr>
+      <tr><td style="color:#60a5fa">hash-based</td><td>🟢 High</td><td>Hard (hash changes when script changes)</td><td>Static inline scripts that rarely change</td></tr>
+      <tr><td style="color:#ef4444">'unsafe-inline'</td><td>🔴 None</td><td>Easy</td><td>NEVER (defeats CSP entirely)</td></tr>
+      <tr><td style="color:#10b981">'strict-dynamic'</td><td>🟢 High</td><td>Easy</td><td>SPAs that load scripts dynamically</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Test CSP — Server-Side Nonce Demo</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:8px">These iframes load pages from the server with different CSP policies. Watch the console (F12) for CSP violations.</p>
+    <div class="grid2">
+      <div>
+        <button onclick="loadPage('no-csp')" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">Load page WITHOUT CSP</button>
+        <iframe id="frame-no-csp" style="width:100%;height:200px;border:1px solid #2d3551;border-radius:8px;background:white;margin-top:8px" srcdoc="<body style='padding:10px;font-family:monospace'>Click button above</body>"></iframe>
+      </div>
+      <div>
+        <button onclick="loadPage('with-csp')" style="background:#1a3a2a;border-color:#10b981;color:#10b981">Load page WITH CSP nonce</button>
+        <iframe id="frame-csp" style="width:100%;height:200px;border:1px solid #2d3551;border-radius:8px;background:white;margin-top:8px" srcdoc="<body style='padding:10px;font-family:monospace'>Click button above</body>"></iframe>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>📡 CSP Violation Log</h3>
+    <p style="font-size:.78rem;color:#94a3b8">Open DevTools → Console to see real CSP violations. Below shows what the server returns:</p>
+    <div class="output" id="csp-log">CSP headers will appear here...</div>
+  </div>
+  <div class="card">
+    <h3>DevTools Walkthrough</h3>
+    <pre><span class="cm">// Step 1: Open DevTools → Network tab</span>
+<span class="cm">// Step 2: Click "Load page WITH CSP"</span>
+<span class="cm">// Step 3: Click the HTML response in Network tab</span>
+<span class="cm">// Step 4: Look at Response Headers → Content-Security-Policy</span>
+<span class="cm">//         You'll see: script-src 'nonce-XXXX' 'strict-dynamic'</span>
+<span class="cm">// Step 5: Switch to Console tab → look for "Refused to execute inline script"</span>
+<span class="cm">// Step 6: The legitimate script (with nonce) runs, injected one is blocked</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🔬 How CSP Nonce Works Internally</h3>
+    <div style="font-size:.82rem;color:#94a3b8">
+      <p><strong style="color:#60a5fa">1. Response Processing:</strong> Browser parses the CSP header BEFORE parsing HTML. It stores the allowed nonces, hashes, and sources in a policy object.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">2. Script Discovery:</strong> When the HTML parser encounters a &lt;script&gt; tag, before executing it, the browser checks the element's nonce attribute against the stored policy.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">3. Inline Event Handlers:</strong> CSP also blocks inline event handlers (onclick, onerror) because they have no way to carry a nonce. This is why CSP is effective against &lt;img onerror=...&gt; even though innerHTML doesn't need &lt;script&gt; tags.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">4. strict-dynamic:</strong> When a trusted script (with valid nonce) dynamically creates a new script via document.createElement('script'), that child script is also trusted — it inherits trust from its parent. This enables SPAs to load modules dynamically.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">5. Violation Reporting:</strong> You can set <code>report-uri</code> or <code>report-to</code> to receive violation reports as JSON POSTs, allowing monitoring without blocking.</p>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CSP Questions</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How would you implement CSP in a React SPA?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">For SSR (Next.js): Generate a nonce per request on the server, inject it into the CSP header and all &lt;script nonce="..."&gt; tags. For pure CSR: Use hash-based CSP since you know the script hashes at build time. Always use 'strict-dynamic' so dynamically-loaded chunks work. Avoid 'unsafe-inline' — React's JSX doesn't need it since it uses addEventListener, not inline handlers.</p>
+      <p><strong style="color:#60a5fa">Q: What's the difference between CSP Level 2 and Level 3?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Level 2 added nonces and hashes. Level 3 added 'strict-dynamic' (trust propagation), 'report-sample' (include violating code in reports), and the navigate-to directive. Google's recommendation is nonce + strict-dynamic, which works even if you have legacy 'unsafe-inline' in older directives — strict-dynamic takes precedence.</p>
+      <p><strong style="color:#60a5fa">Q: Can CSP completely prevent XSS?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Almost, but not quite. CSP cannot prevent: (1) Script gadgets — where existing trusted scripts are tricked into executing attacker data, (2) Dangling markup injection, (3) CSS-based data exfiltration. CSP is a safety net, not a silver bullet — always combine with output encoding/sanitization.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+function log(msg){const el=document.getElementById('csp-log');el.textContent+='\n'+msg;el.scrollTop=el.scrollHeight}
+
+async function loadPage(type){
+  const url=`${API}/api/xss/csp-demo/${type}`;
+  log(`→ GET ${url}`);
+  try{
+    const res=await fetch(url);
+    const csp=res.headers.get('content-security-policy');
+    const html=await res.text();
+    log(`← CSP Header: ${csp||'NONE'}`);
+    log(`← HTML length: ${html.length} bytes`);
+    if(type==='no-csp'){
+      document.getElementById('frame-no-csp').srcdoc=html;
+    }else{
+      document.getElementById('frame-csp').srcdoc=html;
+    }
+  }catch(e){log(`✗ ${e.message}`)}
+}
+</script>
+</body></html>

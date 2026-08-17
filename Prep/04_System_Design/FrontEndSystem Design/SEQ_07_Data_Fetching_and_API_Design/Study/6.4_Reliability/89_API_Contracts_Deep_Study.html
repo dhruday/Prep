@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>API Contracts &amp; Versioning Deep Study — Contract-First Frontend Architecture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2e2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}.card h3.good{color:#10b981}.card h3.bad{color:#ef4444}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>API Contracts &amp; Versioning Deep Study</h1>
+<p class="sub">Module 6.4 · FAANG Interview Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Architecture Patterns</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<!-- Tab 0: Deep Theory -->
+<div class="panel active">
+  <div class="card">
+    <h3>1. What Is an API Contract?</h3>
+    <pre><span class="cm">// An API contract is the formal agreement between frontend and backend:</span>
+<span class="cm">// - What endpoints exist and what methods they support</span>
+<span class="cm">// - What request parameters/body shapes are expected</span>
+<span class="cm">// - What response shapes come back (fields, types, required/optional)</span>
+<span class="cm">// - What error shapes look like</span>
+<span class="cm">// - What status codes mean what</span>
+
+<span class="cm">// Without explicit contracts:</span>
+<span class="cm">// Backend renames "user_name" → "userName" → frontend silently breaks</span>
+<span class="cm">// Backend makes optional field required → frontend sends null → 500 error</span>
+<span class="cm">// Backend removes deprecated field → frontend shows "undefined" to user</span>
+
+<span class="cm">// Contract mechanisms (from weakest to strongest):</span>
+<span class="cm">// 1. Documentation (Confluence/Wiki)    → often stale, not machine-checked</span>
+<span class="cm">// 2. OpenAPI/Swagger spec              → machine-readable, generates code</span>
+<span class="cm">// 3. Zod/Yup runtime validation        → catches violations at runtime</span>
+<span class="cm">// 4. TypeScript SDK generation          → compile-time type safety</span>
+<span class="cm">// 5. Consumer-driven contract tests     → CI fails if contract breaks</span>
+<span class="cm">// 6. tRPC / GraphQL codegen             → end-to-end type-safe, zero drift</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. OpenAPI → TypeScript Generation</h3>
+    <pre><span class="cm">// OpenAPI spec (source of truth, lives in backend repo):</span>
+<span class="cm">// openapi.yaml</span>
+<span class="cm">// paths:</span>
+<span class="cm">//   /products/{id}:</span>
+<span class="cm">//     get:</span>
+<span class="cm">//       responses:</span>
+<span class="cm">//         '200':</span>
+<span class="cm">//           content:</span>
+<span class="cm">//             application/json:</span>
+<span class="cm">//               schema:</span>
+<span class="cm">//                 $ref: '#/components/schemas/Product'</span>
+<span class="cm">//</span>
+<span class="cm">// components:</span>
+<span class="cm">//   schemas:</span>
+<span class="cm">//     Product:</span>
+<span class="cm">//       type: object</span>
+<span class="cm">//       required: [id, name, price]</span>
+<span class="cm">//       properties:</span>
+<span class="cm">//         id: { type: string, format: uuid }</span>
+<span class="cm">//         name: { type: string }</span>
+<span class="cm">//         price: { type: number }</span>
+
+<span class="cm">// Generate TypeScript types at build time:</span>
+<span class="cm">// npx openapi-typescript ./api/openapi.yaml --output ./src/api/types.ts</span>
+<span class="cm">// → If backend removes 'price', TypeScript compilation fails</span>
+<span class="cm">// → CI catches it before deployment</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Zod as Runtime Contract Validator</h3>
+    <pre><span class="cm">// TypeScript types disappear at runtime — they can't catch</span>
+<span class="cm">// a backend change that deployed without updating the spec</span>
+<span class="cm">// Zod validates at runtime: catches contract violations in production</span>
+
+<span class="kw">const</span> ProductSchema = z.<span class="fn">object</span>({
+  id: z.<span class="fn">string</span>().<span class="fn">uuid</span>(),
+  name: z.<span class="fn">string</span>(),
+  price: z.<span class="fn">number</span>().<span class="fn">nonnegative</span>(),
+  description: z.<span class="fn">string</span>().<span class="fn">optional</span>(),
+});
+
+<span class="kw">async function</span> <span class="fn">fetchProduct</span>(id) {
+  <span class="kw">const</span> raw = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`/api/products/${id}`</span>).<span class="fn">then</span>(r =&gt; r.<span class="fn">json</span>());
+  <span class="kw">const</span> result = ProductSchema.<span class="fn">safeParse</span>(raw);
+
+  <span class="kw">if</span> (!result.success) {
+    <span class="cm">// Log to Sentry/Datadog — backend changed without telling us</span>
+    <span class="fn">reportContractViolation</span>({
+      endpoint: <span class="str">`/api/products/${id}`</span>,
+      errors: result.error.<span class="fn">flatten</span>(),
+      rawResponse: raw,
+    });
+    <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">'API contract violation'</span>);
+  }
+
+  <span class="kw">return</span> result.data;
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>4. Versioning Strategies Compared</h3>
+    <table>
+      <tr><th>Strategy</th><th>Example</th><th>Pros</th><th>Cons</th></tr>
+      <tr><td>URL Path</td><td>/api/v1/products</td><td>Explicit, caching-friendly, easy routing</td><td>URL pollution, old versions accumulate</td></tr>
+      <tr><td>Header</td><td>API-Version: 2024-01-01</td><td>Clean URLs, date-based is intuitive</td><td>Harder to test in browser, less discoverable</td></tr>
+      <tr><td>Query Param</td><td>/api/products?version=2</td><td>Easy to test, works in browser</td><td>Pollutes cache keys, feels hacky</td></tr>
+      <tr><td>Content Negotiation</td><td>Accept: application/vnd.api.v2+json</td><td>RESTful, HTTP-compliant</td><td>Complex, rarely understood by devs</td></tr>
+    </table>
+    <div class="info">Stripe uses date-based header versioning (API-Version: 2024-01-01). GitHub uses URL versioning (/v3, /v4). Most teams use URL path versioning — simplest and most explicit.</div>
+  </div>
+</div>
+
+<!-- Tab 1: Architecture Patterns -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Contract-First Development Workflow</h3>
+    <pre><span class="cm">// Step 1: Backend team writes OpenAPI spec FIRST (before code)</span>
+<span class="cm">// Step 2: Frontend team generates types + mock server from spec</span>
+<span class="cm">// Step 3: Both teams implement in parallel</span>
+<span class="cm">// Step 4: Contract tests run in CI — verify both sides match</span>
+
+<span class="cm">// Timeline (parallel development):</span>
+<span class="cm">//</span>
+<span class="cm">// Week 1:  [Write OpenAPI spec] ─────────────────→</span>
+<span class="cm">// Week 2:  [FE: Generate types]  [BE: Implement]</span>
+<span class="cm">//          [FE: Build with mocks]   ↓</span>
+<span class="cm">// Week 3:  [Integration testing]    ↓</span>
+<span class="cm">//          [Contract tests in CI]   ↓</span>
+<span class="cm">// Week 4:  [Deploy together]</span>
+
+<span class="cm">// Mock server from OpenAPI spec (for frontend development):</span>
+<span class="cm">// npx prism mock api/openapi.yaml → localhost:4010</span>
+<span class="cm">// Returns realistic fake data matching the spec shapes</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Consumer-Driven Contract Testing (Pact)</h3>
+    <pre><span class="cm">// Frontend (consumer) defines what it EXPECTS from the API</span>
+<span class="cm">// Backend (provider) verifies it DELIVERS what consumer expects</span>
+
+<span class="cm">// Frontend writes a Pact test:</span>
+<span class="cm">// "When I call GET /api/products/123,</span>
+<span class="cm">//  I expect { id: string, name: string, price: number }"</span>
+<span class="cm">//</span>
+<span class="cm">// This generates a "pact file" (JSON contract)</span>
+<span class="cm">// Pact file is shared with backend team (via Pact Broker)</span>
+<span class="cm">//</span>
+<span class="cm">// Backend runs pact verification:</span>
+<span class="cm">// "Does my API actually return { id, name, price } for GET /products/123?"</span>
+<span class="cm">// If no → CI fails → backend can't deploy a breaking change</span>
+
+<span class="cm">// This is the ONLY approach that catches breaking changes</span>
+<span class="cm">// where backend and frontend release independently</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Defensive Deserialization Pattern</h3>
+    <pre><span class="cm">// Never trust API responses — validate and transform at the boundary</span>
+
+<span class="kw">function</span> <span class="fn">createApiParser</span>(schema) {
+  <span class="kw">return</span> <span class="kw">async function</span>(response) {
+    <span class="kw">const</span> raw = <span class="kw">await</span> response.<span class="fn">json</span>();
+    <span class="kw">const</span> result = schema.<span class="fn">safeParse</span>(raw);
+
+    <span class="kw">if</span> (result.success) <span class="kw">return</span> result.data;
+
+    <span class="cm">// Strategy: partial parse — use what's valid, default the rest</span>
+    <span class="kw">const</span> partial = {};
+    <span class="kw">for</span> (<span class="kw">const</span> [key, value] <span class="kw">of</span> Object.<span class="fn">entries</span>(raw)) {
+      <span class="kw">const</span> fieldResult = schema.shape[key]?.<span class="fn">safeParse</span>(value);
+      <span class="kw">if</span> (fieldResult?.success) partial[key] = fieldResult.data;
+    }
+
+    <span class="cm">// Log what failed for monitoring</span>
+    <span class="fn">logContractDrift</span>({
+      expected: Object.<span class="fn">keys</span>(schema.shape),
+      received: Object.<span class="fn">keys</span>(raw),
+      errors: result.error.issues,
+    });
+
+    <span class="kw">return</span> partial; <span class="cm">// Graceful degradation — show what we can</span>
+  };
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>4. Breaking vs Non-Breaking Changes</h3>
+    <table>
+      <tr><th>Change</th><th>Breaking?</th><th>Why</th></tr>
+      <tr><td>Add optional response field</td><td class="good" style="color:#10b981">No</td><td>Frontend ignores unknown fields</td></tr>
+      <tr><td>Remove response field</td><td class="bad" style="color:#ef4444">Yes</td><td>Frontend may depend on it</td></tr>
+      <tr><td>Rename response field</td><td class="bad" style="color:#ef4444">Yes</td><td>Same as remove + add</td></tr>
+      <tr><td>Change field type (number→string)</td><td class="bad" style="color:#ef4444">Yes</td><td>Frontend parsing breaks</td></tr>
+      <tr><td>Add required request field</td><td class="bad" style="color:#ef4444">Yes</td><td>Old clients don't send it</td></tr>
+      <tr><td>Add optional request field</td><td class="good" style="color:#10b981">No</td><td>Old clients don't need it</td></tr>
+      <tr><td>Make required field optional</td><td class="bad" style="color:#ef4444">Maybe</td><td>Frontend may assume non-null</td></tr>
+      <tr><td>Change error response shape</td><td class="bad" style="color:#ef4444">Yes</td><td>Frontend error parsing breaks</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- Tab 2: FAANG Interview -->
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+
+    <div class="qa">
+      <div class="q">Q1: How do you ensure frontend-backend API compatibility in a microservices architecture?</div>
+      <div class="a">I'd implement a contract-first approach with three layers. First, every service publishes an OpenAPI spec as the single source of truth. We generate TypeScript types from these specs at build time using openapi-typescript — if a backend changes a response shape, our TypeScript compilation fails in CI before deployment. Second, I add Zod runtime validation at the API boundary as a safety net — if a backend team deploys without updating the spec, our monitoring catches the contract violation in production. Third, for critical paths (checkout, auth), I'd use consumer-driven contract tests with Pact — frontend defines what it expects, and the backend's CI verifies it still delivers those shapes. This gives us both compile-time safety and runtime resilience.</div>
+      <div class="followup">Follow-up: What happens when you need to support two API versions simultaneously during migration?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: URL versioning vs header versioning — which do you prefer and why?</div>
+      <div class="a">For most teams, I recommend URL path versioning (/api/v1/products). It's explicit — you can see the version in browser DevTools, API logs, and monitoring dashboards without inspecting headers. It's cache-friendly — CDNs and browsers cache /v1/products and /v2/products separately without custom Vary headers. The main argument against it (URL pollution) doesn't matter in practice because you rarely have more than 2-3 active versions. Header-based versioning (like Stripe's date-based API-Version) is elegant for large public APIs with many consumers who pin to specific versions. But for internal APIs or B2B, URL versioning wins for simplicity and debuggability.</div>
+      <div class="followup">Follow-up: How do you deprecate and sunset old API versions?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q3: How would you handle a backend deploying a breaking change without warning?</div>
+      <div class="a">This is where runtime validation saves you. If I have Zod schemas at the API boundary, the contract violation is caught immediately and logged to our error monitoring (Sentry/Datadog) with the exact field differences. The frontend gracefully degrades — showing cached data or partial results rather than crashing. Longer-term prevention: I'd establish a contract review process where any schema change requires updating the OpenAPI spec, which triggers a compatibility check against consumer expectations. If using Pact, the backend's CI literally cannot deploy a breaking change because the consumer contract test will fail. The key principle: trust but verify at the boundary.</div>
+      <div class="followup">Follow-up: How does this work with GraphQL where the schema is self-documenting?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q4: What's the difference between frontend and backend contract validation?</div>
+      <div class="a">Backend validation is authoritative — it enforces business rules and data integrity (a price must be positive, an email must be unique). If backend validation fails, it's a hard error. Frontend validation is defensive — it protects against unexpected response shapes and provides fast user feedback. Frontend validates outgoing requests (form inputs) to prevent unnecessary round-trips, and incoming responses (Zod parsing) to prevent rendering crashes. The critical insight: frontend validation is never a substitute for backend validation. A malicious user can bypass any frontend check. Frontend validation exists for UX and resilience, not security.</div>
+      <div class="followup">Follow-up: Should frontend and backend share validation schemas? How?</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 3: Code Walkthrough -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Complete API Client with Contract Validation</h3>
+    <pre><span class="kw">class</span> <span class="fn">TypeSafeApiClient</span> {
+  <span class="kw">constructor</span>(baseUrl) {
+    <span class="kw">this</span>.baseUrl = baseUrl;
+    <span class="kw">this</span>.schemas = <span class="kw">new</span> <span class="fn">Map</span>();
+  }
+
+  <span class="fn">register</span>(endpoint, responseSchema) {
+    <span class="kw">this</span>.schemas.<span class="fn">set</span>(endpoint, responseSchema);
+    <span class="kw">return this</span>;
+  }
+
+  <span class="kw">async</span> <span class="fn">get</span>(endpoint, params = {}) {
+    <span class="kw">const</span> url = <span class="kw">new</span> <span class="fn">URL</span>(endpoint, <span class="kw">this</span>.baseUrl);
+    Object.<span class="fn">entries</span>(params).<span class="fn">forEach</span>(([k, v]) =&gt; url.searchParams.<span class="fn">set</span>(k, v));
+
+    <span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(url);
+    <span class="kw">if</span> (!response.ok) <span class="kw">throw new</span> <span class="fn">ApiError</span>(response.statusText, response.status);
+
+    <span class="kw">const</span> raw = <span class="kw">await</span> response.<span class="fn">json</span>();
+    <span class="kw">const</span> schema = <span class="kw">this</span>.schemas.<span class="fn">get</span>(endpoint);
+
+    <span class="kw">if</span> (schema) {
+      <span class="kw">const</span> result = schema.<span class="fn">safeParse</span>(raw);
+      <span class="kw">if</span> (!result.success) {
+        console.<span class="fn">error</span>(<span class="str">'Contract violation:'</span>, endpoint, result.error.issues);
+        <span class="cm">// Report but don't crash — return raw data as fallback</span>
+        <span class="fn">reportContractViolation</span>(endpoint, result.error);
+      } <span class="kw">else</span> {
+        <span class="kw">return</span> result.data;
+      }
+    }
+    <span class="kw">return</span> raw;
+  }
+}
+
+<span class="cm">// Usage:</span>
+<span class="kw">const</span> api = <span class="kw">new</span> <span class="fn">TypeSafeApiClient</span>(<span class="str">'https://api.example.com'</span>)
+  .<span class="fn">register</span>(<span class="str">'/products'</span>, z.<span class="fn">array</span>(ProductSchema))
+  .<span class="fn">register</span>(<span class="str">'/users/me'</span>, UserSchema);
+
+<span class="kw">const</span> products = <span class="kw">await</span> api.<span class="fn">get</span>(<span class="str">'/products'</span>, { page: <span class="str">'1'</span> });</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Version Migration Helper</h3>
+    <pre><span class="cm">// Adapter pattern for supporting multiple API versions during migration</span>
+
+<span class="kw">const</span> productAdapters = {
+  v1: (raw) =&gt; ({
+    id: raw.product_id,       <span class="cm">// v1 used product_id</span>
+    name: raw.product_name,   <span class="cm">// v1 used product_name</span>
+    price: raw.price_cents / <span class="num">100</span>, <span class="cm">// v1 sent cents</span>
+  }),
+  v2: (raw) =&gt; ({
+    id: raw.id,               <span class="cm">// v2 uses id</span>
+    name: raw.name,           <span class="cm">// v2 uses name</span>
+    price: raw.price,         <span class="cm">// v2 sends decimal</span>
+  }),
+};
+
+<span class="kw">function</span> <span class="fn">parseProduct</span>(raw, apiVersion) {
+  <span class="kw">const</span> adapter = productAdapters[apiVersion] ?? productAdapters.v2;
+  <span class="kw">return</span> <span class="fn">adapter</span>(raw);
+}
+
+<span class="cm">// Feature flag controls which version we use</span>
+<span class="kw">const</span> API_VERSION = featureFlags.<span class="fn">get</span>(<span class="str">'products-api-version'</span>) ?? <span class="str">'v1'</span>;</pre>
+  </div>
+</div>
+
+<!-- Tab 4: Cheat Sheet -->
+<div class="panel">
+  <div class="card">
+    <h3>Contract Mechanism Comparison</h3>
+    <table>
+      <tr><th>Mechanism</th><th>Check Time</th><th>Drift Detection</th><th>Effort</th></tr>
+      <tr><td>Documentation</td><td>Manual review</td><td>None</td><td>Low</td></tr>
+      <tr><td>OpenAPI + codegen</td><td>Build time</td><td>TypeScript errors</td><td>Medium</td></tr>
+      <tr><td>Zod runtime</td><td>Runtime</td><td>Monitoring alerts</td><td>Medium</td></tr>
+      <tr><td>Pact contract tests</td><td>CI</td><td>Test failures</td><td>High</td></tr>
+      <tr><td>tRPC</td><td>Build time</td><td>Impossible (shared types)</td><td>Low (if full-stack TS)</td></tr>
+      <tr><td>GraphQL codegen</td><td>Build time</td><td>Schema checks</td><td>Medium</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Versioning Strategy Decision</h3>
+    <pre>Is it a public API with external consumers?
+├── Yes → Header versioning (date-based, like Stripe)
+└── No (internal)
+    ├── Microservices with independent deploy?
+    │   ├── Yes → URL versioning (/api/v2/) + contract tests
+    │   └── No → Zod validation + feature flags for migration
+    └── Full-stack TypeScript?
+        └── Use tRPC — zero contract drift by design</pre>
+  </div>
+
+  <div class="card">
+    <h3>Production Checklist</h3>
+    <pre>✅ Every API has an OpenAPI spec or GraphQL schema
+✅ TypeScript types generated from spec (not hand-written)
+✅ Zod validation at API boundary for critical endpoints
+✅ CI breaks if spec changes don't match implementation
+✅ New API fields are ALWAYS optional (additive-only changes)
+✅ Removing a field requires deprecation notice + migration window
+✅ Error response shapes are part of the contract (not just success)
+✅ Monitor contract violations in production (Sentry/Datadog)
+✅ Version sunset policy defined (e.g., support N-1 for 6 months)
+✅ Adapters isolate version differences from business logic</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

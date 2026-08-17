@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 69 – Frontend Performance Metrics</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>📊 Frontend Performance Metrics</h1>
+<p class="sub">Topic 69 · Module 7.1 — Metrics & Measurement · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Metric Categories</div>
+  <div class="tab" onclick="setTab(1)">Measurement Tools Demo</div>
+  <div class="tab" onclick="setTab(2)">Scoring & Thresholds</div>
+  <div class="tab" onclick="setTab(3)">Code (PerformanceObserver)</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Three categories of frontend metrics</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:12px;border-radius:8px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:8px">⏱️ Loading</div>
+        <div style="color:#94a3b8;line-height:1.9">
+          <strong style="color:#60a5fa">FCP</strong> — First Contentful Paint<br>
+          <strong style="color:#10b981">LCP</strong> — Largest Contentful Paint<br>
+          <strong style="color:#a78bfa">TTFB</strong> — Time to First Byte<br>
+          <strong style="color:#f59e0b">TTI</strong> — Time to Interactive
+        </div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:12px;border-radius:8px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:8px">🖱️ Interactivity</div>
+        <div style="color:#94a3b8;line-height:1.9">
+          <strong style="color:#10b981">INP</strong> — Interaction to Next Paint<br>
+          <strong style="color:#60a5fa">FID</strong> — First Input Delay (deprecated)<br>
+          <strong style="color:#a78bfa">TBT</strong> — Total Blocking Time<br>
+          <strong style="color:#f59e0b">Long Tasks</strong> &gt;50ms
+        </div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;padding:12px;border-radius:8px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:8px">📐 Visual Stability</div>
+        <div style="color:#94a3b8;line-height:1.9">
+          <strong style="color:#a78bfa">CLS</strong> — Cumulative Layout Shift<br>
+          Layout shift score = impact × distance<br><br>
+          <strong style="color:#ef4444">CLS &gt;0.1</strong> = poor<br>
+          <strong style="color:#10b981">CLS &lt;0.1</strong> = good
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px;background:#0f1117;border:1px solid #f59e0b;padding:10px;border-radius:8px;font-size:.78rem;color:#94a3b8">
+      <strong style="color:#f59e0b">Core Web Vitals (Google ranking signal):</strong> LCP · INP · CLS — these three directly affect SEO ranking. SAP Fiori apps improved LCP from 4.2s → 1.8s, CLS from 0.25 → 0.04 after optimization sprint.
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Simulated Lighthouse run — metric scores</h3>
+    <button onclick="runLighthouse()" style="padding:8px 18px;background:#1e3a5f;border:1px solid #60a5fa;color:#60a5fa;border-radius:8px;cursor:pointer;font-size:.82rem;margin-bottom:14px">Run Lighthouse Simulation</button>
+    <div id="lh-scores" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:.78rem"></div>
+    <div id="lh-opportunity" style="margin-top:12px;background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;font-size:.78rem;display:none"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Core Web Vitals thresholds</h3>
+    <div style="font-size:.8rem;display:grid;gap:8px">
+      <div id="thresholds"></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Measuring metrics in code</h3>
+    <pre><span class="cm">// ─── web-vitals library (recommended) ───</span>
+<span class="kw">import</span> { onLCP, onINP, onCLS, onFCP, onTTFB } <span class="kw">from</span> <span class="str">'web-vitals'</span>;
+
+<span class="kw">function</span> <span class="fn">sendToAnalytics</span>(metric: Metric) {
+  navigator.<span class="fn">sendBeacon</span>(<span class="str">'/analytics'</span>, JSON.<span class="fn">stringify</span>({
+    name:  metric.name,
+    value: metric.value,
+    id:    metric.id,
+    page:  location.pathname,
+  }));
+}
+<span class="fn">onLCP</span>(sendToAnalytics);
+<span class="fn">onINP</span>(sendToAnalytics);
+<span class="fn">onCLS</span>(sendToAnalytics);
+
+<span class="cm">// ─── PerformanceObserver (raw API) ───</span>
+<span class="kw">const</span> po = <span class="kw">new</span> <span class="fn">PerformanceObserver</span>((list) =&gt; {
+  list.<span class="fn">getEntries</span>().<span class="fn">forEach</span>(entry =&gt; {
+    <span class="kw">if</span> (entry.duration &gt; 50) {  <span class="cm">// long task threshold</span>
+      console.<span class="fn">warn</span>(<span class="str">'Long task:'</span>, entry.duration.<span class="fn">toFixed</span>(1) + <span class="str">'ms'</span>, entry.attribution);
+    }
+  });
+});
+po.<span class="fn">observe</span>({ type: <span class="str">'longtask'</span>, buffered: <span class="kw">true</span> });
+
+<span class="cm">// ─── Layout Shift tracking ───</span>
+<span class="kw">let</span> cumulativeCLS = 0;
+<span class="kw">new</span> <span class="fn">PerformanceObserver</span>(list =&gt; {
+  list.<span class="fn">getEntries</span>().<span class="fn">forEach</span>(e =&gt; {
+    <span class="kw">if</span> (!e.hadRecentInput) cumulativeCLS += e.value;
+  });
+}).<span class="fn">observe</span>({ type: <span class="str">'layout-shift'</span>, buffered: <span class="kw">true</span> });</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const metrics=[
+  {name:'FCP',good:1800,poor:3000,unit:'ms',desc:'First Contentful Paint'},
+  {name:'LCP',good:2500,poor:4000,unit:'ms',desc:'Largest Contentful Paint'},
+  {name:'INP',good:200,poor:500,unit:'ms',desc:'Interaction to Next Paint'},
+  {name:'CLS',good:0.1,poor:0.25,unit:'',desc:'Cumulative Layout Shift'},
+  {name:'TTI',good:3800,poor:7300,unit:'ms',desc:'Time to Interactive'},
+  {name:'TBT',good:200,poor:600,unit:'ms',desc:'Total Blocking Time'},
+];
+const thresh=document.getElementById('thresholds');
+thresh.innerHTML=metrics.map(m=>`
+  <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center">
+    <div>
+      <div style="color:#60a5fa;font-weight:700">${m.name}</div>
+      <div style="color:#94a3b8;font-size:.72rem">${m.desc}</div>
+    </div>
+    <div style="display:flex;gap:4px;align-items:center">
+      <span style="color:#10b981;font-size:.75rem">🟢 &lt;${m.good}${m.unit}</span>
+      <div style="flex:1;height:8px;background:linear-gradient(to right, #10b981 0%, #10b981 40%, #f59e0b 40%, #f59e0b 70%, #ef4444 70%, #ef4444 100%);border-radius:4px"></div>
+      <span style="color:#ef4444;font-size:.75rem">🔴 &gt;${m.poor}${m.unit}</span>
+    </div>
+  </div>
+`).join('');
+
+function runLighthouse(){
+  const values=[{name:'FCP',v:1600,good:1800,unit:'ms'},{name:'LCP',v:2200,good:2500,unit:'ms'},{name:'INP',v:180,good:200,unit:'ms'},{name:'CLS',v:0.05,good:0.1,unit:''}];
+  const scores=document.getElementById('lh-scores');
+  scores.innerHTML=values.map(m=>{
+    const ok=m.v<=m.good;const color=ok?'#10b981':'#f59e0b';
+    return `<div style="background:#0f1117;border:1px solid ${color};border-radius:8px;padding:12px;text-align:center">
+      <div style="color:${color};font-size:1.4rem;font-weight:700">${m.v}${m.unit}</div>
+      <div style="color:#94a3b8;font-size:.72rem;margin-top:4px">${m.name}</div>
+      <div style="color:${color};font-size:.7rem">${ok?'✅ Good':'⚠️ Needs work'}</div>
+    </div>`;
+  }).join('');
+  const opp=document.getElementById('lh-opportunity');opp.style.display='block';
+  opp.innerHTML='<div style="color:#60a5fa;font-weight:600;margin-bottom:6px">Top opportunities (simulated)</div><div style="color:#94a3b8;line-height:1.9;font-size:.78rem">• Serve images in next-gen formats (WebP/AVIF) — save ~320KB<br>• Eliminate render-blocking resources — save ~340ms<br>• Reduce unused JavaScript — save ~180KB</div>';
+}
+</script>
+</body>
+</html>

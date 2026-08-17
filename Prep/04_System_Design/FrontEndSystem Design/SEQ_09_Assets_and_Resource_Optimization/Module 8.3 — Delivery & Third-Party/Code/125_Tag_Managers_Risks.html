@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>125 – Tag Managers & Risks</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🏷️ Tag Managers & Risks</h1>
+<p class="sub">Topic 125 · Part 8 / Module 8.3 — Delivery & Third-Party · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">GTM Tag Simulator</div>
+  <div class="tab" onclick="setTab(2)">Risk Matrix</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>What is a Tag Manager?</h3>
+    <p style="color:#94a3b8;font-size:.84rem;margin-bottom:14px">A tag manager (GTM, Adobe Launch, Segment) is a single JS snippet that loads on your page and provides a GUI for marketing/analytics teams to inject additional scripts ("tags") without engineer involvement. One GTM container can launch 30+ third-party scripts. The core problem: engineers lose visibility and control over JS execution on their own pages.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.82rem">
+      <div style="background:#0f1117;border:1px solid #ef4444;border-radius:8px;padding:12px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">Performance Risks</div>
+        <ul style="color:#94a3b8;margin-left:16px;line-height:1.9">
+          <li>GTM bootstrap: ~100KB of JS before tags</li>
+          <li>Each tag: additional request + JS execution</li>
+          <li>Tags run before or after DOM load — engineers can't easily audit</li>
+          <li>Tag fires every route change (not page load only)</li>
+          <li>Slow tag = blocked main thread on every navigation</li>
+        </ul>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;border-radius:8px;padding:12px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:6px">Security Risks</div>
+        <ul style="color:#94a3b8;margin-left:16px;line-height:1.9">
+          <li>GTM = arbitrary code execution as first-party JS</li>
+          <li>Anyone with GTM access can steal session tokens</li>
+          <li>Magecart attacks target tag manager containers</li>
+          <li>No CSP protection (tag manager IS the 1st-party script)</li>
+          <li>Pixel scripts may exfiltrate PII to unknown endpoints</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>The dataLayer — the right way to integrate</h3>
+    <p style="color:#94a3b8;font-size:.82rem">The correct pattern: your code pushes <em>structured data events</em> to window.dataLayer. GTM reads from dataLayer and sends to analytics. Your code never calls third-party APIs directly. This keeps third-party logic in GTM (controlled by marketing) while your code is clean and testable.</p>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Simulate tag loading sequence — add tags to see cumulative cost</h3>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      <button onclick="addTag('gtm')">+ GTM Container</button>
+      <button onclick="addTag('analytics')">+ GA4 Analytics</button>
+      <button onclick="addTag('chat')">+ Chat Widget</button>
+      <button onclick="addTag('ab')">+ A/B Testing</button>
+      <button onclick="addTag('pixel')">+ FB Pixel</button>
+      <button onclick="addTag('heatmap')">+ Heatmap</button>
+      <button onclick="resetTags()" style="border-color:#ef4444;color:#ef4444">Clear All</button>
+    </div>
+    <div id="tagList" style="font-size:.8rem"></div>
+    <div id="tagSummary" style="margin-top:10px;background:#0f1117;border-radius:6px;padding:10px;font-size:.8rem;border:1px solid #2d3551"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Tag manager risk matrix</h3>
+    <table>
+      <tr><th>Concern</th><th>GTM</th><th>Adobe Launch</th><th>Segment</th><th>Self-managed</th></tr>
+      <tr><td>Performance overhead</td><td style="color:#ef4444">High (async+tags)</td><td style="color:#ef4444">High</td><td style="color:#f59e0b">Medium</td><td style="color:#10b981">Low (controlled)</td></tr>
+      <tr><td>Security surface</td><td style="color:#ef4444">High (any GTM admin)</td><td style="color:#ef4444">High</td><td style="color:#f59e0b">Medium</td><td style="color:#10b981">Low</td></tr>
+      <tr><td>Marketer autonomy</td><td style="color:#10b981">High</td><td style="color:#10b981">High</td><td style="color:#f59e0b">Medium</td><td style="color:#ef4444">None</td></tr>
+      <tr><td>Engineer visibility</td><td style="color:#ef4444">Low</td><td style="color:#ef4444">Low</td><td style="color:#f59e0b">Medium</td><td style="color:#10b981">Full</td></tr>
+      <tr><td>CSP compatibility</td><td style="color:#ef4444">Breaks strict CSP</td><td style="color:#ef4444">Breaks strict CSP</td><td style="color:#f59e0b">Partial</td><td style="color:#10b981">Full control</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>dataLayer push pattern + GTM output gating</h3>
+    <pre><span class="cm">// ✅ Your app code — push events to dataLayer (type-safe)</span>
+<span class="kw">interface</span> DataLayerEvent {
+  event: string;
+  [key: string]: <span class="kw">unknown</span>;
+}
+<span class="kw">declare</span> global { <span class="kw">interface</span> Window { dataLayer: DataLayerEvent[] } }
+
+<span class="kw">function</span> <span class="fn">trackEvent</span>(event: string, data: Record&lt;string, <span class="kw">unknown</span>&gt; = {}) {
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.<span class="fn">push</span>({ event, ...data });
+}
+
+<span class="cm">// Usage:</span>
+<span class="fn">trackEvent</span>(<span class="str">'product_view'</span>, { productId: <span class="str">'SKU123'</span>, category: <span class="str">'electronics'</span> });
+
+<span class="cm">// ❌ Never call third-party APIs directly in component code:</span>
+<span class="cm">// window.fbq('track', 'Purchase', { value: cart.total })  ← BAD</span>
+
+<span class="cm">// Server-side tagging (sGTM) — moves tag execution to server</span>
+<span class="cm">// Client sends 1 request to your sGTM container (your domain)</span>
+<span class="cm">// sGTM fans out to analytics, ads etc. server-side</span>
+<span class="cm">// Benefits: CSP compliance, no client JS overhead, PII stays server-side</span>
+
+<span class="cm">// Rate limiting GTM tags with consent mode</span>
+<span class="kw">function</span> <span class="fn">initGTM</span>() {
+  <span class="kw">const</span> hasConsent = <span class="fn">getConsentStatus</span>();
+  <span class="kw">if</span> (!hasConsent) {
+    window.dataLayer.<span class="fn">push</span>({ <span class="str">'consent'</span>: <span class="str">'default'</span>, ad_storage: <span class="str">'denied'</span>, analytics_storage: <span class="str">'denied'</span> });
+  }
+  <span class="kw">const</span> s = document.<span class="fn">createElement</span>(<span class="str">'script'</span>);
+  s.src = <span class="str">`https://www.googletagmanager.com/gtm.js?id=GTM-XXXXX`</span>;
+  s.async = <span class="kw">true</span>;
+  document.head.<span class="fn">appendChild</span>(s);
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+const tagDefs = {
+  gtm:       {name:'GTM Container', kb:98,  ms:450, color:'#60a5fa'},
+  analytics: {name:'GA4 Analytics', kb:45,  ms:180, color:'#10b981'},
+  chat:      {name:'Chat Widget',   kb:187, ms:620, color:'#f59e0b'},
+  ab:        {name:'A/B Testing',   kb:64,  ms:230, color:'#a78bfa'},
+  pixel:     {name:'FB Pixel',      kb:38,  ms:95,  color:'#e879f9'},
+  heatmap:   {name:'Heatmap JS',    kb:112, ms:380, color:'#ef4444'},
+};
+
+let loadedTags = [];
+
+function addTag(key) {
+  if (!loadedTags.find(t=>t.key===key)) loadedTags.push({key, ...tagDefs[key]});
+  renderTags();
+}
+
+function renderTags() {
+  const totalKb = loadedTags.reduce((s,t)=>s+t.kb,0);
+  const totalMs = loadedTags.reduce((s,t)=>s+t.ms,0);
+  document.getElementById('tagList').innerHTML = loadedTags.map(t => `
+    <div style="background:#0f1117;border:1px solid ${t.color}44;border-radius:6px;padding:8px;margin-bottom:6px;display:flex;justify-content:space-between">
+      <span style="color:${t.color}">${t.name}</span>
+      <span style="color:#64748b">${t.kb}KB · ~${t.ms}ms</span>
+    </div>
+  `).join('') || '<div style="color:#475569">No tags loaded yet.</div>';
+  
+  const status = totalMs > 1000 ? 'color:#ef4444' : totalMs > 500 ? 'color:#f59e0b' : 'color:#10b981';
+  document.getElementById('tagSummary').innerHTML = loadedTags.length
+    ? `Total: <span style="${status};font-weight:700">${totalKb}KB / ~${totalMs}ms added to load</span> from third-party scripts. ${totalMs>1000?'⚠️ Likely impacting LCP and INP.':''}`
+    : '';
+}
+
+function resetTags(){ loadedTags=[]; renderTags(); }
+</script>
+</body>
+</html>

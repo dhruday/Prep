@@ -1,0 +1,101 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Lab 01 — Error Classification</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}</style></head><body>
+<h1>Lab 01 — Error Classification</h1>
+<p class="sub">Classify HTTP errors as transient/permanent and retryable/not-retryable</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&amp;A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card"><h3>Error Taxonomy</h3>
+    <p><b style="color:#10b981">Transient</b> — temporary failures (500, 503, 429, network). Safe to retry.<br>
+    <b style="color:#ef4444">Permanent</b> — client bugs or missing resources (400, 401, 404). Retrying won't help.</p>
+    <div class="info">Key rule: retry transient errors with backoff; surface permanent errors to the user immediately.</div>
+  </div>
+  <div class="card"><h3>Classification Table</h3>
+<pre>Status │ Type       │ Retryable │ Why
+───────┼────────────┼───────────┼──────────────────────
+400    │ Permanent  │ No        │ Bad request / invalid payload
+404    │ Permanent  │ No        │ Resource does not exist
+429    │ Transient  │ Yes       │ Rate-limited, wait & retry
+500    │ Transient  │ Yes       │ Server crash, may recover
+Network│ Transient  │ Yes       │ Connectivity issue
+Timeout│ Transient  │ Yes       │ Server too slow</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card"><h3>Trigger Errors &amp; Classify</h3>
+    <p>Click buttons to trigger each error type. The classifier will label it.</p>
+    <button onclick="fire(400)">400 Bad Request</button>
+    <button onclick="fire(404)">404 Not Found</button>
+    <button onclick="fire(429)">429 Rate Limit</button>
+    <button onclick="fire(500)">500 Server Error</button>
+    <button onclick="fireNetwork()">Network Error</button>
+    <button onclick="fireTimeout()">Timeout</button>
+    <button onclick="out.textContent=''">Clear</button>
+    <div class="output" id="out"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card"><h3>How the Browser Surfaces Errors</h3>
+    <p>• HTTP errors (4xx/5xx) still resolve the <code>fetch()</code> promise — check <code>response.ok</code>.<br>
+    • Network failures (DNS, no connection) <b>reject</b> the promise with a <code>TypeError</code>.<br>
+    • <code>AbortController</code> timeouts reject with <code>AbortError</code> (DOMException).</p>
+    <div class="info">Chrome DevTools → Network tab shows failed requests in red. Status 0 = CORS or network failure.</div>
+  </div>
+  <div class="card"><h3>Fetch Error Flow</h3>
+<pre><span class="kw">try</span> {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(url, { signal });
+  <span class="kw">if</span> (!res.ok) <span class="cm">// HTTP error — promise resolved</span>
+    <span class="fn">classify</span>(res.status);
+} <span class="kw">catch</span> (e) {
+  <span class="kw">if</span> (e.name === <span class="str">'AbortError'</span>) <span class="cm">// timeout</span>
+  <span class="kw">else</span> <span class="cm">// network failure</span>
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card"><h3>Q: Which HTTP errors should be retried automatically?</h3>
+    <p>Transient server-side errors (500, 502, 503, 504) and 429 (rate-limited) are retryable. Client errors (400, 401, 403, 404) are permanent — retrying won't fix bad input or missing auth.</p></div>
+  <div class="card"><h3>Q: How do you distinguish a network error from a server error in fetch?</h3>
+    <p>Network errors <b>reject</b> the fetch promise (TypeError). Server errors <b>resolve</b> the promise with <code>response.ok === false</code>. You must check both paths.</p></div>
+  <div class="card"><h3>Q: Why is 429 special among 4xx errors?</h3>
+    <p>Unlike other 4xx codes, 429 is transient — the request is valid but rate-limited. Clients should read the <code>Retry-After</code> header and wait before retrying.</p></div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+const out=document.getElementById('out');
+const classify=(s)=>{
+  const map={400:['Permanent','No'],404:['Permanent','No'],429:['Transient','Yes'],500:['Transient','Yes']};
+  const [type,retry]=map[s]||['Unknown','?'];
+  const color=type==='Transient'?'#10b981':'#ef4444';
+  return {type,retry,color};
+};
+function log(msg){out.textContent+=msg+'\n';out.scrollTop=out.scrollHeight;}
+async function fire(status){
+  const t0=performance.now();
+  try{
+    const res=await fetch(`${API}/api/unreliable/error?status=${status}`);
+    const ms=Math.round(performance.now()-t0);
+    const c=classify(status);
+    log(`[${ms}ms] HTTP ${res.status} → ${c.type} | Retryable: ${c.retry}`);
+  }catch(e){log(`[ERR] ${e.message}`);}
+}
+async function fireNetwork(){
+  try{await fetch('http://localhost:9999/nope');}
+  catch(e){log(`[Network] TypeError: ${e.message} → Transient | Retryable: Yes`);}
+}
+function fireTimeout(){
+  const ctrl=new AbortController();
+  setTimeout(()=>ctrl.abort(),50);
+  fetch(`${API}/api/unreliable/slow?delay=5000`,{signal:ctrl.signal})
+    .catch(e=>log(`[Timeout] ${e.name}: ${e.message} → Transient | Retryable: Yes`));
+}
+</script></body></html>

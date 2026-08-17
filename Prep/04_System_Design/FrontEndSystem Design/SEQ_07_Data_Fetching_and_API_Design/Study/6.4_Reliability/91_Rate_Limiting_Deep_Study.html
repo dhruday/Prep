@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Client-Side Rate Limiting Deep Study — Protecting Server &amp; UX</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2e2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}.card h3.good{color:#10b981}.card h3.bad{color:#ef4444}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Client-Side Rate Limiting Deep Study</h1>
+<p class="sub">Module 6.4 · FAANG Interview Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Architecture Patterns</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<!-- Tab 0: Deep Theory -->
+<div class="panel active">
+  <div class="card">
+    <h3>1. Why Rate Limit on the Client?</h3>
+    <pre><span class="cm">// Servers already enforce rate limits (429 Too Many Requests)</span>
+<span class="cm">// But waiting for a 429 is wasteful:</span>
+<span class="cm">//   1. Wastes bandwidth (full request/response round-trip)</span>
+<span class="cm">//   2. Adds latency (user waits for the 429 before retry)</span>
+<span class="cm">//   3. Wastes server resources (server must parse &amp; reject)</span>
+<span class="cm">//   4. Degrades UX (user sees "too many requests" error)</span>
+<span class="cm">//</span>
+<span class="cm">// Client-side rate limiting sits between UI and network:</span>
+<span class="cm">//</span>
+<span class="cm">// Component → useQuery → API Layer → [Rate Limiter] → Network → Server</span>
+<span class="cm">//                                        ↓</span>
+<span class="cm">//                                   queue / drop</span>
+<span class="cm">//                                   if over budget</span>
+<span class="cm">//</span>
+<span class="cm">// It's transparent to components — they call api.fetch() as normal</span>
+<span class="cm">// The rate limiter intercepts and queues excess calls</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Algorithm Comparison</h3>
+    <table>
+      <tr><th>Algorithm</th><th>How It Works</th><th>Burst Handling</th><th>Best For</th></tr>
+      <tr><td>Fixed Window</td><td>N requests per time window (e.g., 10/sec)</td><td>Boundary burst: 10 at 0.99s + 10 at 1.01s = 20 in 20ms</td><td>Simple server-side limits</td></tr>
+      <tr><td>Sliding Window</td><td>Track each request timestamp, evict old</td><td>Accurate, no boundary issue</td><td>Precise rate control</td></tr>
+      <tr><td>Token Bucket</td><td>Tokens refill at rate R, each request costs 1</td><td>Controlled bursting (up to bucket capacity)</td><td>Frontend API clients ✅</td></tr>
+      <tr><td>Leaky Bucket</td><td>Queue drains at fixed rate</td><td>Smoothest output, but adds latency</td><td>Streaming / upload</td></tr>
+    </table>
+    <div class="info">Token Bucket is ideal for frontend: it allows short bursts (good for page loads that fire 5 requests at once) while enforcing a sustained rate limit.</div>
+  </div>
+
+  <div class="card">
+    <h3>3. Token Bucket — How It Works</h3>
+    <pre><span class="cm">// Imagine a bucket that holds 10 tokens (capacity = 10)</span>
+<span class="cm">// Tokens refill at 2 per second (refillRate = 2/s)</span>
+<span class="cm">//</span>
+<span class="cm">// t=0s:  bucket = 10 tokens (full)</span>
+<span class="cm">// Page load fires 8 requests → 8 tokens consumed → 2 remaining</span>
+<span class="cm">// t=0.5s: bucket refills 1 token → 3 available</span>
+<span class="cm">// t=1s:   bucket refills 1 more → 4 available</span>
+<span class="cm">// User types fast → 4 requests → 0 tokens</span>
+<span class="cm">// Next request → BLOCKED until token available (0.5s wait)</span>
+<span class="cm">//</span>
+<span class="cm">// Key insight: burst capacity (10) lets page loads work</span>
+<span class="cm">// Sustained rate (2/s) prevents overwhelming the server</span></pre>
+    <pre><span class="kw">class</span> <span class="fn">TokenBucket</span> {
+  <span class="kw">constructor</span>(capacity, refillRate) {
+    <span class="kw">this</span>.capacity = capacity;
+    <span class="kw">this</span>.tokens = capacity;       <span class="cm">// Start full</span>
+    <span class="kw">this</span>.refillRate = refillRate; <span class="cm">// Tokens per ms</span>
+    <span class="kw">this</span>.lastRefill = Date.<span class="fn">now</span>();
+  }
+
+  <span class="fn">refill</span>() {
+    <span class="kw">const</span> elapsed = Date.<span class="fn">now</span>() - <span class="kw">this</span>.lastRefill;
+    <span class="kw">this</span>.tokens = Math.<span class="fn">min</span>(
+      <span class="kw">this</span>.capacity,
+      <span class="kw">this</span>.tokens + elapsed * <span class="kw">this</span>.refillRate
+    );
+    <span class="kw">this</span>.lastRefill = Date.<span class="fn">now</span>();
+  }
+
+  <span class="fn">consume</span>() {
+    <span class="kw">this</span>.<span class="fn">refill</span>();
+    <span class="kw">if</span> (<span class="kw">this</span>.tokens &gt;= <span class="num">1</span>) {
+      <span class="kw">this</span>.tokens -= <span class="num">1</span>;
+      <span class="kw">return true</span>;  <span class="cm">// Allowed</span>
+    }
+    <span class="kw">return false</span>;    <span class="cm">// Rate limited</span>
+  }
+
+  <span class="kw">get</span> <span class="fn">waitTime</span>() {
+    <span class="kw">this</span>.<span class="fn">refill</span>();
+    <span class="kw">if</span> (<span class="kw">this</span>.tokens &gt;= <span class="num">1</span>) <span class="kw">return</span> <span class="num">0</span>;
+    <span class="kw">return</span> Math.<span class="fn">ceil</span>((<span class="num">1</span> - <span class="kw">this</span>.tokens) / <span class="kw">this</span>.refillRate);
+  }
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>4. Per-Endpoint Configuration</h3>
+    <pre><span class="cm">// Different endpoints have different tolerances:</span>
+<span class="cm">//</span>
+<span class="cm">// Search autocomplete → restrictive (debounced anyway)</span>
+<span class="cm">//   burst: 3, rate: 0.5/s → max 3 immediate, then 1 every 2s</span>
+<span class="cm">//</span>
+<span class="cm">// Analytics events → batch-friendly, low priority</span>
+<span class="cm">//   burst: 5, rate: 0.2/s → batch and drain slowly</span>
+<span class="cm">//</span>
+<span class="cm">// Product API → generous (user browsing)</span>
+<span class="cm">//   burst: 10, rate: 2/s → allows page load burst</span>
+<span class="cm">//</span>
+<span class="cm">// Background sync → very restrictive</span>
+<span class="cm">//   burst: 1, rate: 0.1/s → 1 request every 10 seconds</span>
+
+<span class="kw">const</span> endpointConfigs = {
+  <span class="str">'/api/search'</span>:    { burst: <span class="num">3</span>,  rate: <span class="num">0.5</span> / <span class="num">1000</span> },
+  <span class="str">'/api/analytics'</span>: { burst: <span class="num">5</span>,  rate: <span class="num">0.2</span> / <span class="num">1000</span> },
+  <span class="str">'/api/products'</span>:  { burst: <span class="num">10</span>, rate: <span class="num">2</span> / <span class="num">1000</span> },
+  <span class="str">'/api/sync'</span>:      { burst: <span class="num">1</span>,  rate: <span class="num">0.1</span> / <span class="num">1000</span> },
+};</pre>
+  </div>
+</div>
+
+<!-- Tab 1: Architecture Patterns -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Rate-Limited API Client with Queue</h3>
+    <pre><span class="kw">class</span> <span class="fn">RateLimitedClient</span> {
+  <span class="kw">constructor</span>() {
+    <span class="kw">this</span>.buckets = <span class="kw">new</span> <span class="fn">Map</span>();
+    <span class="kw">this</span>.queues = <span class="kw">new</span> <span class="fn">Map</span>();
+  }
+
+  <span class="fn">getBucket</span>(endpoint) {
+    <span class="kw">if</span> (!<span class="kw">this</span>.buckets.<span class="fn">has</span>(endpoint)) {
+      <span class="kw">const</span> config = endpointConfigs[endpoint] ?? { burst: <span class="num">10</span>, rate: <span class="num">2</span> / <span class="num">1000</span> };
+      <span class="kw">this</span>.buckets.<span class="fn">set</span>(endpoint, <span class="kw">new</span> <span class="fn">TokenBucket</span>(config.burst, config.rate));
+    }
+    <span class="kw">return this</span>.buckets.<span class="fn">get</span>(endpoint);
+  }
+
+  <span class="kw">async</span> <span class="fn">request</span>(endpoint, fetchFn, { queue = <span class="kw">true</span>, priority = <span class="num">0</span> } = {}) {
+    <span class="kw">const</span> bucket = <span class="kw">this</span>.<span class="fn">getBucket</span>(endpoint);
+
+    <span class="kw">if</span> (bucket.<span class="fn">consume</span>()) {
+      <span class="kw">return</span> <span class="fn">fetchFn</span>();  <span class="cm">// Token available → execute immediately</span>
+    }
+
+    <span class="kw">if</span> (!queue) {
+      <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">`Rate limited: ${endpoint} (wait ${bucket.waitTime}ms)`</span>);
+    }
+
+    <span class="cm">// Queue the request for later execution</span>
+    <span class="kw">return new</span> <span class="fn">Promise</span>((resolve, reject) =&gt; {
+      <span class="kw">const</span> q = <span class="kw">this</span>.queues.<span class="fn">get</span>(endpoint) ?? [];
+      q.<span class="fn">push</span>({ fetchFn, resolve, reject, priority });
+      q.<span class="fn">sort</span>((a, b) =&gt; b.priority - a.priority);
+      <span class="kw">this</span>.queues.<span class="fn">set</span>(endpoint, q);
+      <span class="kw">this</span>.<span class="fn">scheduleProcessing</span>(endpoint);
+    });
+  }
+
+  <span class="fn">scheduleProcessing</span>(endpoint) {
+    <span class="kw">const</span> bucket = <span class="kw">this</span>.<span class="fn">getBucket</span>(endpoint);
+    <span class="kw">const</span> delay = bucket.waitTime || <span class="num">100</span>;
+
+    <span class="fn">setTimeout</span>(() =&gt; {
+      <span class="kw">const</span> q = <span class="kw">this</span>.queues.<span class="fn">get</span>(endpoint);
+      <span class="kw">if</span> (!q?.length) <span class="kw">return</span>;
+      <span class="kw">if</span> (bucket.<span class="fn">consume</span>()) {
+        <span class="kw">const</span> item = q.<span class="fn">shift</span>();
+        item.<span class="fn">fetchFn</span>().<span class="fn">then</span>(item.resolve).<span class="fn">catch</span>(item.reject);
+      }
+      <span class="kw">if</span> (q.length) <span class="kw">this</span>.<span class="fn">scheduleProcessing</span>(endpoint);
+    }, delay);
+  }
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Visibility API — Pause When Tab Hidden</h3>
+    <pre><span class="cm">// When user switches tabs, pause background requests</span>
+<span class="cm">// Real-world: dashboard polling every 5s — waste when tab hidden</span>
+
+<span class="kw">class</span> <span class="fn">VisibilityAwareRateLimiter</span> {
+  <span class="kw">constructor</span>(client) {
+    <span class="kw">this</span>.client = client;
+    <span class="kw">this</span>.paused = <span class="kw">false</span>;
+    <span class="kw">this</span>.pendingOnResume = [];
+
+    document.<span class="fn">addEventListener</span>(<span class="str">'visibilitychange'</span>, () =&gt; {
+      <span class="kw">if</span> (document.hidden) {
+        <span class="kw">this</span>.paused = <span class="kw">true</span>;
+      } <span class="kw">else</span> {
+        <span class="kw">this</span>.paused = <span class="kw">false</span>;
+        <span class="cm">// Flush pending requests (staggered)</span>
+        <span class="kw">this</span>.pendingOnResume.<span class="fn">forEach</span>((fn, i) =&gt; {
+          <span class="fn">setTimeout</span>(fn, i * <span class="num">200</span>);  <span class="cm">// 200ms apart to avoid burst</span>
+        });
+        <span class="kw">this</span>.pendingOnResume = [];
+      }
+    });
+  }
+
+  <span class="kw">async</span> <span class="fn">request</span>(endpoint, fetchFn) {
+    <span class="kw">if</span> (<span class="kw">this</span>.paused) {
+      <span class="kw">return new</span> <span class="fn">Promise</span>((resolve, reject) =&gt; {
+        <span class="kw">this</span>.pendingOnResume.<span class="fn">push</span>(() =&gt;
+          <span class="kw">this</span>.client.<span class="fn">request</span>(endpoint, fetchFn)
+            .<span class="fn">then</span>(resolve).<span class="fn">catch</span>(reject)
+        );
+      });
+    }
+    <span class="kw">return this</span>.client.<span class="fn">request</span>(endpoint, fetchFn);
+  }
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Adaptive Rate Limiting</h3>
+    <pre><span class="cm">// Dynamically adjust rate based on server responses</span>
+
+<span class="kw">class</span> <span class="fn">AdaptiveRateLimiter</span> {
+  <span class="kw">constructor</span>(bucket) {
+    <span class="kw">this</span>.bucket = bucket;
+    <span class="kw">this</span>.originalRate = bucket.refillRate;
+  }
+
+  <span class="fn">onResponse</span>(response) {
+    <span class="cm">// Read server's rate limit headers</span>
+    <span class="kw">const</span> remaining = response.headers.<span class="fn">get</span>(<span class="str">'X-RateLimit-Remaining'</span>);
+    <span class="kw">const</span> limit = response.headers.<span class="fn">get</span>(<span class="str">'X-RateLimit-Limit'</span>);
+
+    <span class="kw">if</span> (remaining !== <span class="kw">null</span> &amp;&amp; limit !== <span class="kw">null</span>) {
+      <span class="kw">const</span> ratio = <span class="fn">parseInt</span>(remaining) / <span class="fn">parseInt</span>(limit);
+
+      <span class="kw">if</span> (ratio &lt; <span class="num">0.1</span>) {
+        <span class="cm">// Less than 10% remaining → slow to 25% of normal rate</span>
+        <span class="kw">this</span>.bucket.refillRate = <span class="kw">this</span>.originalRate * <span class="num">0.25</span>;
+      } <span class="kw">else if</span> (ratio &lt; <span class="num">0.3</span>) {
+        <span class="cm">// Less than 30% → slow to 50%</span>
+        <span class="kw">this</span>.bucket.refillRate = <span class="kw">this</span>.originalRate * <span class="num">0.5</span>;
+      } <span class="kw">else</span> {
+        <span class="cm">// Plenty of headroom → normal rate</span>
+        <span class="kw">this</span>.bucket.refillRate = <span class="kw">this</span>.originalRate;
+      }
+    }
+
+    <span class="kw">if</span> (response.status === <span class="num">429</span>) {
+      <span class="cm">// Server rejected us → aggressively back off</span>
+      <span class="kw">this</span>.bucket.refillRate = <span class="kw">this</span>.originalRate * <span class="num">0.1</span>;
+      <span class="kw">this</span>.bucket.tokens = <span class="num">0</span>;
+    }
+  }
+}</pre>
+  </div>
+</div>
+
+<!-- Tab 2: FAANG Interview -->
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+
+    <div class="qa">
+      <div class="q">Q1: Why implement rate limiting on the client when the server already enforces it?</div>
+      <div class="a">Client-side rate limiting is a proactive optimization, not redundancy. Waiting for a server 429 wastes a full round-trip (DNS + TCP + TLS + request + response), adds visible latency, and still consumes server resources to parse and reject. Client-side limiting prevents requests from ever leaving the browser, reducing bandwidth and server load. It also improves UX — instead of showing "429 Too Many Requests" errors, we queue requests transparently. In a real-time dashboard polling every second, client-side limiting can reduce server load by 80% when the tab is hidden (Visibility API). It's the difference between a polite client and an abusive one.</div>
+      <div class="followup">Follow-up: How do you sync client-side limits with server-side limits so they don't diverge?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: Compare Token Bucket vs Leaky Bucket for frontend use.</div>
+      <div class="a">Token Bucket is ideal for frontend because it allows controlled bursting. When a page loads, it might need 8 API calls simultaneously — Token Bucket's capacity parameter permits this burst, then limits sustained rate. Leaky Bucket forces a fixed drain rate with no burst allowance, which means page load requests would be queued and delayed unnecessarily. The trade-off: Token Bucket has variable output rate (bursty), Leaky Bucket has smooth output rate. For frontend, bursty is better — users expect instant page loads. For rate limiting uploads or streaming, Leaky Bucket's smoothness is preferable. I'd use Token Bucket for 95% of frontend rate limiting, Leaky Bucket for file upload progress throttling.</div>
+      <div class="followup">Follow-up: How would you implement a Token Bucket that supports different costs per request type?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q3: How would you handle rate limiting in a micro-frontend architecture?</div>
+      <div class="a">In micro-frontends, each independently deployed app could have its own rate limiter, leading to aggregate over-limiting or under-limiting. I'd centralize rate limiting in a shared API layer — either a Service Worker that intercepts all fetch requests from all micro-frontends, or a shared singleton rate limiter exposed via module federation. The shared limiter tracks a global budget per endpoint, ensuring the aggregate rate stays within server limits. Each micro-frontend registers its priority level, and the limiter allocates budget accordingly — checkout gets higher priority than recommendations. The Service Worker approach is cleanest because it's transparent and requires no coordination between micro-frontends.</div>
+      <div class="followup">Follow-up: What about rate limiting WebSocket messages in addition to HTTP?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q4: How do you handle rate limiting with the Page Visibility API?</div>
+      <div class="a">When a tab is hidden (document.hidden = true), I pause non-critical requests entirely and reduce critical polling frequency. For example, a dashboard polling every 5 seconds pauses background sync when hidden, queuing requests. When the tab becomes visible again, I don't flush all queued requests at once (that would burst-load the server) — instead I stagger them 200ms apart or just fetch the latest data once, discarding stale queued requests. Chrome already throttles setTimeout to 1000ms minimum for hidden tabs, but that still allows 1 request per second — explicit pausing is better. I also reduce WebSocket message processing for hidden tabs, buffering updates and applying them on resume.</div>
+      <div class="followup">Follow-up: How does this interact with Service Workers that may still be active?</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 3: Code Walkthrough -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Production Token Bucket with Priority Queue</h3>
+    <pre><span class="kw">class</span> <span class="fn">PriorityRateLimiter</span> {
+  <span class="kw">constructor</span>(capacity = <span class="num">10</span>, refillPerSec = <span class="num">2</span>) {
+    <span class="kw">this</span>.bucket = <span class="kw">new</span> <span class="fn">TokenBucket</span>(capacity, refillPerSec / <span class="num">1000</span>);
+    <span class="kw">this</span>.queue = [];
+    <span class="kw">this</span>.processing = <span class="kw">false</span>;
+  }
+
+  <span class="fn">execute</span>(fetchFn, priority = <span class="num">0</span>) {
+    <span class="kw">return new</span> <span class="fn">Promise</span>((resolve, reject) =&gt; {
+      <span class="kw">if</span> (<span class="kw">this</span>.bucket.<span class="fn">consume</span>()) {
+        <span class="fn">fetchFn</span>().<span class="fn">then</span>(resolve).<span class="fn">catch</span>(reject);
+        <span class="kw">return</span>;
+      }
+      <span class="kw">this</span>.queue.<span class="fn">push</span>({ fetchFn, resolve, reject, priority });
+      <span class="kw">this</span>.queue.<span class="fn">sort</span>((a, b) =&gt; b.priority - a.priority);
+      <span class="kw">this</span>.<span class="fn">drain</span>();
+    });
+  }
+
+  <span class="fn">drain</span>() {
+    <span class="kw">if</span> (<span class="kw">this</span>.processing) <span class="kw">return</span>;
+    <span class="kw">this</span>.processing = <span class="kw">true</span>;
+
+    <span class="kw">const</span> tick = () =&gt; {
+      <span class="kw">if</span> (!<span class="kw">this</span>.queue.length) {
+        <span class="kw">this</span>.processing = <span class="kw">false</span>;
+        <span class="kw">return</span>;
+      }
+      <span class="kw">if</span> (<span class="kw">this</span>.bucket.<span class="fn">consume</span>()) {
+        <span class="kw">const</span> item = <span class="kw">this</span>.queue.<span class="fn">shift</span>();
+        item.<span class="fn">fetchFn</span>().<span class="fn">then</span>(item.resolve).<span class="fn">catch</span>(item.reject);
+      }
+      <span class="fn">setTimeout</span>(tick, <span class="kw">this</span>.bucket.waitTime || <span class="num">50</span>);
+    };
+    <span class="fn">tick</span>();
+  }
+}
+
+<span class="cm">// Usage:</span>
+<span class="kw">const</span> limiter = <span class="kw">new</span> <span class="fn">PriorityRateLimiter</span>(<span class="num">10</span>, <span class="num">2</span>);
+limiter.<span class="fn">execute</span>(() =&gt; <span class="fn">fetch</span>(<span class="str">'/api/products'</span>), <span class="num">10</span>); <span class="cm">// high priority</span>
+limiter.<span class="fn">execute</span>(() =&gt; <span class="fn">fetch</span>(<span class="str">'/api/analytics'</span>), <span class="num">1</span>); <span class="cm">// low priority</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Reading Server Rate Limit Headers</h3>
+    <pre><span class="cm">// Standard rate limit headers from server:</span>
+<span class="cm">// X-RateLimit-Limit: 100      → max requests in window</span>
+<span class="cm">// X-RateLimit-Remaining: 23   → requests left in window</span>
+<span class="cm">// X-RateLimit-Reset: 1618884480 → unix timestamp when window resets</span>
+<span class="cm">// Retry-After: 30             → seconds to wait (on 429)</span>
+
+<span class="kw">function</span> <span class="fn">parseRateLimitHeaders</span>(response) {
+  <span class="kw">return</span> {
+    limit: <span class="fn">parseInt</span>(response.headers.<span class="fn">get</span>(<span class="str">'X-RateLimit-Limit'</span>)) || <span class="kw">null</span>,
+    remaining: <span class="fn">parseInt</span>(response.headers.<span class="fn">get</span>(<span class="str">'X-RateLimit-Remaining'</span>)) || <span class="kw">null</span>,
+    resetAt: <span class="fn">parseInt</span>(response.headers.<span class="fn">get</span>(<span class="str">'X-RateLimit-Reset'</span>)) * <span class="num">1000</span> || <span class="kw">null</span>,
+    retryAfter: <span class="fn">parseInt</span>(response.headers.<span class="fn">get</span>(<span class="str">'Retry-After'</span>)) || <span class="kw">null</span>,
+  };
+}
+
+<span class="cm">// Use these to configure client-side bucket dynamically:</span>
+<span class="kw">function</span> <span class="fn">syncBucketWithServer</span>(bucket, headers) {
+  <span class="kw">if</span> (headers.remaining !== <span class="kw">null</span> &amp;&amp; headers.limit !== <span class="kw">null</span>) {
+    bucket.tokens = Math.<span class="fn">min</span>(headers.remaining, bucket.capacity);
+  }
+}</pre>
+  </div>
+</div>
+
+<!-- Tab 4: Cheat Sheet -->
+<div class="panel">
+  <div class="card">
+    <h3>Algorithm Quick Reference</h3>
+    <table>
+      <tr><th>Algorithm</th><th>Burst OK?</th><th>Memory</th><th>Complexity</th><th>Frontend Use</th></tr>
+      <tr><td>Fixed Window</td><td>Boundary burst</td><td>O(1)</td><td>Simple</td><td>Rarely</td></tr>
+      <tr><td>Sliding Window</td><td>No burst</td><td>O(n)</td><td>Moderate</td><td>Sometimes</td></tr>
+      <tr><td>Token Bucket</td><td>Controlled burst</td><td>O(1)</td><td>Simple</td><td>Most common ✅</td></tr>
+      <tr><td>Leaky Bucket</td><td>No burst</td><td>O(queue)</td><td>Moderate</td><td>Upload/stream</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Decision Tree</h3>
+    <pre>Need to allow page-load burst?
+├── Yes → Token Bucket (capacity = expected burst size)
+└── No
+    ├── Need smooth output rate? → Leaky Bucket
+    └── Need simple counter? → Fixed Window
+
+Need per-endpoint limits? → Map&lt;endpoint, TokenBucket&gt;
+
+Tab hidden? → Pause optional requests (Visibility API)
+
+Server returning rate headers? → Sync bucket state adaptively</pre>
+  </div>
+
+  <div class="card">
+    <h3>Production Checklist</h3>
+    <pre>✅ Use Token Bucket for frontend (allows controlled bursting)
+✅ Configure per-endpoint rate limits (search ≠ analytics)
+✅ Implement request queuing with priority (checkout &gt; analytics)
+✅ Pause non-critical requests when tab is hidden
+✅ Read server's X-RateLimit-* headers to sync state
+✅ On 429: respect Retry-After header, reduce bucket rate
+✅ Stagger queued requests on tab resume (no burst-flush)
+✅ Log rate limit events to monitoring (detect misconfiguration)
+✅ Set queue size limits (don't queue 1000 requests)
+✅ Combine with circuit breaker for sustained outages</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

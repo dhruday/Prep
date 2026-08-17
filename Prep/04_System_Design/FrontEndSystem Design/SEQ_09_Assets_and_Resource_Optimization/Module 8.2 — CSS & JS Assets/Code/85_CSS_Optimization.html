@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 85 – CSS Optimization</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🎨 CSS Optimization</h1>
+<p class="sub">Topic 85 · Module 8.2 — CSS & JS Assets · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Critical CSS Simulator</div>
+  <div class="tab" onclick="setTab(2)">Techniques</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>CSS is render-blocking — every byte in the critical path delays FCP</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:10px">The browser cannot paint until all CSS in &lt;head&gt; is downloaded and parsed. A 200 KB CSS bundle blocks render for hundreds of milliseconds on 3G. At SAP, extracting critical CSS (above-the-fold styles) as inline styles and loading the rest async cut FCP by 800 ms.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+      <div>
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Techniques</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:2">
+          <li>🔑 Critical CSS inlining (above-fold)</li>
+          <li>📦 PurgeCSS / Tailwind JIT (remove unused)</li>
+          <li>🔗 CSS Modules / Scoped CSS (no global leaks)</li>
+          <li>📐 CSS containment (scope style recalc)</li>
+          <li>🗜️ Minify + deduplicate rules</li>
+        </ul>
+      </div>
+      <div>
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Anti-patterns</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:2">
+          <li>❌ @import in CSS (sequential downloads)</li>
+          <li>❌ Universal selectors with heavy specificity</li>
+          <li>❌ Loading 300 KB Bootstrap for 3 components</li>
+          <li>❌ Inline styles in JS with new objects (defeats memo)</li>
+          <li>❌ Unused rule sets from abandoned features</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Critical CSS vs full CSS — FCP impact</h3>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="simNoкритical()" style="padding:7px 14px;background:#3d0808;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.82rem">Load WITHOUT critical CSS</button>
+      <button onclick="simCritical()" style="padding:7px 14px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:8px;cursor:pointer;font-size:.82rem">Load WITH critical CSS inlined</button>
+    </div>
+    <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;min-height:80px;font-size:.85rem;transition:all .3s" id="css-demo">
+      <div id="css-state" style="color:#475569">Click a button to simulate page load</div>
+    </div>
+    <div id="css-timeline" style="margin-top:10px;font-size:.75rem;color:#475569"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>CSS optimization technique guide</h3>
+    <div style="display:grid;gap:8px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #10b981;padding:10px;border-radius:8px">
+        <strong style="color:#10b981">Critical CSS extraction</strong> — tools like critters (Next.js), critical (npm) scan the HTML for above-fold elements and inline their styles. Everything else loads async with media="print" onload trick.
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:10px;border-radius:8px">
+        <strong style="color:#10b981">PurgeCSS / Tailwind JIT</strong> — scan template files for class usage, remove all unused CSS rules before shipping. Tailwind with JIT ships only what's used — 5 KB instead of 400 KB.
+      </div>
+      <div style="background:#0f1117;border:1px solid #f59e0b;padding:10px;border-radius:8px">
+        <strong style="color:#f59e0b">CSS Modules / styled-components</strong> — scoped class names prevent style leakage, enable per-component chunking. Angular component styles with ViewEncapsulation.Emulated are automatically scoped.
+      </div>
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:10px;border-radius:8px">
+        <strong style="color:#60a5fa">CSS containment</strong> — <code>contain: layout style paint</code> tells the browser that changes inside this element cannot affect outside. Dramatically speeds up style recalculation for dense UIs like data tables.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>CSS optimization patterns</h3>
+    <pre><span class="cm">&lt;!-- Async non-critical CSS load --&gt;</span>
+&lt;<span class="attr">link</span> rel="preload" as="style" href="styles.css"
+  onload="this.onload=null;this.rel='stylesheet'"&gt;
+&lt;<span class="attr">noscript</span>&gt;&lt;link rel="stylesheet" href="styles.css"&gt;&lt;/noscript&gt;
+
+<span class="cm">/* ─── CSS containment for dense tables ───*/</span>
+<span class="attr">.order-table</span> {
+  contain: layout style paint; <span class="cm">/* scope recalc to this element */</span>
+}
+
+<span class="cm">/* ─── CSS custom properties for theming (no reparse) ───*/</span>
+:root {
+  --primary: #60a5fa;
+  --bg: #0f1117;
+}
+<span class="attr">.btn</span> { background: var(--primary); }
+<span class="cm">/* Theme switch = single property change, no CSS reload */</span>
+
+<span class="cm">// ─── PurgeCSS config (vite) ───</span>
+<span class="kw">import</span> purgeCss <span class="kw">from</span> <span class="str">'vite-plugin-purgecss'</span>;
+<span class="kw">export default</span> <span class="fn">defineConfig</span>({
+  plugins: [<span class="fn">purgeCss</span>({
+    content: [<span class="str">'./src/**/*.{ts,tsx,html}'</span>],
+    safelist: [/^sap-/, /^mat-/], <span class="cm">// keep dynamic classes</span>
+  })],
+});
+
+<span class="cm">// ─── Angular component styles: ViewEncapsulation ───</span>
+<span class="attr">@Component</span>({
+  selector: <span class="str">'app-order-table'</span>,
+  encapsulation: ViewEncapsulation.<span class="attr">Emulated</span>, <span class="cm">// scoped shadow-DOM-like</span>
+  styles: [<span class="str">'.row { color: var(--primary); }'</span>]
+})</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const demo=document.getElementById('css-demo');const state=document.getElementById('css-state');const tl=document.getElementById('css-timeline');
+function simNoкritical(){
+  state.style.color='#475569';state.textContent='⬜ Page blank — waiting for 200KB CSS to download…';
+  tl.innerHTML='';
+  let steps=[
+    [0,'HTML parsed','#94a3b8'],
+    [200,'Still white — CSS render-blocking download…','#ef4444'],
+    [800,'CSS downloaded — FCP fires now (800ms)','#f59e0b'],
+    [900,'Page styled and visible','#e2e8f0'],
+  ];
+  steps.forEach(([t,msg,color])=>setTimeout(()=>{state.textContent=msg;state.style.color=color;const d=document.createElement('div');d.style.color=color;d.textContent=`+${t}ms — ${msg}`;tl.appendChild(d);},t));
+}
+function simCritical(){
+  state.textContent='Page immediately styled — critical CSS was inline in HTML';state.style.color='#10b981';
+  tl.innerHTML='';
+  let steps=[
+    [0,'HTML parsed + inline critical CSS — FCP fires immediately!','#10b981'],
+    [100,'&lt;link rel=preload&gt; for full CSS starts in background','#60a5fa'],
+    [500,'Full CSS loaded — enhanced styles applied','#e2e8f0'],
+  ];
+  steps.forEach(([t,msg,color])=>setTimeout(()=>{const d=document.createElement('div');d.style.color=color;d.textContent=`+${t}ms — ${msg}`;tl.appendChild(d);},t));
+}
+</script>
+</body>
+</html>

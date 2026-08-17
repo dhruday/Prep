@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>JWT (JSON Web Tokens) Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:1rem}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#ef4444;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #ef4444;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#ef4444;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>JWT (JSON Web Tokens) Deep Study</h1>
+<p class="sub">Module 12.2 · Security Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Attack &amp; Defense</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. JWT Structure</h3>
+    <pre><span class="cm">// JWT = Header.Payload.Signature (3 base64url-encoded parts)</span>
+
+<span class="cm">// HEADER:</span>
+{
+  <span class="str">"alg"</span>: <span class="str">"RS256"</span>,     <span class="cm">// Signing algorithm</span>
+  <span class="str">"typ"</span>: <span class="str">"JWT"</span>,       <span class="cm">// Token type</span>
+  <span class="str">"kid"</span>: <span class="str">"key-id-1"</span>   <span class="cm">// Key ID (for JWKS rotation)</span>
+}
+
+<span class="cm">// PAYLOAD (Claims):</span>
+{
+  <span class="str">"sub"</span>: <span class="str">"user_123"</span>,           <span class="cm">// Subject (user ID)</span>
+  <span class="str">"iss"</span>: <span class="str">"https://auth.example.com"</span>, <span class="cm">// Issuer</span>
+  <span class="str">"aud"</span>: <span class="str">"https://api.example.com"</span>,  <span class="cm">// Audience</span>
+  <span class="str">"exp"</span>: <span class="num">1700000000</span>,           <span class="cm">// Expiration (Unix timestamp)</span>
+  <span class="str">"iat"</span>: <span class="num">1699999100</span>,           <span class="cm">// Issued at</span>
+  <span class="str">"scope"</span>: <span class="str">"read write"</span>,       <span class="cm">// Permissions</span>
+  <span class="str">"role"</span>: <span class="str">"admin"</span>              <span class="cm">// Custom claim</span>
+}
+
+<span class="cm">// SIGNATURE:</span>
+<span class="cm">// RS256: RSA-SHA256(base64url(header) + "." + base64url(payload), privateKey)</span>
+<span class="cm">// HS256: HMAC-SHA256(base64url(header) + "." + base64url(payload), secret)</span>
+<span class="cm">//</span>
+<span class="cm">// JWT is NOT encrypted — anyone can decode the payload (base64)</span>
+<span class="cm">// Signature only ensures integrity (hasn't been tampered with)</span>
+<span class="cm">// For encrypted tokens → use JWE (JSON Web Encryption)</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. HS256 vs RS256</h3>
+    <table>
+      <tr><th>Aspect</th><th>HS256 (Symmetric)</th><th>RS256 (Asymmetric)</th></tr>
+      <tr><td>Key</td><td>Shared secret</td><td>Private key (sign) / Public key (verify)</td></tr>
+      <tr><td>Who can sign?</td><td>Anyone with the secret</td><td>Only the auth server (private key)</td></tr>
+      <tr><td>Who can verify?</td><td>Anyone with the secret</td><td>Anyone (public key via JWKS)</td></tr>
+      <tr><td>Microservices</td><td>Bad: all services have the secret = all can forge tokens</td><td>Good: services only need public key</td></tr>
+      <tr><td>Key rotation</td><td>Hard: update all services</td><td>Easy: publish new public key to JWKS</td></tr>
+      <tr><td>Performance</td><td>Faster (simple HMAC)</td><td>Slower (RSA operations)</td></tr>
+      <tr><td>Recommendation</td><td>Simple single-server apps only</td><td>Production default</td></tr>
+    </table>
+    <div class="info">Always use RS256 in production with microservices. JWKS (JSON Web Key Set) endpoint makes key distribution and rotation automatic. Services fetch /.well-known/jwks.json and cache the public keys.</div>
+  </div>
+
+  <div class="card">
+    <h3>3. Standard Claims</h3>
+    <table>
+      <tr><th>Claim</th><th>Full Name</th><th>Purpose</th></tr>
+      <tr><td>iss</td><td>Issuer</td><td>Who created the token</td></tr>
+      <tr><td>sub</td><td>Subject</td><td>User/entity the token represents</td></tr>
+      <tr><td>aud</td><td>Audience</td><td>Intended recipient (your API)</td></tr>
+      <tr><td>exp</td><td>Expiration</td><td>Token invalid after this time</td></tr>
+      <tr><td>nbf</td><td>Not Before</td><td>Token not valid before this time</td></tr>
+      <tr><td>iat</td><td>Issued At</td><td>When token was created</td></tr>
+      <tr><td>jti</td><td>JWT ID</td><td>Unique identifier (for revocation/replay prevention)</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>JWT Attack Vectors</h3>
+    <h4>1. Algorithm Confusion (alg: none)</h4>
+    <pre><span class="cm">// Attack: Change header to {"alg": "none"}</span>
+<span class="cm">// Remove signature → server skips verification</span>
+<span class="cm">//</span>
+<span class="cm">// Defense: NEVER accept alg: none. Whitelist allowed algorithms:</span>
+jwt.<span class="fn">verify</span>(token, key, { algorithms: [<span class="str">'RS256'</span>] }); <span class="cm">// Explicit!</span></pre>
+
+    <h4>2. HS256/RS256 Confusion</h4>
+    <pre><span class="cm">// Attack: Server configured for RS256</span>
+<span class="cm">// Attacker changes header to {"alg": "HS256"}</span>
+<span class="cm">// Signs with the PUBLIC key (which is known) as HMAC secret</span>
+<span class="cm">// Vulnerable library: "oh, HS256? let me verify with the key I have"</span>
+<span class="cm">// Uses PUBLIC key as HMAC secret → signature matches!</span>
+<span class="cm">//</span>
+<span class="cm">// Defense: Explicitly set algorithm in verify, not from token header</span>
+<span class="cm">// Modern libraries: separate functions for symmetric vs asymmetric</span></pre>
+
+    <h4>3. JKU/X5U Header Injection</h4>
+    <pre><span class="cm">// Attack: Token header has {"jku": "https://evil.com/jwks.json"}</span>
+<span class="cm">// Server fetches attacker's JWKS → validates with attacker's key</span>
+<span class="cm">//</span>
+<span class="cm">// Defense: Never fetch keys from the token's jku/x5u claims</span>
+<span class="cm">// Whitelist your IdP's JWKS URL in server configuration</span></pre>
+
+    <h4>4. Missing Claim Validation</h4>
+    <pre><span class="cm">// DANGEROUS: Only checking signature, not claims</span>
+<span class="cm">// Token could be expired, wrong audience, wrong issuer</span>
+<span class="cm">//</span>
+<span class="cm">// Always validate: exp, iss, aud at minimum</span>
+jwt.<span class="fn">verify</span>(token, publicKey, {
+  algorithms: [<span class="str">'RS256'</span>],
+  issuer: <span class="str">'https://auth.example.com'</span>,
+  audience: <span class="str">'https://api.example.com'</span>,
+  clockTolerance: <span class="num">30</span>, <span class="cm">// 30 seconds for clock skew</span>
+});</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: Explain how JWT works and why it's useful for microservices.</div>
+      <div class="a">A JWT is a signed JSON payload with three base64url-encoded parts: header (algorithm + key ID), payload (claims like user ID, role, expiry), and signature. The auth server signs the JWT with its private key (RS256). Any microservice can verify the JWT using the public key from the JWKS endpoint — without calling the auth server. This is the key benefit for microservices: stateless verification. Each service independently validates the token by checking the signature, expiration, issuer, and audience. No shared session store, no inter-service auth calls. The trade-off: you can't revoke a JWT instantly because there's no central check. Solutions: short expiry (5 min) so stolen tokens expire quickly, or a lightweight token blacklist (Redis set of jti values) that services check — this re-introduces state but only for revoked tokens, which is a small set.</div>
+      <div class="followup">Follow-up: How do you handle JWT revocation at scale?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q2: What are the top JWT security pitfalls?</div>
+      <div class="a">Five critical ones: (1) Algorithm confusion — accepting 'alg: none' or letting the token header dictate the verification algorithm. Fix: whitelist algorithms explicitly. (2) Not validating claims — checking signature but ignoring exp, iss, aud. A valid signature from the wrong issuer or an expired token should be rejected. (3) Storing sensitive data in payload — JWT payload is simply base64 encoded, not encrypted. Anyone can decode it. Never put passwords, SSNs, or secrets in JWT claims. Use JWE if you need encrypted claims. (4) Using HS256 in microservices — the shared secret means every service can forge tokens. Use RS256 so only the auth server can sign. (5) Infinite token lifetime — long-lived JWTs without refresh token rotation give attackers a large window. Use short-lived access tokens (5-15 min) with refresh token rotation.</div>
+      <div class="followup">Follow-up: How does the kid header prevent key rotation downtime?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q3: How does JWKS work and why is it important?</div>
+      <div class="a">JWKS (JSON Web Key Set) is a JSON document published at a well-known URL (/.well-known/jwks.json) by the authorization server. It contains an array of public keys, each with a kid (key ID), kty (key type), algorithm, and the key material (n and e for RSA). When a service receives a JWT, it reads the kid from the JWT header, fetches the JWKS (cached with TTL), finds the matching key, and verifies the signature. This enables zero-downtime key rotation: the auth server starts signing with a new key (kid-2), publishes both kid-1 and kid-2 in JWKS, services start using kid-2 for new tokens while still validating kid-1 for existing tokens. After old tokens expire, remove kid-1 from JWKS. Services should cache JWKS with a reasonable TTL (e.g., 1 hour) and refetch when they encounter an unknown kid — this handles rotation without manual intervention.</div>
+      <div class="followup">Follow-up: What happens if the JWKS endpoint is down?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>1. JWT Verification (Node.js)</h3>
+    <pre><span class="kw">import</span> jwt <span class="kw">from</span> <span class="str">'jsonwebtoken'</span>;
+<span class="kw">import</span> jwksClient <span class="kw">from</span> <span class="str">'jwks-rsa'</span>;
+
+<span class="kw">const</span> client = <span class="fn">jwksClient</span>({
+  jwksUri: <span class="str">'https://auth.example.com/.well-known/jwks.json'</span>,
+  cache: <span class="kw">true</span>,
+  cacheMaxAge: <span class="num">3600000</span>, <span class="cm">// 1 hour</span>
+});
+
+<span class="kw">function</span> <span class="fn">getKey</span>(header, callback) {
+  client.<span class="fn">getSigningKey</span>(header.kid, (err, key) =&gt; {
+    <span class="kw">if</span> (err) <span class="kw">return</span> <span class="fn">callback</span>(err);
+    <span class="fn">callback</span>(<span class="kw">null</span>, key.<span class="fn">getPublicKey</span>());
+  });
+}
+
+<span class="kw">function</span> <span class="fn">verifyToken</span>(token) {
+  <span class="kw">return new</span> Promise((resolve, reject) =&gt; {
+    jwt.<span class="fn">verify</span>(token, getKey, {
+      algorithms: [<span class="str">'RS256'</span>],
+      issuer: <span class="str">'https://auth.example.com'</span>,
+      audience: <span class="str">'https://api.example.com'</span>,
+      clockTolerance: <span class="num">30</span>,
+    }, (err, decoded) =&gt; {
+      <span class="kw">if</span> (err) <span class="kw">return</span> <span class="fn">reject</span>(err);
+      <span class="fn">resolve</span>(decoded);
+    });
+  });
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Client-Side JWT Decode (No Verification)</h3>
+    <pre><span class="cm">// Decode payload for display purposes (NOT security)</span>
+<span class="cm">// Never trust decoded claims without server verification</span>
+
+<span class="kw">function</span> <span class="fn">decodeJwt</span>(token) {
+  <span class="kw">const</span> [, payload] = token.<span class="fn">split</span>(<span class="str">'.'</span>);
+  <span class="kw">const</span> json = atob(payload.<span class="fn">replace</span>(/-/g, <span class="str">'+'</span>).<span class="fn">replace</span>(/_/g, <span class="str">'/'</span>));
+  <span class="kw">return</span> JSON.<span class="fn">parse</span>(json);
+}
+
+<span class="kw">function</span> <span class="fn">isExpired</span>(token) {
+  <span class="kw">const</span> { exp } = <span class="fn">decodeJwt</span>(token);
+  <span class="kw">return</span> Date.<span class="fn">now</span>() &gt;= exp * <span class="num">1000</span>;
+}
+
+<span class="cm">// Usage: show user profile from token claims</span>
+<span class="kw">const</span> claims = <span class="fn">decodeJwt</span>(accessToken);
+<span class="cm">// { sub: "user_123", email: "...", role: "admin" }</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>JWT Validation Checklist</h3>
+    <pre>✅ Whitelist algorithms: { algorithms: ['RS256'] }
+✅ Validate issuer (iss) matches your auth server
+✅ Validate audience (aud) matches your API
+✅ Check expiration (exp) with clock tolerance (30s)
+✅ Use RS256 for microservices (not HS256)
+✅ Fetch keys from cached JWKS (not token's jku header)
+✅ Never accept alg: "none"
+✅ Never store secrets in JWT payload
+✅ Short expiry: 5-15 minutes for access tokens
+✅ Include jti for replay prevention (optional)
+✅ Rotate signing keys via JWKS with kid overlap period</pre>
+  </div>
+
+  <div class="card">
+    <h3>JWT vs Opaque Tokens</h3>
+    <table>
+      <tr><th>Aspect</th><th>JWT</th><th>Opaque Token</th></tr>
+      <tr><td>Format</td><td>Self-contained JSON</td><td>Random string (reference)</td></tr>
+      <tr><td>Validation</td><td>Local (signature check)</td><td>Remote (introspection endpoint)</td></tr>
+      <tr><td>Size</td><td>~800+ bytes</td><td>~32-64 bytes</td></tr>
+      <tr><td>Revocation</td><td>Hard (need blacklist)</td><td>Instant (delete from store)</td></tr>
+      <tr><td>Privacy</td><td>Claims visible (base64)</td><td>Nothing exposed</td></tr>
+      <tr><td>Best for</td><td>Access tokens (short-lived)</td><td>Refresh tokens (revocable)</td></tr>
+    </table>
+    <div class="info">Best practice: JWT for access tokens (stateless verification), opaque strings for refresh tokens (server-controlled revocation). This combines the performance of JWTs with the revocability of opaque tokens.</div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

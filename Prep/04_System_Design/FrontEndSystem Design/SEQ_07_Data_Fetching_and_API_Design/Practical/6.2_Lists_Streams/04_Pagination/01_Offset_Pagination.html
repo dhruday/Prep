@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — Offset Pagination</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a3a2a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#60a5fa}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.err{color:#ef4444}.num{color:#f59e0b}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #10b981;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}
+.page-btn{min-width:36px;text-align:center}.page-btn.current{background:#1a3a2a;border-color:#10b981;color:#10b981}table{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:8px}th,td{padding:6px 10px;border:1px solid #2d3551;text-align:left}th{background:#1a3a2a;color:#10b981}
+</style>
+</head>
+<body>
+<h1>Lab 01 — Offset Pagination</h1>
+<div class="sub">Module 6.2 Pagination • LIMIT/OFFSET pattern • Page-number navigation</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">📖 Concept</div>
+  <div class="tab" onclick="setTab(1)">▶️ Live Demo</div>
+  <div class="tab" onclick="setTab(2)">⚠️ Performance</div>
+  <div class="tab" onclick="setTab(3)">✅ When to Use</div>
+</div>
+
+<!-- TAB 0 — Concept -->
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>How Offset Pagination Works</h3>
+    <p>The server skips <code>offset</code> rows, then returns the next <code>limit</code> rows.</p>
+<pre>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> items
+<span class="kw">ORDER BY</span> id
+<span class="kw">LIMIT</span> <span class="num">10</span> <span class="kw">OFFSET</span> <span class="num">20</span>;   <span class="cm">-- page 3 (0-indexed offset)</span>
+</pre>
+    <p style="margin-top:10px">Client sends: <code>GET /items?page=3&limit=10</code><br>
+    Server computes: <code>OFFSET = (page - 1) * limit</code></p>
+  </div>
+
+  <div class="card">
+    <h3>Page Number Calculation</h3>
+<pre>
+<span class="cm">// Given: totalCount from X-Total-Count header</span>
+<span class="kw">const</span> totalPages = Math.<span class="fn">ceil</span>(totalCount / limit);
+<span class="kw">const</span> offset    = (page - <span class="num">1</span>) * limit;
+
+<span class="cm">// Page 1 → OFFSET 0   (rows 1-10)</span>
+<span class="cm">// Page 2 → OFFSET 10  (rows 11-20)</span>
+<span class="cm">// Page 5 → OFFSET 40  (rows 41-50)</span>
+</pre>
+  </div>
+
+  <div class="card">
+    <h3 class="bad">Ghost Records Problem</h3>
+    <p>If a row is <strong>inserted or deleted</strong> between page requests, items can be <em>duplicated</em> or <em>skipped</em>.</p>
+<pre>
+<span class="cm">// User fetches page 2 (OFFSET 10)</span>
+<span class="cm">// Meanwhile, row #5 is deleted → all offsets shift by -1</span>
+<span class="cm">// Page 3 (OFFSET 20) now SKIPS what was row #21</span>
+<span class="cm">// Result: user never sees that item — a "ghost" record</span>
+</pre>
+    <div class="info warn">In write-heavy systems, offset pagination causes data inconsistency between pages.</div>
+  </div>
+</div>
+
+<!-- TAB 1 — Live Demo -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>📡 Offset Pagination — Navigate Pages</h3>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button onclick="goPage(1)">⏮ First</button>
+      <button onclick="goPage(currentPage-1)">◀ Prev</button>
+      <span id="pageNumbers"></span>
+      <button onclick="goPage(currentPage+1)">Next ▶</button>
+      <button onclick="goPage(totalPages)">Last ⏭</button>
+      <span style="color:#94a3b8;font-size:.8rem;margin-left:8px" id="pageInfo"></span>
+    </div>
+    <div id="headerInfo" class="info" style="display:none"></div>
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th></tr></thead>
+      <tbody id="tableBody"><tr><td colspan="4" style="color:#94a3b8">Click a page button to fetch data</td></tr></tbody>
+    </table>
+    <div id="demoOutput" class="output" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- TAB 2 — Performance -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3 class="bad">Database Cost of High Offsets</h3>
+    <p>With <code>OFFSET N</code>, the database must <strong>scan and discard N rows</strong> before returning results.</p>
+<pre>
+<span class="cm">-- Page 1: scan 10 rows   → O(10)</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> items <span class="kw">LIMIT</span> <span class="num">10</span> <span class="kw">OFFSET</span> <span class="num">0</span>;
+
+<span class="cm">-- Page 100: scan 1000 rows → O(1000)</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> items <span class="kw">LIMIT</span> <span class="num">10</span> <span class="kw">OFFSET</span> <span class="num">990</span>;
+
+<span class="cm">-- Page 10000: scan 100,000 rows → O(100,000) 🐌</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> items <span class="kw">LIMIT</span> <span class="num">10</span> <span class="kw">OFFSET</span> <span class="num">99990</span>;
+</pre>
+    <div class="info warn">Time complexity: <strong>O(offset + limit)</strong> — linear in page number.</div>
+  </div>
+
+  <div class="card">
+    <h3>EXPLAIN Plan Comparison</h3>
+<pre>
+<span class="cm">-- Page 1 (fast):</span>
+<span class="kw">EXPLAIN ANALYZE</span> <span class="kw">SELECT</span> * <span class="kw">FROM</span> items <span class="kw">LIMIT</span> <span class="num">10</span> <span class="kw">OFFSET</span> <span class="num">0</span>;
+<span class="cm">→ Index Scan: 0.05ms, 10 rows fetched</span>
+
+<span class="cm">-- Page 5000 (slow):</span>
+<span class="kw">EXPLAIN ANALYZE</span> <span class="kw">SELECT</span> * <span class="kw">FROM</span> items <span class="kw">LIMIT</span> <span class="num">10</span> <span class="kw">OFFSET</span> <span class="num">49990</span>;
+<span class="cm">→ Seq Scan: 120ms, 50000 rows scanned, 10 returned</span>
+</pre>
+  </div>
+
+  <div class="card">
+    <h3>Visual: Response Time vs Page Number</h3>
+<pre>
+Response Time (ms)
+  200 │                                    ╱
+      │                                 ╱
+  150 │                              ╱
+      │                          ╱
+  100 │                      ╱
+      │                 ╱
+   50 │           ╱
+      │     ╱
+    0 │──────
+      └───────────────────────────────────────
+        1   100  500  1000  2000  5000  10000
+                     Page Number
+</pre>
+  </div>
+</div>
+
+<!-- TAB 3 — When to Use -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3 class="good">When Offset Pagination Is Acceptable</h3>
+    <ul style="padding-left:18px;font-size:.85rem">
+      <li><strong>Small datasets</strong> — under 10K rows, offset cost is negligible</li>
+      <li><strong>Admin panels</strong> — low traffic, paginating through manageable data</li>
+      <li><strong>Search results</strong> — users rarely go past page 5 (Google caps at ~30 pages)</li>
+      <li><strong>Jump-to-page</strong> requirement — only offset supports "Go to page 42"</li>
+      <li><strong>Simple implementation</strong> — no cursor state to manage</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3 class="bad">When to Avoid Offset</h3>
+    <ul style="padding-left:18px;font-size:.85rem">
+      <li><strong>Millions of rows</strong> — deep pages become very slow</li>
+      <li><strong>Real-time feeds</strong> — inserts cause ghost/duplicate records</li>
+      <li><strong>Infinite scroll</strong> — cursor pagination is more natural</li>
+      <li><strong>Mobile APIs</strong> — cursor is simpler for "load more" UX</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Interview Key Points</h3>
+    <div class="info">
+      ✅ Offset = simple, supports page numbers, good for small data<br>
+      ❌ O(offset) scan cost — degrades linearly with page depth<br>
+      ❌ Ghost records on write-heavy tables<br>
+      🎯 FAANG follow-up: "How would you paginate a feed with 100M posts?" → Cursor
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+let currentPage = 1;
+let totalPages = 1;
+const LIMIT = 10;
+
+async function goPage(page) {
+  if (page < 1) return;
+  const out = document.getElementById('demoOutput');
+  const tbody = document.getElementById('tableBody');
+  const hdrInfo = document.getElementById('headerInfo');
+  out.textContent = `Fetching page ${page} ...`;
+  try {
+    const url = `${API}/api/pagination/offset?page=${page}&limit=${LIMIT}`;
+    const t0 = performance.now();
+    const res = await fetch(url);
+    const elapsed = (performance.now() - t0).toFixed(1);
+    const totalCount = parseInt(res.headers.get('X-Total-Count') || '0', 10);
+    const data = await res.json();
+    totalPages = Math.ceil(totalCount / LIMIT) || 1;
+    currentPage = page;
+    if (currentPage > totalPages) { currentPage = totalPages; }
+
+    hdrInfo.style.display = 'block';
+    hdrInfo.innerHTML = `X-Total-Count: <strong>${totalCount}</strong> · Page ${currentPage}/${totalPages} · OFFSET=${(currentPage-1)*LIMIT} · ${elapsed}ms`;
+
+    tbody.innerHTML = '';
+    (data.items || data.data || data).forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${item.id}</td><td>${item.name||item.title||'-'}</td><td>${item.category||'-'}</td><td>${item.price!=null?'$'+item.price:'-'}</td>`;
+      tbody.appendChild(tr);
+    });
+
+    renderPageNumbers();
+    document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+    out.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    out.textContent = '❌ ' + e.message;
+    hdrInfo.style.display = 'block';
+    hdrInfo.innerHTML = `<span style="color:#ef4444">Error: ${e.message}</span>`;
+  }
+}
+
+function renderPageNumbers() {
+  const container = document.getElementById('pageNumbers');
+  container.innerHTML = '';
+  let pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages = [1];
+    let start = Math.max(2, currentPage - 1);
+    let end = Math.min(totalPages - 1, currentPage + 1);
+    if (start > 2) pages.push('...');
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 1) pages.push('...');
+    pages.push(totalPages);
+  }
+  pages.forEach(p => {
+    if (p === '...') {
+      const s = document.createElement('span');
+      s.textContent = '…';
+      s.style.cssText = 'color:#94a3b8;padding:0 4px';
+      container.appendChild(s);
+    } else {
+      const btn = document.createElement('button');
+      btn.textContent = p;
+      btn.className = 'page-btn' + (p === currentPage ? ' current' : '');
+      btn.onclick = () => goPage(p);
+      container.appendChild(btn);
+    }
+  });
+}
+</script>
+</body>
+</html>

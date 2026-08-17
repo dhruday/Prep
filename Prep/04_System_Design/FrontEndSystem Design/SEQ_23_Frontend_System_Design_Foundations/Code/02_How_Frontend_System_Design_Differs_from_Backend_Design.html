@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Frontend vs Backend System Design</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px}
+    h1{text-align:center;color:#60a5fa;margin-bottom:4px;font-size:1.5rem}
+    .subtitle{text-align:center;color:#94a3b8;margin-bottom:20px;font-size:.88rem}
+    .compare-grid{display:grid;grid-template-columns:1fr 60px 1fr;gap:0;margin-bottom:18px}
+    .fe-col{background:#1a2a1a;border:1px solid #16a34a;border-radius:12px 0 0 12px;padding:16px}
+    .be-col{background:#1a1a2a;border:1px solid #2563eb;border-radius:0 12px 12px 0;padding:16px}
+    .mid-col{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20px;background:#1e2130;border-top:1px solid #2d3551;border-bottom:1px solid #2d3551}
+    .mid-icon{font-size:1.4rem}
+    .col-title{font-size:.9rem;font-weight:bold;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.1)}
+    .diff-item{display:flex;margin-bottom:10px;gap:8px;font-size:.78rem}
+    .diff-icon{font-size:1rem;margin-top:1px;flex-shrink:0}
+    .diff-label{color:#94a3b8;font-size:.7rem}
+    .diff-val{color:#e2e8f0;line-height:1.5}
+    .card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:16px;margin-bottom:14px}
+    .card h2{font-size:.85rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;color:#60a5fa}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}  
+    .concern-row{display:flex;align-items:center;gap:10px;padding:8px;border-radius:6px;margin-bottom:6px;background:#0f1117;font-size:.78rem;cursor:pointer;transition:all .2s}
+    .concern-row:hover{background:#1e2130}
+    .concern-row.selected{background:#1e3a5f;border:1px solid #3b82f6}
+    .concern-icon{font-size:1.1rem;width:28px;text-align:center}
+    .concern-name{flex:1}
+    .concern-fe{width:100px;text-align:center;padding:2px 6px;border-radius:4px;font-size:.7rem;background:#14532d;color:#86efac}
+    .concern-be{width:100px;text-align:center;padding:2px 6px;border-radius:4px;font-size:.7rem;background:#1e3a5f;color:#93c5fd}
+    .detail-box{background:#0f1117;border-radius:8px;padding:12px;min-height:80px;font-size:.78rem;line-height:1.6}
+    .insight{background:#162032;border:1px solid #1e3a5f;border-radius:7px;padding:10px;font-size:.76rem;color:#93c5fd;margin-top:12px}
+    .insight strong{color:#fff}
+  </style>
+</head>
+<body>
+<h1>⚖️ Frontend vs Backend System Design</h1>
+<p class="subtitle">Different constraints, different trade-offs, same rigour</p>
+
+<div class="compare-grid">
+  <div class="fe-col">
+    <div class="col-title" style="color:#86efac">🖥️ Frontend System Design</div>
+    <div class="diff-item"><span class="diff-icon">⚡</span><div><div class="diff-label">Primary constraint</div><div class="diff-val">Browser capabilities, device CPU/RAM, network latency, rendering pipeline</div></div></div>
+    <div class="diff-item"><span class="diff-icon">👤</span><div><div class="diff-label">User is always present</div><div class="diff-val">Every design decision directly affects perceived user experience — latency, jank, layout shifts, accessibility</div></div></div>
+    <div class="diff-item"><span class="diff-icon">🌍</span><div><div class="diff-label">Execution environment</div><div class="diff-val">Unknown, untrusted: any device, any browser, any network, any screen size</div></div></div>
+    <div class="diff-item"><span class="diff-icon">📦</span><div><div class="diff-label">Scale unit</div><div class="diff-val">Bundle size, DOM node count, re-render frequency, network requests per page</div></div></div>
+    <div class="diff-item"><span class="diff-icon">🔐</span><div><div class="diff-label">Security posture</div><div class="diff-val">Defence in depth: XSS, CSRF, CORS, token storage, CSP — client-side code is always attackable</div></div></div>
+  </div>
+  <div class="mid-col">
+    <div class="mid-icon">⚡</div>
+    <div class="mid-icon">👁️</div>
+    <div class="mid-icon">🔄</div>
+    <div class="mid-icon">📊</div>
+  </div>
+  <div class="be-col">
+    <div class="col-title" style="color:#93c5fd">⚙️ Backend System Design</div>
+    <div class="diff-item"><span class="diff-icon">🏗️</span><div><div class="diff-label">Primary constraint</div><div class="diff-val">Throughput, latency, consistency, availability — CAP theorem trade-offs</div></div></div>
+    <div class="diff-item"><span class="diff-icon">🤖</span><div><div class="diff-label">Machine-to-machine</div><div class="diff-val">Optimise for RPS, p99 latency, fault tolerance — users don't directly observe implementation</div></div></div>
+    <div class="diff-item"><span class="diff-icon">🖥️</span><div><div class="diff-label">Execution environment</div><div class="diff-val">Known, controlled: your servers, your OS, your hardware — predictable and configurable</div></div></div>
+    <div class="diff-item"><span class="diff-icon">🗄️</span><div><div class="diff-label">Scale unit</div><div class="diff-val">QPS, read/write ratio, data size, number of microservices, database shards</div></div></div>
+    <div class="diff-item"><span class="diff-icon">🔑</span><div><div class="diff-label">Security posture</div><div class="diff-val">Auth, authorization, SQL injection, secrets management — server-side enforcement</div></div></div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <h2>🔍 Click a Concern to Compare</h2>
+    <div class="concern-row selected" id="row-perf" onclick="select(this,'Performance','<strong>Frontend:</strong> LCP < 2.5s, INP < 200ms, CLS < 0.1. Measured on real user devices via RUM. Lighthouse CI gates performance in the pipeline. Every KB of JS has a parse cost on mobile.<br><br><strong>Backend:</strong> p50/p99 response time (< 100ms API, < 10ms DB). Measured at server. Load balancers + horizontal scaling handle throughput.')">
+      <span class="concern-icon">⚡</span><span class="concern-name">Performance</span>
+      <span class="concern-fe">CWV / LCP</span><span class="concern-be">RPS / p99</span>
+    </div>
+    <div class="concern-row" onclick="select(this,'Caching','<strong>Frontend:</strong> HTTP Cache-Control, Service Worker cache (Workbox), browser memory (React Query), CDN edge cache. Cache invalidation = cache key versioning in asset filenames.<br><br><strong>Backend:</strong> Redis/Memcached for object cache, database query cache, CDN for API responses, ETags for conditional GETs.')">
+      <span class="concern-icon">💾</span><span class="concern-name">Caching</span>
+      <span class="concern-fe">SW / HTTP Cache</span><span class="concern-be">Redis / CDN</span>
+    </div>
+    <div class="concern-row" onclick="select(this,'Scalability','<strong>Frontend:</strong> Micro-frontends (team-level scaling), code splitting (payload scaling), CDN-first architecture (geographic scaling), feature flags (release scaling).<br><br><strong>Backend:</strong> Horizontal pod scaling, database sharding, read replicas, message queues, eventual consistency.')">
+      <span class="concern-icon">📈</span><span class="concern-name">Scalability</span>
+      <span class="concern-fe">Micro-FE / CDN</span><span class="concern-be">Sharding / Queues</span>
+    </div>
+    <div class="concern-row" onclick="select(this,'State Management','<strong>Frontend:</strong> Local (useState), Global (Redux/Zustand), Server state (React Query/RTK Query), URL state, persisted state (localStorage/IndexedDB). State is ephemeral per session.<br><br><strong>Backend:</strong> Database (source of truth), distributed cache (Redis), session store, message queue. State is durable and shared.')">
+      <span class="concern-icon">🧠</span><span class="concern-name">State Management</span>
+      <span class="concern-fe">Redux / Signals</span><span class="concern-be">DB / Redis</span>
+    </div>
+    <div class="concern-row" onclick="select(this,'Reliability','<strong>Frontend:</strong> Error boundaries, retry with exponential backoff, optimistic UI + rollback, graceful degradation, offline support via Service Workers.<br><br><strong>Backend:</strong> Circuit breakers, bulkhead pattern, saga pattern, retries idempotency, distributed tracing.')">
+      <span class="concern-icon">🛡️</span><span class="concern-name">Reliability</span>
+      <span class="concern-fe">Error Boundaries</span><span class="concern-be">Circuit Breaker</span>
+    </div>
+    <div class="concern-row" onclick="select(this,'Observability','<strong>Frontend:</strong> Real User Monitoring (RUM), Sentry error tracking, session replay (FullStory), performance marks, Core Web Vitals in field.<br><br><strong>Backend:</strong> Prometheus metrics, distributed tracing (Jaeger/OpenTelemetry), structured logging (ELK), health checks, alerting (PagerDuty).')">
+      <span class="concern-icon">👁️</span><span class="concern-name">Observability</span>
+      <span class="concern-fe">RUM / Sentry</span><span class="concern-be">Prometheus / Trace</span>
+    </div>
+  </div>
+  <div class="card">
+    <h2>📖 Comparison Detail</h2>
+    <div class="detail-box" id="detail-box">
+      <strong>Performance:</strong> LCP &lt; 2.5s, INP &lt; 200ms, CLS &lt; 0.1. Measured on real user devices via RUM. Lighthouse CI gates performance in the pipeline. Every KB of JS has a parse cost on mobile.<br><br>
+      <strong>Backend:</strong> p50/p99 response time (&lt; 100ms API, &lt; 10ms DB). Measured at server. Load balancers + horizontal scaling handle throughput.
+    </div>
+    <div class="insight">
+      <strong>Interview framing:</strong> When asked "how is this different from backend design?", show you understand that the frontend runs in an untrusted, resource-constrained, user-observed environment. The same problem (caching, consistency, scaling) has different solutions because the constraints are fundamentally different.
+    </div>
+  </div>
+</div>
+
+<script>
+  function select(el, title, html) {
+    document.querySelectorAll('.concern-row').forEach(r => r.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('detail-box').innerHTML = html;
+  }
+</script>
+</body>
+</html>

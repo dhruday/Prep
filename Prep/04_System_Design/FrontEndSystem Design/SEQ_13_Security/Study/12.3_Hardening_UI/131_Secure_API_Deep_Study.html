@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Secure API Communication Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:1rem}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#ef4444;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #ef4444;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#ef4444;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Secure API Communication Deep Study</h1>
+<p class="sub">Module 12.3 · Security Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Attack &amp; Defense</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. HTTPS / TLS Fundamentals</h3>
+    <pre><span class="cm">// HTTPS = HTTP over TLS (Transport Layer Security)</span>
+<span class="cm">// TLS provides: Confidentiality + Integrity + Authentication</span>
+<span class="cm">//</span>
+<span class="cm">// TLS Handshake (simplified):</span>
+<span class="cm">// 1. Client Hello → supported cipher suites, random value</span>
+<span class="cm">// 2. Server Hello → chosen cipher suite, certificate, random value</span>
+<span class="cm">// 3. Client verifies certificate chain (CA trust)</span>
+<span class="cm">// 4. Key exchange → both sides derive session keys</span>
+<span class="cm">// 5. All subsequent data encrypted with symmetric key (AES-256-GCM)</span>
+<span class="cm">//</span>
+<span class="cm">// TLS 1.3 improvements:</span>
+<span class="cm">// - 1-RTT handshake (vs 2-RTT in TLS 1.2)</span>
+<span class="cm">// - 0-RTT resumption (fast reconnection)</span>
+<span class="cm">// - Removed insecure cipher suites (RC4, SHA-1, CBC)</span>
+<span class="cm">// - Forward secrecy mandatory (ECDHE)</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. HSTS (HTTP Strict Transport Security)</h3>
+    <pre><span class="cm">// Problem: First visit to http://bank.com → redirect to https://</span>
+<span class="cm">// That first HTTP request is vulnerable to MITM (SSL stripping)</span>
+<span class="cm">//</span>
+<span class="cm">// HSTS tells browser: "ALWAYS use HTTPS for this domain"</span>
+Strict-Transport-Security: max-age=<span class="num">31536000</span>; includeSubDomains; preload
+
+<span class="cm">// max-age: how long (seconds) to enforce HTTPS (1 year)</span>
+<span class="cm">// includeSubDomains: apply to all subdomains too</span>
+<span class="cm">// preload: opt-in to browser's built-in HSTS list</span>
+<span class="cm">//   → browser enforces HTTPS even on FIRST EVER visit</span>
+<span class="cm">//   → submit to: hstspreload.org</span>
+<span class="cm">//</span>
+<span class="cm">// After HSTS: browser automatically upgrades http:// → https://</span>
+<span class="cm">// Even if user types http://bank.com → browser sends https://</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. API Security Layers</h3>
+    <table>
+      <tr><th>Layer</th><th>Protection</th><th>Implementation</th></tr>
+      <tr><td>Transport</td><td>Encryption in transit</td><td>TLS 1.3, HSTS, certificate pinning</td></tr>
+      <tr><td>Authentication</td><td>Identity verification</td><td>JWT, OAuth 2.0, API keys</td></tr>
+      <tr><td>Authorization</td><td>Permission checking</td><td>RBAC, ABAC, scope claims in JWT</td></tr>
+      <tr><td>Validation</td><td>Input sanitization</td><td>Zod/Joi schemas, parameterized queries</td></tr>
+      <tr><td>Rate Limiting</td><td>Abuse prevention</td><td>Token bucket, sliding window</td></tr>
+      <tr><td>Logging</td><td>Audit trail</td><td>Structured logs, SIEM integration</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>API Attack Vectors</h3>
+    <h4>1. MITM (Man-in-the-Middle) — SSL Stripping</h4>
+    <pre><span class="cm">// Attacker intercepts HTTP → HTTPS redirect</span>
+<span class="cm">// User connects to attacker's HTTP proxy</span>
+<span class="cm">// Attacker connects to bank via HTTPS</span>
+<span class="cm">// User sees HTTP, thinks it's secure</span>
+<span class="cm">//</span>
+<span class="cm">// Defense: HSTS + preload → browser never makes HTTP request</span>
+<span class="cm">// Defense: HSTS preload list → works even on first visit</span></pre>
+
+    <h4>2. Broken Object-Level Authorization (BOLA/IDOR)</h4>
+    <pre><span class="cm">// GET /api/users/123/profile → returns user 123's data</span>
+<span class="cm">// Attacker changes to: GET /api/users/456/profile</span>
+<span class="cm">// If server doesn't check: "Is the authenticated user allowed to see user 456?"</span>
+<span class="cm">// → Data breach</span>
+<span class="cm">//</span>
+<span class="cm">// OWASP API Security Top 1 risk</span>
+<span class="cm">// Defense: always verify resource ownership server-side</span>
+app.<span class="fn">get</span>(<span class="str">'/api/users/:id/profile'</span>, (req, res) =&gt; {
+  <span class="kw">if</span> (req.params.id !== req.user.id &amp;&amp; !req.user.isAdmin) {
+    <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">403</span>).<span class="fn">json</span>({ error: <span class="str">'Forbidden'</span> });
+  }
+  <span class="cm">// ... return profile</span>
+});</pre>
+
+    <h4>3. Mass Assignment</h4>
+    <pre><span class="cm">// User sends: { name: "Alice", role: "admin" }</span>
+<span class="cm">// Server does: Object.assign(user, req.body)</span>
+<span class="cm">// → user.role is now "admin"!</span>
+<span class="cm">//</span>
+<span class="cm">// Defense: whitelist allowed fields</span>
+<span class="kw">const</span> { name, email } = req.body; <span class="cm">// Destructure only allowed fields</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: How do you secure API communication between a frontend and backend?</div>
+      <div class="a">Layered approach: Transport — TLS 1.3 with HSTS (max-age=1 year, includeSubDomains, preload). Never serve anything over HTTP. Authentication — OAuth 2.0 with PKCE for user auth, short-lived JWTs for API access. CSRF protection via SameSite cookies + custom headers. Authorization — server validates every request: does this user own this resource? Role-based access control via JWT claims + server-side checks. Never trust frontend-sent role/permission data. Input validation — Zod schemas on every endpoint. Parameterized queries for database access. Rate limiting — per-user and per-endpoint. Sliding window with 429 responses that include Retry-After header. Response security — don't over-fetch (GraphQL: use field-level authorization). Set proper CORS headers (explicit origin whitelist, not *). Cache-Control: no-store for sensitive responses. Logging — structured audit logs for all auth events and data access.</div>
+      <div class="followup">Follow-up: How do you handle API versioning securely?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q2: Explain Certificate Pinning and why it's controversial for web apps.</div>
+      <div class="a">Certificate Pinning hardcodes the expected certificate (or public key hash) into the client. If the server presents a different certificate, the connection is rejected — even if it's from a trusted CA. This prevents attacks where a compromised or rogue CA issues a fake certificate for your domain. For mobile apps, pinning is common and recommended (e.g., TrustKit for iOS, OkHttp CertificatePinner). For web apps, it's been deprecated: the HPKP (HTTP Public Key Pins) header was removed from browsers because it was too dangerous — a misconfiguration or key loss could permanently brick your site for users. Modern alternative: Certificate Transparency (CT) logs. Browsers require certificates to be logged in public CT logs, making rogue certificates detectable. Plus HSTS with preload ensures HTTPS. The combination of CT + HSTS provides similar protection without the bricking risk.</div>
+      <div class="followup">Follow-up: What about Certificate Transparency monitoring for your domain?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q3: What's BOLA/IDOR and how do you test for it?</div>
+      <div class="a">BOLA (Broken Object-Level Authorization), formerly called IDOR (Insecure Direct Object Reference), is the #1 API security risk per OWASP. It happens when the API uses user-supplied IDs to access resources without verifying the authenticated user has permission. Example: GET /api/orders/12345 — does the server check that the requesting user owns order 12345? Testing: (1) Create two test users A and B. (2) User A creates resources. (3) User B tries to access/modify A's resources by guessing or incrementing IDs. (4) Automate with Burp Suite intruder: swap authorization headers while keeping the same resource IDs. Prevention: always validate resource ownership in the data layer (not just middleware). Use UUIDs instead of sequential IDs to make guessing harder (but this is NOT a security control — just obscurity). For GraphQL: field-level authorization resolvers that check ownership.</div>
+      <div class="followup">Follow-up: How do you implement authorization in a GraphQL API?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>1. Secure Fetch Wrapper</h3>
+    <pre><span class="kw">const</span> API_BASE = <span class="str">'https://api.example.com'</span>;
+
+<span class="kw">async function</span> <span class="fn">secureFetch</span>(path, options = {}) {
+  <span class="kw">const</span> token = <span class="kw">await</span> tokenManager.<span class="fn">getToken</span>();
+
+  <span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`</span>${API_BASE}${path}<span class="str">`</span>, {
+    ...options,
+    headers: {
+      <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,
+      <span class="str">'Authorization'</span>: <span class="str">`Bearer </span>${token}<span class="str">`</span>,
+      <span class="str">'X-Request-ID'</span>: crypto.<span class="fn">randomUUID</span>(),
+      ...options.headers,
+    },
+  });
+
+  <span class="cm">// Handle common security scenarios</span>
+  <span class="kw">if</span> (response.status === <span class="num">401</span>) {
+    <span class="kw">const</span> newToken = <span class="kw">await</span> <span class="fn">refreshAccessToken</span>();
+    <span class="kw">return</span> <span class="fn">secureFetch</span>(path, {
+      ...options,
+      headers: { ...options.headers, Authorization: <span class="str">`Bearer </span>${newToken}<span class="str">`</span> },
+    });
+  }
+
+  <span class="kw">if</span> (response.status === <span class="num">429</span>) {
+    <span class="kw">const</span> retryAfter = response.headers.<span class="fn">get</span>(<span class="str">'Retry-After'</span>) || <span class="num">5</span>;
+    <span class="kw">await</span> <span class="kw">new</span> Promise(r =&gt; <span class="fn">setTimeout</span>(r, retryAfter * <span class="num">1000</span>));
+    <span class="kw">return</span> <span class="fn">secureFetch</span>(path, options);
+  }
+
+  <span class="kw">return</span> response;
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Input Validation (Zod)</h3>
+    <pre><span class="kw">import</span> { z } <span class="kw">from</span> <span class="str">'zod'</span>;
+
+<span class="kw">const</span> UpdateProfileSchema = z.<span class="fn">object</span>({
+  name: z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">1</span>).<span class="fn">max</span>(<span class="num">100</span>),
+  email: z.<span class="fn">string</span>().<span class="fn">email</span>(),
+  <span class="cm">// Explicitly NO 'role' or 'isAdmin' fields → mass assignment prevented</span>
+});
+
+app.<span class="fn">put</span>(<span class="str">'/api/profile'</span>, (req, res) =&gt; {
+  <span class="kw">const</span> result = UpdateProfileSchema.<span class="fn">safeParse</span>(req.body);
+  <span class="kw">if</span> (!result.success) {
+    <span class="kw">return</span> res.<span class="fn">status</span>(<span class="num">400</span>).<span class="fn">json</span>({ errors: result.error.issues });
+  }
+  <span class="cm">// result.data contains only { name, email } — safe</span>
+  db.<span class="fn">updateProfile</span>(req.user.id, result.data);
+});</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>API Security Checklist</h3>
+    <pre>✅ TLS 1.3 everywhere (no HTTP fallback)
+✅ HSTS with preload (max-age=31536000; includeSubDomains; preload)
+✅ Authentication on every endpoint (except public routes)
+✅ Authorization: verify resource ownership (prevent BOLA/IDOR)
+✅ Input validation: Zod/Joi schemas on all endpoints
+✅ Rate limiting: per-user, per-endpoint, per-IP
+✅ CORS: explicit origin whitelist, Vary: Origin
+✅ Request IDs: X-Request-ID for tracing
+✅ Prevent mass assignment: whitelist allowed fields
+✅ Parameterized queries (never string concat SQL)
+✅ Audit logging: who accessed what, when
+✅ Error responses: don't leak stack traces or internal details</pre>
+  </div>
+
+  <div class="card">
+    <h3>OWASP API Security Top 10 (2023)</h3>
+    <table>
+      <tr><th>#</th><th>Risk</th><th>Frontend Impact</th></tr>
+      <tr><td>1</td><td>Broken Object-Level Authorization</td><td>Check IDs aren't guessable; server must enforce</td></tr>
+      <tr><td>2</td><td>Broken Authentication</td><td>Token storage, refresh flow, session management</td></tr>
+      <tr><td>3</td><td>Broken Object Property-Level Authorization</td><td>Don't send/display fields user shouldn't see</td></tr>
+      <tr><td>4</td><td>Unrestricted Resource Consumption</td><td>Rate limiting, pagination, file upload limits</td></tr>
+      <tr><td>5</td><td>Broken Function-Level Authorization</td><td>Don't expose admin UI to non-admins</td></tr>
+      <tr><td>6</td><td>Unrestricted Access to Sensitive Flows</td><td>CAPTCHA on signup, prevent automated abuse</td></tr>
+      <tr><td>7</td><td>Server-Side Request Forgery</td><td>Validate URLs, don't let users specify internal endpoints</td></tr>
+      <tr><td>8</td><td>Security Misconfiguration</td><td>CORS, headers, error details, debug mode</td></tr>
+      <tr><td>9</td><td>Improper Inventory Management</td><td>Remove old API endpoints, document all routes</td></tr>
+      <tr><td>10</td><td>Unsafe API Consumption</td><td>Validate third-party API responses</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

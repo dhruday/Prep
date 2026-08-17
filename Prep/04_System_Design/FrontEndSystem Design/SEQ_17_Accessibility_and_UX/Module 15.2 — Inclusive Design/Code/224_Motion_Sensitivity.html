@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>224 · Motion Sensitivity · Hruday's Interview Prep</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.6;min-height:100vh}header{background:linear-gradient(135deg,#1e2130,#2d1f4e);padding:24px 32px;border-bottom:1px solid #2d3551}header h1{font-size:1.6rem;color:#a78bfa;font-weight:700}header p{color:#94a3b8;font-size:.9rem;margin-top:4px}.tabs{display:flex;gap:4px;padding:16px 24px 0;background:#12151e;border-bottom:1px solid #2d3551;flex-wrap:wrap}.tab-btn{padding:10px 20px;border:none;background:transparent;color:#94a3b8;cursor:pointer;border-bottom:3px solid transparent;font-size:.9rem;transition:all .2s;border-radius:4px 4px 0 0}.tab-btn.active{color:#a78bfa;border-bottom-color:#a78bfa;background:#1e2130}.tab{display:none;padding:28px 32px}.tab.active{display:block}h2{color:#a78bfa;font-size:1.2rem;margin-bottom:16px}h3{color:#60a5fa;font-size:1rem;margin:20px 0 10px}p{color:#cbd5e1;margin-bottom:12px;font-size:.88rem}pre{background:#12151e;border:1px solid #2d3551;border-radius:8px;padding:20px;overflow-x:auto;font-size:.82rem;line-height:1.7;color:#e2e8f0}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:20px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:20px}.card h4{font-size:.85rem;margin-bottom:8px;color:#e2e8f0}.info-block{background:#1a1f30;border-left:3px solid #60a5fa;padding:12px 16px;border-radius:0 6px 6px 0;margin:12px 0;font-size:.85rem;color:#cbd5e1}.btn{padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600;transition:all .2s;margin:4px}.btn-green{background:#064e3b;color:#6ee7b7;border:1px solid #10b981}.btn-red{background:#4c1515;color:#fca5a5;border:1px solid #ef4444}.demo-card{width:200px;height:120px;background:#1e2130;border:1px solid #2d3551;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:16px;transition:transform .3s ease,box-shadow .3s ease;cursor:pointer;font-size:.9rem;color:#a78bfa}.demo-card:hover{transform:translateY(-8px);box-shadow:0 12px 24px rgba(0,0,0,.3)}.demo-card.reduced{transition:box-shadow .1s ease}.demo-card.reduced:hover{transform:none;box-shadow:0 0 0 3px #a78bfa}
+</style>
+</head>
+<body>
+<header>
+  <h1>Motion Sensitivity — prefers-reduced-motion</h1>
+  <p>Topic 224 · Part 15 / Module 15.2 — Inclusive Design · Hruday's Interview Prep</p>
+</header>
+<div class="tabs">
+  <button class="tab-btn active" onclick="setTab(1)">Concept</button>
+  <button class="tab-btn" onclick="setTab(2)">Live Demo</button>
+  <button class="tab-btn" onclick="setTab(3)">Code</button>
+</div>
+<div id="tab1" class="tab active">
+  <h2>What is Motion Sensitivity?</h2>
+  <p>~35% of people experience some form of motion discomfort. <code>prefers-reduced-motion</code> detects OS-level "Reduce motion" setting and lets you provide non-triggering alternatives.</p>
+  <div class="cards">
+    <div class="card"><h4>🤢 Parallax Scrolling</h4><p>Backgrounds moving at different speeds cause vestibular discomfort.</p></div>
+    <div class="card"><h4>💫 Page Transitions</h4><p>Slide/zoom transitions between routes trigger dizziness.</p></div>
+    <div class="card"><h4>🔄 Auto-playing Animation</h4><p>Continuous motion causes distraction and seizure risk.</p></div>
+    <div class="card"><h4>📏 Zoom Effects</h4><p>Scaling/zooming transitions cause nausea in vestibular disorders.</p></div>
+  </div>
+  <div class="info-block"><strong>Principle:</strong> Don't remove visual feedback — replace motion with opacity/color changes. Card hover: instead of translateY, use a border highlight.</div>
+</div>
+<div id="tab2" class="tab">
+  <h2>Live Comparison</h2>
+  <p>Toggle reduced motion to see the difference:</p>
+  <div style="margin-bottom:16px">
+    <button class="btn btn-green" onclick="setMotion(false)">Normal Motion</button>
+    <button class="btn btn-red" onclick="setMotion(true)">Reduced Motion</button>
+  </div>
+  <div style="display:flex;gap:20px;flex-wrap:wrap">
+    <div>
+      <h3>Hover this card:</h3>
+      <div class="demo-card" id="demo1">Hover Me</div>
+    </div>
+    <div>
+      <h3>Current mode:</h3>
+      <div id="mode-display" style="background:#1e2130;border:1px solid #2d3551;border-radius:8px;padding:20px;font-size:.9rem">
+        <strong style="color:#6ee7b7">Normal Motion</strong>
+        <p style="font-size:.8rem;color:#94a3b8;margin-top:8px">Card lifts up on hover with transform: translateY(-8px)</p>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="tab3" class="tab">
+  <h2>CSS Implementation</h2>
+  <pre>
+<span style="color:#475569">/* Default: animations enabled */</span>
+.card {
+  <span style="color:#60a5fa">transition</span>: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card:hover {
+  <span style="color:#60a5fa">transform</span>: translateY(-8px);
+}
+
+<span style="color:#475569">/* Reduced motion: replace with non-motion alternative */</span>
+<span style="color:#a78bfa">@media (prefers-reduced-motion: reduce)</span> {
+  .card {
+    <span style="color:#60a5fa">transition</span>: box-shadow 0.1s ease;
+  }
+  .card:hover {
+    <span style="color:#60a5fa">transform</span>: none;
+    <span style="color:#60a5fa">box-shadow</span>: 0 0 0 3px #a78bfa; <span style="color:#475569">/* outline instead */</span>
+  }
+
+  <span style="color:#475569">/* Nuclear option: remove ALL animations */</span>
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+  </pre>
+  <h3>JavaScript Detection</h3>
+  <pre>
+<span style="color:#60a5fa">const</span> prefersReducedMotion = 
+  window.<span style="color:#a78bfa">matchMedia</span>(<span style="color:#10b981">'(prefers-reduced-motion: reduce)'</span>);
+
+prefersReducedMotion.<span style="color:#a78bfa">addEventListener</span>(<span style="color:#10b981">'change'</span>, (e) => {
+  <span style="color:#60a5fa">if</span> (e.matches) disableAnimations();
+  <span style="color:#60a5fa">else</span> enableAnimations();
+});
+  </pre>
+</div>
+<script>
+function setTab(n){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab'+n).classList.add('active');document.querySelectorAll('.tab-btn')[n-1].classList.add('active')}
+function setMotion(reduced){
+  const card=document.getElementById('demo1');
+  const display=document.getElementById('mode-display');
+  if(reduced){
+    card.classList.add('reduced');
+    display.innerHTML='<strong style="color:#fca5a5">Reduced Motion</strong><p style="font-size:.8rem;color:#94a3b8;margin-top:8px">Card shows a border highlight instead of movement. No transform.</p>';
+  }else{
+    card.classList.remove('reduced');
+    display.innerHTML='<strong style="color:#6ee7b7">Normal Motion</strong><p style="font-size:.8rem;color:#94a3b8;margin-top:8px">Card lifts up on hover with transform: translateY(-8px)</p>';
+  }
+}
+</script>
+</body>
+</html>

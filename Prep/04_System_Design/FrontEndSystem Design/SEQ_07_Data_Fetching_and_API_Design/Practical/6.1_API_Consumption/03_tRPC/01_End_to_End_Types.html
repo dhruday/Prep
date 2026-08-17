@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — End-to-End Type Safety</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#60a5fa;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#60a5fa;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.err{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#60a5fa;color:#60a5fa}button.blue{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #60a5fa;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}.ok{border-left-color:#10b981}</style>
+</head>
+<body>
+<h1>Lab 01 — End-to-End Type Safety</h1>
+<p class="sub">tRPC: TypeScript types flow from server router to client — zero codegen</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&amp;A</div>
+</div>
+
+<!-- TAB 0: Concept -->
+<div class="panel active">
+  <div class="card">
+    <h3>How tRPC Achieves End-to-End Types</h3>
+    <p>tRPC uses TypeScript's <b>type inference</b> — the server defines procedures with input/output types, and the client infers them through the <code>AppRouter</code> type export. No code generation step is needed.</p>
+    <div class="info ok">Server types → TypeScript compiler → Client autocomplete. Change server → client breaks at compile time.</div>
+  </div>
+  <div class="card">
+    <h3>Server: Define the Router</h3>
+<pre><span class="cm">// server/router.ts</span>
+<span class="kw">import</span> { initTRPC } <span class="kw">from</span> <span class="str">'@trpc/server'</span>;
+<span class="kw">import</span> { z } <span class="kw">from</span> <span class="str">'zod'</span>;
+
+<span class="kw">const</span> t = <span class="fn">initTRPC</span>.<span class="fn">create</span>();
+
+<span class="kw">export const</span> appRouter = t.router({
+  <span class="fn">getUser</span>: t.procedure
+    .<span class="fn">input</span>(z.<span class="fn">object</span>({ id: z.<span class="fn">string</span>() }))
+    .<span class="fn">query</span>(<span class="kw">async</span> ({ input }) => {
+      <span class="cm">// input is typed as { id: string }</span>
+      <span class="kw">return</span> { id: input.id, name: <span class="str">'Alice'</span>, role: <span class="str">'admin'</span> };
+      <span class="cm">// Return type inferred: { id: string; name: string; role: string }</span>
+    }),
+});
+
+<span class="cm">// Export the type — this is the magic link</span>
+<span class="kw">export type</span> AppRouter = <span class="kw">typeof</span> appRouter;</pre>
+  </div>
+  <div class="card">
+    <h3>Client: Types Flow Automatically</h3>
+<pre><span class="cm">// client/trpc.ts</span>
+<span class="kw">import</span> { createTRPCProxyClient, httpBatchLink } <span class="kw">from</span> <span class="str">'@trpc/client'</span>;
+<span class="kw">import type</span> { AppRouter } <span class="kw">from</span> <span class="str">'../server/router'</span>;
+
+<span class="kw">const</span> trpc = <span class="fn">createTRPCProxyClient</span>&lt;AppRouter&gt;({
+  links: [<span class="fn">httpBatchLink</span>({ url: <span class="str">'http://localhost:3000/trpc'</span> })],
+});
+
+<span class="cm">// Full autocomplete — no codegen needed!</span>
+<span class="kw">const</span> user = <span class="kw">await</span> trpc.getUser.<span class="fn">query</span>({ id: <span class="str">'123'</span> });
+<span class="cm">// user is typed as { id: string; name: string; role: string }</span>
+
+trpc.getUser.<span class="fn">query</span>({ id: <span class="err">42</span> });
+<span class="cm">// TS Error: Type 'number' is not assignable to type 'string'</span></pre>
+  </div>
+  <div class="card">
+    <h3>The Type Chain</h3>
+<pre>Server Router Definition
+    ↓ <span class="cm">export type AppRouter = typeof appRouter</span>
+TypeScript Compiler (type-only import)
+    ↓ <span class="cm">import type { AppRouter } from '../server/router'</span>
+Client Proxy
+    ↓ <span class="cm">createTRPCProxyClient&lt;AppRouter&gt;</span>
+Full autocomplete + compile-time errors
+    ↓ <span class="cm">trpc.getUser.query({ id: '123' }) → typed result</span></pre>
+  </div>
+</div>
+
+<!-- TAB 1: Hands-On Lab -->
+<div class="panel">
+  <div class="card">
+    <h3>🧪 Type Error Simulator</h3>
+    <p style="margin-bottom:10px;">See which client calls would pass or fail TypeScript compilation.</p>
+    <button class="green" onclick="checkCall('valid')">✅ trpc.getUser.query({ id: "123" })</button>
+    <button onclick="checkCall('wrongType')" style="border-color:#ef4444;color:#ef4444">❌ trpc.getUser.query({ id: 42 })</button>
+    <button onclick="checkCall('missingField')" style="border-color:#ef4444;color:#ef4444">❌ trpc.getUser.query({})</button>
+    <button onclick="checkCall('extraField')" style="border-color:#f59e0b;color:#f59e0b">⚠️ trpc.getUser.query({ id: "1", extra: true })</button>
+    <button class="green" onclick="checkCall('accessField')">✅ const name = user.name</button>
+    <button onclick="checkCall('wrongField')" style="border-color:#ef4444;color:#ef4444">❌ const email = user.email</button>
+    <div id="type-out" class="output">Click a call to check type safety...</div>
+  </div>
+  <div class="card">
+    <h3>📝 What Happens at Runtime?</h3>
+    <div class="info">tRPC sends a plain HTTP request under the hood — the types exist <b>only at compile time</b>. The wire format is just JSON over HTTP.</div>
+<pre><span class="cm">// What tRPC actually sends:</span>
+GET /trpc/getUser?input=%7B%22id%22%3A%22123%22%7D
+
+<span class="cm">// Decoded: /trpc/getUser?input={"id":"123"}</span>
+<span class="cm">// Response: {"result":{"data":{"id":"123","name":"Alice","role":"admin"}}}</span></pre>
+  </div>
+</div>
+
+<!-- TAB 2: Browser Internals -->
+<div class="panel">
+  <div class="card">
+    <h3>tRPC Wire Protocol</h3>
+<pre><b>Query (GET request):</b>
+  GET /trpc/getUser?input=<span class="str">{"id":"123"}</span>
+  → Cacheable by browser, CDN, reverse proxy
+
+<b>Mutation (POST request):</b>
+  POST /trpc/createUser
+  Body: <span class="str">{"id":"123","name":"Bob"}</span>
+
+<b>Batch (single round-trip):</b>
+  GET /trpc/getUser,getPosts?batch=1&input=<span class="str">{"0":{"id":"1"},"1":{}}</span>
+  → Multiple procedures in one HTTP request</pre>
+  </div>
+  <div class="card">
+    <h3>Type Erasure at Compile Time</h3>
+    <div class="info">TypeScript types are <b>erased</b> during compilation. tRPC's magic is that <code>import type { AppRouter }</code> imports zero runtime bytes — it only exists for the TS compiler. The compiled JS has no type information.</div>
+<pre><span class="cm">// TypeScript source:</span>
+<span class="kw">import type</span> { AppRouter } <span class="kw">from</span> <span class="str">'../server/router'</span>;
+<span class="kw">const</span> trpc = createTRPCProxyClient&lt;AppRouter&gt;({...});
+
+<span class="cm">// Compiled JavaScript (types gone):</span>
+<span class="kw">const</span> trpc = createTRPCProxyClient({...});
+<span class="cm">// No import, no type info — just a plain function call</span></pre>
+  </div>
+  <div class="card">
+    <h3>Monorepo Requirement</h3>
+    <div class="info warn">tRPC requires the server and client to share types via <code>import type</code>. This means they must be in the same TypeScript project or monorepo. For separate repos, you'd need GraphQL or OpenAPI codegen instead.</div>
+  </div>
+</div>
+
+<!-- TAB 3: Interview Q&A -->
+<div class="panel">
+  <div class="card">
+    <h3>Q1: How does tRPC achieve type safety without codegen?</h3>
+    <p><b>A:</b> tRPC leverages TypeScript's structural type system and type inference. The server defines procedures as TypeScript functions with typed inputs and outputs. The client imports the router <b>type</b> (not the runtime code) using <code>import type</code>. TypeScript's compiler then infers the exact input/output types for each procedure call. No codegen step, no schema file — just TypeScript's built-in type inference across a shared type boundary.</p>
+  </div>
+  <div class="card">
+    <h3>Q2: tRPC vs GraphQL codegen — when to use which?</h3>
+<pre><b>tRPC</b>                           <b>GraphQL</b>
+─────────────────────           ─────────────────────
+Same repo (monorepo)            Separate repos / teams
+TypeScript only                 Language-agnostic
+Zero codegen                    Requires codegen step
+No schema file                  Schema-first (SDL)
+Direct function call feel       Query language (GQL)
+Simpler for full-stack TS       Better for public APIs
+No introspection                Built-in introspection
+Tight coupling (by design)      Loose coupling</pre>
+  </div>
+  <div class="card">
+    <h3>Q3: What is `import type` and why does tRPC use it?</h3>
+    <p><b>A:</b> <code>import type</code> is a TypeScript-only import that is completely erased at compile time. It imports zero runtime bytes — no module loading, no bundled code. tRPC uses it so the client can reference the server's router type for autocomplete and type checking without actually importing the server code into the client bundle. This keeps the client lightweight while maintaining full type safety.</p>
+  </div>
+  <div class="card">
+    <h3>Q4: Can tRPC work across separate repositories?</h3>
+    <p><b>A:</b> Not natively. tRPC relies on <code>import type</code> from the server package, which requires a shared TypeScript compilation context (monorepo or published npm package with types). For cross-repo scenarios, alternatives include: (1) Publish the server as an npm package with its types. (2) Use GraphQL with codegen. (3) Use OpenAPI with generated TypeScript clients. tRPC is intentionally designed for the monorepo use case.</p>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const typeOut = document.getElementById('type-out');
+const checks = {
+  valid: { pass: true, msg: '✅ PASS — { id: string } matches the input schema.\n\nResult type: { id: string; name: string; role: string }' },
+  wrongType: { pass: false, msg: '❌ TS2322: Type \'number\' is not assignable to type \'string\'.\n\n  trpc.getUser.query({ id: 42 })\n                           ~~\n  Expected: { id: string }\n  Got:      { id: number }' },
+  missingField: { pass: false, msg: '❌ TS2345: Argument of type \'{}\' is not assignable to\n  parameter of type \'{ id: string }\'.\n\n  Property \'id\' is missing in type \'{}\'\n  but required in type \'{ id: string }\'.' },
+  extraField: { pass: true, msg: '⚠️ PASS (with warning) — TypeScript allows excess properties\n  when assigned through a variable, but errors on object literals.\n\n  // This errors (object literal):\n  trpc.getUser.query({ id: "1", extra: true }) // ❌\n\n  // This passes (variable):\n  const input = { id: "1", extra: true };\n  trpc.getUser.query(input); // ✅ (excess props ignored)' },
+  accessField: { pass: true, msg: '✅ PASS — \'name\' exists on { id: string; name: string; role: string }\n\nconst user = await trpc.getUser.query({ id: "123" });\nconst name = user.name; // string ✓' },
+  wrongField: { pass: false, msg: '❌ TS2339: Property \'email\' does not exist on type\n  \'{ id: string; name: string; role: string }\'.\n\n  const email = user.email;\n                     ~~~~~\n  Did you mean \'name\'?' },
+};
+
+function checkCall(key) {
+  const c = checks[key];
+  typeOut.textContent = c.msg;
+  typeOut.style.borderColor = c.pass ? '#10b981' : '#ef4444';
+}
+</script>
+</body>
+</html>

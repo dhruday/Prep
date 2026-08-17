@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 36 – Static Site Generation (SSG)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.step{display:flex;align-items:flex-start;gap:12px;margin:8px 0;font-size:.83rem}
+.badge{background:#1e3a5f;color:#60a5fa;border-radius:6px;padding:2px 8px;font-size:.75rem;font-weight:700;white-space:nowrap}
+.green{color:#10b981}.red{color:#ef4444}.amber{color:#f59e0b}
+.page-item{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:.8rem;cursor:pointer;margin:4px 0;transition:border-color .2s}
+.page-item.active-p{border-color:#60a5fa}
+.page-item:hover{border-color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>📄 Static Site Generation (SSG)</h1>
+<p class="sub">Topic 36 · Module 4.1 — Rendering Models · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">How SSG Works</div>
+  <div class="tab" onclick="setTab(1)">Build-time Explorer</div>
+  <div class="tab" onclick="setTab(2)">Trade-offs</div>
+  <div class="tab" onclick="setTab(3)">Next.js Code</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>SSG — Build-time HTML Generation</h3>
+    <div class="step"><span class="badge">Build</span><div><strong>npm run build</strong> — Next.js/Gatsby/Astro fetches all data and renders every page to static HTML files</div></div>
+    <div class="step"><span class="badge">Deploy</span><div>Static HTML/CSS/JS uploaded to <strong>CDN</strong> — no server needed at runtime</div></div>
+    <div class="step"><span class="badge">Request</span><div>User requests <code>/blog/post-1</code> → CDN returns pre-built <code>post-1.html</code> instantly — TTFB &lt; 50ms</div></div>
+    <div class="step"><span class="badge">Hydrate</span><div>JS bundle downloads and attaches interactivity — page is already visible</div></div>
+    <div style="margin-top:14px;font-size:.83rem;color:#94a3b8">
+      <strong class="green">Best TTFB possible</strong> — CDN cache hit. No DB, no server compute per request.<br>
+      <strong class="amber">Limitation</strong> — data is stale until next build. Not suitable for real-time or user-specific content.
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Build output explorer — click a page to inspect</h3>
+    <div style="font-size:.78rem;color:#94a3b8;margin-bottom:10px">Typical Next.js build for a docs site (100 pages):</div>
+    <div id="page-list"></div>
+    <div id="page-detail" style="margin-top:12px;background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;font-size:.8rem;color:#94a3b8;min-height:60px">
+      Click a page above to see its build info.
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>SSG Pros &amp; Cons</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <div style="font-size:.8rem;font-weight:700;color:#10b981;margin-bottom:8px">✅ Advantages</div>
+        <div style="font-size:.8rem;color:#94a3b8;line-height:2">Fastest possible load (CDN edge)<br>Zero server cost per request<br>Unbeatable SEO (full HTML)<br>Highly secure (no server runtime)<br>Great Core Web Vitals scores</div>
+      </div>
+      <div>
+        <div style="font-size:.8rem;font-weight:700;color:#ef4444;margin-bottom:8px">❌ Disadvantages</div>
+        <div style="font-size:.8rem;color:#94a3b8;line-height:2">Stale data until rebuild<br>Long build times at scale (10k+ pages)<br>Can't personalise per user<br>Needs rebuild pipeline on content change<br>Not for dynamic/auth content</div>
+      </div>
+    </div>
+    <h3>Use case fit</h3>
+    <div style="font-size:.82rem;color:#94a3b8;line-height:1.9">Marketing sites, documentation (SAP Help Portal), blogs, product landing pages. SAP's developer.sap.com is built on static generation with a CMS-driven rebuild pipeline.</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Next.js App Router — SSG with generateStaticParams</h3>
+    <pre><span class="cm">// app/blog/[slug]/page.tsx</span>
+<span class="kw">import</span> { notFound } <span class="kw">from</span> <span class="str">'next/navigation'</span>;
+
+<span class="cm">// Tell Next.js which slugs to pre-build at build time</span>
+<span class="kw">export async function</span> <span class="attr">generateStaticParams</span>() {
+  <span class="kw">const</span> posts = <span class="kw">await</span> <span class="attr">getAllPosts</span>();
+  <span class="kw">return</span> posts.<span class="attr">map</span>((p) =&gt; ({ slug: p.slug }));
+}
+
+<span class="cm">// Page is statically rendered at build time</span>
+<span class="kw">export default async function</span> <span class="attr">BlogPost</span>({ params }) {
+  <span class="kw">const</span> post = <span class="kw">await</span> <span class="attr">getPost</span>(params.slug);
+  <span class="kw">if</span> (!post) <span class="attr">notFound</span>();
+  <span class="kw">return</span> &lt;<span class="attr">article</span>&gt;{post.content}&lt;/<span class="attr">article</span>&gt;;
+}
+
+<span class="cm">// Force static — this is already the default for pages with</span>
+<span class="cm">// generateStaticParams, but explicit for clarity:</span>
+<span class="kw">export const</span> dynamic = <span class="str">'force-static'</span>;</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const pages=[
+  {name:'/index.html',size:'4.2KB',ttfb:'18ms',strategy:'SSG',note:'Homepage — marketing content, never changes unless rebuild'},
+  {name:'/blog/post-1.html',size:'12KB',ttfb:'22ms',strategy:'SSG',note:'Blog post — fetched from CMS at build time; stale until next build'},
+  {name:'/docs/getting-started.html',size:'28KB',ttfb:'19ms',strategy:'SSG',note:'Docs page — 500 docs pages all pre-rendered by generateStaticParams'},
+  {name:'/products/widget-a.html',size:'16KB',ttfb:'21ms',strategy:'SSG',note:'Product page — price/stock NOT real-time; use ISR or client fetch for live price'},
+  {name:'/_next/static/chunks/app.js',size:'180KB',ttfb:'8ms',strategy:'CDN cache',note:'Shared JS bundle — immutable hash in filename, cached 1 year'},
+];
+
+document.getElementById('page-list').innerHTML=pages.map((p,i)=>`
+  <div class="page-item" onclick="showPage(${i})">
+    <span style="color:#60a5fa">${p.name}</span>
+    <span style="color:#94a3b8;font-size:.75rem;margin-left:auto">${p.size}</span>
+    <span style="background:#1e3a5f;color:#10b981;padding:1px 7px;border-radius:4px;font-size:.72rem">${p.strategy}</span>
+  </div>
+`).join('');
+
+function showPage(i){
+  const p=pages[i];
+  document.getElementById('page-detail').innerHTML=`
+    <strong style="color:#60a5fa">${p.name}</strong><br>
+    <span style="color:#10b981">TTFB from CDN:</span> ${p.ttfb} &nbsp; <span style="color:#f59e0b">Size:</span> ${p.size} &nbsp; <span style="color:#a78bfa">Strategy:</span> ${p.strategy}<br><br>
+    <span style="color:#94a3b8">${p.note}</span>
+  `;
+  document.querySelectorAll('.page-item').forEach((el,idx)=>el.classList.toggle('active-p',idx===i));
+}
+</script>
+</body>
+</html>

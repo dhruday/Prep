@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — WebAuthn Fundamentals</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a3a2a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:500px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟢 Lab 01 — WebAuthn Fundamentals</h1>
+<p class="sub">Module 12.2 · Passwordless authentication with passkeys</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">How Passkeys Work</div>
+  <div class="tab" onclick="setTab(1)">Registration Flow</div>
+  <div class="tab" onclick="setTab(2)">Authentication Flow</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>WebAuthn / Passkeys Architecture</h3>
+    <pre><span class="cm">// WebAuthn = W3C standard for passwordless authentication</span>
+<span class="cm">// Passkeys = consumer-friendly name for discoverable WebAuthn credentials</span>
+
+<span class="cm">// Three entities:</span>
+<span class="cm">// 1. Relying Party (RP) — your web application</span>
+<span class="cm">// 2. Authenticator — biometric, security key, or platform authenticator</span>
+<span class="cm">// 3. Browser — mediates between RP and authenticator via WebAuthn API</span>
+
+<span class="cm">// Key concept: Public-key cryptography</span>
+<span class="cm">// Registration: Authenticator creates a key pair</span>
+<span class="cm">//   Private key → stored in authenticator (never leaves device)</span>
+<span class="cm">//   Public key → sent to server (stored in DB)</span>
+<span class="cm">// Authentication: Server sends challenge → authenticator signs it</span>
+<span class="cm">//   Server verifies signature with stored public key</span>
+
+<span class="cm">// Why passkeys are better than passwords:</span>
+<span class="cm">// ✅ Phishing-resistant (bound to origin)</span>
+<span class="cm">// ✅ No shared secrets (nothing to steal from server DB)</span>
+<span class="cm">// ✅ No password reuse across sites</span>
+<span class="cm">// ✅ No brute-force attacks possible</span>
+<span class="cm">// ✅ Built-in multi-factor (possession + biometric)</span></pre>
+  </div>
+  <div class="card">
+    <h3>Passkey Types</h3>
+    <pre><span class="cm">// 1. Platform authenticator (built-in)</span>
+<span class="cm">//    - Touch ID / Face ID (Apple)</span>
+<span class="cm">//    - Windows Hello</span>
+<span class="cm">//    - Android biometrics</span>
+<span class="cm">//    Synced via cloud: iCloud Keychain, Google Password Manager</span>
+
+<span class="cm">// 2. Roaming authenticator (external)</span>
+<span class="cm">//    - YubiKey, Titan Security Key</span>
+<span class="cm">//    - USB, NFC, or Bluetooth</span>
+<span class="cm">//    Not synced — physical device required</span>
+
+<span class="cm">// 3. Cross-device (hybrid)</span>
+<span class="cm">//    - Use phone as authenticator for desktop login</span>
+<span class="cm">//    - QR code + Bluetooth proximity check</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Registration Flow</h3>
+    <button onclick="checkSupport()">1️⃣ Check WebAuthn Support</button>
+    <button onclick="showRegistrationOptions()">2️⃣ View Registration Options</button>
+    <div class="output" id="reg-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Authentication Ceremony</h3>
+    <pre><span class="cm">// Step 1: Server generates challenge</span>
+<span class="kw">const</span> options = {
+  challenge: crypto.getRandomValues(<span class="kw">new</span> Uint8Array(32)),
+  rpId: <span class="str">"myapp.com"</span>,
+  allowCredentials: [{  <span class="cm">// optional for discoverable creds</span>
+    id: storedCredentialId,
+    type: <span class="str">"public-key"</span>,
+    transports: [<span class="str">"internal"</span>, <span class="str">"hybrid"</span>]
+  }],
+  userVerification: <span class="str">"preferred"</span>,
+  timeout: 60000
+};
+
+<span class="cm">// Step 2: Browser prompts user (biometric/PIN)</span>
+<span class="kw">const</span> assertion = <span class="kw">await</span> navigator.credentials.get({
+  publicKey: options
+});
+
+<span class="cm">// Step 3: Send assertion to server</span>
+<span class="cm">// assertion contains:</span>
+<span class="cm">//   - authenticatorData (rpIdHash, flags, counter)</span>
+<span class="cm">//   - clientDataJSON (type, challenge, origin)</span>
+<span class="cm">//   - signature (signed by private key)</span>
+
+<span class="cm">// Step 4: Server verifies</span>
+<span class="cm">//   - Challenge matches what was issued</span>
+<span class="cm">//   - Origin matches expected origin</span>
+<span class="cm">//   - rpIdHash matches expected RP ID</span>
+<span class="cm">//   - Signature valid with stored public key</span>
+<span class="cm">//   - Counter increased (cloning detection)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — WebAuthn</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How are passkeys phishing-resistant?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">The browser enforces origin binding at the protocol level. When creating a passkey, the credential is bound to the RP ID (e.g., "google.com"). During authentication, the browser checks: (1) The requesting origin matches the RP ID. (2) The challenge was received over a secure connection from that origin. If an attacker creates a phishing page at "g00gle.com", the browser won't find any credentials for that RP ID. Even if the user is tricked into clicking "Sign in," there are simply no passkeys available. The authenticator won't produce a valid signature because the rpIdHash in the clientDataJSON won't match. This is fundamentally different from passwords — where the user types the password into whatever form is shown.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function checkSupport(){
+  const el=document.getElementById('reg-result');
+  el.textContent='WebAuthn Support Check:\n'+'-'.repeat(40)+'\n\n';
+  el.textContent+=`window.PublicKeyCredential: ${typeof window.PublicKeyCredential!=='undefined'?'✅ Available':'❌ Not available'}\n`;
+  el.textContent+=`navigator.credentials: ${typeof navigator.credentials!=='undefined'?'✅ Available':'❌ Not available'}\n`;
+  el.textContent+=`Secure context (HTTPS): ${window.isSecureContext?'✅ Yes':'⚠️ No — WebAuthn requires HTTPS (except localhost)'}\n`;
+  if(window.PublicKeyCredential){
+    PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then(available=>{
+      el.textContent+=`Platform authenticator: ${available?'✅ Available (Touch ID/Face ID/Windows Hello)':'⚠️ Not available (use security key)'}\n`;
+    });
+    if(PublicKeyCredential.isConditionalMediationAvailable){
+      PublicKeyCredential.isConditionalMediationAvailable().then(available=>{
+        el.textContent+=`Conditional UI (autofill): ${available?'✅ Available':'⚠️ Not available'}\n`;
+      });
+    }
+  }
+}
+
+function showRegistrationOptions(){
+  const el=document.getElementById('reg-result');
+  const options={
+    challenge:'base64url-encoded-random-bytes',
+    rp:{id:'localhost',name:'Security Lab'},
+    user:{id:'base64url-user-id',name:'alice@example.com',displayName:'Alice'},
+    pubKeyCredParams:[{alg:-7,type:'public-key'},{alg:-257,type:'public-key'}],
+    authenticatorSelection:{authenticatorAttachment:'platform',residentKey:'required',userVerification:'preferred'},
+    timeout:60000,
+    attestation:'none'
+  };
+  el.textContent=`Registration Options (navigator.credentials.create):\n${'='.repeat(50)}\n\n${JSON.stringify(options,null,2)}\n\n`;
+  el.textContent+=`Key parameters:\n`;
+  el.textContent+=`  rp.id: "${options.rp.id}" — credential bound to this domain\n`;
+  el.textContent+=`  pubKeyCredParams: algorithms the server accepts\n`;
+  el.textContent+=`    -7 = ES256 (ECDSA P-256) — recommended\n`;
+  el.textContent+=`    -257 = RS256 (RSA PKCS#1) — fallback\n`;
+  el.textContent+=`  residentKey: "required" — discoverable credential (passkey)\n`;
+  el.textContent+=`  userVerification: "preferred" — biometric if available\n`;
+  el.textContent+=`  attestation: "none" — don't need hardware attestation\n`;
+}
+</script>
+</body></html>

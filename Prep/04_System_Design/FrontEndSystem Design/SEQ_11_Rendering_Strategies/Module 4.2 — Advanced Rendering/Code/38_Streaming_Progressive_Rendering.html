@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 38 – Streaming &amp; Progressive Rendering</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.green{color:#10b981}.amber{color:#f59e0b}
+.chunk{background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:8px 12px;margin:4px 0;font-size:.8rem;opacity:0;transform:translateX(-10px);transition:opacity .4s,transform .4s}
+.chunk.visible{opacity:1;transform:translateX(0)}
+</style>
+</head>
+<body>
+<h1>🌊 Streaming &amp; Progressive Rendering</h1>
+<p class="sub">Topic 38 · Module 4.2 — Advanced Rendering · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Streaming Demo</div>
+  <div class="tab" onclick="setTab(2)">React Suspense Streaming</div>
+  <div class="tab" onclick="setTab(3)">Code</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>What is Streaming?</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:14px">Traditional SSR blocks the entire response until all data is fetched and all HTML is rendered. Streaming uses HTTP chunked transfer encoding to send HTML in pieces as soon as each piece is ready. The browser renders each chunk progressively — the user sees content sooner.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;padding:12px;border-radius:8px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">❌ Blocking SSR</div>
+        <div style="color:#94a3b8;line-height:1.8">Wait → Wait → Wait → Send ALL HTML<br>User sees blank screen until slowest API resolves</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:12px;border-radius:8px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Streaming SSR</div>
+        <div style="color:#94a3b8;line-height:1.8">Shell → Nav → Hero → Sidebar → Feed (each chunk as ready)<br>User sees something in ~200ms, rest fills in</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;font-size:.82rem;color:#94a3b8">React 18's <code>renderToPipeableStream</code> + Next.js App Router + <code>&lt;Suspense&gt;</code> = out-of-the-box streaming. Each Suspense boundary becomes a chunk boundary.</div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Streaming chunks arriving progressively</h3>
+    <button onclick="startStream()" style="padding:8px 20px;background:#1e3a5f;color:#60a5fa;border:1px solid #60a5fa;border-radius:8px;cursor:pointer;margin-bottom:12px">▶ Start streaming</button>
+    <div id="stream-output"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>React Suspense as streaming boundaries</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:12px">Each <code>&lt;Suspense&gt;</code> wrapping an async component becomes a streaming boundary. The fallback is sent first. When data resolves, the real component HTML is streamed in — React swaps it on client without full page re-render.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;padding:12px;border-radius:8px">
+        <div style="color:#f59e0b;margin-bottom:6px;font-weight:700">What streams immediately (0ms)</div>
+        <div style="color:#94a3b8;line-height:1.8">✦ HTML shell &lt;head&gt;&lt;/head&gt;<br>✦ Navigation bar<br>✦ Page layout/skeleton<br>✦ Critical above-fold text</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;padding:12px;border-radius:8px">
+        <div style="color:#10b981;margin-bottom:6px;font-weight:700">What streams later (async)</div>
+        <div style="color:#94a3b8;line-height:1.8">✦ Comments list (DB query)<br>✦ User profile sidebar<br>✦ Product recommendations<br>✦ Analytics widgets</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Next.js App Router — streaming with Suspense</h3>
+    <pre><span class="cm">// app/dashboard/page.tsx — streaming layout</span>
+<span class="kw">import</span> { Suspense } <span class="kw">from</span> <span class="str">'react'</span>;
+
+<span class="kw">export default function</span> <span class="attr">Dashboard</span>() {
+  <span class="cm">// Shell renders + streams immediately (no awaits here)</span>
+  <span class="kw">return</span> (
+    &lt;<span class="attr">main</span>&gt;
+      &lt;<span class="attr">header</span>&gt;SAP Fiori Header&lt;/<span class="attr">header</span>&gt;  <span class="cm">{/* instant */}</span>
+
+      <span class="cm">{/* NavBar streams first — fast DB read */}</span>
+      &lt;<span class="attr">Suspense</span> fallback={&lt;<span class="attr">NavSkeleton</span> /&gt;}&gt;
+        &lt;<span class="attr">Nav</span> /&gt;
+      &lt;/<span class="attr">Suspense</span>&gt;
+
+      <span class="cm">{/* Analytics slow — streams last */}</span>
+      &lt;<span class="attr">Suspense</span> fallback={&lt;<span class="attr">AnalyticsSkeleton</span> /&gt;}&gt;
+        &lt;<span class="attr">Analytics</span> /&gt;  <span class="cm">{/* async server component */}</span>
+      &lt;/<span class="attr">Suspense</span>&gt;
+    &lt;/<span class="attr">main</span>&gt;
+  );
+}
+
+<span class="cm">// Analytics.tsx — server component, async</span>
+<span class="kw">async function</span> <span class="attr">Analytics</span>() {
+  <span class="kw">const</span> data = <span class="kw">await</span> <span class="attr">fetchAnalytics</span>(); <span class="cm">// slow: 800ms</span>
+  <span class="kw">return</span> &lt;<span class="attr">AnalyticsWidget</span> data={data} /&gt;;
+  <span class="cm">// Streams in after 800ms — shell already visible</span>
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const chunks=[
+  {t:0,html:'<html><head>...styles, fonts...</head>',color:'#60a5fa',label:'Shell + &lt;head&gt; — 0ms'},
+  {t:80,html:'<div id="layout"><header>...</header>',color:'#10b981',label:'Layout + Nav — 80ms'},
+  {t:180,html:'<section class="hero">Product title, images</section>',color:'#10b981',label:'Hero content — 180ms'},
+  {t:420,html:'<!-- Suspense resolved: sidebar -->',color:'#a78bfa',label:'Sidebar data (API fast) — 420ms'},
+  {t:850,html:'<!-- Suspense resolved: recommendations -->',color:'#f59e0b',label:'Recommendations (ML API slow) — 850ms'},
+  {t:1100,html:'<!-- Suspense resolved: analytics widget -->',color:'#f59e0b',label:'Analytics widget — 1100ms'},
+];
+
+function startStream(){
+  const out=document.getElementById('stream-output');
+  out.innerHTML='';
+  chunks.forEach((c,i)=>{
+    const div=document.createElement('div');
+    div.className='chunk';
+    div.innerHTML=`<span style="color:${c.color};font-size:.75rem;font-weight:700">[+${c.t}ms]</span> <span style="color:#94a3b8">${c.label}</span><br><code style="color:#60a5fa;font-size:.73rem">${c.html}</code>`;
+    out.appendChild(div);
+    setTimeout(()=>div.classList.add('visible'),c.t+50);
+  });
+}
+</script>
+</body>
+</html>

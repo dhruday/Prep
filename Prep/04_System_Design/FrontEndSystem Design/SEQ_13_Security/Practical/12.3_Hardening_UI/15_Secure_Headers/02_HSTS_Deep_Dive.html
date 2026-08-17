@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — HSTS Deep Dive</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a2a1a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟢 Lab 02 — HSTS Deep Dive</h1>
+<p class="sub">Module 12.3 · Strict Transport Security, preload, SSL stripping</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">HSTS Mechanics</div>
+  <div class="tab" onclick="setTab(1)">SSL Stripping</div>
+  <div class="tab" onclick="setTab(2)">Preload List</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>How HSTS Works</h3>
+    <pre><span class="cm">// HSTS header (sent ONLY over HTTPS):</span>
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+
+<span class="cm">// Behavior after receiving HSTS:</span>
+<span class="cm">// 1. Browser stores: "example.com uses HSTS until [date]"</span>
+<span class="cm">// 2. Any HTTP request to example.com → auto-upgraded to HTTPS</span>
+<span class="cm">// 3. If HTTPS certificate is invalid → HARD FAIL (no bypass)</span>
+<span class="cm">//    Normal: "Your connection is not private" with "Proceed anyway"</span>
+<span class="cm">//    HSTS: No "Proceed" option. Connection blocked.</span>
+
+<span class="cm">// Parameters:</span>
+<span class="cm">// max-age=63072000  → 2 years (seconds)</span>
+<span class="cm">// includeSubDomains → Applies to all *.example.com</span>
+<span class="cm">// preload           → Eligible for browser preload list</span>
+
+<span class="cm">// Rollout strategy:</span>
+<span class="cm">// Week 1: max-age=300 (5 minutes) — test</span>
+<span class="cm">// Week 2: max-age=86400 (1 day)</span>
+<span class="cm">// Week 3: max-age=604800 (1 week)</span>
+<span class="cm">// Month 2: max-age=63072000 (2 years) + preload</span>
+<span class="cm">// Gradual increase prevents lockout if cert issues arise</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>SSL Stripping Attack</h3>
+    <pre><span class="cm">// Without HSTS:</span>
+<span class="cm">// 1. User types "example.com" in browser</span>
+<span class="cm">// 2. Browser sends HTTP request (not HTTPS)</span>
+<span class="cm">// 3. MITM intercepts HTTP request</span>
+<span class="cm">// 4. MITM connects to example.com via HTTPS</span>
+<span class="cm">// 5. MITM relays content to user via HTTP</span>
+<span class="cm">// 6. User sees content but connection is NOT encrypted</span>
+<span class="cm">// 7. MITM can read/modify all traffic</span>
+
+<span class="cm">//    User ←─ HTTP ─→ Attacker ←─ HTTPS ─→ Server</span>
+<span class="cm">//    (no padlock)      (reads everything)   (thinks it's secure)</span>
+
+<span class="cm">// With HSTS:</span>
+<span class="cm">// 1. User types "example.com"</span>
+<span class="cm">// 2. Browser internal redirect: "I know this is HSTS → HTTPS"</span>
+<span class="cm">// 3. HTTP request NEVER sent</span>
+<span class="cm">// 4. MITM has nothing to intercept</span>
+
+<span class="cm">// HSTS weakness: First visit</span>
+<span class="cm">// First visit has no HSTS cached → HTTP sent → interceptable</span>
+<span class="cm">// Solution: HSTS Preload List (next tab)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>HSTS Preload List</h3>
+    <pre><span class="cm">// Preload = Hardcoded HSTS in browser source code</span>
+<span class="cm">// Even FIRST visit uses HTTPS (no TOFU problem)</span>
+
+<span class="cm">// Requirements for preload:</span>
+<span class="cm">// 1. Valid HTTPS certificate</span>
+<span class="cm">// 2. Redirect HTTP → HTTPS on same host</span>
+<span class="cm">// 3. HSTS header on HTTPS response</span>
+<span class="cm">// 4. max-age ≥ 63072000 (2 years)</span>
+<span class="cm">// 5. includeSubDomains directive</span>
+<span class="cm">// 6. preload directive</span>
+
+<span class="cm">// Submit at: https://hstspreload.org</span>
+
+<span class="cm">// ⚠️ WARNING: Preload is HARD TO UNDO</span>
+<span class="cm">// Removal takes months (browser release cycles)</span>
+<span class="cm">// If you lose your cert or need HTTP: users can't access your site</span>
+<span class="cm">// Make sure ALL subdomains support HTTPS before submitting</span>
+
+<span class="cm">// Chrome checks (chrome://net-internals/#hsts):</span>
+<span class="cm">// Query: Check if domain has HSTS</span>
+<span class="cm">// Delete: Remove HSTS for testing</span>
+
+<span class="cm">// Notable preloaded domains:</span>
+<span class="cm">// google.com, facebook.com, twitter.com, github.com</span>
+<span class="cm">// All .dev and .app TLDs are preloaded!</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — HSTS</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: What's the risk of setting includeSubDomains on HSTS?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">includeSubDomains forces HTTPS on ALL subdomains: *.example.com. Risks: (1) If ANY subdomain doesn't support HTTPS (legacy internal tool at internal.example.com), it becomes inaccessible. (2) Development/staging subdomains without valid certs are blocked. (3) If a subdomain's cert expires, no user bypass is possible (HSTS prevents "proceed anyway"). (4) Third-party services on your subdomains may not support HTTPS. Mitigation: (1) Audit ALL subdomains before enabling. Use Certificate Transparency logs: crt.sh/?q=%.example.com. (2) Start without includeSubDomains, add it after confirming all subdomains work. (3) Use short max-age during testing (300 seconds). (4) Wildcard certs cover all subdomains easily. For preload: includeSubDomains is REQUIRED. The .dev and .app TLDs are entirely preloaded — every domain under them forces HTTPS.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+</script>
+</body></html>

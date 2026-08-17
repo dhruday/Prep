@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Debounce &amp; Throttle Deep Study — Timing Control for Network Requests</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2e2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}.card h3.good{color:#10b981}.card h3.bad{color:#ef4444}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Debounce &amp; Throttle Deep Study — Timing Control for Network Requests</h1>
+<p class="sub">Module 6.3 · FAANG Interview Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Architecture Patterns</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<!-- Tab 0: Deep Theory -->
+<div class="panel active">
+  <div class="card">
+    <h3>1. Event Loop Mechanics</h3>
+    <pre><span class="cm">// Both debounce and throttle use setTimeout internally</span>
+<span class="cm">// Understanding the event loop is critical:</span>
+
+<span class="cm">// Timer resolution in browsers:</span>
+<span class="cm">// - Minimum: 4ms (setTimeout spec minimum after nested calls)</span>
+<span class="cm">// - Background tabs: 1000ms minimum (Chrome/Firefox)</span>
+<span class="cm">// - setTimeout(fn, 0) ≈ 4ms in practice</span>
+<span class="cm">// - requestAnimationFrame: ~16.67ms (60fps)</span>
+
+<span class="cm">// Timer phases in Node.js event loop:</span>
+<span class="cm">// timers → pending → idle → poll → check → close</span>
+<span class="cm">// setTimeout callbacks fire in "timers" phase</span>
+<span class="cm">// Multiple expired timers batch in same phase</span>
+
+<span class="cm">// Browser event loop:</span>
+<span class="cm">// task (setTimeout) → microtasks (Promise) → render → task</span>
+<span class="cm">// Debounced function fires as a macrotask</span>
+<span class="cm">// If clearTimeout called before firing, timer removed from queue</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Debounce — "Wait Until Calm"</h3>
+    <pre><span class="cm">// Timeline visualization (300ms delay):</span>
+<span class="cm">// User types: H...e...l...l...o</span>
+<span class="cm">//</span>
+<span class="cm">// Time:  0   50  100 150 200 250 ... 500</span>
+<span class="cm">// Input: H   e   l   l   o</span>
+<span class="cm">// Timer: [---X---X---X---X-----------→] FIRE!</span>
+<span class="cm">//</span>
+<span class="cm">// Each keystroke RESETS the 300ms timer</span>
+<span class="cm">// Only fires once after 300ms of silence</span>
+<span class="cm">// Total calls: 5 keystrokes → 1 API call</span>
+
+<span class="cm">// Leading edge debounce:</span>
+<span class="cm">// Time:  0   50  100 150 200 250 ... 500</span>
+<span class="cm">// Input: H   e   l   l   o</span>
+<span class="cm">// Timer: FIRE![---------X---X-----------→]</span>
+<span class="cm">//</span>
+<span class="cm">// Fires IMMEDIATELY on first call, then waits</span>
+<span class="cm">// Good for: button clicks (instant feedback)</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Throttle — "Limit Frequency"</h3>
+    <pre><span class="cm">// Timeline visualization (200ms interval):</span>
+<span class="cm">// User scrolls continuously for 1 second</span>
+<span class="cm">//</span>
+<span class="cm">// Time:    0    50   100  150  200  250  300  350  400...</span>
+<span class="cm">// Events:  ↓    ↓    ↓    ↓    ↓    ↓    ↓    ↓    ↓</span>
+<span class="cm">// Fires:   ✓                   ✓                   ✓</span>
+<span class="cm">//</span>
+<span class="cm">// Executes at most once per 200ms</span>
+<span class="cm">// Event count: 9 scroll events → 3 handler calls</span>
+
+<span class="cm">// Leading vs Trailing throttle:</span>
+<span class="cm">// Leading (default): fires on first call, then every interval</span>
+<span class="cm">// Trailing: fires at end of each interval</span>
+<span class="cm">// Both: fires on first call AND at end of each interval</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>4. requestAnimationFrame as Throttle</h3>
+    <pre><span class="cm">// rAF naturally throttles to display refresh rate (60fps = 16.67ms)</span>
+<span class="cm">// Perfect for visual updates: scroll position, resize, animations</span>
+
+<span class="kw">let</span> ticking = <span class="kw">false</span>;
+window.<span class="fn">addEventListener</span>(<span class="str">'scroll'</span>, () =&gt; {
+  <span class="kw">if</span> (!ticking) {
+    <span class="fn">requestAnimationFrame</span>(() =&gt; {
+      <span class="fn">updateScrollProgress</span>();
+      ticking = <span class="kw">false</span>;
+    });
+    ticking = <span class="kw">true</span>;
+  }
+});
+
+<span class="cm">// Why rAF over throttle for visual updates:</span>
+<span class="cm">// 1. Syncs with browser paint cycle (no wasted computation)</span>
+<span class="cm">// 2. Automatically pauses in background tabs</span>
+<span class="cm">// 3. Adapts to display refresh rate (120Hz, 60Hz, etc.)</span>
+<span class="cm">// 4. No arbitrary timing constant to choose</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>5. AbortController Integration</h3>
+    <pre><span class="cm">// Debounce alone isn't enough — previous requests may still be in-flight</span>
+<span class="cm">// Combine debounce + AbortController for complete solution:</span>
+
+<span class="cm">// Without abort:  H → [req1 pending] e → [req2 pending] l → [req3 fires]</span>
+<span class="cm">//                 req1 returns AFTER req3 → stale results shown!</span>
+
+<span class="cm">// With abort:     H → [req1 pending] e → [abort req1] l → [req3 fires]</span>
+<span class="cm">//                 Only req3 returns → correct results</span>
+
+<span class="cm">// Race condition timeline:</span>
+<span class="cm">// t=0:    User types "he" → fetch("he") → server processes (200ms)</span>
+<span class="cm">// t=50:   User types "hel" → fetch("hel") → server processes (50ms)</span>
+<span class="cm">// t=100:  "hel" returns first (faster query)</span>
+<span class="cm">// t=200:  "he" returns (slower query) → OVERWRITES correct result!</span>
+<span class="cm">// Solution: abort "he" request when "hel" is sent</span></pre>
+  </div>
+</div>
+
+<!-- Tab 1: Architecture Patterns -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Search Autocomplete Architecture</h3>
+    <pre><span class="cm">// Production search pipeline:</span>
+
+User Input ──→ Debounce (300ms) ──→ Abort Previous ──→ Fetch
+                                                         │
+                                               ┌─────────┴─────────┐
+                                               ▼                   ▼
+                                          Cache Hit?          API Call
+                                          (return)           /api/search
+                                                                │
+                                                         ┌──────┴──────┐
+                                                         ▼             ▼
+                                                    Suggestions    Highlighting
+                                                         │             │
+                                                         └──────┬──────┘
+                                                                ▼
+                                                          Render Results
+                                                         + Cache Response
+
+<span class="cm">// Optimization layers:</span>
+<span class="cm">// 1. Client cache: Map&lt;query, results&gt; (avoid re-fetch)</span>
+<span class="cm">// 2. Minimum query length: skip if &lt; 2 chars</span>
+<span class="cm">// 3. Prefetch common completions on focus</span>
+<span class="cm">// 4. Stale-while-revalidate for cached results</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Scroll-Based Analytics Architecture</h3>
+    <pre><span class="cm">// Pattern: Throttle scroll → batch analytics events</span>
+
+Scroll Events (60/sec)
+    │
+    ▼ Throttle (200ms)
+    │
+    ▼ Calculate visible items
+    │
+    ▼ Queue impression events
+    │
+    ▼ Batch send (every 5s or page exit)
+    │
+    ▼ POST /api/analytics
+
+<span class="cm">// Implementation:</span>
+<span class="kw">const</span> queue = [];
+<span class="kw">const</span> trackImpression = <span class="fn">throttle</span>(() =&gt; {
+  <span class="kw">const</span> visible = <span class="fn">getVisibleItems</span>();
+  visible.<span class="fn">forEach</span>(item =&gt; {
+    <span class="kw">if</span> (!seen.<span class="fn">has</span>(item.id)) {
+      queue.<span class="fn">push</span>({ type: <span class="str">'impression'</span>, id: item.id, ts: Date.<span class="fn">now</span>() });
+      seen.<span class="fn">add</span>(item.id);
+    }
+  });
+}, <span class="num">200</span>);
+
+<span class="cm">// Flush on page exit:</span>
+window.<span class="fn">addEventListener</span>(<span class="str">'beforeunload'</span>, () =&gt; {
+  navigator.<span class="fn">sendBeacon</span>(<span class="str">'/api/analytics'</span>, JSON.<span class="fn">stringify</span>(queue));
+});</pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Resize Observer + Debounce Pattern</h3>
+    <pre><span class="cm">// ResizeObserver fires rapidly during window resize</span>
+<span class="cm">// Debounce expensive layout recalculations</span>
+
+<span class="kw">const</span> <span class="fn">useResizeDebounced</span> = (ref, callback, delay = <span class="num">150</span>) =&gt; {
+  <span class="fn">useEffect</span>(() =&gt; {
+    <span class="kw">const</span> el = ref.current;
+    <span class="kw">if</span> (!el) <span class="kw">return</span>;
+    
+    <span class="kw">const</span> debouncedCb = <span class="fn">debounce</span>((entry) =&gt; {
+      callback({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      });
+    }, delay);
+    
+    <span class="kw">const</span> observer = <span class="kw">new</span> <span class="fn">ResizeObserver</span>((entries) =&gt; {
+      debouncedCb(entries[<span class="num">0</span>]);
+    });
+    
+    observer.<span class="fn">observe</span>(el);
+    <span class="kw">return</span> () =&gt; {
+      observer.<span class="fn">disconnect</span>();
+      debouncedCb.<span class="fn">cancel</span>(); <span class="cm">// prevent memory leak</span>
+    };
+  }, [ref, callback, delay]);
+};</pre>
+  </div>
+</div>
+
+<!-- Tab 2: FAANG Interview -->
+<div class="panel">
+  <div class="qa">
+    <div class="q">Q1: Implement debounce from scratch. Explain every line.</div>
+    <div class="a">See Code Walkthrough tab for full annotated implementation. Key points:<br>
+    1. Closure captures timer ID<br>
+    2. Each call clears previous timer (clearTimeout)<br>
+    3. Sets new timer with delay<br>
+    4. Uses apply() to preserve `this` context and arguments<br>
+    5. Returns wrapper function (not the result)<br>
+    6. Optional: .cancel() method, .flush() for immediate execution, leading edge option</div>
+    <div class="followup">Follow-up: What happens if debounce is called with delay=0?</div>
+    <div class="a">setTimeout(fn, 0) still defers to next macrotask (~4ms). This means rapid calls still batch — only the last call fires. Useful for batching synchronous state updates into a single async callback. React's setState batching works similarly.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q2: When would you use debounce vs throttle vs requestAnimationFrame?</div>
+    <div class="a"><strong>Debounce</strong>: When you want the FINAL value after activity stops.<br>
+    - Search input (fire after user stops typing)<br>
+    - Window resize (recalculate layout once resizing ends)<br>
+    - Form auto-save (save after user stops editing)<br><br>
+    <strong>Throttle</strong>: When you want PERIODIC updates during activity.<br>
+    - Scroll position tracking (update every 200ms during scroll)<br>
+    - Rate-limiting API calls (max 5 calls/second)<br>
+    - Drag events (update position regularly)<br><br>
+    <strong>requestAnimationFrame</strong>: When updating VISUAL state.<br>
+    - Scroll-linked animations<br>
+    - Canvas/WebGL rendering<br>
+    - Any DOM manipulation that should sync with paint</div>
+    <div class="followup">Follow-up: Can you use debounce with leading=true as a throttle substitute?</div>
+    <div class="a">Leading debounce fires immediately then waits, but it only fires ONCE at the start and ONCE at the end (if trailing=true). Throttle fires periodically throughout. For continuous events like scroll, throttle gives regular updates while debounce would give just start + end.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q3: How does Google Search implement its autocomplete? Walk through the architecture.</div>
+    <div class="a">1. <strong>Debounce ~150ms</strong>: Short delay because Google optimizes for perceived speed<br>
+    2. <strong>Prefetch</strong>: On input focus, prefetch trending/personalized suggestions<br>
+    3. <strong>Client cache</strong>: Hash map of query→results. "hel" cached when user types "hello" then backspaces<br>
+    4. <strong>Cancel previous</strong>: AbortController on each new request<br>
+    5. <strong>Streaming response</strong>: Results arrive in chunks (partial rendering)<br>
+    6. <strong>Prediction</strong>: Grey text completion (inline autocomplete) from most likely suggestion<br>
+    7. <strong>Keyboard navigation</strong>: Arrow keys change highlighted suggestion without new request<br>
+    8. <strong>Trie/prefix tree</strong>: Server-side data structure for O(L) prefix matching<br>
+    9. <strong>Personalization</strong>: Recent searches weighted higher in results<br>
+    10. <strong>Fallback</strong>: If API slow (&gt;200ms), show cached/trending results as placeholder</div>
+    <div class="followup">Follow-up: Why 150ms and not 300ms?</div>
+    <div class="a">Google's research shows 150ms feels "instant" while still saving ~70% of requests. They can afford shorter delays because their autocomplete API is optimized to respond in &lt;50ms globally (edge servers + trie data structure). Less optimized APIs need 300ms+ to avoid overloading.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q4: A search input has a race condition — sometimes old results overwrite new ones. Debug it.</div>
+    <div class="a"><strong>Root cause</strong>: Debounce prevents rapid fire but doesn't cancel in-flight requests. Sequence:<br>
+    1. User types "react" → debounce fires → fetch("react") starts (200ms response)<br>
+    2. User types "react hooks" → debounce fires → fetch("react hooks") starts (50ms response)<br>
+    3. "react hooks" returns FIRST (faster query)<br>
+    4. "react" returns LATER → overwrites results!<br><br>
+    <strong>Fixes (pick one or combine):</strong><br>
+    1. AbortController: abort previous fetch on new request<br>
+    2. Request ID: track latest request ID, ignore stale responses<br>
+    3. Timestamp: ignore response if older request<br>
+    4. React Query: handles this automatically (queryKey changes cancel stale queries)</div>
+    <div class="followup">Follow-up: How does React Query handle this internally?</div>
+    <div class="a">When queryKey changes, React Query marks the previous query as "stale." If a response arrives for a stale query, it's cached but NOT used as current data. The observer only subscribes to the latest queryKey. Internally uses a query hash + observer pattern.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q5: How do debounce/throttle behave in background tabs?</div>
+    <div class="a">Critical browser behavior:<br>
+    1. <strong>Chrome/Firefox</strong>: setTimeout minimum delay = 1000ms in background tabs<br>
+    2. <strong>300ms debounce becomes 1000ms</strong> automatically in hidden tabs<br>
+    3. <strong>rAF pauses completely</strong> in background tabs (no frames to render)<br>
+    4. <strong>Web Workers</strong>: Timers are NOT throttled in workers<br><br>
+    Implications:<br>
+    - Auto-save with 5s debounce: still works (1s minimum &lt; 5s)<br>
+    - Polling with 500ms interval: slows to 1s (acceptable usually)<br>
+    - 100ms throttle for scroll: becomes 1s (but tab isn't visible anyway)<br>
+    - Real-time updates: use visibility API to pause/resume instead of relying on timers</div>
+    <div class="followup">Follow-up: How do you handle this in production?</div>
+    <div class="a">document.addEventListener('visibilitychange', () => { if (document.hidden) { pause(); } else { resume(); flush(); } }). On resume, immediately sync state (flush pending debounced work, refetch stale data).</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q6: Implement a search hook with debounce, abort, and caching. Production quality.</div>
+    <div class="a">See Code Walkthrough tab for full implementation. Key requirements:<br>
+    1. useDebounce hook wraps the search term<br>
+    2. useQuery with debouncedTerm as queryKey<br>
+    3. AbortSignal passed to fetch via queryFn<br>
+    4. staleTime: 5 * 60 * 1000 (cache results for 5 min)<br>
+    5. enabled: debouncedTerm.length >= 2 (don't search single chars)<br>
+    6. placeholderData: keepPreviousData (show old results while loading new)<br>
+    7. Minimum query length check before debounce trigger</div>
+  </div>
+</div>
+
+<!-- Tab 3: Code Walkthrough -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Debounce Implementation — Fully Annotated</h3>
+    <pre><span class="kw">function</span> <span class="fn">debounce</span>(func, delay, options = {}) {
+  <span class="kw">let</span> timerId = <span class="kw">null</span>;    <span class="cm">// Closure: holds active timer</span>
+  <span class="kw">let</span> lastArgs = <span class="kw">null</span>;   <span class="cm">// Last arguments for trailing call</span>
+  <span class="kw">let</span> lastThis = <span class="kw">null</span>;   <span class="cm">// Last 'this' context</span>
+  <span class="kw">let</span> result;             <span class="cm">// Return value for leading call</span>
+  <span class="kw">const</span> leading = options.leading || <span class="kw">false</span>;
+  <span class="kw">const</span> trailing = options.trailing !== <span class="kw">false</span>; <span class="cm">// default true</span>
+  
+  <span class="kw">function</span> <span class="fn">debounced</span>(...args) {
+    lastArgs = args;
+    lastThis = <span class="kw">this</span>;
+    
+    <span class="kw">const</span> callNow = leading &amp;&amp; !timerId;
+    <span class="cm">// ^ Leading: fire immediately if no active timer</span>
+    
+    <span class="fn">clearTimeout</span>(timerId);
+    <span class="cm">// ^ Cancel any existing timer — THIS is the debounce magic</span>
+    <span class="cm">// Every call resets the countdown</span>
+    
+    timerId = <span class="fn">setTimeout</span>(() =&gt; {
+      timerId = <span class="kw">null</span>;      <span class="cm">// Timer expired, reset state</span>
+      <span class="kw">if</span> (trailing &amp;&amp; lastArgs) {
+        result = func.<span class="fn">apply</span>(lastThis, lastArgs);
+        <span class="cm">// ^ Trailing: fire with most recent args after delay</span>
+        lastArgs = lastThis = <span class="kw">null</span>;
+      }
+    }, delay);
+    
+    <span class="kw">if</span> (callNow) {
+      result = func.<span class="fn">apply</span>(<span class="kw">this</span>, args);
+      <span class="cm">// ^ Leading: fire synchronously right now</span>
+    }
+    
+    <span class="kw">return</span> result;
+  }
+  
+  debounced.<span class="fn">cancel</span> = () =&gt; {
+    <span class="fn">clearTimeout</span>(timerId);
+    timerId = lastArgs = lastThis = <span class="kw">null</span>;
+    <span class="cm">// ^ Clean up: prevent memory leak on unmount</span>
+  };
+  
+  debounced.<span class="fn">flush</span> = () =&gt; {
+    <span class="kw">if</span> (timerId &amp;&amp; lastArgs) {
+      result = func.<span class="fn">apply</span>(lastThis, lastArgs);
+      debounced.<span class="fn">cancel</span>();
+    }
+    <span class="kw">return</span> result;
+    <span class="cm">// ^ Force immediate execution (e.g., on form submit)</span>
+  };
+  
+  <span class="kw">return</span> debounced;
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Throttle Implementation</h3>
+    <pre><span class="kw">function</span> <span class="fn">throttle</span>(func, interval) {
+  <span class="kw">let</span> lastTime = <span class="num">0</span>;       <span class="cm">// Last execution timestamp</span>
+  <span class="kw">let</span> timerId = <span class="kw">null</span>;     <span class="cm">// Trailing edge timer</span>
+  <span class="kw">let</span> lastArgs = <span class="kw">null</span>;
+  
+  <span class="kw">function</span> <span class="fn">throttled</span>(...args) {
+    <span class="kw">const</span> now = Date.<span class="fn">now</span>();
+    <span class="kw">const</span> remaining = interval - (now - lastTime);
+    <span class="cm">// ^ Time until next allowed execution</span>
+    
+    lastArgs = args;
+    
+    <span class="kw">if</span> (remaining &lt;= <span class="num">0</span>) {
+      <span class="cm">// Enough time elapsed — execute now (leading edge)</span>
+      <span class="fn">clearTimeout</span>(timerId);
+      timerId = <span class="kw">null</span>;
+      lastTime = now;
+      func.<span class="fn">apply</span>(<span class="kw">this</span>, args);
+    } <span class="kw">else if</span> (!timerId) {
+      <span class="cm">// Schedule trailing execution</span>
+      timerId = <span class="fn">setTimeout</span>(() =&gt; {
+        lastTime = Date.<span class="fn">now</span>();
+        timerId = <span class="kw">null</span>;
+        func.<span class="fn">apply</span>(<span class="kw">this</span>, lastArgs);
+      }, remaining);
+    }
+    <span class="cm">// If timer exists, ignore (already scheduled)</span>
+  }
+  
+  throttled.<span class="fn">cancel</span> = () =&gt; {
+    <span class="fn">clearTimeout</span>(timerId);
+    lastTime = <span class="num">0</span>;
+    timerId = lastArgs = <span class="kw">null</span>;
+  };
+  
+  <span class="kw">return</span> throttled;
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>3. React useDebounce Hook</h3>
+    <pre><span class="kw">function</span> <span class="fn">useDebounce</span>(value, delay) {
+  <span class="kw">const</span> [debouncedValue, setDebouncedValue] = <span class="fn">useState</span>(value);
+  
+  <span class="fn">useEffect</span>(() =&gt; {
+    <span class="kw">const</span> timer = <span class="fn">setTimeout</span>(() =&gt; {
+      <span class="fn">setDebouncedValue</span>(value);
+    }, delay);
+    
+    <span class="kw">return</span> () =&gt; <span class="fn">clearTimeout</span>(timer);
+    <span class="cm">// ^ Cleanup runs BEFORE next effect — cancels timer on re-render</span>
+    <span class="cm">// This is the debounce: value changes → timer reset</span>
+  }, [value, delay]);
+  
+  <span class="kw">return</span> debouncedValue;
+}
+
+<span class="cm">// Usage with React Query:</span>
+<span class="kw">function</span> <span class="fn">SearchComponent</span>() {
+  <span class="kw">const</span> [query, setQuery] = <span class="fn">useState</span>(<span class="str">''</span>);
+  <span class="kw">const</span> debouncedQuery = <span class="fn">useDebounce</span>(query, <span class="num">300</span>);
+  
+  <span class="kw">const</span> { data } = <span class="fn">useQuery</span>({
+    queryKey: [<span class="str">'search'</span>, debouncedQuery],
+    queryFn: ({ signal }) =&gt;
+      <span class="fn">fetch</span>(<span class="str">`/api/search?q=${debouncedQuery}`</span>, { signal })
+        .<span class="fn">then</span>(r =&gt; r.<span class="fn">json</span>()),
+    enabled: debouncedQuery.length &gt;= <span class="num">2</span>,
+    <span class="cm">// ^ React Query passes AbortSignal automatically</span>
+    <span class="cm">// When queryKey changes, previous request is aborted</span>
+    staleTime: <span class="num">5</span> * <span class="num">60</span> * <span class="num">1000</span>, <span class="cm">// Cache 5 min</span>
+    placeholderData: <span class="fn">keepPreviousData</span>,
+  });
+}</pre>
+  </div>
+</div>
+
+<!-- Tab 4: Cheat Sheet -->
+<div class="panel">
+  <div class="card">
+    <h3>Debounce vs Throttle vs rAF</h3>
+    <table>
+      <tr><th>Feature</th><th>Debounce</th><th>Throttle</th><th>rAF</th></tr>
+      <tr><td>When fires</td><td>After N ms of silence</td><td>Every N ms max</td><td>Every paint frame</td></tr>
+      <tr><td>Typical delay</td><td>150-500ms</td><td>100-300ms</td><td>~16.67ms (60fps)</td></tr>
+      <tr><td>Best for</td><td>Search, auto-save</td><td>Scroll, resize</td><td>Animations, DOM updates</td></tr>
+      <tr><td>Background tab</td><td>Min 1000ms</td><td>Min 1000ms</td><td>Paused completely</td></tr>
+      <tr><td>Cancel support</td><td>.cancel()</td><td>.cancel()</td><td>cancelAnimationFrame(id)</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Common Delay Values</h3>
+    <pre>Search autocomplete:    <span class="num">150-300ms</span> debounce
+Form auto-save:         <span class="num">1000-2000ms</span> debounce
+Window resize:          <span class="num">150ms</span> debounce
+Scroll tracking:        <span class="num">100-200ms</span> throttle
+API rate limiting:      <span class="num">1000ms</span> throttle
+Analytics batching:     <span class="num">200ms</span> throttle + <span class="num">5s</span> flush
+Button click:           <span class="num">300ms</span> debounce (leading edge)
+Drag events:            rAF (no custom delay)</pre>
+  </div>
+
+  <div class="card">
+    <h3>Decision Tree</h3>
+    <pre>Need FINAL value only? ──── Yes ──→ <span class="fn">Debounce</span>
+         │ No                          (search, save, resize)
+         ▼
+Need PERIODIC updates? ──── Yes ──→ <span class="fn">Throttle</span>
+         │ No                          (scroll, drag, tracking)
+         ▼
+Updating visual/DOM? ────── Yes ──→ <span class="fn">requestAnimationFrame</span>
+         │ No                          (animations, paint-sync)
+         ▼
+Need instant + debounce? ── Yes ──→ <span class="fn">Debounce(leading: true)</span>
+                                       (button clicks)</pre>
+  </div>
+
+  <div class="card">
+    <h3>Production Checklist</h3>
+    <pre>✅ Always call .cancel() on component unmount
+✅ Combine debounce with AbortController for fetch
+✅ Handle background tab timer throttling
+✅ Use useRef for debounced callbacks (avoid stale closures)
+✅ Set minimum query length before triggering search
+✅ Flush pending debounce on form submit
+✅ Consider leading edge for button clicks
+✅ Test with React Strict Mode (double effects)</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

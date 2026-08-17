@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 05 — Storage & Memory Leaks</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ec4899;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1a2a;border-color:#ec4899;color:#ec4899}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ec4899;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ec4899;color:#ec4899}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🩷 Lab 05 — Storage & Memory Security</h1>
+<p class="sub">Module 12.3 · Secure data cleanup, logout hygiene, memory wiping</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Storage Risks</div>
+  <div class="tab" onclick="setTab(1)">Secure Logout</div>
+  <div class="tab" onclick="setTab(2)">Audit Demo</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Browser Storage Security Risks</h3>
+    <pre><span class="cm">// Data left behind after logout = security risk</span>
+
+<span class="cm">// localStorage:</span>
+<span class="cm">// ❌ Persists after tab close, browser restart, even logout</span>
+<span class="cm">// ❌ Accessible by any JavaScript on the same origin (XSS)</span>
+<span class="cm">// ❌ No encryption — plaintext on disk</span>
+<span class="cm">// ❌ No expiry mechanism</span>
+
+<span class="cm">// sessionStorage:</span>
+<span class="cm">// ✅ Cleared when tab closes</span>
+<span class="cm">// ❌ Still accessible by XSS during the session</span>
+<span class="cm">// ❌ Duplicated when tab is duplicated (Ctrl+Shift+T)</span>
+
+<span class="cm">// IndexedDB:</span>
+<span class="cm">// ❌ Persists until explicitly cleared</span>
+<span class="cm">// ❌ Can contain large amounts of sensitive data</span>
+<span class="cm">// ❌ Often forgotten during logout cleanup</span>
+
+<span class="cm">// Service Worker Cache:</span>
+<span class="cm">// ❌ Persists after logout</span>
+<span class="cm">// ❌ May contain cached API responses with user data</span>
+
+<span class="cm">// Cookies (without Secure/HttpOnly):</span>
+<span class="cm">// ❌ Readable by JavaScript (XSS)</span>
+<span class="cm">// ❌ Sent with every request (including to attackers via CSRF)</span>
+
+<span class="cm">// Memory:</span>
+<span class="cm">// JavaScript variables, closures, event listeners</span>
+<span class="cm">// ❌ Sensitive data in strings persists until GC</span>
+<span class="cm">// ❌ No way to force memory clearing in JS</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Complete Secure Logout</h3>
+    <pre><span class="kw">async function</span> <span class="fn">secureLogout</span>() {
+  <span class="cm">// 1. Revoke tokens server-side</span>
+  <span class="kw">await</span> fetch(<span class="str">'/api/auth/logout'</span>, {
+    method: <span class="str">'POST'</span>,
+    credentials: <span class="str">'same-origin'</span>,
+  });
+
+  <span class="cm">// 2. Clear all browser storage</span>
+  localStorage.clear();
+  sessionStorage.clear();
+
+  <span class="cm">// 3. Clear IndexedDB</span>
+  <span class="kw">const</span> dbs = <span class="kw">await</span> indexedDB.databases();
+  dbs.forEach(db =&gt; indexedDB.deleteDatabase(db.name));
+
+  <span class="cm">// 4. Clear Service Worker caches</span>
+  <span class="kw">if</span> (<span class="str">'caches'</span> <span class="kw">in</span> window) {
+    <span class="kw">const</span> names = <span class="kw">await</span> caches.keys();
+    <span class="kw">await</span> Promise.all(names.map(n =&gt; caches.delete(n)));
+  }
+
+  <span class="cm">// 5. Unregister Service Workers</span>
+  <span class="kw">if</span> (navigator.serviceWorker) {
+    <span class="kw">const</span> regs = <span class="kw">await</span> navigator.serviceWorker.getRegistrations();
+    regs.forEach(r =&gt; r.unregister());
+  }
+
+  <span class="cm">// 6. Clear cookies (client-accessible ones)</span>
+  document.cookie.split(<span class="str">';'</span>).forEach(c =&gt; {
+    <span class="kw">const</span> name = c.split(<span class="str">'='</span>)[0].trim();
+    document.cookie = `\${name}=;expires=Thu, 01 Jan 1970;path=/`;
+  });
+
+  <span class="cm">// 7. Broadcast logout to other tabs</span>
+  <span class="kw">new</span> BroadcastChannel(<span class="str">'auth'</span>).postMessage({ type: <span class="str">'LOGOUT'</span> });
+
+  <span class="cm">// 8. Clear in-memory state</span>
+  <span class="cm">// Reset Redux/Zustand store, React context, etc.</span>
+
+  <span class="cm">// 9. Redirect to login (clears navigation state)</span>
+  window.location.replace(<span class="str">'/login'</span>);
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🧪 Storage Audit</h3>
+    <button onclick="auditStorage()">🔍 Audit Browser Storage</button>
+    <button onclick="cleanStorage()">🧹 Clean All Storage</button>
+    <div class="output" id="storage-result">Click to audit storage contents</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Storage Security</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How do you handle sensitive data in a shared computer scenario?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Shared/public computers (libraries, hotels, kiosks): (1) Prefer sessionStorage over localStorage — auto-clears on tab close. (2) Keep tokens in memory only — never persist sensitive tokens. (3) Implement inactivity timeout — auto-logout after 5 minutes of inactivity. (4) Thorough logout — clear ALL storage, caches, service workers (as shown in Lab). (5) No "Remember Me" — disable persistent login on shared devices. Detect? Not reliably, but offer "Public computer" checkbox. (6) HTTP-only secure cookies with short expiry — even if user forgets to log out, session expires quickly. (7) Warning on login — "You're signing in on a device. Make sure to sign out when done." (8) Content isolation — use history.replaceState to prevent back-button data access. Set Cache-Control: no-store on all authenticated pages. Google: "Security checkup" feature lets users view/revoke active sessions from any device.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function auditStorage(){
+  const el=document.getElementById('storage-result');
+  el.textContent='Browser Storage Audit:\n'+('='.repeat(40))+'\n\n';
+  el.textContent+=`── localStorage (${localStorage.length} items) ──\n`;
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    const val=localStorage.getItem(key);
+    const sensitive=/token|password|secret|key|auth|session|credit/i.test(key+val);
+    el.textContent+=`${sensitive?'🔴':'🔵'} ${key}: ${val.substring(0,50)}${val.length>50?'...':''}\n`;
+  }
+  if(!localStorage.length)el.textContent+='  (empty)\n';
+  el.textContent+=`\n── sessionStorage (${sessionStorage.length} items) ──\n`;
+  for(let i=0;i<sessionStorage.length;i++){
+    const key=sessionStorage.key(i);
+    const val=sessionStorage.getItem(key);
+    el.textContent+=`🔵 ${key}: ${val.substring(0,50)}${val.length>50?'...':''}\n`;
+  }
+  if(!sessionStorage.length)el.textContent+='  (empty)\n';
+  el.textContent+=`\n── Cookies ──\n`;
+  const cookies=document.cookie.split(';').filter(c=>c.trim());
+  cookies.forEach(c=>el.textContent+=`🍪 ${c.trim()}\n`);
+  if(!cookies.length)el.textContent+='  (none accessible via JS — may have HttpOnly cookies)\n';
+}
+
+async function cleanStorage(){
+  const el=document.getElementById('storage-result');
+  el.textContent='Cleaning all storage...\n\n';
+  localStorage.clear();el.textContent+='✅ localStorage cleared\n';
+  sessionStorage.clear();el.textContent+='✅ sessionStorage cleared\n';
+  if('caches' in window){const names=await caches.keys();await Promise.all(names.map(n=>caches.delete(n)));el.textContent+=`✅ ${names.length} cache(s) cleared\n`}
+  document.cookie.split(';').forEach(c=>{const name=c.split('=')[0].trim();document.cookie=`${name}=;expires=Thu, 01 Jan 1970;path=/`});
+  el.textContent+='✅ Accessible cookies cleared\n';
+  el.textContent+='\n🧹 Storage cleanup complete!';
+}
+</script>
+</body></html>

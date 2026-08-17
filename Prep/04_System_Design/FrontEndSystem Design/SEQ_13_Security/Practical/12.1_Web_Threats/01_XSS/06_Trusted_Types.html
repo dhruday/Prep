@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 06 — Trusted Types</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style>
+</head>
+<body>
+<h1>🔐 Lab 06 — Trusted Types (DOM XSS Killer)</h1>
+<p class="sub">Module 12.1 · Web Threats · Browser-enforced DOM sink protection (Google-originated spec)</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Implementation</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3 class="safe">What are Trusted Types?</h3>
+    <p style="font-size:.83rem;color:#94a3b8">Trusted Types is a W3C web spec (originated at Google) that prevents DOM XSS by requiring all dangerous sink assignments to go through a policy. Instead of assigning raw strings to innerHTML, you must create a <strong>TrustedHTML</strong> object through a policy function that sanitizes the input.</p>
+    <pre><span class="cm">// WITHOUT Trusted Types (vulnerable):</span>
+element.innerHTML = userInput;  <span class="cm">// any string works → XSS possible</span>
+
+<span class="cm">// WITH Trusted Types (CSP: require-trusted-types-for 'script'):</span>
+element.innerHTML = userInput;  <span class="danger">// TypeError! Raw string not allowed</span>
+
+<span class="cm">// You MUST create a policy first:</span>
+<span class="kw">const</span> policy = trustedTypes.createPolicy(<span class="str">'sanitizer'</span>, {
+  createHTML: (input) => DOMPurify.sanitize(input)
+});
+element.innerHTML = policy.createHTML(userInput);  <span class="str">// ✅ TrustedHTML type</span></pre>
+  </div>
+  <div class="card">
+    <h3>Three Trusted Types</h3>
+    <pre><span class="cm">// TrustedHTML  → innerHTML, outerHTML, insertAdjacentHTML</span>
+<span class="cm">// TrustedScript → eval(), setTimeout(string), script.text</span>  
+<span class="cm">// TrustedScriptURL → script.src, iframe.src, fetch()</span>
+
+<span class="cm">// CSP to enable enforcement:</span>
+Content-Security-Policy: require-trusted-types-for <span class="str">'script'</span>;
+
+<span class="cm">// CSP to allow specific policy names:</span>
+Content-Security-Policy: trusted-types <span class="str">sanitizer</span> <span class="str">default</span>;</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Trusted Types — Interactive Demo</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:8px">This demo creates a Trusted Types policy in this page. Try assigning raw HTML vs policy-wrapped HTML.</p>
+    <input id="payload" value='<b>Hello</b> <img src=x onerror=alert(1)> <script>alert("xss")</script>'>
+    <div class="grid2">
+      <div class="card">
+        <h3>⚠️ Without Policy (raw string)</h3>
+        <button onclick="tryRaw()" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">el.innerHTML = rawString</button>
+        <div id="raw-result" class="output" style="border-color:#ef4444"></div>
+      </div>
+      <div class="card">
+        <h3 class="safe">✅ With Trusted Types Policy</h3>
+        <button onclick="tryPolicy()" style="background:#1a3a2a;border-color:#10b981;color:#10b981">el.innerHTML = policy.createHTML(input)</button>
+        <div id="policy-result" class="output" style="border-color:#10b981"></div>
+        <div id="policy-render" style="background:#0d1117;border:1px solid #10b981;border-radius:8px;padding:12px;margin-top:8px;min-height:40px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>📋 Console Log (Trusted Types events)</h3>
+    <div class="output" id="tt-log">Events will appear here...
+    
+Note: Trusted Types enforcement requires the CSP header:
+  Content-Security-Policy: require-trusted-types-for 'script';
+  
+Without this header, raw strings still work — no enforcement.
+This demo simulates the policy workflow that would be enforced by CSP.</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Implementing Trusted Types in Production</h3>
+    <pre><span class="cm">// Step 1: Deploy in report-only mode first</span>
+Content-Security-Policy-Report-Only: 
+  require-trusted-types-for <span class="str">'script'</span>;
+  trusted-types <span class="str">sanitizer</span> <span class="str">default</span>;
+  report-uri <span class="str">/csp-report</span>;
+
+<span class="cm">// Step 2: Create a default policy (catches all unmodified code)</span>
+<span class="kw">if</span> (<span class="kw">typeof</span> trustedTypes !== <span class="str">'undefined'</span>) {
+  trustedTypes.createPolicy(<span class="str">'default'</span>, {
+    createHTML: (s) => DOMPurify.sanitize(s),
+    createScript: () => { <span class="kw">throw new</span> Error(<span class="str">'Scripts not allowed'</span>); },
+    createScriptURL: (s) => {
+      <span class="kw">const</span> url = <span class="kw">new</span> URL(s, location.origin);
+      <span class="kw">if</span> (url.origin === location.origin) <span class="kw">return</span> s;
+      <span class="kw">throw new</span> Error(<span class="str">`Blocked: ${s}`</span>);
+    }
+  });
+}
+
+<span class="cm">// Step 3: Fix violations one by one (codemods, grep for innerHTML)</span>
+<span class="cm">// Step 4: Switch from report-only to enforcement</span></pre>
+  </div>
+  <div class="card">
+    <h3>Google's Trusted Types Deployment</h3>
+    <div style="font-size:.82rem;color:#94a3b8">
+      <p>• Google Search, Gmail, YouTube, Maps all use Trusted Types in enforcement mode</p>
+      <p>• <strong>9 out of 10</strong> DOM XSS bugs are caught by Trusted Types before they reach production</p>
+      <p>• Google wrote codemods to auto-migrate 500K+ innerHTML call sites → TrustedHTML policies</p>
+      <p>• Frameworks like Angular have built-in Trusted Types support (DomSanitizer)</p>
+      <p>• React has partial support — dangerouslySetInnerHTML triggers Trusted Types in report mode</p>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Trusted Types Questions</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How do Trusted Types complement CSP?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">CSP with nonces prevents injection of NEW script elements. Trusted Types prevents EXISTING scripts from being tricked into DOM XSS (via innerHTML, eval, etc.). Together they provide complete coverage: CSP handles reflected/stored XSS, Trusted Types handles DOM-based XSS.</p>
+      <p><strong style="color:#60a5fa">Q: What's the "default" policy and why is it powerful?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">The 'default' policy is a catch-all: any code that tries to assign a raw string to a sink goes through this policy automatically. This lets you deploy Trusted Types incrementally — the default policy sanitizes everything, then you create stricter named policies for specific code paths. It's how Google migrated massive codebases without rewriting every innerHTML call.</p>
+      <p><strong style="color:#60a5fa">Q: Browser support for Trusted Types?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Chromium-based browsers (Chrome, Edge) support enforcement. Firefox supports it behind a flag. Safari does not yet support it. For cross-browser, use the polyfill in report-only mode, and serve the CSP header only to Chromium browsers (via User-Agent detection).</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+function log(msg){const el=document.getElementById('tt-log');el.textContent+='\n'+new Date().toLocaleTimeString()+' '+msg;el.scrollTop=el.scrollHeight}
+
+// Create a sanitizer policy (simulated — real enforcement requires CSP header)
+let sanitizerPolicy = null;
+if(typeof window.trustedTypes !== 'undefined') {
+  try {
+    sanitizerPolicy = trustedTypes.createPolicy('sanitizer', {
+      createHTML: (input) => DOMPurify.sanitize(input)
+    });
+    log('✅ Trusted Types supported! Policy "sanitizer" created.');
+  } catch(e) { log('⚠️ Trusted Types policy creation failed: ' + e.message); }
+} else {
+  log('ℹ️ Trusted Types API not available in this browser. Simulating policy behavior.');
+  sanitizerPolicy = { createHTML: (input) => DOMPurify.sanitize(input) };
+}
+
+function tryRaw() {
+  const input = document.getElementById('payload').value;
+  log('→ Attempting: element.innerHTML = "' + input.substring(0,50) + '..."');
+  const el = document.getElementById('raw-result');
+  // Without enforcement, raw string works — but we show what WOULD happen
+  el.textContent = 'Input: ' + input + '\n\nWithout CSP enforcement, this would execute.\nWith require-trusted-types-for \'script\' CSP:\n  → TypeError: Failed to set innerHTML on Element: This document requires TrustedHTML assignment.';
+  log('⚠️ In enforcement mode, this would throw TypeError');
+}
+
+function tryPolicy() {
+  const input = document.getElementById('payload').value;
+  log('→ Calling: policy.createHTML("' + input.substring(0,50) + '...")');
+  const sanitized = sanitizerPolicy.createHTML(input);
+  log('← Policy returned: ' + String(sanitized).substring(0,60));
+  document.getElementById('policy-result').textContent = 'Input: ' + input + '\n\nSanitized (TrustedHTML): ' + sanitized;
+  document.getElementById('policy-render').innerHTML = String(sanitized);
+}
+</script>
+</body></html>

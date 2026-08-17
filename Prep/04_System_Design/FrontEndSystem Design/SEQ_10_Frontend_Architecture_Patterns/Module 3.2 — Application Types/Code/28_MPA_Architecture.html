@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 28 – MPA Architecture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+.green{color:#10b981}.red{color:#ef4444}.amber{color:#f59e0b}
+.tl-bar{height:22px;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:.72rem;color:#fff;font-weight:600;margin-bottom:4px}
+.use-case{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;margin:6px 0;cursor:pointer;transition:all .2s}
+.use-case:hover{border-color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>📄 Multi-Page Application (MPA) Architecture</h1>
+<p class="sub">Topic 28 · Module 3.2 — Application Types · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">How MPA Works</div>
+  <div class="tab" onclick="setTab(1)">SPA vs MPA Tradeoffs</div>
+  <div class="tab" onclick="setTab(2)">When to Choose MPA</div>
+  <div class="tab" onclick="setTab(3)">Modern MPA (Next.js)</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>MPA Request Model</h3>
+    <p style="font-size:.85rem;color:#94a3b8;margin-bottom:14px">Every navigation requires a full server round-trip. Server renders HTML and sends it. Browser discards current page and loads new one. State is lost between pages (session/cookie bridges it).</p>
+    <div style="font-size:.8rem;color:#94a3b8;line-height:2;background:#0f1117;padding:14px;border-radius:8px;border:1px solid #2d3551">
+      <div><span class="amber">User clicks link</span></div>
+      <div>→ Browser makes GET /orders (full HTTP request)</div>
+      <div>→ Server: query DB, render HTML template</div>
+      <div>→ Server: sends complete HTML page (~50KB)</div>
+      <div>→ Browser: parses full HTML, discards old DOM</div>
+      <div>→ <span class="green">Page visible (all content in HTML — great for SEO)</span></div>
+      <div style="margin-top:8px;color:#ef4444">→ Repeat for every navigation — no persistent state</div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3 class="green">✅ MPA Strengths</h3>
+      <div style="font-size:.82rem;color:#94a3b8;line-height:1.9">Excellent SEO (HTML on first byte)<br>Works without JavaScript<br>Each page independently cacheable<br>Simpler mental model<br>No JS bundle size problem<br>Back-button works natively</div>
+    </div>
+    <div class="card">
+      <h3 class="red">❌ MPA Weaknesses</h3>
+      <div style="font-size:.82rem;color:#94a3b8;line-height:1.9">Full page reload flicker<br>Shared header/footer re-fetched<br>Server must render everything<br>No client-side state persistence<br>Harder to build rich interactions</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Head-to-Head Comparison</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+      <thead><tr style="background:#0f1117"><th style="padding:8px;color:#60a5fa;border-bottom:1px solid #2d3551;text-align:left">Dimension</th><th style="padding:8px;color:#60a5fa;border-bottom:1px solid #2d3551">SPA</th><th style="padding:8px;color:#60a5fa;border-bottom:1px solid #2d3551">MPA</th></tr></thead>
+      <tbody id="compare-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>When to choose — click each</h3>
+    <div id="use-cases"></div>
+    <div id="case-detail" style="display:none;margin-top:12px;padding:14px;background:#0f1117;border-radius:8px;font-size:.82rem;color:#94a3b8"></div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Modern MPA with Next.js (best of both worlds)</h3>
+    <pre><span class="cm">// Next.js App Router — each route is server-rendered HTML</span>
+<span class="cm">// but client-side navigation uses prefetch for SPA-like speed</span>
+
+<span class="cm">// app/orders/page.tsx — Server Component (MPA model)</span>
+<span class="kw">export default async function</span> <span class="attr">OrdersPage</span>() {
+  <span class="cm">// Runs on server — no JS bundle for this data fetching</span>
+  <span class="kw">const</span> orders = <span class="kw">await</span> <span class="attr">fetch</span>(<span class="str">'/api/orders'</span>).<span class="attr">then</span>(r =&gt; r.<span class="attr">json</span>());
+  
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      &lt;h1&gt;Orders&lt;/h1&gt;
+      {orders.<span class="attr">map</span>((order: Order) =&gt; (
+        &lt;OrderCard key={order.id} {...order} /&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}
+
+<span class="cm">// SEO: Google gets fully rendered HTML
+// Performance: zero client-side JS for this page
+// Client navigation: Next.js prefetches chunks → SPA-like speed</span></pre>
+    <div style="margin-top:12px;font-size:.8rem;color:#94a3b8">
+      <strong style="color:#60a5fa">The modern answer:</strong> Most production apps use <em>hybrid rendering</em> — server renders HTML for SEO/performance, then hydrates for interactivity. Next.js App Router, Nuxt 3, SvelteKit all do this.
+    </div>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const rows=[
+  ['Initial page load','Slow (full JS bundle)','Fast (HTML only)'],
+  ['Subsequent navigation','Very fast (no reload)','Slower (full reload)'],
+  ['SEO','Poor without SSR','Excellent natively'],
+  ['JS dependency','Required','Optional'],
+  ['State management','Client-side state','Session/cookie/URL'],
+  ['Caching','App shell cacheable','Per-page cacheable'],
+  ['Team skill','Frontend-heavy','Full-stack / backend'],
+  ['Best for','Dashboards, SaaS tools','Blogs, e-commerce, docs'],
+];
+const tb=document.getElementById('compare-table');
+tb.innerHTML=rows.map(r=>`<tr><td style="padding:8px;border-bottom:1px solid #1a1f2e;color:#e2e8f0">${r[0]}</td><td style="padding:8px;border-bottom:1px solid #1a1f2e;color:#94a3b8">${r[1]}</td><td style="padding:8px;border-bottom:1px solid #1a1f2e;color:#94a3b8">${r[2]}</td></tr>`).join('');
+
+const cases=[
+  {label:'E-commerce product pages',icon:'🛍️',spa:false,detail:'MPA / SSR — product pages need SEO. Google must index /products/123. Server-rendered HTML ensures crawlability and fast TTFB.'},
+  {label:'Internal admin dashboard',icon:'⚙️',spa:true,detail:'SPA — authenticated behind login, no SEO needed. Users navigate frequently between sections. Client state (filters, selections) persists across pages.'},
+  {label:'Marketing/landing page',icon:'📢',spa:false,detail:'MPA or SSG — critical SEO, few page types, minimal interactivity. Use static generation (Next.js getStaticProps).'},
+  {label:'SAP Fiori analytics tool',icon:'📊',spa:true,detail:'SPA — Hruday\'s context. Authenticated internal tool, complex charts, state shared across 10+ views. Angular SPA was the right choice.'},
+  {label:'News/media site',icon:'📰',spa:false,detail:'MPA/SSR — Each article needs SEO, unique URL, shareable. Server rendering ensures Google indexes. Next.js with ISR is ideal.'},
+];
+const uc=document.getElementById('use-cases');
+uc.innerHTML=cases.map((c,i)=>`<div class="use-case" onclick="showCase(${i})">${c.icon} <strong>${c.label}</strong> <span style="float:right;font-size:.72rem;padding:2px 8px;border-radius:10px;background:${c.spa?'#60a5fa22':'#10b98122'};color:${c.spa?'#60a5fa':'#10b981'}">${c.spa?'SPA':'MPA'}</span></div>`).join('');
+function showCase(i){const d=document.getElementById('case-detail');d.style.display='block';d.innerHTML=cases[i].detail;}
+</script>
+</body>
+</html>

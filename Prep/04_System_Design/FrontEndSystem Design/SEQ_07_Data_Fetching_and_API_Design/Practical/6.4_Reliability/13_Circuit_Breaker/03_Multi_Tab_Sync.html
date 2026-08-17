@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Circuit Breaker — Multi-Tab Sync</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+.status-bar{display:flex;gap:12px;align-items:center;margin:12px 0;flex-wrap:wrap}.status-item{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px 16px;font-size:.82rem}.status-item .val{font-weight:700;color:#ef4444}.msg-log{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.75rem;min-height:80px;max-height:200px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>⚡ Circuit Breaker — Multi-Tab Sync</h1>
+<p class="sub">BroadcastChannel syncs circuit state across browser tabs in real time</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Live Demo</div>
+  <div class="tab" onclick="setTab(1)">How It Works</div>
+  <div class="tab" onclick="setTab(2)">Code</div>
+  <div class="tab" onclick="setTab(3)">Key Takeaways</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card"><h3>Local Breaker State</h3>
+    <div class="status-bar">
+      <div class="status-item">State: <span class="val" id="v-state">CLOSED</span></div>
+      <div class="status-item">Failures: <span class="val" id="v-fail">0</span></div>
+      <div class="status-item">Tab ID: <span class="val" id="v-tab"></span></div>
+    </div>
+  </div>
+  <div class="card"><h3>Controls</h3>
+    <button onclick="makeRequest()">🔥 Call Flaky Endpoint</button>
+    <button onclick="resetBreaker()">♻️ Reset Breaker</button>
+    <button onclick="broadcast()">📢 Force Broadcast State</button>
+    <div class="info">Open this page in multiple tabs, then trigger failures in one tab — all tabs sync!</div>
+    <div class="output" id="log"></div>
+  </div>
+  <div class="card"><h3>BroadcastChannel Messages</h3>
+    <div class="msg-log" id="msgLog"></div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card"><h3>Cross-Tab Synchronization</h3>
+    <div class="info"><b>BroadcastChannel API</b> allows same-origin tabs to send messages to each other without a server.</div>
+    <div class="info">When a circuit breaker changes state in one tab, it broadcasts the new state to all other tabs on the same channel.</div>
+    <div class="info">Receiving tabs update their local breaker to match, preventing redundant requests to a known-down service.</div>
+    <div class="info">This avoids the "thundering herd" problem where every tab independently discovers the service is down.</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card"><h3>Sync via BroadcastChannel</h3>
+<pre><span class="kw">const</span> channel = <span class="kw">new</span> BroadcastChannel(<span class="str">'circuit-breaker'</span>);
+
+<span class="cm">// On state change, broadcast</span>
+<span class="kw">function</span> <span class="fn">onStateChange</span>(state, failures) {
+  channel.postMessage({
+    type: <span class="str">'state-change'</span>,
+    state, failures,
+    tabId: TAB_ID,
+    timestamp: Date.now()
+  });
+}
+
+<span class="cm">// Listen for broadcasts from other tabs</span>
+channel.onmessage = (e) => {
+  <span class="kw">const</span> { state, failures } = e.data;
+  breaker.state = state;
+  breaker.failures = failures;
+  <span class="kw">if</span> (state === <span class="str">'OPEN'</span>)
+    breaker.nextAttempt = Date.now() + cooldown;
+  updateUI();
+};</pre></div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card"><h3>Key Takeaways</h3>
+    <div class="info">✅ BroadcastChannel is zero-server cross-tab communication for same-origin pages.</div>
+    <div class="info">✅ Syncing circuit state prevents N tabs from all hammering a failing service independently.</div>
+    <div class="info">✅ Include a tabId to identify the source and avoid echo loops.</div>
+    <div class="info">✅ Fallback: SharedWorker or localStorage events for older browsers.</div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const TAB_ID=Math.random().toString(36).slice(2,8);
+document.getElementById('v-tab').textContent=TAB_ID;
+
+const logEl=document.getElementById('log'),msgLogEl=document.getElementById('msgLog');
+function addLog(msg){logEl.textContent=`[${new Date().toLocaleTimeString()}] ${msg}\n`+logEl.textContent;}
+function addMsgLog(msg){msgLogEl.textContent=`[${new Date().toLocaleTimeString()}] ${msg}\n`+msgLogEl.textContent;}
+
+class CircuitBreaker{
+  constructor(threshold=3,cooldown=5000){this.state='CLOSED';this.failures=0;this.threshold=threshold;this.cooldown=cooldown;this.nextAttempt=0;}
+  async call(fn){
+    if(this.state==='OPEN'){
+      if(Date.now()<this.nextAttempt) throw new Error('Circuit OPEN — fast fail');
+      this.state='HALF_OPEN';updateUI();addLog('⏳ → HALF-OPEN');
+    }
+    try{const r=await fn();this.onSuccess();return r;}catch(e){this.onFailure();throw e;}
+  }
+  onSuccess(){this.failures=0;this.state='CLOSED';updateUI();broadcastState();}
+  onFailure(){
+    this.failures++;
+    if(this.state==='HALF_OPEN'){this.state='OPEN';this.nextAttempt=Date.now()+this.cooldown;updateUI();broadcastState();return;}
+    if(this.failures>=this.threshold){this.state='OPEN';this.nextAttempt=Date.now()+this.cooldown;addLog(`🔴 → OPEN (${this.failures} fails)`);}
+    updateUI();broadcastState();
+  }
+}
+
+const breaker=new CircuitBreaker(3,5000);
+const channel=new BroadcastChannel('circuit-breaker-sync');
+
+function broadcastState(){
+  const msg={type:'state-change',state:breaker.state,failures:breaker.failures,tabId:TAB_ID,ts:Date.now()};
+  channel.postMessage(msg);
+  addMsgLog(`📤 SENT → ${JSON.stringify(msg)}`);
+}
+
+channel.onmessage=(e)=>{
+  const d=e.data;
+  if(d.tabId===TAB_ID) return;
+  addMsgLog(`📥 RECV from ${d.tabId}: state=${d.state}, failures=${d.failures}`);
+  breaker.state=d.state;breaker.failures=d.failures;
+  if(d.state==='OPEN') breaker.nextAttempt=Date.now()+breaker.cooldown;
+  updateUI();addLog(`🔄 Synced from tab ${d.tabId}: ${d.state}`);
+};
+
+function updateUI(){
+  document.getElementById('v-state').textContent=breaker.state;
+  document.getElementById('v-fail').textContent=breaker.failures;
+}
+
+async function makeRequest(){
+  addLog(`📡 Calling flaky… [state=${breaker.state}]`);
+  try{
+    await breaker.call(async()=>{
+      const r=await fetch(`${API}/api/unreliable/flaky?failRate=0.7`);
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);return r.json();
+    });
+    addLog('✅ Success');
+  }catch(e){addLog('❌ '+e.message);}
+}
+function resetBreaker(){breaker.state='CLOSED';breaker.failures=0;breaker.nextAttempt=0;updateUI();broadcastState();addLog('♻️ Reset');}
+function broadcast(){broadcastState();addLog('📢 Forced broadcast');}
+</script>
+</body>
+</html>

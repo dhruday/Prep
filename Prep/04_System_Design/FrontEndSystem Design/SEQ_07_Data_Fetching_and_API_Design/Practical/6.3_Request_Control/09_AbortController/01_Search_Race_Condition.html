@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab 01 — Search Race Condition</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}button.red{background:#3a1e1e;border-color:#ef4444;color:#ef4444}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+</style>
+</head>
+<body>
+<h1>Lab 01 — Search Race Condition</h1>
+<p class="sub">Without AbortController, slow responses overwrite fast ones. With abort, stale requests are cancelled.</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">🏃 Live Demo</div>
+  <div class="tab" onclick="setTab(1)">❌ Without Abort</div>
+  <div class="tab" onclick="setTab(2)">✅ With Abort</div>
+  <div class="tab" onclick="setTab(3)">📊 Timeline</div>
+</div>
+
+<!-- Tab 0: Live Demo -->
+<div class="panel active" id="p0">
+  <div class="grid2">
+    <div class="card">
+      <h3 class="bad">❌ Naive Search (Race Condition)</h3>
+      <input id="naiveInput" placeholder="Type quickly: a → ab → abc" oninput="naiveSearch(this.value)">
+      <div class="output" id="naiveOut">Type to search...</div>
+    </div>
+    <div class="card">
+      <h3 class="good">✅ AbortController Search (Safe)</h3>
+      <input id="safeInput" placeholder="Type quickly: a → ab → abc" oninput="safeSearch(this.value)">
+      <div class="output" id="safeOut">Type to search...</div>
+    </div>
+  </div>
+  <div class="info">Type fast in both inputs. The naive version may show results for an older query. The abort version always shows the latest.</div>
+</div>
+
+<!-- Tab 1: Without Abort -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3 class="bad">❌ The Problem — Stale Responses Overwrite Fresh Ones</h3>
+<pre><span class="cm">// User types "a", then "ab", then "abc" quickly</span>
+<span class="cm">// Request for "a" takes 800ms, "ab" takes 200ms, "abc" takes 400ms</span>
+<span class="cm">// Response order: "ab"(200ms) → "abc"(400ms) → "a"(800ms)</span>
+<span class="cm">// Final display shows results for "a" — WRONG!</span>
+
+<span class="kw">async function</span> <span class="fn">naiveSearch</span>(query) {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${API}/api/search/slow?q=${query}`</span>);
+  <span class="kw">const</span> data = <span class="kw">await</span> res.<span class="fn">json</span>();
+  display(data); <span class="cm">// Last response wins, not last request!</span>
+}</pre>
+  </div>
+  <div class="info warn">The core issue: network latency is non-deterministic. A request sent first can arrive last, overwriting the correct result.</div>
+</div>
+
+<!-- Tab 2: With Abort -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3 class="good">✅ The Fix — Cancel Previous Requests</h3>
+<pre><span class="kw">let</span> controller = <span class="kw">null</span>;
+
+<span class="kw">async function</span> <span class="fn">safeSearch</span>(query) {
+  <span class="cm">// Cancel any in-flight request</span>
+  <span class="kw">if</span> (controller) controller.<span class="fn">abort</span>();
+  controller = <span class="kw">new</span> <span class="fn">AbortController</span>();
+
+  <span class="kw">try</span> {
+    <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`${API}/api/search/slow?q=${query}`</span>, {
+      signal: controller.signal
+    });
+    <span class="kw">const</span> data = <span class="kw">await</span> res.<span class="fn">json</span>();
+    display(data); <span class="cm">// Only the latest request completes</span>
+  } <span class="kw">catch</span> (e) {
+    <span class="kw">if</span> (e.name !== <span class="str">'AbortError'</span>) <span class="kw">throw</span> e;
+    <span class="cm">// Aborted — silently ignore</span>
+  }
+}</pre>
+  </div>
+  <div class="info">Each new keystroke aborts the previous fetch. Only the response matching the current input is displayed.</div>
+</div>
+
+<!-- Tab 3: Timeline -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>📊 Request Timeline</h3>
+    <button onclick="runTimeline()">▶ Run Timeline Simulation</button>
+    <button class="red" onclick="clearTimeline()">Clear</button>
+    <div class="output" id="timelineOut">Click "Run" to see how requests overlap and which gets cancelled...</div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+let naiveCount = 0;
+async function naiveSearch(q) {
+  if (!q) { document.getElementById('naiveOut').textContent = 'Type to search...'; return; }
+  const id = ++naiveCount;
+  const t0 = performance.now();
+  try {
+    const res = await fetch(`${API}/api/search/slow?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    const ms = (performance.now() - t0).toFixed(0);
+    document.getElementById('naiveOut').textContent =
+      `[req #${id}] query="${q}" took ${ms}ms\n` + JSON.stringify(data, null, 2);
+  } catch (e) {
+    document.getElementById('naiveOut').textContent = `Error: ${e.message}`;
+  }
+}
+
+let safeCtrl = null, safeCount = 0;
+async function safeSearch(q) {
+  if (!q) { document.getElementById('safeOut').textContent = 'Type to search...'; return; }
+  if (safeCtrl) safeCtrl.abort();
+  safeCtrl = new AbortController();
+  const id = ++safeCount;
+  const t0 = performance.now();
+  try {
+    const res = await fetch(`${API}/api/search/slow?q=${encodeURIComponent(q)}`, { signal: safeCtrl.signal });
+    const data = await res.json();
+    const ms = (performance.now() - t0).toFixed(0);
+    document.getElementById('safeOut').textContent =
+      `[req #${id}] query="${q}" took ${ms}ms\n` + JSON.stringify(data, null, 2);
+  } catch (e) {
+    if (e.name !== 'AbortError')
+      document.getElementById('safeOut').textContent = `Error: ${e.message}`;
+  }
+}
+
+async function runTimeline() {
+  const out = document.getElementById('timelineOut');
+  out.textContent = '⏳ Simulating rapid typing: "a" → "ab" → "abc"\n\n';
+  const queries = ['a', 'ab', 'abc'];
+  let ctrl = null;
+  for (const q of queries) {
+    if (ctrl) { ctrl.abort(); out.textContent += `  🛑 Aborted previous request\n`; }
+    ctrl = new AbortController();
+    const t0 = performance.now();
+    out.textContent += `→ Sending: "${q}"...\n`;
+    try {
+      const res = await fetch(`${API}/api/search/slow?q=${encodeURIComponent(q)}`, { signal: ctrl.signal });
+      const data = await res.json();
+      const ms = (performance.now() - t0).toFixed(0);
+      out.textContent += `  ✅ "${q}" responded in ${ms}ms: ${JSON.stringify(data).slice(0, 80)}\n\n`;
+    } catch (e) {
+      if (e.name === 'AbortError') out.textContent += `  ⚡ "${q}" was aborted\n`;
+      else out.textContent += `  ❌ Error: ${e.message}\n`;
+    }
+  }
+  out.textContent += '✅ Only the last request ("abc") completed!';
+}
+
+function clearTimeline() {
+  document.getElementById('timelineOut').textContent = 'Click "Run" to see how requests overlap...';
+}
+</script>
+</body>
+</html>

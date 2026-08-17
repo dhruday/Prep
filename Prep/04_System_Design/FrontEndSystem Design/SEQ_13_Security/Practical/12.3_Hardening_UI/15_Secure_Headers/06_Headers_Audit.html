@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 06 — Security Headers Audit</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a2a1a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:500px;overflow:auto;white-space:pre-wrap;margin-top:8px}input{padding:8px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem}
+</style>
+</head>
+<body>
+<h1>🟢 Lab 06 — Security Headers Audit Tool</h1>
+<p class="sub">Module 12.3 · Complete header scan, grading, and recommendations</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Full Audit</div>
+  <div class="tab" onclick="setTab(1)">Header Cheatsheet</div>
+  <div class="tab" onclick="setTab(2)">Express Config</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>🧪 Security Headers Audit</h3>
+    <input id="audit-url" value="http://localhost:3001/api/sensitive/data" style="width:350px">
+    <button onclick="fullAudit()">🔍 Run Full Audit</button>
+    <div class="output" id="audit-result">Enter URL and click to audit</div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Security Headers Cheatsheet</h3>
+    <pre><span class="cm">// Copy-paste for Express.js production:</span>
+
+<span class="cm">// ═══ CRITICAL (Must Have) ═══</span>
+Content-Security-Policy:
+  default-src <span class="str">'none'</span>;
+  script-src <span class="str">'self'</span> <span class="str">'nonce-{random}'</span> <span class="str">'strict-dynamic'</span>;
+  style-src <span class="str">'self'</span> <span class="str">'nonce-{random}'</span>;
+  img-src <span class="str">'self'</span> data:;
+  font-src <span class="str">'self'</span>;
+  connect-src <span class="str">'self'</span>;
+  frame-ancestors <span class="str">'none'</span>;
+  base-uri <span class="str">'self'</span>;
+  form-action <span class="str">'self'</span>;
+  object-src <span class="str">'none'</span>;
+  upgrade-insecure-requests
+
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+
+X-Content-Type-Options: nosniff
+
+X-Frame-Options: DENY
+
+<span class="cm">// ═══ IMPORTANT ═══</span>
+Referrer-Policy: strict-origin-when-cross-origin
+
+Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+<span class="cm">// ═══ RECOMMENDED ═══</span>
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+Cross-Origin-Resource-Policy: same-origin
+
+<span class="cm">// ═══ REMOVE ═══</span>
+<span class="cm">// X-Powered-By (reveals technology stack)</span>
+<span class="cm">// Server (reveals server software)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Complete Express.js Configuration</h3>
+    <pre><span class="kw">const</span> express = require(<span class="str">'express'</span>);
+<span class="kw">const</span> helmet = require(<span class="str">'helmet'</span>);
+<span class="kw">const</span> crypto = require(<span class="str">'crypto'</span>);
+
+<span class="kw">const</span> app = express();
+
+<span class="cm">// Generate nonce per request</span>
+app.use((req, res, next) =&gt; {
+  res.locals.nonce = crypto.randomBytes(16).toString(<span class="str">'base64'</span>);
+  next();
+});
+
+<span class="cm">// Helmet with custom CSP</span>
+app.use((req, res, next) =&gt; {
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: [<span class="str">"'none'"</span>],
+        scriptSrc: [<span class="str">"'self'"</span>, `'nonce-\${res.locals.nonce}'`, <span class="str">"'strict-dynamic'"</span>],
+        styleSrc: [<span class="str">"'self'"</span>, `'nonce-\${res.locals.nonce}'`],
+        imgSrc: [<span class="str">"'self'"</span>, <span class="str">"data:"</span>],
+        fontSrc: [<span class="str">"'self'"</span>],
+        connectSrc: [<span class="str">"'self'"</span>],
+        frameAncestors: [<span class="str">"'none'"</span>],
+        baseUri: [<span class="str">"'self'"</span>],
+        formAction: [<span class="str">"'self'"</span>],
+        objectSrc: [<span class="str">"'none'"</span>],
+        upgradeInsecureRequests: [],
+      }
+    },
+    crossOriginOpenerPolicy: { policy: <span class="str">"same-origin"</span> },
+    crossOriginEmbedderPolicy: { policy: <span class="str">"require-corp"</span> },
+    crossOriginResourcePolicy: { policy: <span class="str">"same-origin"</span> },
+    referrerPolicy: { policy: <span class="str">"strict-origin-when-cross-origin"</span> },
+    hsts: { maxAge: 63072000, includeSubDomains: <span class="kw">true</span>, preload: <span class="kw">true</span> },
+    frameguard: { action: <span class="str">"deny"</span> }
+  })(req, res, next);
+});
+
+<span class="cm">// Permissions-Policy (not in Helmet)</span>
+app.use((req, res, next) =&gt; {
+  res.setHeader(<span class="str">'Permissions-Policy'</span>,
+    <span class="str">'camera=(), microphone=(), geolocation=(), payment=(self)'</span>);
+  next();
+});</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Headers Strategy</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How do security headers differ between API and web page responses?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Key differences: API responses (JSON): (1) X-Content-Type-Options: nosniff is CRITICAL — prevents browser from interpreting JSON as HTML. (2) Content-Type: application/json; charset=utf-8 — explicit, no sniffing. (3) CSP is less relevant (no HTML rendering) but still set it. (4) No X-Frame-Options needed (can't frame JSON). (5) CORS headers are critical — Access-Control-Allow-Origin with specific origins. Web page responses (HTML): (1) Full CSP with nonces/hashes. (2) X-Frame-Options + frame-ancestors. (3) Referrer-Policy matters (page has links). (4) Permissions-Policy (page uses browser APIs). Both: HSTS, X-Content-Type-Options, CORS (if cross-origin). Common mistake: Applying same headers to both. API responses with 'unsafe-inline' CSP, or HTML pages without frame-ancestors. Use middleware that detects response Content-Type and applies appropriate headers.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function fullAudit(){
+  const el=document.getElementById('audit-result');
+  const url=document.getElementById('audit-url').value;
+  el.textContent=`Security Headers Audit: ${url}\n${'═'.repeat(50)}\n\n`;
+  try{
+    const resp=await fetch(url);
+    const checks=[
+      {name:'Content-Security-Policy',key:'content-security-policy',weight:3,rec:'Set strict CSP with nonces'},
+      {name:'Strict-Transport-Security',key:'strict-transport-security',weight:3,rec:'max-age=63072000; includeSubDomains; preload'},
+      {name:'X-Content-Type-Options',key:'x-content-type-options',weight:2,rec:'nosniff'},
+      {name:'X-Frame-Options',key:'x-frame-options',weight:2,rec:'DENY or SAMEORIGIN'},
+      {name:'Referrer-Policy',key:'referrer-policy',weight:1,rec:'strict-origin-when-cross-origin'},
+      {name:'Permissions-Policy',key:'permissions-policy',weight:1,rec:'camera=(), microphone=(), geolocation=()'},
+      {name:'Cross-Origin-Opener-Policy',key:'cross-origin-opener-policy',weight:1,rec:'same-origin'},
+      {name:'Cross-Origin-Embedder-Policy',key:'cross-origin-embedder-policy',weight:1,rec:'require-corp'},
+      {name:'Cross-Origin-Resource-Policy',key:'cross-origin-resource-policy',weight:1,rec:'same-origin'},
+    ];
+    const leaks=[{name:'X-Powered-By',key:'x-powered-by'},{name:'Server',key:'server'}];
+    let score=0,maxScore=0;
+    el.textContent+='── Security Headers ──\n\n';
+    checks.forEach(c=>{
+      maxScore+=c.weight;
+      const val=resp.headers.get(c.key);
+      if(val){score+=c.weight;el.textContent+=`✅ ${c.name}: ${val}\n\n`}
+      else{el.textContent+=`❌ ${c.name}: MISSING\n   Recommended: ${c.rec}\n\n`}
+    });
+    el.textContent+='── Information Leaks ──\n\n';
+    leaks.forEach(l=>{
+      const val=resp.headers.get(l.key);
+      if(val){el.textContent+=`⚠️ ${l.name}: ${val} (remove this)\n`}
+      else{score+=1;el.textContent+=`✅ ${l.name}: not exposed\n`}
+    });
+    maxScore+=leaks.length;
+    const pct=Math.round(score/maxScore*100);
+    const grade=pct>=90?'A+':pct>=80?'A':pct>=70?'B':pct>=50?'C':'F';
+    el.textContent+=`\n${'═'.repeat(50)}\nGrade: ${grade} (${pct}%) — ${score}/${maxScore} points\n`;
+  }catch(e){el.textContent+=`Error: ${e.message}\n(Server may not be running)`}
+}
+</script>
+</body></html>

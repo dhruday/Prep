@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>113 – scheduler.postTask API</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#e879f9}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+.task-lane{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.task-bar{height:28px;border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:.75rem;font-weight:600;transition:width 1s ease;cursor:default}
+.lane-label{font-size:.72rem;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+</style>
+</head>
+<body>
+<h1>🎯 scheduler.postTask() API</h1>
+<p class="sub">Topic 113 · Part 7 / Module 7.4 — Main Thread Management · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Task Scheduler</div>
+  <div class="tab" onclick="setTab(2)">Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>The core problem — main thread blocking</h3>
+    <p style="color:#94a3b8;font-size:.84rem;margin-bottom:14px">JavaScript is single-threaded. Long tasks (>50ms) block the main thread, preventing frame renders and user input processing. The browser can't interrupt a running task — so a 200ms data processing loop will freeze the UI for that entire duration. The Scheduler API (WICG proposal, Chrome 94+) provides a priority queue for yielding between tasks, letting the browser interleave rendering and user input.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #ef4444;border-radius:8px;padding:12px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">user-blocking</div>
+        <div style="color:#94a3b8">Runs ASAP, like a click handler. For: form validation, auto-complete response, menu toggle. Blocks rendering.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #f59e0b;border-radius:8px;padding:12px">
+        <div style="color:#f59e0b;font-weight:700;margin-bottom:6px">user-visible</div>
+        <div style="color:#94a3b8">Default priority. For: lazy-loading UI chunks, analytics, chart rendering. Interleaved with rendering.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #60a5fa;border-radius:8px;padding:12px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">background</div>
+        <div style="color:#94a3b8">Runs when browser is idle. For: log flushing, caching, prefetch, spell check. Like rIC but with priority</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>yield() pattern — chunking long tasks</h3>
+    <p style="color:#94a3b8;font-size:.82rem">Instead of one 300ms task, use <code style="color:#a78bfa">await scheduler.yield()</code> inside a loop to yield control to the browser every N iterations. The browser gets a chance to handle input and paint a frame, then your task resumes. This keeps INP (Interaction to Next Paint) low while still completing all the work.</p>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Visualize task scheduling — click to run all 3 priority queues</h3>
+    <p style="color:#94a3b8;font-size:.8rem;margin-bottom:14px">When you queue tasks at different priorities, the browser runs them in priority order. User-blocking first, then user-visible, then background — but user-visible and background yield for rendering frames in between.</p>
+    <div style="margin-bottom:12px">
+      <button onclick="runSimulation()" style="background:#1e3a5f;border-color:#3b82f6;color:#60a5fa">▶ Schedule all tasks</button>
+      <button onclick="resetSim()">Reset</button>
+    </div>
+    <div id="timelineContainer"></div>
+    <div id="simLog" style="font-size:.75rem;color:#94a3b8;margin-top:12px;line-height:1.8"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>scheduler.postTask vs alternatives</h3>
+    <table>
+      <tr><th>API</th><th>Priority Control</th><th>Cancelable</th><th>Yield Support</th><th>Best For</th></tr>
+      <tr><td>scheduler.postTask()</td><td style="color:#10b981">3 levels</td><td style="color:#10b981">✅ AbortController</td><td style="color:#10b981">✅ scheduler.yield()</td><td>Production scheduling (Chrome 94+)</td></tr>
+      <tr><td>requestIdleCallback()</td><td style="color:#f59e0b">Background only</td><td style="color:#10b981">✅ cancelIdleCallback</td><td style="color:#ef4444">❌</td><td>Non-urgent background work</td></tr>
+      <tr><td>requestAnimationFrame()</td><td style="color:#ef4444">Visual only</td><td style="color:#10b981">✅</td><td style="color:#ef4444">❌</td><td>Graphics / animation frame-sync</td></tr>
+      <tr><td>queueMicrotask()</td><td style="color:#ef4444">No — highest priority</td><td style="color:#ef4444">❌</td><td style="color:#ef4444">❌ — blocks rendering</td><td>Tiny deferred effects (post-promise)</td></tr>
+      <tr><td>setTimeout(fn, 0)</td><td style="color:#ef4444">No</td><td style="color:#10b981">✅</td><td style="color:#ef4444">❌</td><td>Legacy pattern (min 4ms delay)</td></tr>
+      <tr><td>Web Workers</td><td style="color:#f59e0b">Via message queue</td><td style="color:#10b981">✅</td><td>N/A (off-thread)</td><td>CPU-intensive (no DOM access)</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>scheduler.postTask() with priority and cancellation</h3>
+    <pre><span class="cm">// Feature detect (Chrome 94+, polyfill otherwise)</span>
+<span class="kw">const</span> <span class="fn">schedule</span> = <span class="kw">async</span> (fn: () => <span class="kw">void</span>, priority: TaskPriority = <span class="str">'user-visible'</span>) => {
+  <span class="kw">if</span> (<span class="str">'scheduler'</span> <span class="kw">in</span> window) {
+    <span class="kw">await</span> (window <span class="kw">as</span> <span class="kw">any</span>).scheduler.<span class="fn">postTask</span>(fn, { priority });
+  } <span class="kw">else</span> {
+    <span class="kw">await new</span> <span class="fn">Promise</span>(r => <span class="fn">setTimeout</span>(r, <span class="num">0</span>));
+    <span class="fn">fn</span>();
+  }
+};
+
+<span class="cm">// Cancelable task — e.g., cancel search if user types again</span>
+<span class="kw">let</span> controller: TaskController | <span class="kw">null</span> = <span class="kw">null</span>;
+
+<span class="kw">async function</span> <span class="fn">processSearchResults</span>(query: string) {
+  controller?.<span class="fn">abort</span>();
+  controller = <span class="kw">new</span> (window <span class="kw">as</span> <span class="kw">any</span>).<span class="fn">TaskController</span>({ priority: <span class="str">'user-visible'</span> });
+  
+  <span class="kw">try</span> {
+    <span class="kw">await</span> (window <span class="kw">as</span> <span class="kw">any</span>).scheduler.<span class="fn">postTask</span>(() => {
+      <span class="fn">renderResults</span>(query);
+    }, { signal: controller.signal });
+  } <span class="kw">catch</span> (e) {
+    <span class="kw">if</span> (e.name !== <span class="str">'AbortError'</span>) <span class="kw">throw</span> e;
+  }
+}
+
+<span class="cm">// Chunked processing with yield — 10000 items without blocking</span>
+<span class="kw">async function</span> <span class="fn">processProducts</span>(products: Product[]) {
+  <span class="kw">const</span> CHUNK = <span class="num">100</span>;
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; products.length; i += CHUNK) {
+    products.<span class="fn">slice</span>(i, i + CHUNK).<span class="fn">forEach</span>(<span class="fn">process</span>);
+    <span class="kw">await</span> (window <span class="kw">as</span> <span class="kw">any</span>).scheduler.<span class="fn">yield</span>();  <span class="cm">// yield for frame / input</span>
+  }
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+const tasks = [
+  {label:'user-blocking: form validation',priority:'user-blocking',color:'#ef4444',delay:0,dur:40},
+  {label:'user-visible: render chart',priority:'user-visible',color:'#f59e0b',delay:0,dur:80},
+  {label:'user-visible: lazy load component',priority:'user-visible',color:'#f59e0b',delay:0,dur:60},
+  {label:'background: flush analytics',priority:'background',color:'#60a5fa',delay:0,dur:30},
+  {label:'background: prefetch next page',priority:'background',color:'#60a5fa',delay:0,dur:50},
+  {label:'▶ FRAME (browser paint)',priority:'frame',color:'#10b981',delay:0,dur:16},
+];
+
+function buildTimeline() {
+  const container = document.getElementById('timelineContainer');
+  container.innerHTML = tasks.map((t,i) => `
+    <div class="task-lane">
+      <div class="lane-label">${t.label}</div>
+      <div class="task-bar" id="bar${i}" style="background:${t.color}22;border:1px solid ${t.color}55;width:0%;color:${t.color}">―</div>
+    </div>
+  `).join('');
+}
+
+function runSimulation() {
+  buildTimeline();
+  const log = document.getElementById('simLog');
+  log.innerHTML = '';
+  let totalMs = 0;
+
+  // user-blocking runs first and fully
+  const seq = [0, 5, 1, 5, 2, 5, 3, 5, 4]; // interleaved with frames
+  let t = 100;
+  const order = [0, 1, 2, 3, 4]; // priority order
+  const execOrder = ['user-blocking','frame(paint)','user-visible','frame(paint)','user-visible','frame(paint)','background','frame(paint)','background'];
+  
+  [0].forEach(idx => {
+    setTimeout(()=>{
+      document.getElementById(`bar${idx}`).style.width = '60%';
+      document.getElementById(`bar${idx}`).textContent = `${tasks[idx].dur}ms`;
+      log.innerHTML += `+${totalMs}ms → ${tasks[idx].label}\n`;
+      totalMs += tasks[idx].dur;
+    }, t); t+=300;
+  });
+  
+  setTimeout(()=>{
+    document.getElementById(`bar5`).style.width = '15%';
+    document.getElementById(`bar5`).textContent = '16ms';
+    log.innerHTML += `+${totalMs}ms → ▶ Browser renders frame\n`;
+    totalMs += 16;
+  }, t); t+=200;
+
+  [1,2].forEach(idx => {
+    setTimeout(()=>{
+      document.getElementById(`bar${idx}`).style.width = '70%';
+      document.getElementById(`bar${idx}`).textContent = `${tasks[idx].dur}ms`;
+      log.innerHTML += `+${totalMs}ms → ${tasks[idx].label}\n`;
+      totalMs += tasks[idx].dur;
+    }, t); t+=350;
+    setTimeout(()=>{
+      log.innerHTML += `+${totalMs}ms → ▶ Frame\n`;
+      totalMs += 16;
+    }, t); t+=150;
+  });
+
+  [3,4].forEach(idx => {
+    setTimeout(()=>{
+      document.getElementById(`bar${idx}`).style.width = '50%';
+      document.getElementById(`bar${idx}`).textContent = `${tasks[idx].dur}ms`;
+      log.innerHTML += `+${totalMs}ms → ${tasks[idx].label} (background — low priority)\n`;
+      totalMs += tasks[idx].dur;
+    }, t); t+=400;
+  });
+}
+
+function resetSim(){
+  document.getElementById('timelineContainer').innerHTML='';
+  document.getElementById('simLog').innerHTML='';
+}
+
+buildTimeline();
+</script>
+</body>
+</html>

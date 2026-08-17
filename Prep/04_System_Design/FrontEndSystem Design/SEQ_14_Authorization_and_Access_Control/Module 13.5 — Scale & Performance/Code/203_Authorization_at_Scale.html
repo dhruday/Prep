@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>203 – Authorization at Scale</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#f472b6}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover,.btn-act{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🚀 Authorization at Scale</h1>
+<p class="sub">Topic 203 · Part 13 / Module 13.5 — Scale & Performance · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Latency Simulator</div>
+  <div class="tab" onclick="setTab(2)">Push vs Pull</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Authorization as infrastructure: tiered latency model</h3>
+    <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;font-size:.75rem;margin-bottom:12px">
+      <div style="color:#a78bfa;font-weight:700;margin-bottom:10px;font-size:.82rem">Three tiers — choose based on check complexity</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid #60a5fa44;border-radius:6px;background:#1e2130">
+          <div style="background:#60a5fa22;padding:3px 8px;border-radius:4px;color:#60a5fa;font-size:.7rem;white-space:nowrap">Tier 1: JWT claims</div>
+          <div style="color:#94a3b8;font-size:.72rem;flex:1">90% of checks — <strong style="color:#10b981">&lt;0.1ms</strong> — no I/O, in-memory Set.has()</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10;padding:8px;border:1px solid #10b98144;border-radius:6px;background:#1e2130">
+          <div style="background:#10b98122;padding:3px 8px;border-radius:4px;color:#10b981;font-size:.7rem;white-space:nowrap">Tier 2: Redis cache</div>
+          <div style="color:#94a3b8;font-size:.72rem;flex:1">8% of checks — <strong style="color:#f59e0b">&lt;1ms</strong> — single Redis GET, permission Set</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid #a78bfa44;border-radius:6px;background:#1e2130">
+          <div style="background:#a78bfa22;padding:3px 8px;border-radius:4px;color:#a78bfa;font-size:.7rem;white-space:nowrap">Tier 3: OPA sidecar</div>
+          <div style="color:#94a3b8;font-size:.72rem;flex:1">2% of checks — <strong style="color:#f59e0b">~0.5ms</strong> — complex ABAC, local socket call</div>
+        </div>
+      </div>
+    </div>
+    <div style="background:#0f1117;border:1px solid #f59e0b44;border-radius:8px;padding:10px;font-size:.78rem">
+      <div style="color:#f59e0b;font-weight:700;margin-bottom:4px">The math: 10M DAU</div>
+      <div style="color:#94a3b8;font-size:.73rem">10M users × 100 API calls/day = 1B checks/day = <strong style="color:#e2e8f0">~11,600 checks/second</strong>. Without caching: 11K DB queries/sec → DB saturates. With 95% cache hit: 580 DB queries/sec → manageable.</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Authorization request path latency simulator</h3>
+    <div style="margin-bottom:12px;font-size:.78rem;color:#94a3b8">Select authorization strategy and see the request timeline:</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn-act" id="rb-jwt" onclick="runLatencySim('jwt')">⚡ JWT claim check</button>
+      <button id="rb-redis" onclick="runLatencySim('redis_hit')">🔴 Redis cache HIT</button>
+      <button id="rb-miss" onclick="runLatencySim('redis_miss')">🔴 Redis cache MISS</button>
+      <button id="rb-opa" onclick="runLatencySim('opa_sidecar')">🧩 OPA sidecar</button>
+      <button id="rb-db" onclick="runLatencySim('db_direct')">🗄️ DB direct</button>
+    </div>
+    <div id="latencySim" style="font-size:.78rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Push vs Pull authorization model</h3>
+    <table>
+      <tr><th>Aspect</th><th>Push (JWT claims)</th><th>Pull (OPA / check API)</th></tr>
+      <tr><td>When permissions resolved</td><td>At login (token issue)</td><td>At request time</td></tr>
+      <tr><td>Latency</td><td style="color:#10b981">&lt;0.1ms (in-memory)</td><td style="color:#f59e0b">0.5-5ms (network/socket)</td></tr>
+      <tr><td>Freshness</td><td>Token TTL (15 min)</td><td style="color:#10b981">Near-real-time</td></tr>
+      <tr><td>Failure mode</td><td style="color:#10b981">None (local JWT)</td><td>Network failure risk</td></tr>
+      <tr><td>Complex policies</td><td style="color:#ef4444">Limited (JWT size)</td><td style="color:#10b981">Unlimited Rego/OPA</td></tr>
+      <tr><td>Best for</td><td>90% of standard checks</td><td>Financial, compliance, ABAC</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3>OPA deployment patterns</h3>
+    <table>
+      <tr><th>Pattern</th><th>Latency</th><th>Failure handling</th><th>Scalability</th></tr>
+      <tr><td>OPA sidecar</td><td style="color:#10b981">~0.5ms (localhost)</td><td>Local fallback</td><td>Scales with service</td></tr>
+      <tr><td>OPA cluster</td><td style="color:#f59e0b">~3ms (network)</td><td>LB handles failures</td><td>Horizontal</td></tr>
+      <tr><td>OPA compiled Wasm</td><td style="color:#10b981">~0.05ms (in-process)</td><td>None (embedded)</td><td>N/A (per-process)</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Hybrid authorization — tiered dispatch</h3>
+    <pre><span class="kw">async</span> <span class="fn">authorize</span>(input: <span class="dec">AuthzInput</span>): <span class="dec">Promise</span>&lt;<span class="dec">boolean</span>&gt; {
+  <span class="cm">// Tier 1: JWT claims — 0ms, handles 90% of checks</span>
+  <span class="kw">if</span> (input.type === <span class="str">'simple'</span>)
+    <span class="kw">return</span> jwtClaims.<span class="fn">hasPermission</span>(input.permission);
+
+  <span class="cm">// Tier 2: Redis cache — &lt;1ms</span>
+  <span class="kw">if</span> (input.type === <span class="str">'cached'</span>) {
+    <span class="kw">const</span> cached = <span class="kw">await</span> redis.<span class="fn">get</span>(<span class="str">`perm:${</span>input.tenantId<span class="str">}:${</span>input.userId<span class="str">}`</span>);
+    <span class="kw">if</span> (cached) <span class="kw">return</span> <span class="fn">new</span> <span class="dec">Set</span>(cached).<span class="fn">has</span>(input.permission);
+  }
+
+  <span class="cm">// Tier 3: OPA sidecar — ~0.5ms, complex ABAC</span>
+  <span class="kw">try</span> {
+    <span class="kw">const</span> result = <span class="kw">await</span> opaClient.<span class="fn">evaluate</span>(input.policy, input);
+    <span class="kw">return</span> result.allow === <span class="kw">true</span>;
+  } <span class="kw">catch</span> {
+    <span class="cm">// Circuit breaker: fail-closed for sensitive ops</span>
+    <span class="kw">return</span> input.sensitive ? <span class="kw">false</span> : <span class="kw">true</span>;
+  }
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+const strategies = {
+  jwt: {
+    label: 'JWT claim check',
+    steps: [
+      { label: 'Decode JWT (in-memory)', ms: 0.05, color: '#60a5fa' },
+      { label: 'Set.has(permission)', ms: 0.01, color: '#60a5fa' },
+    ],
+    total: 0.06, grade: 'Excellent', rps: '2,000,000/sec'
+  },
+  redis_hit: {
+    label: 'Redis cache HIT',
+    steps: [
+      { label: 'Redis GET (network)', ms: 0.5, color: '#10b981' },
+      { label: 'Set.has() in-memory', ms: 0.01, color: '#10b981' },
+    ],
+    total: 0.51, grade: 'Excellent', rps: '100,000/sec'
+  },
+  redis_miss: {
+    label: 'Redis cache MISS (first load)',
+    steps: [
+      { label: 'Redis GET — miss', ms: 0.5, color: '#f59e0b' },
+      { label: 'DB query for permissions', ms: 8, color: '#f59e0b' },
+      { label: 'Redis SET (cache populate)', ms: 0.5, color: '#f59e0b' },
+      { label: 'Set.has() in-memory', ms: 0.01, color: '#f59e0b' },
+    ],
+    total: 9.01, grade: 'Acceptable (1x per 5 min)', rps: '10,000/sec'
+  },
+  opa_sidecar: {
+    label: 'OPA sidecar policy evaluation',
+    steps: [
+      { label: 'Unix socket call to OPA', ms: 0.2, color: '#a78bfa' },
+      { label: 'Rego policy evaluation', ms: 0.4, color: '#a78bfa' },
+      { label: 'Decision return', ms: 0.1, color: '#a78bfa' },
+    ],
+    total: 0.7, grade: 'Good (for complex ABAC)', rps: '50,000/sec'
+  },
+  db_direct: {
+    label: 'DB direct (no cache)',
+    steps: [
+      { label: 'DB connection pool acquire', ms: 2, color: '#ef4444' },
+      { label: 'SQL: SELECT permissions WHERE userId=?', ms: 12, color: '#ef4444' },
+      { label: 'Result deserialization', ms: 1, color: '#ef4444' },
+    ],
+    total: 15, grade: '⚠️ Poor at scale', rps: '3,000/sec'
+  }
+};
+
+function runLatencySim(strategy) {
+  const s = strategies[strategy];
+  Object.keys(strategies).forEach(k => {
+    const id = k === 'redis_hit' ? 'rb-redis' : k === 'redis_miss' ? 'rb-miss' : k === 'opa_sidecar' ? 'rb-opa' : k === 'db_direct' ? 'rb-db' : `rb-${k}`;
+    const b = document.getElementById(id);
+    if (b) b.className = k === strategy ? 'btn-act' : '';
+  });
+
+  const maxMs = Math.max(...Object.values(strategies).map(x => x.total));
+  const stepsHtml = s.steps.map(step => {
+    const widthPct = Math.max(2, (step.ms / maxMs) * 80);
+    return `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div style="font-size:.7rem;color:#94a3b8;width:280px;flex-shrink:0">${step.label}</div>
+        <div style="height:14px;border-radius:4px;background:${step.color}55;border:1px solid ${step.color}44;width:${widthPct}%;min-width:6px;transition:width .3s"></div>
+        <div style="font-size:.7rem;color:${step.color};white-space:nowrap">${step.ms}ms</div>
+      </div>
+    `;
+  }).join('');
+
+  const gradeColor = s.grade.includes('⚠️') ? '#ef4444' : s.grade.includes('Excellent') ? '#10b981' : '#f59e0b';
+
+  document.getElementById('latencySim').innerHTML = `
+    ${stepsHtml}
+    <div style="margin-top:8px;padding:10px 14px;border-radius:8px;background:#0f1117;border:1px solid #2d3551">
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div style="font-size:.78rem">Total P99: <strong style="color:#60a5fa">${s.total}ms</strong></div>
+        <div style="font-size:.78rem">Max throughput: <strong style="color:#10b981">${s.rps}</strong></div>
+        <div style="font-size:.78rem">Grade: <strong style="color:${gradeColor}">${s.grade}</strong></div>
+      </div>
+    </div>
+  `;
+}
+
+runLatencySim('jwt');
+</script>
+</body>
+</html>

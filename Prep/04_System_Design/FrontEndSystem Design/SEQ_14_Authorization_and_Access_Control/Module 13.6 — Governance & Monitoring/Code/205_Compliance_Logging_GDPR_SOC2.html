@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>205 · Compliance Logging: GDPR &amp; SOC 2 · Hruday's Interview Prep</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.6;min-height:100vh}
+header{background:linear-gradient(135deg,#1e2130,#0f2e1e);padding:24px 32px;border-bottom:1px solid #2d3551}
+header h1{font-size:1.6rem;color:#10b981;font-weight:700}
+header p{color:#94a3b8;font-size:.9rem;margin-top:4px}
+.tabs{display:flex;gap:4px;padding:16px 24px 0;background:#12151e;border-bottom:1px solid #2d3551;flex-wrap:wrap}
+.tab-btn{padding:10px 20px;border:none;background:transparent;color:#94a3b8;cursor:pointer;border-bottom:3px solid transparent;font-size:.9rem;transition:all .2s;border-radius:4px 4px 0 0}
+.tab-btn.active{color:#10b981;border-bottom-color:#10b981;background:#1e2130}
+.tab-btn:hover:not(.active){color:#e2e8f0;background:#1a1f30}
+.tab{display:none;padding:28px 32px;animation:fadeIn .3s ease}
+.tab.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+h2{color:#10b981;font-size:1.2rem;margin-bottom:16px}
+h3{color:#60a5fa;font-size:1rem;margin:20px 0 10px}
+p{color:#cbd5e1;margin-bottom:12px;line-height:1.7}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:20px}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:20px}
+.card h4{font-size:.85rem;margin-bottom:8px;font-weight:600}
+.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.75rem;font-weight:600;margin-bottom:8px}
+.tag-green{background:#064e3b;color:#6ee7b7}
+.tag-blue{background:#1a3a5c;color:#93c5fd}
+.tag-purple{background:#3b1f6b;color:#c4b5fd}
+.tag-red{background:#4c1515;color:#fca5a5}
+.tag-amber{background:#451f00;color:#fcd34d}
+pre{background:#12151e;border:1px solid #2d3551;border-radius:8px;padding:20px;overflow-x:auto;font-size:.82rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#f472b6}
+table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:.85rem}
+th{background:#2d3551;padding:10px 14px;text-align:left;color:#94a3b8;font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.5px}
+td{padding:10px 14px;border-bottom:1px solid #1e2130;color:#cbd5e1}
+tr:hover td{background:#1a1f30}
+.divider{height:1px;background:#2d3551;margin:24px 0}
+.info-block{background:#1a1f30;border-left:3px solid #60a5fa;padding:12px 16px;border-radius:0 6px 6px 0;margin:12px 0;font-size:.85rem;color:#cbd5e1}
+.warn-block{background:#1a1500;border-left:3px solid #f59e0b;padding:12px 16px;border-radius:0 6px 6px 0;margin:12px 0;font-size:.85rem;color:#fef3c7}
+.success-block{background:#052e1c;border-left:3px solid #10b981;padding:12px 16px;border-radius:0 6px 6px 0;margin:12px 0;font-size:.85rem;color:#d1fae5}
+/* Compliance Checklist Simulator */
+#checklist-container{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:700px){#checklist-container{grid-template-columns:1fr}}
+.checklist-section{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:20px}
+.checklist-section h4{margin-bottom:14px;font-size:.9rem}
+.checklist-section h4.gdpr{color:#a78bfa}
+.checklist-section h4.soc2{color:#60a5fa}
+.chk-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #12151e;cursor:pointer;transition:background .15s;border-radius:4px}
+.chk-item:last-child{border-bottom:none}
+.chk-item:hover{background:#252a3d;padding-left:4px}
+.chk-box{width:20px;height:20px;border:2px solid #2d3551;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;margin-top:2px}
+.chk-box.checked{background:#10b981;border-color:#10b981}
+.chk-box.checked::after{content:'✓';color:white;font-size:.7rem;font-weight:700}
+.chk-box.failed{background:#ef4444;border-color:#ef4444}
+.chk-box.failed::after{content:'✗';color:white;font-size:.7rem;font-weight:700}
+.chk-text{font-size:.8rem;color:#94a3b8;line-height:1.4}
+.chk-text .label{display:block;color:#e2e8f0;font-weight:600;margin-bottom:2px}
+.score-bar-wrap{background:#12151e;border-radius:8px;height:16px;overflow:hidden;margin:8px 0}
+.score-bar{height:100%;border-radius:8px;transition:width .5s ease,background .3s}
+.score-display{text-align:center;font-size:1.5rem;font-weight:700;margin:6px 0}
+.overall-score-box{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:20px;margin-top:16px;text-align:center}
+.overall-score-box h4{color:#94a3b8;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.legend-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;justify-content:center}
+.legend-item{font-size:.72rem;color:#94a3b8;display:flex;align-items:center;gap:4px}
+.legend-dot{width:8px;height:8px;border-radius:50%}
+.ctrl-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.btn{padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600;transition:all .2s}
+.btn-green{background:#064e3b;color:#6ee7b7;border:1px solid #10b981}
+.btn-green:hover{background:#0d6b52}
+.btn-ghost{background:transparent;color:#94a3b8;border:1px solid #2d3551}
+.btn-ghost:hover{background:#1e2130;color:#e2e8f0}
+/* Pseudonymization flow */
+.pseudo-flow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.pseudo-node{background:#1e2130;border:1px solid #2d3551;border-radius:8px;padding:12px 16px;font-size:.8rem;text-align:center}
+.pseudo-node.input{border-color:#ef4444;background:#2a1010}
+.pseudo-node.output{border-color:#10b981;background:#0a2e1c}
+.pseudo-node.store{border-color:#f59e0b;background:#1a1200}
+.pseudo-arrow{color:#2d3551;font-size:1.4rem}
+.retention-bar-wrap{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.r-row{display:flex;align-items:center;gap:10px;font-size:.8rem}
+.r-label{min-width:100px;color:#94a3b8}
+.r-bar-bg{flex:1;background:#12151e;border-radius:4px;height:12px;overflow:hidden}
+.r-bar{height:100%;border-radius:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Compliance Logging: GDPR &amp; SOC 2</h1>
+  <p>Topic 205 · Part 13 / Module 13.6 — Governance &amp; Monitoring · Hruday's Interview Prep</p>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="setTab(1)">Concept</button>
+  <button class="tab-btn" onclick="setTab(2)">Compliance Checklist</button>
+  <button class="tab-btn" onclick="setTab(3)">Comparison</button>
+  <button class="tab-btn" onclick="setTab(4)">Code Patterns</button>
+</div>
+
+<!-- TAB 1: CONCEPT -->
+<div id="tab1" class="tab active">
+  <h2>GDPR vs SOC 2: The Core Tension</h2>
+  <p><strong>GDPR</strong> says minimize what you collect. <strong>SOC 2</strong> says prove who did what. The engineering resolution: pseudonymize PII at write time. Logs contain enough to satisfy SOC 2 evidence requirements, but not enough to identify the person without the separately-stored mapping table.</p>
+
+  <div class="cards">
+    <div class="card" style="border-color:#a78bfa">
+      <span class="tag tag-purple">GDPR</span>
+      <h4 style="color:#c4b5fd">Data Protection Regulation (EU)</h4>
+      <ul style="color:#94a3b8;font-size:.82rem;padding-left:16px;line-height:2">
+        <li>Art. 5(1)(c) — Data minimisation</li>
+        <li>Art. 5(1)(e) — Storage limitation (retain only as long as necessary)</li>
+        <li>Art. 17 — Right to erasure ("Right to be forgotten")</li>
+        <li>Art. 25 — Privacy by design (pseudonymization default)</li>
+        <li>Art. 30 — Records of processing activities</li>
+        <li>Fines up to <strong>4% global annual revenue</strong></li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:#60a5fa">
+      <span class="tag tag-blue">SOC 2</span>
+      <h4 style="color:#93c5fd">Trust Service Criteria (US SaaS)</h4>
+      <ul style="color:#94a3b8;font-size:.82rem;padding-left:16px;line-height:2">
+        <li>CC6.1 — Logical access restrictions</li>
+        <li>CC6.2 — Access provisioning log</li>
+        <li>CC6.3 — Access revocation/offboarding log</li>
+        <li>CC6.7 — Data transmission / export audit</li>
+        <li>CC7.2 — Anomaly monitoring evidence</li>
+        <li>Type II covers <strong>6–12 month window</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <h3>Pseudonymization: Resolving GDPR ↔ SOC 2 Conflict</h3>
+  <div class="pseudo-flow">
+    <div class="pseudo-node input">Raw Request<br><small style="color:#fca5a5">userId: hruday@acme.com<br>ip: 185.22.33.44</small></div>
+    <div class="pseudo-arrow">→</div>
+    <div class="pseudo-node" style="border-color:#a78bfa;background:#1f1040">HMAC(tenantId+value+salt)<br><small style="color:#c4b5fd">SHA256 slice</small></div>
+    <div class="pseudo-arrow">→</div>
+    <div class="pseudo-node output">Audit Log Entry<br><small style="color:#6ee7b7">userId: pseu_a9f3c1b2<br>ip: 185.22.x.x</small></div>
+    <div class="pseudo-arrow"> + </div>
+    <div class="pseudo-node store">Mapping Table<br><small style="color:#fcd34d">pseu_a9f3c1b2<br>→ hruday@acme.com</small></div>
+  </div>
+  <p style="font-size:.82rem;color:#475569">On GDPR erasure request: delete the mapping table row. The audit log entry remains (tamper-evident) but is now anonymized — no longer personal data under GDPR.</p>
+
+  <div class="divider"></div>
+
+  <h3>Log Retention by Regulation</h3>
+  <div class="retention-bar-wrap">
+    <div class="r-row"><span class="r-label">GDPR (EU)</span><div class="r-bar-bg"><div class="r-bar" style="width:13%;background:#a78bfa"></div></div><small style="color:#94a3b8">~90 days (stated purpose)</small></div>
+    <div class="r-row"><span class="r-label">SOC 2</span><div class="r-bar-bg"><div class="r-bar" style="width:14%;background:#60a5fa"></div></div><small style="color:#94a3b8">1 year</small></div>
+    <div class="r-row"><span class="r-label">PCI-DSS</span><div class="r-bar-bg"><div class="r-bar" style="width:14%;background:#f472b6"></div></div><small style="color:#94a3b8">1 year (3 months online)</small></div>
+    <div class="r-row"><span class="r-label">HIPAA</span><div class="r-bar-bg"><div class="r-bar" style="width:85%;background:#10b981"></div></div><small style="color:#94a3b8">6 years</small></div>
+    <div class="r-row"><span class="r-label">SOX (financial)</span><div class="r-bar-bg"><div class="r-bar" style="width:100%;background:#f59e0b"></div></div><small style="color:#94a3b8">7 years ← longest</small></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <h3>WORM (Write Once Read Many) Storage Options</h3>
+  <div class="cards">
+    <div class="card">
+      <span class="tag tag-amber">AWS</span>
+      <h4>S3 Object Lock — Compliance Mode</h4>
+      <p style="color:#94a3b8;font-size:.82rem">Once in compliance mode, <em>no one</em> (including AWS root) can delete or modify objects before the retention date expires. Strongest tamper-evidence guarantee.</p>
+    </div>
+    <div class="card">
+      <span class="tag tag-blue">Azure</span>
+      <h4>Immutable Blob Storage</h4>
+      <p style="color:#94a3b8;font-size:.82rem">Time-based retention policies at container level. Locked policies cannot be shortened. Meets SEC Rule 17a-4 WORM requirements.</p>
+    </div>
+    <div class="card">
+      <span class="tag tag-green">Self-hosted</span>
+      <h4>Hash Chaining</h4>
+      <p style="color:#94a3b8;font-size:.82rem">Each log entry stores SHA-256(previousHash + currentContent). Modification of any entry breaks all subsequent hashes — proving tampering without special storage.</p>
+    </div>
+  </div>
+
+  <div class="warn-block">
+    <strong>⚠️ GDPR + Audit Log Conflict:</strong> You cannot delete an audit log entry (that breaks tamper-evidence). You also cannot refuse a valid erasure request. Resolution: only store pseudonymous IDs. Deleting the <em>mapping</em> satisfies erasure. The log entry no longer contains personal data.
+  </div>
+</div>
+
+<!-- TAB 2: COMPLIANCE CHECKLIST SIMULATOR -->
+<div id="tab2" class="tab">
+  <h2>Compliance Checklist Simulator</h2>
+  <p>Click each control to toggle its status (compliant ✓ / non-compliant ✗). Watch your compliance scores update in real time. Aim for 100% on both frameworks before an audit.</p>
+
+  <div class="ctrl-row">
+    <button class="btn btn-green" onclick="checkAll()">✅ Mark All Compliant</button>
+    <button class="btn btn-ghost" onclick="resetAll()">Reset All</button>
+  </div>
+
+  <div id="checklist-container">
+    <!-- GDPR column -->
+    <div class="checklist-section">
+      <h4 class="gdpr">GDPR Controls</h4>
+      <div id="gdpr-score-bar-wrap" class="score-bar-wrap"><div id="gdpr-score-bar" class="score-bar" style="width:0%;background:#a78bfa"></div></div>
+      <div id="gdpr-score-display" class="score-display" style="color:#a78bfa">0%</div>
+
+      <div class="chk-item" onclick="toggle('g1')" id="item-g1">
+        <div class="chk-box" id="box-g1"></div>
+        <div class="chk-text"><span class="label">Art. 5 — PII not stored in raw form</span>userId, IP, email pseudonymized with HMAC before logging</div>
+      </div>
+      <div class="chk-item" onclick="toggle('g2')" id="item-g2">
+        <div class="chk-box" id="box-g2"></div>
+        <div class="chk-text"><span class="label">Art. 17 — Erasure request supported</span>Mapping table deletion anonymizes logs without modifying them</div>
+      </div>
+      <div class="chk-item" onclick="toggle('g3')" id="item-g3">
+        <div class="chk-box" id="box-g3"></div>
+        <div class="chk-text"><span class="label">Art. 25 — Privacy by design</span>Pseudonymization is default, not an add-on</div>
+      </div>
+      <div class="chk-item" onclick="toggle('g4')" id="item-g4">
+        <div class="chk-box" id="box-g4"></div>
+        <div class="chk-text"><span class="label">Art. 5(1)(e) — Retention policy defined</span>Automated deletion/archival at stated purpose deadline</div>
+      </div>
+      <div class="chk-item" onclick="toggle('g5')" id="item-g5">
+        <div class="chk-box" id="box-g5"></div>
+        <div class="chk-text"><span class="label">Art. 30 — Records of processing</span>Documented what data is processed, why, and on what legal basis</div>
+      </div>
+      <div class="chk-item" onclick="toggle('g6')" id="item-g6">
+        <div class="chk-box" id="box-g6"></div>
+        <div class="chk-text"><span class="label">Data residency — EU data stays in EU</span>Audit logs for EU tenants stored in EU regions only</div>
+      </div>
+      <div class="chk-item" onclick="toggle('g7')" id="item-g7">
+        <div class="chk-box" id="box-g7"></div>
+        <div class="chk-text"><span class="label">Access controls on mapping table</span>Only security team can de-pseudonymize; access itself is audited</div>
+      </div>
+    </div>
+
+    <!-- SOC 2 column -->
+    <div class="checklist-section">
+      <h4 class="soc2">SOC 2 Controls</h4>
+      <div id="soc2-score-bar-wrap" class="score-bar-wrap"><div id="soc2-score-bar" class="score-bar" style="width:0%;background:#60a5fa"></div></div>
+      <div id="soc2-score-display" class="score-display" style="color:#60a5fa">0%</div>
+
+      <div class="chk-item" onclick="toggle('s1')" id="item-s1">
+        <div class="chk-box" id="box-s1"></div>
+        <div class="chk-text"><span class="label">CC6.1 — Logical access controls logged</span>Every role/permission assignment captured as structured event</div>
+      </div>
+      <div class="chk-item" onclick="toggle('s2')" id="item-s2">
+        <div class="chk-box" id="box-s2"></div>
+        <div class="chk-text"><span class="label">CC6.2 — Access provisioning log</span>Who granted what to whom and when — queryable by auditor</div>
+      </div>
+      <div class="chk-item" onclick="toggle('s3')" id="item-s3">
+        <div class="chk-box" id="box-s3"></div>
+        <div class="chk-text"><span class="label">CC6.3 — Offboarding/revocation log</span>Access removal on employee exit, role change, or explicit revoke</div>
+      </div>
+      <div class="chk-item" onclick="toggle('s4')" id="item-s4">
+        <div class="chk-box" id="box-s4"></div>
+        <div class="chk-text"><span class="label">CC6.7 — Data export audit trail</span>Every bulk export/download generates a log entry</div>
+      </div>
+      <div class="chk-item" onclick="toggle('s5')" id="item-s5">
+        <div class="chk-box" id="box-s5"></div>
+        <div class="chk-text"><span class="label">CC7.2 — Anomaly monitoring active</span>SIEM rules configured; high-deny-rate users flagged</div>
+      </div>
+      <div class="chk-item" onclick="toggle('s6')" id="item-s6">
+        <div class="chk-box" id="box-s6"></div>
+        <div class="chk-text"><span class="label">1-year retention enforced</span>Audit logs retained ≥1 year, queryable for audit period evidence</div>
+      </div>
+      <div class="chk-item" onclick="toggle('s7')" id="item-s7">
+        <div class="chk-box" id="box-s7"></div>
+        <div class="chk-text"><span class="label">WORM / tamper-evident storage</span>S3 Object Lock, Immutable Blob, or hash-chained records</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overall-score-box">
+    <h4>Overall Compliance Score</h4>
+    <div class="score-bar-wrap"><div id="overall-bar" class="score-bar" style="width:0%;background:#10b981"></div></div>
+    <div id="overall-score" class="score-display" style="color:#10b981">0%</div>
+    <div id="compliance-verdict" style="color:#475569;font-size:.85rem">Mark controls compliant to track readiness.</div>
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div> GDPR</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div> SOC 2</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Overall</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 3: COMPARISON -->
+<div id="tab3" class="tab">
+  <h2>GDPR vs SOC 2 — Side by Side</h2>
+  <table>
+    <thead><tr><th>Aspect</th><th>GDPR</th><th>SOC 2</th></tr></thead>
+    <tbody>
+      <tr><td>Origin</td><td>EU law (2018)</td><td>AICPA standard (US)</td></tr>
+      <tr><td>Who it applies to</td><td>Any org processing EU personal data</td><td>SaaS/cloud service providers</td></tr>
+      <tr><td>PII in logs</td><td>❌ Minimize; pseudonymize</td><td>✅ Required (identity evidence)</td></tr>
+      <tr><td>Log deletion</td><td>Erasure via pseudonym mapping deletion</td><td>WORM — no deletion allowed</td></tr>
+      <tr><td>Retention</td><td>No fixed minimum; purpose-limited</td><td>1 year minimum</td></tr>
+      <tr><td>Audit type</td><td>Regulator investigation (DPA)</td><td>3rd party auditor (CPA firm)</td></tr>
+      <tr><td>Enforcement</td><td>4% global revenue fine</td><td>Lose certification (commercial impact)</td></tr>
+      <tr><td>Key log events</td><td>Data access, erasure requests, consent changes</td><td>Role changes, access grants, exports, logins</td></tr>
+      <tr><td>Right to erasure</td><td>✅ Must support</td><td>N/A</td></tr>
+      <tr><td>Continuous monitoring</td><td>Recommended</td><td>Required (CC7.2)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+  <h2>Multi-Regulation Retention Matrix</h2>
+  <table>
+    <thead><tr><th>Regulation</th><th>Min Retention</th><th>Max Retention</th><th>Industry</th><th>Tiered Strategy</th></tr></thead>
+    <tbody>
+      <tr><td>GDPR</td><td>Purpose-limited (~90 days for security)</td><td>As long as justified</td><td>Any (EU data subjects)</td><td>Hot 90d → Glacier 1yr</td></tr>
+      <tr><td>SOC 2</td><td>1 year</td><td>2 years recommended</td><td>SaaS/Cloud</td><td>Hot 6mo → Glacier 2yr</td></tr>
+      <tr><td>HIPAA</td><td>6 years</td><td>6 years</td><td>Healthcare</td><td>Hot 1yr → Glacier 6yr</td></tr>
+      <tr><td>SOX</td><td>7 years</td><td>7 years</td><td>Public companies (financial)</td><td>Hot 1yr → Glacier 7yr</td></tr>
+      <tr><td>PCI-DSS</td><td>1 year</td><td>1 year</td><td>Payment card</td><td>Online 3mo → Cold 9mo</td></tr>
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+  <h2>Compliance Logging by Company Context</h2>
+  <table>
+    <thead><tr><th>Company</th><th>Relevant Standard</th><th>Logging Mechanism</th></tr></thead>
+    <tbody>
+      <tr><td>Microsoft</td><td>GDPR + SOC 2 + ISO 27001</td><td>Azure Activity Log, Purview Audit, Defender for Cloud</td></tr>
+      <tr><td>Adobe</td><td>GDPR + CCPA + SOC 2</td><td>Experience Platform audit trail + DULE policy enforcement log</td></tr>
+      <tr><td>Salesforce</td><td>GDPR + SOC 2 + HIPAA + PCI</td><td>Shield Event Monitoring, Field Audit Trail</td></tr>
+      <tr><td>Cisco</td><td>SOC 2 + FedRAMP + GDPR</td><td>SecureX audit aggregation, ISE access control logs</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info-block">
+    <strong>Key insight for multi-regulation environments:</strong> Use log category metadata to apply different retention policies per event type. <code>category: 'financial_op'</code> → 7 years (SOX). <code>category: 'eu_data_access'</code> → 90 days (GDPR). <code>category: 'role_change'</code> → 1 year (SOC 2). A single retention engine applies the right policy automatically.
+  </div>
+</div>
+
+<!-- TAB 4: CODE PATTERNS -->
+<div id="tab4" class="tab">
+  <h2>Code Patterns</h2>
+
+  <h3>GDPR-Compliant Pseudonymization</h3>
+  <pre><span class="kw">import</span> { createHash } <span class="kw">from</span> <span class="str">'crypto'</span>;
+
+<span class="cm">// HMAC-based pseudonymization — stable (same input = same output) but not reversible</span>
+<span class="kw">function</span> <span class="fn">pseudonymize</span>(value: <span class="kw">string</span>, tenantId: <span class="kw">string</span>): <span class="kw">string</span> {
+  <span class="kw">return</span> <span class="fn">createHash</span>(<span class="str">'sha256'</span>)
+    .<span class="fn">update</span>(<span class="str">`</span><span class="kw">${tenantId}</span><span class="str">:</span><span class="kw">${value}</span><span class="str">:</span><span class="kw">${process.env.PSEUDONYM_SALT}</span><span class="str">`</span>)
+    .<span class="fn">digest</span>(<span class="str">'hex'</span>)
+    .<span class="fn">slice</span>(<span class="num">0</span>, <span class="num">16</span>);
+}
+
+<span class="kw">function</span> <span class="fn">maskIp</span>(ip: <span class="kw">string</span>): <span class="kw">string</span> {
+  <span class="cm">// IPv4: keep first 2 octets; IPv6: keep first 4 groups</span>
+  <span class="kw">if</span> (ip.<span class="fn">includes</span>(<span class="str">':'</span>)) <span class="kw">return</span> ip.<span class="fn">split</span>(<span class="str">':'</span>).<span class="fn">slice</span>(<span class="num">0</span>,<span class="num">4</span>).<span class="fn">join</span>(<span class="str">':'</span>) + <span class="str">::x:x:x:x'</span>;
+  <span class="kw">return</span> ip.<span class="fn">split</span>(<span class="str">'.'</span>).<span class="fn">slice</span>(<span class="num">0</span>,<span class="num">2</span>).<span class="fn">join</span>(<span class="str">'.'</span>) + <span class="str">'.x.x'</span>;
+}
+
+<span class="cm">// GDPR erasure: delete mapping → log entries anonymized, not deleted</span>
+<span class="kw">async function</span> <span class="fn">processErasureRequest</span>(userId: <span class="kw">string</span>, tenantId: <span class="kw">string</span>): <span class="kw">Promise</span>&lt;<span class="kw">void</span>&gt; {
+  <span class="kw">const</span> pseudoId = <span class="fn">pseudonymize</span>(userId, tenantId);
+  <span class="cm">// Step 1: Delete mapping table entry (GDPR erasure satisfied)</span>
+  <span class="kw">await</span> db.<span class="fn">query</span>(<span class="str">'DELETE FROM pseudonym_mapping WHERE pseudo_id = $1 AND tenant_id = $2'</span>, [pseudoId, tenantId]);
+  <span class="cm">// Step 2: Audit log entries still exist — now anonymized (no longer personal data)</span>
+  <span class="cm">// Step 3: Log the erasure request itself (meta-compliance record)</span>
+  <span class="kw">await</span> metaAudit.<span class="fn">write</span>({ action: <span class="str">'gdpr:erasure_processed'</span>, pseudoId, tenantId });
+}</pre>
+
+  <h3>SOC 2 Evidence Query Service</h3>
+  <pre><span class="cm">// Provides structured evidence for SOC 2 auditor evidence requests</span>
+<span class="kw">export class</span> <span class="fn">Soc2EvidenceService</span> {
+  <span class="cm">// CC6.2 — Access provisioning log (auditor: "who was granted access in Q1?")</span>
+  <span class="kw">async</span> <span class="fn">getProvisioningLog</span>(from: Date, to: Date, tenantId: <span class="kw">string</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.repo.<span class="fn">query</span>({
+      tenantId,
+      action: { <span class="kw">in</span>: [<span class="str">'user:grant_role'</span>, <span class="str">'permission:create'</span>, <span class="str">'access:provision'</span>] },
+      timestamp: { gte: from, lte: to }
+    });
+  }
+
+  <span class="cm">// CC6.3 — Access revocation log (auditor: "who was offboarded and when?")</span>
+  <span class="kw">async</span> <span class="fn">getRevocationLog</span>(from: Date, to: Date, tenantId: <span class="kw">string</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.repo.<span class="fn">query</span>({
+      tenantId,
+      action: { <span class="kw">in</span>: [<span class="str">'user:revoke_role'</span>, <span class="str">'access:revoke'</span>, <span class="str">'user:offboard'</span>] },
+      timestamp: { gte: from, lte: to }
+    });
+  }
+
+  <span class="cm">// CC7.2 — Anomaly evidence (auditor: "how do you detect suspicious access?")</span>
+  <span class="kw">async</span> <span class="fn">getHighDenyUsers</span>(from: Date, to: Date, tenantId: <span class="kw">string</span>) {
+    <span class="kw">return</span> <span class="kw">this</span>.repo.<span class="fn">aggregateByUser</span>({ tenantId, decision: <span class="str">'deny'</span>, timestamp: { gte: from, lte: to }, havingCount: { gte: <span class="num">100</span> } });
+  }
+}
+
+<span class="cm">// Multi-framework retention enforcer</span>
+<span class="kw">const</span> RETENTION_POLICIES = [
+  { category: <span class="str">'security_event'</span>, days: <span class="num">90</span>,   <span class="cm">/* GDPR */</span>   coldDays: <span class="num">365</span>  },
+  { category: <span class="str">'role_change'</span>,    days: <span class="num">365</span>,  <span class="cm">/* SOC 2 */</span>  coldDays: <span class="num">730</span>  },
+  { category: <span class="str">'financial_op'</span>,   days: <span class="num">365</span>,  <span class="cm">/* SOX */</span>    coldDays: <span class="num">2555</span> },
+  { category: <span class="str">'pii_access'</span>,     days: <span class="num">180</span>,  <span class="cm">/* GDPR+SOC2 */</span> coldDays: <span class="num">730</span> },
+];
+
+<span class="kw">async function</span> <span class="fn">runRetentionCycle</span>(): <span class="kw">Promise</span>&lt;<span class="kw">void</span>&gt; {
+  <span class="kw">for</span> (<span class="kw">const</span> p <span class="kw">of</span> RETENTION_POLICIES) {
+    <span class="kw">const</span> hotCutoff  = <span class="kw">new</span> <span class="fn">Date</span>(Date.now() - p.days     * <span class="num">86400000</span>);
+    <span class="kw">const</span> coldCutoff = <span class="kw">new</span> <span class="fn">Date</span>(Date.now() - p.coldDays  * <span class="num">86400000</span>);
+    <span class="kw">await</span> archiver.<span class="fn">moveToGlacier</span>({ category: p.category, olderThan: hotCutoff });
+    <span class="kw">await</span> archiver.<span class="fn">verifyGlacierIntegrity</span>({ category: p.category, olderThan: coldCutoff });
+    <span class="cm">// Note: we never DELETE — only archive to WORM storage</span>
+  }
+}</pre>
+
+  <div class="success-block">
+    <strong>Key Interviewer Points:</strong><br>
+    (1) HMAC pseudonymization — deterministic, not reversible without the PSEUDONYM_SALT env var<br>
+    (2) Erasure = delete mapping table, not the log<br>
+    (3) SOC2EvidenceService wraps auditor evidence queries — compliance team, not devops, uses this<br>
+    (4) Retention enforcer uses WORM archive (never DELETE) with per-category policies
+  </div>
+</div>
+
+<script>
+const state = {};
+const gdprItems = ['g1','g2','g3','g4','g5','g6','g7'];
+const soc2Items = ['s1','s2','s3','s4','s5','s6','s7'];
+const allItems = [...gdprItems, ...soc2Items];
+allItems.forEach(id => state[id] = null);
+
+function toggle(id) {
+  if(state[id] === null) state[id] = 'checked';
+  else if(state[id] === 'checked') state[id] = 'failed';
+  else state[id] = null;
+  const box = document.getElementById('box-'+id);
+  box.className = 'chk-box' + (state[id] ? ' '+state[id] : '');
+  updateScores();
+}
+
+function checkAll() {
+  allItems.forEach(id => { state[id] = 'checked'; document.getElementById('box-'+id).className = 'chk-box checked'; });
+  updateScores();
+}
+
+function resetAll() {
+  allItems.forEach(id => { state[id] = null; document.getElementById('box-'+id).className = 'chk-box'; });
+  updateScores();
+}
+
+function calcScore(items) {
+  const checked = items.filter(id => state[id] === 'checked').length;
+  return Math.round((checked / items.length) * 100);
+}
+
+function updateScores() {
+  const gdprPct = calcScore(gdprItems);
+  const soc2Pct = calcScore(soc2Items);
+  const overallPct = calcScore(allItems);
+  document.getElementById('gdpr-score-bar').style.width = gdprPct+'%';
+  document.getElementById('gdpr-score-display').textContent = gdprPct+'%';
+  document.getElementById('soc2-score-bar').style.width = soc2Pct+'%';
+  document.getElementById('soc2-score-display').textContent = soc2Pct+'%';
+  document.getElementById('overall-bar').style.width = overallPct+'%';
+  document.getElementById('overall-bar').style.background = overallPct===100?'#10b981':overallPct>=70?'#f59e0b':'#ef4444';
+  document.getElementById('overall-score').textContent = overallPct+'%';
+  const verdicts = {
+    100: '🎉 Fully compliant! Ready for audit.',
+    85: '✅ Nearly there — a few controls need attention.',
+    70: '⚠️ Moderate compliance gaps. Address before audit.',
+    0: '❌ Major compliance gaps. Significant work required.',
+  };
+  const v = overallPct===100?100:overallPct>=85?85:overallPct>=70?70:0;
+  document.getElementById('compliance-verdict').textContent = verdicts[v];
+  document.getElementById('compliance-verdict').style.color = overallPct===100?'#10b981':overallPct>=70?'#fcd34d':'#fca5a5';
+}
+
+function setTab(n) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab'+n).classList.add('active');
+  document.querySelectorAll('.tab-btn')[n-1].classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — CSRF Token Patterns</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟡 Lab 02 — CSRF Token Patterns</h1>
+<p class="sub">Module 12.1 · Synchronizer Token vs Double-Submit Cookie vs Origin Check</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Patterns Comparison</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Implementation</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Three CSRF Prevention Patterns</h3>
+    <table>
+      <tr><th>Pattern</th><th>How It Works</th><th>Pros</th><th>Cons</th></tr>
+      <tr>
+        <td style="color:#10b981">Synchronizer Token</td>
+        <td>Server generates random token, stores in session. Client sends in hidden form field or header.</td>
+        <td>Most secure, battle-tested</td>
+        <td>Requires server-side session state</td>
+      </tr>
+      <tr>
+        <td style="color:#60a5fa">Double-Submit Cookie</td>
+        <td>Server sets CSRF token in cookie AND expects it in request header. Attacker can't read the cookie to copy it.</td>
+        <td>Stateless, scales well</td>
+        <td>Vulnerable if attacker can set cookies (subdomain XSS)</td>
+      </tr>
+      <tr>
+        <td style="color:#a78bfa">Origin/Referer Check</td>
+        <td>Server checks Origin or Referer header matches expected domain.</td>
+        <td>No token management</td>
+        <td>Referer can be stripped; Origin not sent on some requests</td>
+      </tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3>Modern SPA Pattern: Custom Header</h3>
+    <pre><span class="cm">// SPAs that use fetch/XHR can use a simpler approach:</span>
+<span class="cm">// Cross-origin requests with custom headers trigger CORS preflight.</span>
+<span class="cm">// Evil.com CANNOT add custom headers via form submission.</span>
+
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'/api/transfer'</span>, {
+  method: <span class="str">'POST'</span>,
+  headers: {
+    <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span>,  <span class="cm">// triggers preflight</span>
+    <span class="str">'X-Requested-With'</span>: <span class="str">'XMLHttpRequest'</span>  <span class="cm">// custom header = CSRF protection</span>
+  },
+  body: JSON.stringify({ to: <span class="str">'friend'</span>, amount: <span class="str">50</span> })
+});
+
+<span class="cm">// Server-side: reject requests without the custom header</span>
+<span class="kw">if</span> (!req.headers[<span class="str">'x-requested-with'</span>]) {
+  <span class="kw">return</span> res.status(<span class="str">403</span>).json({ error: <span class="str">'Missing custom header'</span> });
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Test All Three Patterns</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:10px">Log in first, then test each CSRF defense pattern:</p>
+    <div class="grid2">
+      <div>
+        <input id="user" value="alice" placeholder="Username" style="width:100%;padding:8px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;margin:4px 0">
+        <input id="pass" value="Password123!" type="password" style="width:100%;padding:8px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;margin:4px 0">
+        <button onclick="login()">🔑 Login</button>
+      </div>
+      <div id="session-info" class="output" style="min-height:40px">Not logged in</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Pattern 1: Synchronizer Token</h3>
+    <div class="grid2">
+      <div>
+        <button onclick="testSync(false)" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Request WITHOUT token</button>
+        <div class="output" id="sync-fail"></div>
+      </div>
+      <div>
+        <button onclick="testSync(true)" style="background:#1a3a2a;border-color:#10b981;color:#10b981">✅ Request WITH token</button>
+        <div class="output" id="sync-ok"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Pattern 2: Double-Submit Cookie</h3>
+    <div class="grid2">
+      <div>
+        <button onclick="testDouble(false)" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Header missing (cookie only)</button>
+        <div class="output" id="double-fail"></div>
+      </div>
+      <div>
+        <button onclick="testDouble(true)" style="background:#1a3a2a;border-color:#10b981;color:#10b981">✅ Cookie + Header match</button>
+        <div class="output" id="double-ok"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Pattern 3: Origin Check</h3>
+    <div class="grid2">
+      <div>
+        <button onclick="testOrigin('http://evil.com')" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Origin: evil.com</button>
+        <div class="output" id="origin-fail"></div>
+      </div>
+      <div>
+        <button onclick="testOrigin(location.origin)" style="background:#1a3a2a;border-color:#10b981;color:#10b981">✅ Origin: same-origin</button>
+        <div class="output" id="origin-ok"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Server Implementation (Express.js)</h3>
+    <pre><span class="cm">// Synchronizer Token Pattern</span>
+<span class="kw">const</span> crypto = require(<span class="str">'crypto'</span>);
+<span class="kw">const</span> tokens = <span class="kw">new</span> Map(); <span class="cm">// session_id → csrf_token</span>
+
+app.get(<span class="str">'/api/csrf/token'</span>, (req, res) => {
+  <span class="kw">const</span> token = crypto.randomBytes(<span class="str">32</span>).toString(<span class="str">'hex'</span>);
+  tokens.set(req.sessionId, token);
+  res.json({ csrfToken: token });
+});
+
+app.post(<span class="str">'/api/transfer'</span>, (req, res) => {
+  <span class="kw">const</span> expected = tokens.get(req.sessionId);
+  <span class="kw">const</span> received = req.headers[<span class="str">'x-csrf-token'</span>];
+  <span class="kw">if</span> (!expected || expected !== received) {
+    <span class="kw">return</span> res.status(<span class="str">403</span>).json({ error: <span class="str">'Invalid CSRF token'</span> });
+  }
+  tokens.delete(req.sessionId); <span class="cm">// one-time use</span>
+  <span class="cm">// process transfer...</span>
+});
+
+<span class="cm">// Double-Submit Cookie Pattern</span>
+app.use((req, res, next) => {
+  <span class="kw">if</span> ([<span class="str">'POST'</span>,<span class="str">'PUT'</span>,<span class="str">'DELETE'</span>].includes(req.method)) {
+    <span class="kw">const</span> cookieToken = req.cookies[<span class="str">'csrf-token'</span>];
+    <span class="kw">const</span> headerToken = req.headers[<span class="str">'x-csrf-token'</span>];
+    <span class="kw">if</span> (!cookieToken || cookieToken !== headerToken) {
+      <span class="kw">return</span> res.status(<span class="str">403</span>).json({ error: <span class="str">'CSRF mismatch'</span> });
+    }
+  }
+  next();
+});</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CSRF Patterns</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: For a new Google-scale app, which CSRF pattern would you choose?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">For an SPA: Custom header check (X-Requested-With) + SameSite=Lax cookies. This is the simplest and most scalable. The custom header forces a CORS preflight, which cross-origin forms can't do. For SSR pages with forms: synchronizer tokens stored in the session. Double-submit as fallback for stateless microservices. Always layer with SameSite cookies.</p>
+      <p><strong style="color:#60a5fa">Q: How does SameSite=Lax interact with CSRF in real scenarios?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Lax sends cookies on top-level navigations (GET) but NOT on cross-origin POST form submissions. This blocks classic CSRF. But: (1) GET-based state changes are still vulnerable, (2) Two-minute POST window on new cookies in Chrome, (3) doesn't protect against subdomain attacks. Always pair SameSite with explicit CSRF tokens for defense-in-depth.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+let token=null;
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function login(){
+  try{
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('user').value,password:document.getElementById('pass').value}),credentials:'include'});
+    const d=await res.json();
+    if(d.token){token=d.token;document.getElementById('session-info').textContent='✅ Logged in\nJWT: '+d.token.substring(0,30)+'...'}
+    else document.getElementById('session-info').textContent='❌ '+JSON.stringify(d);
+  }catch(e){document.getElementById('session-info').textContent='Error: '+e.message}
+}
+
+async function testSync(withToken){
+  const h={'Content-Type':'application/json','Authorization':`Bearer ${token}`};
+  let csrfToken='';
+  if(withToken){
+    const r=await fetch(`${API}/api/csrf/token`,{headers:h});
+    const d=await r.json();csrfToken=d.csrfToken;
+    h['X-CSRF-Token']=csrfToken;
+  }
+  const res=await fetch(`${API}/api/csrf/protected/transfer`,{method:'POST',headers:h,body:JSON.stringify({to:'friend',amount:50})});
+  const d=await res.json();
+  document.getElementById(withToken?'sync-ok':'sync-fail').textContent=`Status: ${res.status}\n${JSON.stringify(d,null,2)}`;
+}
+
+async function testDouble(withHeader){
+  const h={'Content-Type':'application/json','Authorization':`Bearer ${token}`};
+  if(withHeader){
+    const r=await fetch(`${API}/api/csrf/token`,{headers:h,credentials:'include'});
+    const d=await r.json();h['X-CSRF-Token']=d.csrfToken;
+  }
+  const res=await fetch(`${API}/api/csrf/protected/transfer`,{method:'POST',headers:h,body:JSON.stringify({to:'friend',amount:50}),credentials:'include'});
+  const d=await res.json();
+  document.getElementById(withHeader?'double-ok':'double-fail').textContent=`Status: ${res.status}\n${JSON.stringify(d,null,2)}`;
+}
+
+async function testOrigin(origin){
+  const h={'Content-Type':'application/json','Authorization':`Bearer ${token}`,'Origin':origin};
+  const res=await fetch(`${API}/api/csrf/protected/transfer`,{method:'POST',headers:h,body:JSON.stringify({to:'friend',amount:50})});
+  const d=await res.json();
+  const id=origin.includes('evil')?'origin-fail':'origin-ok';
+  document.getElementById(id).textContent=`Origin: ${origin}\nStatus: ${res.status}\n${JSON.stringify(d,null,2)}`;
+}
+</script>
+</body></html>

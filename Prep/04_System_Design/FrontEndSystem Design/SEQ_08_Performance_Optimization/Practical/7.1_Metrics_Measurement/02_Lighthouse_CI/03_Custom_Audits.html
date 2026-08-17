@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Custom Lighthouse Audits</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}
+</style>
+</head>
+<body>
+<h1>Custom Lighthouse Audits</h1>
+<p class="sub">Practical 7.1 · Create custom audits for organization-specific perf checks</p>
+
+<div class="card">
+  <h3>1. Custom Audit: Maximum Third-Party Scripts</h3>
+  <pre><span class="cm">// third-party-audit.js</span>
+<span class="cm">// Fails if page loads more than 3 third-party scripts</span>
+
+<span class="kw">import</span> { Audit } <span class="kw">from</span> <span class="str">'lighthouse'</span>;
+
+<span class="kw">class</span> <span class="fn">ThirdPartyScriptAudit</span> <span class="kw">extends</span> Audit {
+  <span class="kw">static get</span> <span class="fn">meta</span>() {
+    <span class="kw">return</span> {
+      id: <span class="str">'third-party-script-count'</span>,
+      title: <span class="str">'Page loads limited third-party scripts'</span>,
+      failureTitle: <span class="str">'Too many third-party scripts loaded'</span>,
+      description: <span class="str">'Each 3rd-party script adds latency and risk.'</span>,
+      requiredArtifacts: [<span class="str">'devtoolsLogs'</span>],
+    };
+  }
+
+  <span class="kw">static async</span> <span class="fn">audit</span>(artifacts) {
+    <span class="kw">const</span> devtoolsLog = artifacts.devtoolsLogs[Audit.DEFAULT_PASS];
+    <span class="kw">const</span> networkRecords = <span class="kw">await</span> NetworkRecords.request(devtoolsLog);
+
+    <span class="kw">const</span> pageHost = <span class="kw">new</span> URL(artifacts.URL.finalUrl).host;
+    <span class="kw">const</span> thirdParty = networkRecords.filter(req =&gt;
+      req.resourceType === <span class="str">'Script'</span> &&
+      <span class="kw">new</span> URL(req.url).host !== pageHost
+    );
+
+    <span class="kw">const</span> MAX = <span class="num">3</span>;
+    <span class="kw">return</span> {
+      score: thirdParty.length &lt;= MAX ? <span class="num">1</span> : <span class="num">0</span>,
+      numericValue: thirdParty.length,
+      displayValue: <span class="str">`${thirdParty.length} third-party scripts`</span>,
+      details: Audit.makeTableDetails(
+        [{ key: <span class="str">'url'</span>, label: <span class="str">'Script URL'</span> },
+         { key: <span class="str">'size'</span>, label: <span class="str">'Size (KB)'</span> }],
+        thirdParty.map(r =&gt; ({
+          url: r.url,
+          size: Math.round(r.transferSize / <span class="num">1024</span>),
+        }))
+      ),
+    };
+  }
+}</pre>
+</div>
+
+<div class="card">
+  <h3>2. Custom Audit: No Render-Blocking CSS</h3>
+  <pre><span class="cm">// render-blocking-css-audit.js</span>
+<span class="kw">class</span> <span class="fn">RenderBlockingCSSAudit</span> <span class="kw">extends</span> Audit {
+  <span class="kw">static get</span> <span class="fn">meta</span>() {
+    <span class="kw">return</span> {
+      id: <span class="str">'no-render-blocking-css'</span>,
+      title: <span class="str">'No render-blocking stylesheets above 5KB'</span>,
+      failureTitle: <span class="str">'Large render-blocking stylesheets found'</span>,
+      description: <span class="str">'Inline critical CSS and async-load the rest.'</span>,
+      requiredArtifacts: [<span class="str">'TagsBlockingFirstPaint'</span>],
+    };
+  }
+
+  <span class="kw">static</span> <span class="fn">audit</span>(artifacts) {
+    <span class="kw">const</span> blocking = artifacts.TagsBlockingFirstPaint
+      .filter(tag =&gt; tag.tag.endsWith(<span class="str">'link'</span>) && tag.transferSize &gt; <span class="num">5120</span>);
+
+    <span class="kw">return</span> {
+      score: blocking.length === <span class="num">0</span> ? <span class="num">1</span> : <span class="num">0</span>,
+      displayValue: <span class="str">`${blocking.length} blocking stylesheets > 5KB`</span>,
+    };
+  }
+}</pre>
+</div>
+
+<div class="card">
+  <h3>3. Registering Custom Audits</h3>
+  <pre><span class="cm">// custom-config.js — Lighthouse custom config</span>
+module.exports = {
+  <span class="kw">extends</span>: <span class="str">'lighthouse:default'</span>,
+  audits: [
+    <span class="str">'./third-party-audit.js'</span>,
+    <span class="str">'./render-blocking-css-audit.js'</span>,
+  ],
+  categories: {
+    <span class="str">'custom-perf'</span>: {
+      title: <span class="str">'Custom Performance Checks'</span>,
+      auditRefs: [
+        { id: <span class="str">'third-party-script-count'</span>, weight: <span class="num">1</span> },
+        { id: <span class="str">'no-render-blocking-css'</span>, weight: <span class="num">1</span> },
+      ],
+    },
+  },
+};
+
+<span class="cm">// Run: lighthouse https://example.com --config-path=./custom-config.js</span></pre>
+</div>
+
+<div class="card">
+  <h3>4. Lighthouse Plugin Structure</h3>
+  <pre><span class="cm">// For reusable audits, package as a Lighthouse plugin:</span>
+<span class="cm">//</span>
+<span class="cm">// lighthouse-plugin-my-company/</span>
+<span class="cm">// ├── package.json          ← name: "lighthouse-plugin-my-company"</span>
+<span class="cm">// ├── plugin.js             ← exports { audits, category }</span>
+<span class="cm">// └── audits/</span>
+<span class="cm">//     ├── third-party.js</span>
+<span class="cm">//     └── render-blocking.js</span>
+<span class="cm">//</span>
+<span class="cm">// plugin.js:</span>
+module.exports = {
+  audits: [
+    { path: <span class="str">'lighthouse-plugin-my-company/audits/third-party.js'</span> },
+    { path: <span class="str">'lighthouse-plugin-my-company/audits/render-blocking.js'</span> },
+  ],
+  category: {
+    title: <span class="str">'My Company Perf'</span>,
+    auditRefs: [
+      { id: <span class="str">'third-party-script-count'</span>, weight: <span class="num">1</span> },
+      { id: <span class="str">'no-render-blocking-css'</span>, weight: <span class="num">1</span> },
+    ],
+  },
+};
+
+<span class="cm">// Run: lighthouse https://example.com --plugins=lighthouse-plugin-my-company</span></pre>
+</div>
+</body>
+</html>

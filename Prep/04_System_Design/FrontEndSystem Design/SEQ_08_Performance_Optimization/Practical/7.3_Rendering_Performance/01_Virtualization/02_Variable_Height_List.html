@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Variable Height List Virtualization</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}button{background:#f59e0b;color:#0f1117;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.82rem;margin:4px}#output{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;margin-top:10px;font-size:.78rem;max-height:180px;overflow-y:auto;font-family:monospace}.list-container{height:350px;overflow-y:auto;border:1px solid #2d3551;border-radius:8px;margin:8px 0;position:relative}.vrow{padding:8px 12px;border-bottom:1px solid #1a1d2e;font-size:.82rem;position:absolute;width:100%;left:0}.vrow .title{color:#f59e0b;font-weight:600}.vrow .body{color:#94a3b8;font-size:.75rem;margin-top:2px}</style>
+</head>
+<body>
+<h1>Variable Height List Virtualization</h1>
+<p class="sub">Practical 7.3 · Virtualize lists where rows have different heights</p>
+
+<div class="card">
+  <h3>Live Demo: 5,000 Variable-Height Items</h3>
+  <p style="font-size:.78rem;color:#94a3b8;margin-bottom:8px">Each row has random content length → different heights. Scroll to see virtualization in action.</p>
+  <button onclick="buildVirtualList()">Render Virtual List</button>
+  <button onclick="clearAll()">Clear</button>
+  <div id="listContainer" class="list-container"></div>
+  <div id="output"></div>
+</div>
+
+<div class="card">
+  <h3>react-window VariableSizeList</h3>
+  <pre><span class="kw">import</span> { VariableSizeList <span class="kw">as</span> List } <span class="kw">from</span> <span class="str">'react-window'</span>;
+
+<span class="cm">// You must provide itemSize function: index → pixel height</span>
+<span class="kw">function</span> <span class="fn">ChatMessages</span>({ messages }) {
+  <span class="kw">const</span> listRef = useRef();
+
+  <span class="cm">// Pre-calculate or estimate heights</span>
+  <span class="kw">const</span> <span class="fn">getItemSize</span> = (index) =&gt; {
+    <span class="kw">const</span> msg = messages[index];
+    <span class="kw">const</span> lineCount = Math.ceil(msg.text.length / <span class="num">60</span>);
+    <span class="kw">return</span> <span class="num">40</span> + lineCount * <span class="num">20</span>; <span class="cm">// base + lines × lineHeight</span>
+  };
+
+  <span class="kw">return</span> (
+    &lt;<span class="fn">List</span>
+      ref={listRef}
+      height={<span class="num">500</span>}
+      width={<span class="str">"100%"</span>}
+      itemCount={messages.length}
+      itemSize={getItemSize}     <span class="cm">// function, not number</span>
+      overscanCount={<span class="num">3</span>}
+    &gt;
+      {({ index, style }) =&gt; (
+        &lt;div style={style}&gt;
+          &lt;strong&gt;{messages[index].user}&lt;/strong&gt;
+          &lt;p&gt;{messages[index].text}&lt;/p&gt;
+        &lt;/div&gt;
+      )}
+    &lt;/List&gt;
+  );
+}
+
+<span class="cm">// ⚠️ If heights change after render (e.g., image loads):</span>
+listRef.current.resetAfterIndex(changedIndex);
+<span class="cm">// Recalculates positions from that index onward</span></pre>
+</div>
+
+<div class="card">
+  <h3>Dynamic Height Measurement (react-virtuoso)</h3>
+  <pre><span class="cm">// react-virtuoso handles dynamic heights automatically</span>
+<span class="cm">// No need to pre-calculate — it measures after render</span>
+
+<span class="kw">import</span> { Virtuoso } <span class="kw">from</span> <span class="str">'react-virtuoso'</span>;
+
+<span class="kw">function</span> <span class="fn">Feed</span>({ posts }) {
+  <span class="kw">return</span> (
+    &lt;<span class="fn">Virtuoso</span>
+      data={posts}
+      itemContent={(index, post) =&gt; (
+        &lt;<span class="fn">PostCard</span>
+          title={post.title}
+          body={post.body}
+          images={post.images} <span class="cm">// images load → height changes → OK!</span>
+        /&gt;
+      )}
+      <span class="cm">// Optional: provide estimate for better initial layout</span>
+      defaultItemHeight={<span class="num">200</span>}
+      <span class="cm">// Optional: enable smooth scrolling to index</span>
+      initialTopMostItemIndex={posts.length - <span class="num">1</span>}
+    /&gt;
+  );
+}
+
+<span class="cm">// @tanstack/react-virtual (headless approach)</span>
+<span class="kw">import</span> { useVirtualizer } <span class="kw">from</span> <span class="str">'@tanstack/react-virtual'</span>;
+
+<span class="kw">const</span> virtualizer = <span class="fn">useVirtualizer</span>({
+  count: items.length,
+  getScrollElement: () =&gt; parentRef.current,
+  estimateSize: () =&gt; <span class="num">50</span>,          <span class="cm">// initial estimate</span>
+  measureElement: (el) =&gt; el.getBoundingClientRect().height,
+});
+<span class="cm">// Headless — you render the DOM yourself, full control</span></pre>
+</div>
+
+<script>
+const container = document.getElementById('listContainer');
+const output = document.getElementById('output');
+const log = (msg) => { output.innerHTML += msg + '\n'; };
+
+const TOTAL = 5000;
+const OVERSCAN = 3;
+
+// Generate variable-height data
+const items = Array.from({length: TOTAL}, (_, i) => {
+  const lines = 1 + Math.floor(Math.random() * 4);
+  const text = Array.from({length: lines}, () => 
+    'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'.slice(0, 20 + Math.floor(Math.random() * 35))
+  ).join(' ');
+  return { id: i, title: `Message #${i+1}`, text, lines };
+});
+
+// Pre-compute heights and offsets
+const LINE_HEIGHT = 18;
+const BASE_HEIGHT = 36;
+const heights = items.map(it => BASE_HEIGHT + it.lines * LINE_HEIGHT);
+const offsets = [0];
+for (let i = 1; i < TOTAL; i++) offsets[i] = offsets[i-1] + heights[i-1];
+const totalHeight = offsets[TOTAL-1] + heights[TOTAL-1];
+
+function buildVirtualList() {
+  container.innerHTML = '';
+  const spacer = document.createElement('div');
+  spacer.style.height = totalHeight + 'px';
+  spacer.style.position = 'relative';
+  container.appendChild(spacer);
+  
+  const start = performance.now();
+  
+  function findStartIndex(scrollTop) {
+    let lo = 0, hi = TOTAL - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (offsets[mid] + heights[mid] < scrollTop) lo = mid + 1;
+      else hi = mid;
+    }
+    return Math.max(0, lo - OVERSCAN);
+  }
+  
+  function renderVisible() {
+    const scrollTop = container.scrollTop;
+    const viewH = container.clientHeight;
+    const startIdx = findStartIndex(scrollTop);
+    let endIdx = startIdx;
+    while (endIdx < TOTAL - 1 && offsets[endIdx] < scrollTop + viewH + 200) endIdx++;
+    endIdx = Math.min(TOTAL - 1, endIdx + OVERSCAN);
+    
+    spacer.querySelectorAll('.vrow').forEach(r => r.remove());
+    for (let i = startIdx; i <= endIdx; i++) {
+      const row = document.createElement('div');
+      row.className = 'vrow';
+      row.style.top = offsets[i] + 'px';
+      row.style.height = heights[i] + 'px';
+      row.innerHTML = `<div class="title">${items[i].title} (h=${heights[i]}px)</div><div class="body">${items[i].text}</div>`;
+      spacer.appendChild(row);
+    }
+    return endIdx - startIdx + 1;
+  }
+  
+  const rendered = renderVisible();
+  const dur = (performance.now() - start).toFixed(1);
+  log(`Virtual rendered: ${rendered} of ${TOTAL} items (variable height), ${dur}ms`);
+  log(`Total scroll height: ${(totalHeight/1024).toFixed(1)}KB of layout`);
+  
+  container.addEventListener('scroll', () => requestAnimationFrame(renderVisible));
+}
+
+function clearAll() { container.innerHTML = ''; output.innerHTML = ''; }
+</script>
+</body>
+</html>

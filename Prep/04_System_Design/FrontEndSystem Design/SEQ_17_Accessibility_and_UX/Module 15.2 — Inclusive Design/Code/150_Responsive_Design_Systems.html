@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 150 – Responsive Design Systems</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#10b981;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#0f2318;border-color:#10b981;color:#10b981}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#10b981;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #10b981;background:#0f2318;color:#10b981;cursor:pointer;font-size:.82rem;margin:4px}
+input[type=range]{accent-color:#10b981;width:200px;vertical-align:middle}
+</style>
+</head>
+<body>
+<h1>📐 Responsive Design Systems</h1>
+<p class="sub">Topic 150 · Part 14 / 14.2 Inclusive Design · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Fluid Type Demo</div>
+  <div class="tab" onclick="setTab(2)">Breakpoint Systems</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Responsive design systems — what differs at scale</h3>
+    <p style="color:#94a3b8;font-size:.83rem;margin-bottom:14px">A design system isn't just a component library — it's a set of constraints that produce consistent, accessible, and adaptive UI across screen sizes, devices, and user preferences. Adobe Spectrum, SAP Fiori, Microsoft Fluent, and Salesforce Lightning all implement systematic breakpoints, fluid spacing, and adaptive typography. Senior frontend engineers at these companies are expected to understand and extend these systems, not just consume them.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#10b981;font-weight:700;margin-bottom:6px">Fluid typography</div><div style="color:#94a3b8">Font size linearly interpolates between a min and max based on viewport width: clamp(min, preferred, max). No breakpoint jumps — smooth scaling.</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Container queries</div><div style="color:#94a3b8">CSS @container — component responds to its own parent container size, not the viewport. Enables truly reusable components that work in sidebars AND full-width panels.</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#a78bfa;font-weight:700;margin-bottom:6px">Preference media queries</div><div style="color:#94a3b8">prefers-reduced-motion, prefers-color-scheme, prefers-contrast, prefers-reduced-data. Critical for inclusivity — never animate unless motion is allowed.</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Breakpoint strategies</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#10b981"><th style="padding:8px;border:1px solid #2d3551;text-align:left">Strategy</th><th style="padding:8px;border:1px solid #2d3551">Pattern</th><th style="padding:8px;border:1px solid #2d3551">When to use</th></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">Mobile-first</td><td style="padding:8px;border:1px solid #2d3551;font-family:monospace;font-size:.74rem;color:#94a3b8">min-width: 640px, 1024px, 1280px</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Always — ensures smaller devices load minimal CSS</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">Content-based</td><td style="padding:8px;border:1px solid #2d3551;font-family:monospace;font-size:.74rem;color:#94a3b8">Set breakpoints where layout breaks, not at device sizes</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Bespoke pages where content should dictate layout</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">Container-first</td><td style="padding:8px;border:1px solid #2d3551;font-family:monospace;font-size:.74rem;color:#94a3b8">@container (min-width: 400px)</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Component library — card, widget, sidebar content</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Fluid typography visualizer — move slider to simulate viewport</h3>
+    <div style="margin-bottom:14px">
+      <label style="color:#94a3b8;font-size:.8rem">Viewport width: <span id="vw-label">800px</span></label><br>
+      <input type="range" id="vw-slider" min="320" max="1440" value="800" oninput="updateFluid()">
+    </div>
+    <div id="fluid-demo" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:20px">
+      <p id="fluid-h1" style="font-weight:700;color:#e2e8f0;transition:font-size .1s">Heading — fluid type scales smoothly</p>
+      <p id="fluid-body" style="color:#94a3b8;margin-top:8px;transition:font-size .1s">Body text stays readable at all sizes because it uses clamp() to linearly interpolate between minimum and maximum values.</p>
+    </div>
+    <div id="fluid-info" style="margin-top:10px;font-size:.78rem;color:#60a5fa"></div>
+    <div style="margin-top:10px;background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:10px;font-size:.78rem;font-family:monospace;color:#94a3b8">
+      h1 { font-size: clamp(1.5rem, 2.5vw + 1rem, 3rem); }<br>
+      body { font-size: clamp(1rem, 1.5vw + 0.5rem, 1.25rem); }
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Container query — card adapts to its container, not to viewport</h3>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <button onclick="setContainerW(300)">Narrow (300px)</button>
+      <button onclick="setContainerW(500)">Medium (500px)</button>
+      <button onclick="setContainerW(700)">Wide (700px)</button>
+    </div>
+    <div id="cq-container" style="container-type:inline-size;container-name:card-container;width:500px;transition:width .3s;overflow:hidden">
+      <div id="cq-card" style="background:#0f1117;border:1px solid #2d3551;border-radius:10px;padding:16px;display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+        <div style="background:#10b981;border-radius:8px;width:60px;height:60px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem">🛒</div>
+        <div style="flex:1;min-width:120px">
+          <div style="font-weight:700;color:#e2e8f0;margin-bottom:4px">Product name</div>
+          <div style="color:#94a3b8;font-size:.8rem;margin-bottom:8px">Description of product, now showing full detail in wider layout.</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span style="background:#0f2318;border:1px solid #10b981;color:#10b981;padding:3px 8px;border-radius:4px;font-size:.75rem">Add to cart</span>
+            <span style="background:#1a2332;border:1px solid #2d3551;color:#94a3b8;padding:3px 8px;border-radius:4px;font-size:.75rem">Wishlist</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="color:#94a3b8;font-size:.72rem;margin-top:6px">Container width: <span id="cq-label">500px</span> — in practice, card reflows when the sidebar/column changes, not the viewport</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Fluid type scale + container query + media preference code</h3>
+    <pre><span class="cm">/* ─── Fluid type scale (Utopia-inspired) ───</span>
+<span class="cm">   clamp(min, preferred-vw-based, max) — no breakpoints needed */</span>
+:root {
+  --type-xs: <span class="fn">clamp</span>(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --type-sm: <span class="fn">clamp</span>(0.875rem, 0.8rem + 0.375vw, 1rem);
+  --type-md: <span class="fn">clamp</span>(1rem, 0.9rem + 0.5vw, 1.25rem);
+  --type-lg: <span class="fn">clamp</span>(1.25rem, 1rem + 1.25vw, 2rem);
+  --type-xl: <span class="fn">clamp</span>(1.5rem, 1rem + 2.5vw, 3rem);
+}
+
+<span class="cm">/* ─── Container queries ─── */</span>
+.card-wrapper { container-type: inline-size; container-name: card; }
+
+@container card (min-width: 400px) {
+  .card { display: grid; grid-template-columns: 80px 1fr; }
+}
+
+<span class="cm">/* ─── Preference media queries ─── */</span>
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; }
+}
+@media (prefers-contrast: more) {
+  :root { --text-muted: #ffffff; --border-color: #ffffff; }
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0f1117; --text: #e2e8f0; }
+}
+
+<span class="cm">// ─── React hook for user preferences ───</span>
+<span class="kw">function</span> <span class="fn">useMotionSafe</span>() {
+  <span class="kw">const</span> mq = <span class="fn">matchMedia</span>(<span class="str">'(prefers-reduced-motion: reduce)'</span>);
+  <span class="kw">const</span> [safe, setSafe] = <span class="fn">useState</span>(!mq.matches);
+  <span class="fn">useEffect</span>(() =&gt; {
+    mq.<span class="fn">addEventListener</span>(<span class="str">'change'</span>, e =&gt; <span class="fn">setSafe</span>(!e.matches));
+  }, []);
+  <span class="kw">return</span> safe;
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+function updateFluid(){
+  const vw=parseInt(document.getElementById('vw-slider').value);
+  document.getElementById('vw-label').textContent=vw+'px';
+  const h1Size=Math.max(24,Math.min(48,24+(vw-320)*(48-24)/(1440-320)));
+  const bodySize=Math.max(14,Math.min(20,14+(vw-320)*(20-14)/(1440-320)));
+  document.getElementById('fluid-h1').style.fontSize=h1Size+'px';
+  document.getElementById('fluid-body').style.fontSize=bodySize+'px';
+  document.getElementById('fluid-info').textContent=`h1: ${h1Size.toFixed(1)}px  |  body: ${bodySize.toFixed(1)}px  |  clamp(1.5rem, 2.5vw+1rem, 3rem)`;
+}
+updateFluid();
+function setContainerW(w){document.getElementById('cq-container').style.width=w+'px';document.getElementById('cq-label').textContent=w+'px';}
+</script>
+</body>
+</html>

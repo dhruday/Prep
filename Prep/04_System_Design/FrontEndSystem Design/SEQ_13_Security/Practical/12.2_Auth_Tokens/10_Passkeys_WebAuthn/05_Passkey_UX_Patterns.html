@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 05 — Passkey UX Patterns</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a3a2a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:500px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟢 Lab 05 — Passkey UX Patterns</h1>
+<p class="sub">Module 12.2 · Progressive enhancement, migration strategy, best practices</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">UX Best Practices</div>
+  <div class="tab" onclick="setTab(1)">Migration Strategy</div>
+  <div class="tab" onclick="setTab(2)">Progressive Enhancement</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Passkey UX Guidelines</h3>
+    <pre><span class="cm">// 1. DISCOVERY — Let users know passkeys exist</span>
+<span class="cm">//   Show "Create a passkey" prompt after successful password login</span>
+<span class="cm">//   Don't force it — let users opt in</span>
+
+<span class="cm">// 2. CREATION — Make it simple</span>
+<span class="cm">//   "Create a passkey to sign in faster next time"</span>
+<span class="cm">//   One button, one biometric prompt, done</span>
+<span class="cm">//   Show success confirmation with device info</span>
+
+<span class="cm">// 3. SIGN IN — Conditional UI preferred</span>
+<span class="cm">//   Passkey appears in autofill alongside saved passwords</span>
+<span class="cm">//   No separate "Sign in with passkey" step needed</span>
+<span class="cm">//   Fallback: dedicated button for passkey sign-in</span>
+
+<span class="cm">// 4. MANAGEMENT — credential inventory</span>
+<span class="cm">//   Show registered passkeys in security settings</span>
+<span class="cm">//   Display: device name, creation date, last used</span>
+<span class="cm">//   Allow deletion (with re-authentication)</span>
+
+<span class="cm">// 5. RECOVERY — always have a fallback</span>
+<span class="cm">//   Password, recovery codes, email link, backup passkey</span>
+<span class="cm">//   Never lock users out if they lose their device</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Migration Strategy</h3>
+    <pre><span class="cm">// Phase 1: ADD Passkey Support (keep everything else)</span>
+<span class="cm">//   - Add WebAuthn registration in account settings</span>
+<span class="cm">//   - Add passkey sign-in alongside password form</span>
+<span class="cm">//   - Prompt to create passkey after password login</span>
+<span class="cm">//   Duration: 3-6 months</span>
+
+<span class="cm">// Phase 2: PREFER Passkeys</span>
+<span class="cm">//   - Make passkey the default sign-in method</span>
+<span class="cm">//   - Move password to "Other sign-in methods"</span>
+<span class="cm">//   - Enable conditional UI (autofill)</span>
+<span class="cm">//   - Increase passkey creation prompts</span>
+<span class="cm">//   Duration: 6-12 months</span>
+
+<span class="cm">// Phase 3: PASSWORD-OPTIONAL</span>
+<span class="cm">//   - Allow users to remove their password</span>
+<span class="cm">//   - Require multiple passkeys before allowing removal</span>
+<span class="cm">//   - Recovery: backup codes, security key, trusted device</span>
+<span class="cm">//   Duration: 12+ months</span>
+
+<span class="cm">// Metrics to track:</span>
+<span class="cm">//   - Passkey creation rate (% of active users)</span>
+<span class="cm">//   - Passkey sign-in rate vs password sign-in</span>
+<span class="cm">//   - Sign-in success rate (compare passkey vs password)</span>
+<span class="cm">//   - Support tickets related to passkeys</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🧪 Progressive Enhancement Code</h3>
+    <button onclick="demoProgressive()">⚡ Detect Capabilities</button>
+    <div class="output" id="progressive-result"></div>
+  </div>
+  <div class="card">
+    <h3>Login Form with Progressive Enhancement</h3>
+    <pre><span class="cm">// The complete progressive enhancement pattern:</span>
+
+<span class="kw">async function</span> <span class="fn">initAuth</span>() {
+  <span class="kw">const</span> capabilities = <span class="kw">await</span> detectCapabilities();
+
+  <span class="kw">if</span> (capabilities.conditionalUI) {
+    <span class="cm">// Best: Start conditional mediation (autofill passkeys)</span>
+    startConditionalAuth();
+    showPasswordForm(); <span class="cm">// Still show form as fallback</span>
+  } <span class="kw">else if</span> (capabilities.platformAuth) {
+    <span class="cm">// Good: Show explicit passkey button</span>
+    showPasskeyButton();
+    showPasswordForm();
+  } <span class="kw">else if</span> (capabilities.webauthn) {
+    <span class="cm">// OK: Security key support only</span>
+    showSecurityKeyOption();
+    showPasswordForm();
+  } <span class="kw">else</span> {
+    <span class="cm">// Baseline: Password only</span>
+    showPasswordForm();
+  }
+}
+
+<span class="kw">async function</span> <span class="fn">detectCapabilities</span>() {
+  <span class="kw">const</span> webauthn = !!window.PublicKeyCredential;
+  <span class="kw">let</span> platformAuth = <span class="kw">false</span>, conditionalUI = <span class="kw">false</span>;
+
+  <span class="kw">if</span> (webauthn) {
+    platformAuth = <span class="kw">await</span> PublicKeyCredential
+      .isUserVerifyingPlatformAuthenticatorAvailable();
+    <span class="kw">if</span> (PublicKeyCredential.isConditionalMediationAvailable) {
+      conditionalUI = <span class="kw">await</span> PublicKeyCredential
+        .isConditionalMediationAvailable();
+    }
+  }
+  <span class="kw">return</span> { webauthn, platformAuth, conditionalUI };
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Passkey UX</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Design the login page for a banking app that supports passkeys, passwords, and MFA.</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Layout: (1) Username input with autocomplete="username webauthn" — enables conditional UI. Passkeys and passwords both appear in autofill. (2) On focus, start conditional mediation. If user selects passkey → authenticate directly (skip password field). (3) If user types username and submits → show password field. (4) After password → require MFA (TOTP or push notification). (5) "Use security key" link below form for hardware key users. (6) After successful password login → "Secure your account with a passkey" prompt. (7) For banking: require userVerification: "required" (always biometric/PIN). Don't accept UV=false. (8) Session: HttpOnly cookie, 15-min idle timeout, absolute 8-hour max. (9) High-risk operations (transfers) → re-authenticate with passkey even if session is valid.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function demoProgressive(){
+  const el=document.getElementById('progressive-result');
+  el.textContent='Detecting WebAuthn Capabilities...\n'+'-'.repeat(40)+'\n\n';
+  
+  const webauthn=typeof window.PublicKeyCredential!=='undefined';
+  el.textContent+=`WebAuthn API: ${webauthn?'✅ Available':'❌ Not available'}\n`;
+  
+  if(webauthn){
+    try{
+      const platform=await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      el.textContent+=`Platform authenticator: ${platform?'✅ Available':'❌ Not available'}\n`;
+    }catch(e){el.textContent+=`Platform authenticator: ⚠️ Check failed: ${e.message}\n`}
+    
+    try{
+      if(PublicKeyCredential.isConditionalMediationAvailable){
+        const conditional=await PublicKeyCredential.isConditionalMediationAvailable();
+        el.textContent+=`Conditional UI (autofill): ${conditional?'✅ Available':'❌ Not available'}\n`;
+      }else{el.textContent+=`Conditional UI: ⚠️ API not available in this browser\n`}
+    }catch(e){el.textContent+=`Conditional UI: ⚠️ Check failed: ${e.message}\n`}
+  }
+  
+  el.textContent+=`\nRecommended Login Experience:\n${'='.repeat(40)}\n`;
+  if(!webauthn){
+    el.textContent+='→ Password-only form\n→ Consider MFA with TOTP/SMS';
+  }else{
+    el.textContent+='→ Show passkey option alongside password form\n';
+    el.textContent+='→ Enable conditional UI if available\n';
+    el.textContent+='→ Prompt to create passkey after password login\n';
+    el.textContent+='→ Hardware security key as additional option';
+  }
+}
+</script>
+</body></html>

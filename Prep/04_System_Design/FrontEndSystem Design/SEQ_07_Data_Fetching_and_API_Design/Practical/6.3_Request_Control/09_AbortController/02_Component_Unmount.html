@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab 02 — Component Unmount</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}button.red{background:#3a1e1e;border-color:#ef4444;color:#ef4444}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+</style>
+</head>
+<body>
+<h1>Lab 02 — Component Unmount</h1>
+<p class="sub">Unmounting a component while a fetch is in-flight causes memory leaks and "setState on unmounted" errors.</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">🏃 Live Demo</div>
+  <div class="tab" onclick="setTab(1)">❌ Without Cleanup</div>
+  <div class="tab" onclick="setTab(2)">✅ With Cleanup</div>
+  <div class="tab" onclick="setTab(3)">📝 React Pattern</div>
+</div>
+
+<!-- Tab 0: Live Demo -->
+<div class="panel active" id="p0">
+  <div class="grid2">
+    <div class="card">
+      <h3 class="bad">❌ No Abort on Unmount</h3>
+      <button onclick="mountBad()">Mount Component</button>
+      <button class="red" onclick="unmountBad()">Unmount Component</button>
+      <div id="badMountArea" style="margin-top:10px"></div>
+      <div class="output" id="badLog">Mount, then quickly unmount to see the leak...</div>
+    </div>
+    <div class="card">
+      <h3 class="good">✅ Abort on Unmount</h3>
+      <button onclick="mountGood()">Mount Component</button>
+      <button class="green" onclick="unmountGood()">Unmount Component</button>
+      <div id="goodMountArea" style="margin-top:10px"></div>
+      <div class="output" id="goodLog">Mount, then quickly unmount to see clean cleanup...</div>
+    </div>
+  </div>
+  <div class="info">Mount a component that fetches data, then unmount before the response arrives. Watch the logs.</div>
+</div>
+
+<!-- Tab 1: Without Cleanup -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3 class="bad">❌ Memory Leak — Updating Removed DOM</h3>
+<pre><span class="kw">function</span> <span class="fn">mountComponent</span>(container) {
+  container.innerHTML = <span class="str">'&lt;p&gt;Loading...&lt;/p&gt;'</span>;
+
+  <span class="fn">fetch</span>(<span class="str">`${API}/api/search/slow?q=data`</span>)
+    .<span class="fn">then</span>(r => r.<span class="fn">json</span>())
+    .<span class="fn">then</span>(data => {
+      <span class="cm">// ⚠️ Container may already be removed from DOM!</span>
+      container.innerHTML = <span class="str">`&lt;p&gt;${data.results.length} results&lt;/p&gt;`</span>;
+      console.<span class="fn">log</span>(<span class="str">'Updated DOM after unmount!'</span>); <span class="cm">// LEAK</span>
+    });
+}
+
+<span class="kw">function</span> <span class="fn">unmountComponent</span>(container) {
+  container.innerHTML = <span class="str">''</span>; <span class="cm">// Removed, but fetch still pending</span>
+}</pre>
+  </div>
+  <div class="info warn">The fetch callback fires after unmount, writing to detached DOM nodes. This leaks memory and can cause errors in frameworks.</div>
+</div>
+
+<!-- Tab 2: With Cleanup -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3 class="good">✅ Clean Cleanup with AbortController</h3>
+<pre><span class="kw">let</span> controller = <span class="kw">null</span>;
+
+<span class="kw">function</span> <span class="fn">mountComponent</span>(container) {
+  controller = <span class="kw">new</span> <span class="fn">AbortController</span>();
+  container.innerHTML = <span class="str">'&lt;p&gt;Loading...&lt;/p&gt;'</span>;
+
+  <span class="fn">fetch</span>(<span class="str">`${API}/api/search/slow?q=data`</span>, {
+    signal: controller.signal
+  })
+    .<span class="fn">then</span>(r => r.<span class="fn">json</span>())
+    .<span class="fn">then</span>(data => {
+      container.innerHTML = <span class="str">`&lt;p&gt;${data.results.length} results&lt;/p&gt;`</span>;
+    })
+    .<span class="fn">catch</span>(e => {
+      <span class="kw">if</span> (e.name === <span class="str">'AbortError'</span>) <span class="kw">return</span>; <span class="cm">// Expected</span>
+      <span class="kw">throw</span> e;
+    });
+}
+
+<span class="kw">function</span> <span class="fn">unmountComponent</span>(container) {
+  <span class="kw">if</span> (controller) controller.<span class="fn">abort</span>(); <span class="cm">// Cancel in-flight</span>
+  container.innerHTML = <span class="str">''</span>;
+}</pre>
+  </div>
+  <div class="info">The request is cancelled immediately on unmount. No callback fires, no leaked references, no wasted bandwidth.</div>
+</div>
+
+<!-- Tab 3: React Pattern -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>📝 React useEffect Cleanup Pattern</h3>
+<pre><span class="kw">function</span> <span class="fn">UserProfile</span>({ userId }) {
+  <span class="kw">const</span> [user, setUser] = <span class="fn">useState</span>(<span class="kw">null</span>);
+
+  <span class="fn">useEffect</span>(() => {
+    <span class="kw">const</span> controller = <span class="kw">new</span> <span class="fn">AbortController</span>();
+
+    <span class="fn">fetch</span>(<span class="str">`/api/users/${userId}`</span>, {
+      signal: controller.signal
+    })
+      .<span class="fn">then</span>(r => r.<span class="fn">json</span>())
+      .<span class="fn">then</span>(data => <span class="fn">setUser</span>(data))
+      .<span class="fn">catch</span>(e => {
+        <span class="kw">if</span> (e.name !== <span class="str">'AbortError'</span>) console.<span class="fn">error</span>(e);
+      });
+
+    <span class="cm">// Cleanup runs on unmount or dependency change</span>
+    <span class="kw">return</span> () => controller.<span class="fn">abort</span>();
+  }, [userId]);
+
+  <span class="kw">return</span> user ? <span class="str">`&lt;div&gt;${user.name}&lt;/div&gt;`</span> : <span class="str">'Loading...'</span>;
+}</pre>
+  </div>
+  <div class="info">Returning <code>controller.abort()</code> from useEffect ensures fetch is cancelled whenever the component unmounts or <code>userId</code> changes.</div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+let badMounted = false;
+function mountBad() {
+  const area = document.getElementById('badMountArea');
+  const log = document.getElementById('badLog');
+  area.innerHTML = '<div style="padding:10px;border:1px solid #ef4444;border-radius:8px">📦 Component mounted — fetching data...</div>';
+  badMounted = true;
+  log.textContent = '📦 Mounted. Fetching /api/search/slow?q=mount-test...\n';
+  const t0 = performance.now();
+  fetch(`${API}/api/search/slow?q=mount-test`)
+    .then(r => r.json())
+    .then(data => {
+      const ms = (performance.now() - t0).toFixed(0);
+      if (!badMounted) {
+        log.textContent += `⚠️ Response arrived after ${ms}ms but component is UNMOUNTED!\n`;
+        log.textContent += `⚠️ Writing to detached DOM — MEMORY LEAK!\n`;
+        log.textContent += `Data: ${JSON.stringify(data).slice(0, 100)}`;
+      } else {
+        area.innerHTML = `<div style="padding:10px;border:1px solid #10b981;border-radius:8px">✅ Got ${JSON.stringify(data).length} bytes in ${ms}ms</div>`;
+        log.textContent += `✅ Data received in ${ms}ms\n`;
+      }
+    })
+    .catch(e => { log.textContent += `❌ ${e.message}\n`; });
+}
+
+function unmountBad() {
+  badMounted = false;
+  document.getElementById('badMountArea').innerHTML = '<div style="padding:10px;color:#ef4444">💀 Component unmounted (fetch still running!)</div>';
+  document.getElementById('badLog').textContent += '💀 Unmounted! But fetch is still in-flight...\n';
+}
+
+let goodCtrl = null;
+function mountGood() {
+  const area = document.getElementById('goodMountArea');
+  const log = document.getElementById('goodLog');
+  goodCtrl = new AbortController();
+  area.innerHTML = '<div style="padding:10px;border:1px solid #10b981;border-radius:8px">📦 Component mounted — fetching data...</div>';
+  log.textContent = '📦 Mounted. Fetching with AbortController...\n';
+  const t0 = performance.now();
+  fetch(`${API}/api/search/slow?q=mount-test`, { signal: goodCtrl.signal })
+    .then(r => r.json())
+    .then(data => {
+      const ms = (performance.now() - t0).toFixed(0);
+      area.innerHTML = `<div style="padding:10px;border:1px solid #10b981;border-radius:8px">✅ Got ${JSON.stringify(data).length} bytes in ${ms}ms</div>`;
+      log.textContent += `✅ Data received in ${ms}ms\n`;
+    })
+    .catch(e => {
+      if (e.name === 'AbortError') log.textContent += '🛑 Fetch aborted cleanly — no leak!\n';
+      else log.textContent += `❌ ${e.message}\n`;
+    });
+}
+
+function unmountGood() {
+  if (goodCtrl) goodCtrl.abort();
+  document.getElementById('goodMountArea').innerHTML = '<div style="padding:10px;color:#10b981">🧹 Component unmounted (fetch cancelled)</div>';
+  document.getElementById('goodLog').textContent += '🧹 Unmounted — AbortController.abort() called\n';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Thinking in Components, State and Data Flow</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px}
+    h1{text-align:center;color:#60a5fa;margin-bottom:4px;font-size:1.5rem}
+    .subtitle{text-align:center;color:#94a3b8;margin-bottom:16px;font-size:.88rem}
+    .decomp-area{display:grid;grid-template-columns:260px 1fr;gap:14px;margin-bottom:14px}
+    .ui-mock{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:12px;user-select:none}
+    .ui-mock h3{font-size:.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+    .comp{border-radius:5px;border:2px solid transparent;padding:8px;margin:4px 0;cursor:pointer;transition:all .15s;font-size:.75rem;position:relative}
+    .comp:hover,.comp.active{border-color:var(--c)!important}
+    .comp-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;color:var(--c);position:absolute;top:-9px;left:8px;background:#1e2130;padding:0 4px}
+    .AppShell{--c:#60a5fa;border-color:#1e3a5f;background:#0a1520;padding:10px}
+    .Header{--c:#10b981;border-color:#14532d;background:#0a1a0a;padding:8px;margin-bottom:8px}
+    .NavItem{--c:#a78bfa;border-color:#312e81;background:#1a1030;padding:4px 8px;display:inline-block;margin-right:4px;border-radius:3px;font-size:.7rem}
+    .FeedContainer{--c:#f59e0b;border-color:#451a03;background:#1a1000;padding:8px}
+    .PostCard{--c:#ef4444;border-color:#7f1d1d;background:#1a0808;padding:7px;margin-bottom:6px}
+    .PostActions{--c:#06b6d4;border-color:#164e63;background:#041015;padding:5px;margin-top:4px;display:flex;gap:6px}
+    .action-btn{background:#0a1a22;border-radius:3px;padding:2px 6px;font-size:.65rem;color:#06b6d4}
+    .detail-panel{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:14px}
+    .detail-panel h3{font-size:.8rem;text-transform:uppercase;color:#60a5fa;letter-spacing:.8px;margin-bottom:10px}
+    .comp-detail{display:none;animation:fadeIn .2s}
+    .comp-detail.show{display:block}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    .comp-name{font-size:1rem;font-weight:bold;margin-bottom:6px}
+    .prop{background:#0f1117;border-radius:5px;padding:6px 10px;margin:4px 0;font-size:.74rem;border-left:3px solid}
+    .prop-in{border-color:#10b981}
+    .prop-out{border-color:#60a5fa}
+    .prop-state{border-color:#f59e0b}
+    .tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:.63rem;margin-right:4px}
+    .t-props{background:#0d2b1a;color:#86efac}
+    .t-emits{background:#0f1929;color:#93c5fd}
+    .t-state{background:#2a1a00;color:#fcd34d}
+    .t-smart{background:#312e81;color:#c4b5fd}
+    .t-dumb{background:#1a3a1a;color:#86efac}
+    .state-flow{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:14px;margin-bottom:14px}
+    .state-flow h2{font-size:.82rem;text-transform:uppercase;color:#f59e0b;letter-spacing:.8px;margin-bottom:12px}
+    .flow-diagram{display:flex;align-items:center;gap:0;flex-wrap:wrap}
+    .flow-box{background:#0f1117;border-radius:7px;padding:10px 14px;border:1px solid;font-size:.76rem;text-align:center;min-width:110px;cursor:pointer;transition:all .2s}
+    .flow-box:hover{transform:scale(1.04)}
+    .flow-arrow{color:#475569;font-size:1.1rem;margin:0 4px;align-self:center}
+    .flow-server{border-color:#10b981;color:#86efac}
+    .flow-cache{border-color:#f59e0b;color:#fcd34d}
+    .flow-store{border-color:#a78bfa;color:#c4b5fd}
+    .flow-context{border-color:#60a5fa;color:#93c5fd}
+    .flow-local{border-color:#ef4444;color:#fca5a5}
+    .flow-render{border-color:#06b6d4;color:#67e8f9}
+    .flow-note{font-size:.66rem;color:#475569;margin-top:3px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:16px}
+    .card h2{font-size:.82rem;text-transform:uppercase;color:#60a5fa;letter-spacing:.8px;margin-bottom:10px}
+    code{background:#0d1117;border:1px solid #2d3551;border-radius:4px;padding:1px 5px;font-size:.72rem;color:#a78bfa;font-family:monospace}
+    pre{background:#0d1117;border:1px solid #2d3551;border-radius:7px;padding:10px;font-size:.72rem;color:#a78bfa;overflow-x:auto;font-family:monospace;line-height:1.6;margin:6px 0}
+    .insight{background:#162032;border-left:3px solid #3b82f6;padding:8px 12px;border-radius:0 5px 5px 0;font-size:.74rem;line-height:1.5;color:#93c5fd;margin-top:8px}
+  </style>
+</head>
+<body>
+<h1>🧩 Thinking in Components, State & Data Flow</h1>
+<p class="subtitle">Click any component in the mock UI to see its contract — props, emits, local state</p>
+
+<div class="decomp-area">
+  <div class="ui-mock">
+    <h3>📱 Twitter-like Feed (click to inspect)</h3>
+    <div class="comp AppShell" onclick="showComp('app')">
+      <span class="comp-label">AppShell</span>
+      <div class="comp Header" onclick="showComp('header');event.stopPropagation()">
+        <span class="comp-label">Header</span>
+        <strong>🐦 FeedApp</strong>
+        <div class="NavItem" onclick="showComp('nav');event.stopPropagation()">Home</div>
+        <div class="NavItem" onclick="showComp('nav');event.stopPropagation()">Explore</div>
+        <div class="NavItem" onclick="showComp('nav');event.stopPropagation()">Notifications</div>
+      </div>
+      <div class="comp FeedContainer" onclick="showComp('feed');event.stopPropagation()">
+        <span class="comp-label">FeedContainer</span>
+        <div class="comp PostCard" onclick="showComp('post');event.stopPropagation()">
+          <span class="comp-label">PostCard</span>
+          <div style="color:#94a3b8;font-size:.72rem">👤 @hruday_dev · 2m ago</div>
+          <div style="font-size:.75rem;margin:4px 0">Just shipped the new micro-frontend at SAP Labs! 🚀 Module Federation FTW.</div>
+          <div class="comp PostActions" onclick="showComp('actions');event.stopPropagation()">
+            <span class="comp-label" style="top:-8px">PostActions</span>
+            <div class="action-btn">❤️ 42</div>
+            <div class="action-btn">💬 7</div>
+            <div class="action-btn">🔁 12</div>
+          </div>
+        </div>
+        <div class="comp PostCard" onclick="showComp('post');event.stopPropagation()">
+          <span class="comp-label">PostCard</span>
+          <div style="color:#94a3b8;font-size:.72rem">👤 @angular_fan · 5m ago</div>
+          <div style="font-size:.75rem;margin:4px 0">OnPush change detection is underrated. Saved our app 40% re-renders.</div>
+          <div class="comp PostActions" onclick="showComp('actions');event.stopPropagation()">
+            <span class="comp-label" style="top:-8px">PostActions</span>
+            <div class="action-btn">❤️ 88</div>
+            <div class="action-btn">💬 23</div>
+            <div class="action-btn">🔁 31</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="detail-panel">
+    <h3>🔍 Component Contract Inspector</h3>
+    <div id="default-msg" style="color:#475569;font-size:.76rem;padding:20px;text-align:center">← Click any highlighted component to inspect its contract</div>
+
+    <div id="detail-app" class="comp-detail">
+      <div class="comp-name" style="color:#60a5fa">AppShell <span class="tag t-smart">Smart</span></div>
+      <div style="font-size:.74rem;color:#94a3b8;margin-bottom:8px">Top-level container. Owns global navigation state, authentication context, and routing.</div>
+      <div class="prop prop-state"><span class="tag t-state">State</span> <code>currentRoute: string</code> — active route for highlighting nav items</div>
+      <div class="prop prop-state"><span class="tag t-state">State</span> <code>theme: 'light' | 'dark'</code> — passed via Context to all children</div>
+      <div class="prop prop-out"><span class="tag t-emits">Provides (Context)</span> <code>ThemeContext</code>, <code>AuthContext</code></div>
+      <div class="insight">AppShell is the context provider boundary. Everything below it can read theme and auth without prop-drilling.</div>
+    </div>
+
+    <div id="detail-header" class="comp-detail">
+      <div class="comp-name" style="color:#10b981">Header <span class="tag t-dumb">Presentational</span></div>
+      <div style="font-size:.74rem;color:#94a3b8;margin-bottom:8px">Renders the top navigation bar. Reads theme from context, receives active route as prop.</div>
+      <div class="prop prop-in"><span class="tag t-props">Props</span> <code>activeRoute: string</code> — determines which NavItem is highlighted</div>
+      <div class="prop prop-in"><span class="tag t-props">Props</span> <code>user: User | null</code> — shows avatar or login button</div>
+      <div class="prop prop-out"><span class="tag t-emits">Emits</span> <code>onLogout: () =&gt; void</code> — bubbled to AppShell for auth state update</div>
+      <div class="insight">No local state. Header is a pure function of props — easy to test, easy to reuse.</div>
+    </div>
+
+    <div id="detail-nav" class="comp-detail">
+      <div class="comp-name" style="color:#a78bfa">NavItem <span class="tag t-dumb">Dumb</span></div>
+      <div class="prop prop-in"><span class="tag t-props">Props</span> <code>label: string</code></div>
+      <div class="prop prop-in"><span class="tag t-props">Props</span> <code>href: string</code></div>
+      <div class="prop prop-in"><span class="tag t-props">Props</span> <code>isActive: boolean</code> — controls highlight style</div>
+      <div class="insight">Zero state, zero side effects. The simplest possible component. Always start here and add complexity only when needed.</div>
+    </div>
+
+    <div id="detail-feed" class="comp-detail">
+      <div class="comp-name" style="color:#f59e0b">FeedContainer <span class="tag t-smart">Smart</span></div>
+      <div style="font-size:.74rem;color:#94a3b8;margin-bottom:8px">Data-fetching boundary. Fetches paginated posts, manages cursor, handles loading/error/empty states.</div>
+      <div class="prop prop-state"><span class="tag t-state">State</span> <code>posts: Post[]</code> — current page of posts</div>
+      <div class="prop prop-state"><span class="tag t-state">State</span> <code>cursor: string | null</code> — for infinite scroll pagination</div>
+      <div class="prop prop-state"><span class="tag t-state">State</span> <code>isLoading: boolean</code></div>
+      <div class="prop prop-state"><span class="tag t-state">State</span> <code>error: Error | null</code></div>
+      <div class="prop prop-out"><span class="tag t-emits">Passes down (Props)</span> <code>posts[]</code> to TweetList component</div>
+      <div class="insight">Container pattern: FeedContainer owns ALL data concerns. PostCard knows nothing about fetching — it just renders. This separation makes PostCard 100% testable without mocking APIs.</div>
+    </div>
+
+    <div id="detail-post" class="comp-detail">
+      <div class="comp-name" style="color:#ef4444">PostCard <span class="tag t-dumb">Presentational</span></div>
+      <div class="prop prop-in"><span class="tag t-props">Props</span> <code>post: Post</code> — <code>{`{ id, author, content, likeCount, replyCount }`}</code></div>
+      <div class="prop prop-in"><span class="tag t-props">Props</span> <code>isLiked: boolean</code> — determined by parent, not local state</div>
+      <div class="prop prop-out"><span class="tag t-emits">Emits</span> <code>onLike: (postId: string) =&gt; void</code></div>
+      <div class="prop prop-out"><span class="tag t-emits">Emits</span> <code>onReply: (postId: string) =&gt; void</code></div>
+      <div class="insight">Like state is NOT local — it comes from the parent (or global store). This enables optimistic updates to be rolled back correctly if the API fails.</div>
+    </div>
+
+    <div id="detail-actions" class="comp-detail">
+      <div class="comp-name" style="color:#06b6d4">PostActions <span class="tag t-dumb">Dumb</span></div>
+      <div class="prop prop-in"><span class="tag t-props">Props</span> <code>likeCount: number</code></div>
+      <div class="prop prop-in"><span class="tag t-props">Props</span> <code>replyCount: number</code></div>
+      <div class="prop prop-in"><span class="tag t-props">Props</span> <code>retweetCount: number</code></div>
+      <div class="prop prop-in"><span class="tag t-props">Props</span> <code>isLiked: boolean</code></div>
+      <div class="prop prop-out"><span class="tag t-emits">Emits</span> <code>onLike: () =&gt; void</code> — forwarded up to PostCard</div>
+      <div class="insight">The deepest leaf component. Zero state, just renders numbers and fires events. Testable with a single render + click assert.</div>
+    </div>
+  </div>
+</div>
+
+<div class="state-flow" style="margin-bottom:14px">
+  <h2>🔄 Data Flow: Server → Store → Component → User → Back Up</h2>
+  <div class="flow-diagram">
+    <div class="flow-box flow-server" onclick="highlightFlow(this)">🌐 REST API<div class="flow-note">GET /feed?cursor=…</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box flow-cache" onclick="highlightFlow(this)">📦 React Query Cache<div class="flow-note">staleTime: 30s</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box flow-store" onclick="highlightFlow(this)">🗃️ Global Store<div class="flow-note">likedPosts: Set&lt;id&gt;</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box flow-context" onclick="highlightFlow(this)">🌳 Context Providers<div class="flow-note">Theme, Auth</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box flow-local" onclick="highlightFlow(this)">🔴 Local State<div class="flow-note">isDropdownOpen</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box flow-render" onclick="highlightFlow(this)">🖥️ Render<div class="flow-note">Component tree</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color:#94a3b8;color:#e2e8f0" onclick="highlightFlow(this)">👤 User Action<div class="flow-note">click / type</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box flow-store" onclick="highlightFlow(this)">🗃️ dispatch(like)<div class="flow-note">optimistic update</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box flow-server" onclick="highlightFlow(this)">🌐 POST /like<div class="flow-note">+ rollback on fail</div></div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <h2>🏆 State Placement Decision Rule</h2>
+    <pre>// Ask these questions in order:
+// 1. Is this state needed by only ONE component?
+//    → Keep it LOCAL with useState/useReducer
+
+// 2. Is it needed by a small subtree of 2-4 components?
+//    → Lift to nearest common ancestor (prop drilling OK)
+
+// 3. Is it needed across many unrelated components?
+//    → React Context (if simple) or Zustand/Redux (if complex)
+
+// 4. Is it server/async data?
+//    → React Query / TanStack Query (NOT global store)
+
+// Examples from feed app:
+// isDropdownOpen   → LOCAL (Header only)
+// currentUser      → CONTEXT (many components need it)
+// likedPostIds     → GLOBAL STORE (optimistic + server sync)
+// posts[]          → REACT QUERY (server state)</pre>
+  </div>
+  <div class="card">
+    <h2>📐 Component Decomposition Checklist</h2>
+    <div style="font-size:.76rem;line-height:1.9">
+      <div style="border-bottom:1px solid #2d3551;padding:4px 0">☐ <strong>Single Responsibility:</strong> Does each component do exactly one thing?</div>
+      <div style="border-bottom:1px solid #2d3551;padding:4px 0">☐ <strong>Smart vs Dumb:</strong> Have you separated data-fetching from rendering?</div>
+      <div style="border-bottom:1px solid #2d3551;padding:4px 0">☐ <strong>Props contract:</strong> Can you write a TypeScript interface for every component's props?</div>
+      <div style="border-bottom:1px solid #2d3551;padding:4px 0">☐ <strong>State ownership:</strong> Is each piece of state owned by exactly one place?</div>
+      <div style="border-bottom:1px solid #2d3551;padding:4px 0">☐ <strong>Event flow:</strong> Does data flow DOWN and events flow UP?</div>
+      <div style="border-bottom:1px solid #2d3551;padding:4px 0">☐ <strong>Error boundaries:</strong> Where can a component fail without crashing the whole page?</div>
+      <div style="padding:4px 0">☐ <strong>Testability:</strong> Can you test each component in isolation?</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showComp(id) {
+  document.querySelectorAll('.comp-detail').forEach(d => d.classList.remove('show'));
+  document.getElementById('default-msg').style.display = 'none';
+  document.getElementById('detail-' + id).classList.add('show');
+  document.querySelectorAll('.comp').forEach(c => c.classList.remove('active'));
+}
+function highlightFlow(el) {
+  document.querySelectorAll('.flow-box').forEach(b => b.style.transform = '');
+  el.style.transform = 'scale(1.07)';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 03 — Secure Login Flow</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}input[type=text],input[type=password]{width:100%;padding:8px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem;margin:4px 0}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 03 — Secure Login Flow</h1>
+<p class="sub">Module 12.2 · Bcrypt, timing attacks, rate limiting, brute force prevention</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Security Checklist</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Timing Attacks</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Secure Login Implementation Checklist</h3>
+    <pre><span class="cm">// ✅ 1. HTTPS only — never send credentials over HTTP</span>
+<span class="cm">// ✅ 2. Hash passwords with bcrypt/argon2 (NEVER SHA256/MD5)</span>
+<span class="kw">const</span> hash = <span class="kw">await</span> bcrypt.hash(password, <span class="str">12</span>); <span class="cm">// cost factor 12</span>
+
+<span class="cm">// ✅ 3. Constant-time comparison (prevent timing attacks)</span>
+<span class="kw">const</span> isValid = <span class="kw">await</span> bcrypt.compare(input, storedHash);
+<span class="cm">// bcrypt.compare is constant-time internally</span>
+
+<span class="cm">// ✅ 4. Generic error messages</span>
+<span class="cm">// ❌ "User not found" — reveals valid usernames</span>
+<span class="cm">// ❌ "Wrong password" — confirms username exists</span>
+<span class="cm">// ✅ "Invalid credentials" — for ALL failures</span>
+
+<span class="cm">// ✅ 5. Rate limiting per IP + per username</span>
+<span class="cm">// 5 attempts → 1 min delay, 10 → 15 min, 20 → 1 hour</span>
+
+<span class="cm">// ✅ 6. Session fixation prevention</span>
+<span class="cm">// Generate NEW session ID after successful login</span>
+req.session.regenerate(() => { <span class="cm">/* ... */</span> });
+
+<span class="cm">// ✅ 7. Audit logging — log ALL login attempts</span>
+<span class="cm">// Include: username, IP, timestamp, success/failure, user-agent</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Login Security Lab (Real Server)</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <input type="text" id="login-user" placeholder="username" value="alice">
+      <input type="password" id="login-pass" placeholder="password" value="Password123!">
+    </div>
+    <button onclick="doLogin()" style="background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6">🔑 Login</button>
+    <button onclick="doLogin('wrong')" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">❌ Wrong Password</button>
+    <button onclick="doLogin('nouser')" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">❌ Non-existent User</button>
+    <div class="output" id="login-result">Test login with correct and incorrect credentials</div>
+  </div>
+  <div class="card">
+    <h3>🧪 Rate Limiting Test</h3>
+    <button onclick="bruteForce()">⚡ Simulate Brute Force (10 rapid attempts)</button>
+    <div class="output" id="rate-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 Username Enumeration Test</h3>
+    <button onclick="enumerateTest()">🔍 Compare error messages</button>
+    <div class="output" id="enum-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Timing Attack Prevention</h3>
+    <pre><span class="cm">// VULNERABLE: Early return reveals whether user exists</span>
+<span class="kw">async function</span> <span class="fn">login</span>(username, password) {
+  <span class="kw">const</span> user = db.getUser(username);
+  <span class="kw">if</span> (!user) <span class="kw">return</span> <span class="str">false</span>; <span class="danger">// ← returns FAST (no hash check)</span>
+  <span class="kw">return</span> bcrypt.compare(password, user.hash); <span class="cm">// ← returns SLOW</span>
+}
+<span class="cm">// An attacker can measure response time to enumerate valid usernames!</span>
+
+<span class="cm">// SECURE: Always perform the hash comparison</span>
+<span class="kw">async function</span> <span class="fn">login</span>(username, password) {
+  <span class="kw">const</span> user = db.getUser(username);
+  <span class="kw">const</span> hash = user ? user.hash : <span class="str">'$2b$12$dummy...'</span>; <span class="cm">// dummy hash</span>
+  <span class="kw">const</span> valid = <span class="kw">await</span> bcrypt.compare(password, hash);
+  <span class="kw">if</span> (!user || !valid) <span class="kw">return</span> <span class="str">false</span>; <span class="cm">// same timing regardless</span>
+  <span class="kw">return</span> <span class="str">true</span>;
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Login Security</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: A user reports that login is slow. It takes 200ms per attempt. Is this a bug?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">No, this is by design. Bcrypt with cost factor 12 takes ~200ms on purpose. This is the hashing time, making brute force attacks impractical (5 attempts/sec instead of millions). If you need faster login UX: (1) Show a loading spinner. (2) Use Argon2id which offers similar security with tunable parameters. (3) Consider WebAuthn/passkeys which don't need password hashing at all. Never reduce the cost factor just for speed — you're trading security. Google uses multi-layered auth that includes risk scoring, which adds latency but provides security.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function doLogin(mode){
+  const el=document.getElementById('login-result');
+  const user=mode==='nouser'?'nonexistent_user':document.getElementById('login-user').value;
+  const pass=mode==='wrong'?'WrongPassword999':document.getElementById('login-pass').value;
+  const start=performance.now();
+  try{
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pass})});
+    const d=await res.json();
+    const time=Math.round(performance.now()-start);
+    el.textContent=`Login attempt:\n  Username: ${user}\n  Password: ${pass.replace(/./g,'*')}\n  Status: ${res.status}\n  Time: ${time}ms\n\nResponse:\n${JSON.stringify(d,null,2)}\n\n${res.ok?'✅ Login successful':'❌ Login failed'}\n\n${mode==='nouser'?'Note: Check if the error message reveals that the user doesn\'t exist\n(it should say "Invalid credentials" for BOTH wrong user and wrong password)':''}`;
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+
+async function bruteForce(){
+  const el=document.getElementById('rate-result');
+  el.textContent='Simulating brute force attack (10 rapid attempts)...\n\n';
+  for(let i=1;i<=10;i++){
+    const start=performance.now();
+    try{
+      const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'alice',password:`attempt_${i}`})});
+      const d=await res.json();
+      const time=Math.round(performance.now()-start);
+      el.textContent+=`Attempt ${i}: Status ${res.status} | ${time}ms | ${d.error||d.message||''}\n`;
+      if(res.status===429){
+        el.textContent+=`\n🛑 RATE LIMITED! Server blocked further attempts.\nThis prevents brute force attacks.\n\nHeaders to check:\n  Retry-After: seconds until retry allowed\n  X-RateLimit-Remaining: attempts left`;
+        break;
+      }
+    }catch(e){el.textContent+=`Attempt ${i}: Error - ${e.message}\n`}
+  }
+}
+
+async function enumerateTest(){
+  const el=document.getElementById('enum-result');
+  el.textContent='Testing username enumeration...\n\n';
+  const tests=[{user:'alice',pass:'wrong',label:'Valid user, wrong password'},{user:'nonexistent',pass:'wrong',label:'Invalid user, wrong password'}];
+  for(const t of tests){
+    const start=performance.now();
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:t.user,password:t.pass})});
+    const d=await res.json();
+    const time=Math.round(performance.now()-start);
+    el.textContent+=`${t.label}:\n  Status: ${res.status}\n  Message: "${d.error||d.message}"\n  Time: ${time}ms\n\n`;
+  }
+  el.textContent+=`Security check:\n  ✅ Same error message? (should be generic like "Invalid credentials")\n  ✅ Similar response time? (bcrypt should take similar time regardless)\n  ⚠️ If messages differ → username enumeration vulnerability`;
+}
+</script>
+</body></html>

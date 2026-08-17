@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 55 – React Server Components (RSC)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.green{color:#10b981}.amber{color:#f59e0b}.red{color:#ef4444}
+</style>
+</head>
+<body>
+<h1>🧩 React Server Components (RSC)</h1>
+<p class="sub">Topic 55 · Module 4.2 — Advanced Rendering · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">What is RSC</div>
+  <div class="tab" onclick="setTab(1)">Server vs Client</div>
+  <div class="tab" onclick="setTab(2)">Data Waterfall Fix</div>
+  <div class="tab" onclick="setTab(3)">Code Examples</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>React Server Components — concept</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">RSC (React 18+, Next.js App Router) introduces a new component model: <strong style="color:#10b981">Server Components</strong> run <em>only</em> on the server — they read databases, call APIs, access secrets — and produce HTML/React tree that streams to the client. They ship <strong style="color:#ef4444">zero JavaScript</strong> to the browser. <strong style="color:#60a5fa">Client Components</strong> (marked <code>'use client'</code>) behave like traditional React — they hydrate and run in the browser.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #10b981;padding:12px;border-radius:8px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">Server Component</div>
+        <div style="color:#94a3b8;line-height:1.8">✅ Async/await at top level<br>✅ Direct DB access<br>✅ Access environment secrets<br>✅ Reduce bundle size<br>❌ No useState/useEffect<br>❌ No event handlers<br>❌ No browser APIs</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:12px;border-radius:8px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Client Component ('use client')</div>
+        <div style="color:#94a3b8;line-height:1.8">✅ useState / useReducer<br>✅ useEffect / browser APIs<br>✅ Event handlers (onClick etc.)<br>✅ Real-time UI<br>❌ No direct DB access<br>❌ Ships JS to client<br>❌ Can't be async component</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Component tree — server vs client boundary</h3>
+    <div id="tree" style="font-family:monospace;font-size:.8rem;background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px"></div>
+    <div style="margin-top:10px;font-size:.79rem">
+      <span style="color:#10b981">■ Server Component</span> — no JS to client &nbsp;
+      <span style="color:#60a5fa">■ Client Component</span> — ships JS &nbsp;
+      <span style="color:#f59e0b">■ Boundary</span>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Solving the data waterfall</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:10px">Traditional fetch-in-component causes sequential waterfalls. RSC allows parallel fetching and removes the client round-trip entirely.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.8rem">
+      <div>
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">❌ Old CSR waterfall</div>
+        <div style="background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:10px;color:#94a3b8;font-family:monospace;font-size:.77rem;line-height:2">
+          <span style="color:#475569">0ms</span>  Download JS bundle<br>
+          <span style="color:#475569">800ms</span> App renders, fetch /user<br>
+          <span style="color:#475569">1100ms</span> Render UserLayout, fetch /posts<br>
+          <span style="color:#475569">1400ms</span> Render Posts, fetch /comments<br>
+          <span style="color:#f59e0b">Total: ~1400ms + 3 round trips</span>
+        </div>
+      </div>
+      <div>
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ RSC parallel fetch</div>
+        <div style="background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:10px;color:#94a3b8;font-family:monospace;font-size:.77rem;line-height:2">
+          <span style="color:#475569">0ms</span>  Server runs ALL fetches in parallel<br>
+          <span style="color:#475569">0ms</span>  Promise.all([user, posts, comments])<br>
+          <span style="color:#475569">~300ms</span> All data ready, HTML streams<br>
+          <span style="color:#475569">~320ms</span> FCP — full page visible<br>
+          <span style="color:#10b981">Total: ~320ms, 0 client round trips</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>RSC — server + client component pattern</h3>
+    <pre><span class="cm">// app/dashboard/page.tsx — SERVER COMPONENT (default)</span>
+<span class="kw">import</span> InteractiveChart <span class="kw">from</span> <span class="str">'./InteractiveChart'</span>; <span class="cm">// client</span>
+
+<span class="kw">export default async function</span> <span class="attr">Dashboard</span>() {
+  <span class="cm">// Direct DB/API — no useEffect, no fetch on client</span>
+  <span class="kw">const</span> [metrics, user] = <span class="kw">await</span> Promise.<span class="attr">all</span>([
+    <span class="attr">getMetrics</span>(),
+    <span class="attr">getCurrentUser</span>(),
+  ]);
+
+  <span class="kw">return</span> (
+    &lt;<span class="attr">section</span>&gt;
+      &lt;<span class="attr">h1</span>&gt;Welcome, {user.name}&lt;/<span class="attr">h1</span>&gt;
+      <span class="cm">{/* Server component — no JS */}</span>
+      &lt;<span class="attr">MetricsSummary</span> data={metrics} /&gt;
+      <span class="cm">{/* Client component — ships JS, interactive */}</span>
+      &lt;<span class="attr">InteractiveChart</span> data={metrics.series} /&gt;
+    &lt;/<span class="attr">section</span>&gt;
+  );
+}
+
+<span class="cm">// InteractiveChart.tsx — CLIENT COMPONENT</span>
+<span class="str">'use client'</span>;
+<span class="kw">import</span> { useState } <span class="kw">from</span> <span class="str">'react'</span>;
+
+<span class="kw">export default function</span> <span class="attr">InteractiveChart</span>({ data }) {
+  <span class="kw">const</span> [range, setRange] = useState(<span class="str">'7d'</span>);
+  <span class="kw">return</span> (
+    &lt;<span class="attr">div</span>&gt;
+      &lt;<span class="attr">RangeSelector</span> value={range} onChange={setRange} /&gt;
+      &lt;<span class="attr">Chart</span> data={data} range={range} /&gt;
+    &lt;/<span class="attr">div</span>&gt;
+  );
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const tree=`<span style="color:#10b981">▸ RootLayout.tsx</span>          (Server — layout, auth check)
+  <span style="color:#10b981">▸ Header.tsx</span>               (Server — nav links from DB)
+    <span style="color:#60a5fa">▸ ThemeToggle.tsx</span>        <span style="color:#f59e0b">← 'use client' boundary</span>
+  <span style="color:#10b981">▸ Dashboard/page.tsx</span>       (Server — fetch metrics)
+    <span style="color:#10b981">▸ MetricsSummary.tsx</span>     (Server — static table)
+    <span style="color:#60a5fa">▸ InteractiveChart.tsx</span>   <span style="color:#f59e0b">← 'use client' boundary</span>
+      <span style="color:#60a5fa">▸ RangeSelector.tsx</span>    (inherits client context)
+    <span style="color:#10b981">▸ UserActivity.tsx</span>       (Server — log from DB)
+  <span style="color:#60a5fa">▸ NotificationBell.tsx</span>     <span style="color:#f59e0b">← 'use client' (WebSocket)</span>`;
+document.getElementById('tree').innerHTML=tree;
+</script>
+</body>
+</html>

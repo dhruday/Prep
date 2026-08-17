@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 133 – Content Security Policy (CSP)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#a78bfa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e1a3f;border-color:#a78bfa;color:#a78bfa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#a78bfa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #a78bfa;background:#1e1a3f;color:#a78bfa;cursor:pointer;font-size:.82rem;margin:4px}
+.dir{color:#f59e0b}.val{color:#10b981}.bad{color:#ef4444}
+</style>
+</head>
+<body>
+<h1>🛡️ Content Security Policy (CSP)</h1>
+<p class="sub">Topic 133 · Part 12 / 12.3 Hardening UI · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Policy Builder</div>
+  <div class="tab" onclick="setTab(2)">Directives</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>CSP — a second layer of defence against XSS and data injection</h3>
+    <p style="color:#94a3b8;font-size:.83rem;margin-bottom:14px">Even if an attacker injects HTML/JS, CSP blocks execution of unauthorised scripts. CSP is delivered as an HTTP response header (or meta tag) and tells the browser what sources are allowed for each resource type.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:8px">How it stops XSS</div>
+        <div style="color:#94a3b8">Attacker injects: <code style="color:#ef4444">&lt;script src="evil.com/steal.js"&gt;</code><br><br>Without CSP → browser loads it.<br>With <span style="color:#10b981">script-src 'self'</span> → browser blocks evil.com script, logs violation.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:8px">Deployment modes</div>
+        <div style="color:#94a3b8"><b style="color:#f59e0b">Enforce:</b> violations are blocked + reported<br><b style="color:#60a5fa">Report-Only:</b> <code>Content-Security-Policy-Report-Only</code> — violations reported but not blocked (use to test before enforcing)<br><b style="color:#10b981">Nonce:</b> per-request nonce allows specific inline scripts</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>CSP policy builder — toggle restrictions</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.8rem;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="inline-scripts" onchange="buildPolicy()"> Allow inline scripts (<span style="color:#ef4444">unsafe-inline</span>)</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="eval-scripts" onchange="buildPolicy()"> Allow eval() (<span style="color:#ef4444">unsafe-eval</span>)</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="cdn" onchange="buildPolicy()"> Allow scripts from cdnjs.cloudflare.com</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="ga" onchange="buildPolicy()"> Allow Google Analytics (www.google-analytics.com)</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="frame" onchange="buildPolicy()"> Allow framing from any origin</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="nonce" checked onchange="buildPolicy()"> Use nonce for inline scripts (recommended)</label>
+    </div>
+    <pre id="policy-out"></pre>
+    <div id="policy-warn" style="font-size:.78rem;margin-top:8px;min-height:16px"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Key CSP directives reference</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#a78bfa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Directive</th>
+        <th style="padding:8px;border:1px solid #2d3551">Controls</th>
+        <th style="padding:8px;border:1px solid #2d3551">Common values</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">default-src</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Fallback for all fetch directives</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">'self' — only same origin</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">script-src</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">JavaScript sources</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">'self' 'nonce-{base64}' cdn.com</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">style-src</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">CSS sources</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">'self' 'unsafe-inline' (common for CSS-in-JS)</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">img-src</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Image sources</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">'self' data: https://cdn.example.com</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">connect-src</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">fetch / XHR / WebSocket</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">'self' https://api.example.com wss://ws.example.com</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">frame-ancestors</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Who can embed this page</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">'none' or 'self' (replaces X-Frame-Options)</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">report-uri / report-to</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Where violations are sent</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">https://csp-report.example.com/collect</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">unsafe-inline</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Allows all inline scripts/styles</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">⚠ Defeats XSS protection — avoid</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">unsafe-eval</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Allows eval(), setTimeout(string)</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">⚠ Enable only for specific legacy libs</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>CSP with nonce + Next.js middleware + violation reporting</h3>
+    <pre><span class="cm">// ─── Next.js middleware.ts — generate per-request nonce ───</span>
+<span class="kw">import</span> { NextResponse } <span class="kw">from</span> <span class="str">'next/server'</span>;
+<span class="kw">import</span> { randomBytes } <span class="kw">from</span> <span class="str">'crypto'</span>;
+
+<span class="kw">export function</span> <span class="fn">middleware</span>(req) {
+  <span class="kw">const</span> nonce = <span class="fn">randomBytes</span>(16).<span class="fn">toString</span>(<span class="str">'base64'</span>);
+  <span class="kw">const</span> csp = [
+    <span class="str">`default-src 'self'`</span>,
+    <span class="str">`script-src 'self' 'nonce-${nonce}'`</span>,  <span class="cm">// nonce for inline scripts</span>
+    <span class="str">`style-src 'self' 'unsafe-inline'`</span>,     <span class="cm">// CSS-in-JS usually needs this</span>
+    <span class="str">`img-src 'self' data: https:`</span>,
+    <span class="str">`connect-src 'self' https://api.example.com`</span>,
+    <span class="str">`frame-ancestors 'none'`</span>,
+    <span class="str">`report-uri /api/csp-report`</span>
+  ].<span class="fn">join</span>(<span class="str">';'</span>);
+
+  <span class="kw">const</span> res = NextResponse.<span class="fn">next</span>();
+  res.headers.<span class="fn">set</span>(<span class="str">'Content-Security-Policy'</span>, csp);
+  res.headers.<span class="fn">set</span>(<span class="str">'x-nonce'</span>, nonce); <span class="cm">// pass nonce to layout</span>
+  <span class="kw">return</span> res;
+}
+
+<span class="cm">// ─── _document.tsx — use nonce on inline scripts ───</span>
+&lt;<span class="fn">Script</span> nonce={nonce} strategy=<span class="str">"beforeInteractive"</span>&gt;
+  window.__APP_ENV__ = <span class="fn">JSON.stringify</span>(publicEnv);
+&lt;/<span class="fn">Script</span>&gt;
+
+<span class="cm">// ─── CSP violation report endpoint ───</span>
+<span class="kw">export async function</span> <span class="fn">POST</span>(req: Request) {
+  <span class="kw">const</span> report = <span class="kw">await</span> req.<span class="fn">json</span>();
+  logger.<span class="fn">warn</span>(<span class="str">'CSP violation'</span>, report[<span class="str">'csp-report'</span>]);
+  <span class="kw">return</span> <span class="fn">Response.json</span>({ ok: <span class="kw">true</span> });
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+function buildPolicy(){
+  const inl=document.getElementById('inline-scripts').checked;
+  const ev=document.getElementById('eval-scripts').checked;
+  const cdn=document.getElementById('cdn').checked;
+  const ga=document.getElementById('ga').checked;
+  const fr=document.getElementById('frame').checked;
+  const nc=document.getElementById('nonce').checked;
+  let scriptSrc="'self'";
+  if(nc) scriptSrc+=" 'nonce-{auto}'";
+  if(inl) scriptSrc+=" 'unsafe-inline'";
+  if(ev) scriptSrc+=" 'unsafe-eval'";
+  if(cdn) scriptSrc+=" cdnjs.cloudflare.com";
+  if(ga) scriptSrc+=" www.google-analytics.com";
+  const lines=[
+    `Content-Security-Policy:`,
+    `  default-src 'self';`,
+    `  script-src ${scriptSrc};`,
+    `  style-src 'self' 'unsafe-inline';`,
+    `  img-src 'self' data: https:;`,
+    `  connect-src 'self'${ga?' https://www.google-analytics.com':''};`,
+    `  frame-ancestors ${fr?"*":"'none'"};`,
+    `  report-uri /api/csp-report`
+  ];
+  document.getElementById('policy-out').textContent=lines.join('\n');
+  const warns=[];
+  if(inl) warns.push("⚠ unsafe-inline disables XSS protection");
+  if(ev) warns.push("⚠ unsafe-eval allows eval() and Function() attacks");
+  if(!nc&&!inl) warns.push("ℹ Add 'nonce' or 'hash' to allow specific inline scripts safely");
+  document.getElementById('policy-warn').innerHTML=warns.map(w=>`<div style="color:#f59e0b">${w}</div>`).join('');
+}
+buildPolicy();
+</script>
+</body>
+</html>

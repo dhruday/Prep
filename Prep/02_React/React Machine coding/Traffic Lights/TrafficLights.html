@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        .traffic-lights {
+            background-color: black;
+            height: 350px;
+            width: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            border-radius: 15px
+        }
+
+        .lights {
+            border-radius: 50%;
+            border: 1px solid white;
+            width: 75px;
+            height: 75px;
+            margin: 10px
+        }
+
+        .active.red {
+            background-color: red;
+        }
+
+        .active.yellow {
+            background-color: yellow;
+        }
+
+        .active.green {
+            background-color: green
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const rootElement = document.getElementById('root');
+        const root = ReactDOM.createRoot(rootElement);
+        const { useState, useEffect } = React;
+        function TrafficLight() {
+            const lightConfig = {
+                red: "4000",
+                yellow: "500",
+                green: "3000"
+            }
+            const sequence = ["red", "yellow", "green"];
+            const [currentColor, setcurrentColor] = useState("red");
+            useEffect(() => {
+                let idx = 0;
+                const cycle = function () {
+                    setcurrentColor(sequence[idx]);
+                    setTimeout(() => {
+                        idx = (idx + 1) % sequence.length;
+                        cycle();
+                    }, lightConfig[sequence[idx]]);
+                }
+                cycle();
+            }, [])
+
+            return <div className="traffic-lights">
+                {currentColor}
+                <span className={"lights red" + (currentColor === "red" ? " active" : "")}></span>
+                <span className={"lights yellow" + (currentColor === "yellow" ? " active" : "")}></span>
+                <span className={"lights green" + (currentColor === "green" ? " active" : "")}></span>
+            </div>;
+        }
+        root.render(<TrafficLight />);
+
+    </script>
+</body>
+
+</html>

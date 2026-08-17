@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>HLD vs LLD in Frontend Context</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px}
+    h1{text-align:center;color:#60a5fa;margin-bottom:4px;font-size:1.5rem}
+    .subtitle{text-align:center;color:#94a3b8;margin-bottom:18px;font-size:.88rem}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+    .panel{background:#1e2130;border-radius:12px;padding:16px;border-top:3px solid}
+    .hld-panel{border-color:#60a5fa}
+    .lld-panel{border-color:#a78bfa}
+    .panel h2{font-size:1rem;margin-bottom:12px}
+    .panel-desc{font-size:.77rem;color:#94a3b8;margin-bottom:12px;line-height:1.6}
+    .layer{background:#0f1117;border-radius:6px;padding:8px 12px;margin-bottom:6px;cursor:pointer;border:1px solid transparent;transition:all .2s;font-size:.78rem}
+    .layer:hover,.layer.active{border-color:var(--acc)}
+    .layer-name{font-weight:bold;color:var(--acc);margin-bottom:2px}
+    .layer-desc{color:#94a3b8;font-size:.72rem;display:none}
+    .layer.active .layer-desc{display:block}
+    .hld-layer{--acc:#60a5fa}
+    .lld-layer{--acc:#a78bfa}
+    .timeline{display:flex;align-items:center;gap:0;margin-bottom:14px;background:#1e2130;border-radius:12px;padding:14px;border:1px solid #2d3551}
+    .t-step{flex:1;text-align:center;position:relative}
+    .t-step::after{content:'→';position:absolute;right:-6px;top:50%;transform:translateY(-50%);color:#475569;font-size:.9rem}
+    .t-step:last-child::after{display:none}
+    .t-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:.9rem;border:2px solid}
+    .t-label{font-size:.68rem;color:#94a3b8}
+    .t-tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:.62rem;margin-top:2px}
+    .example-box{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:14px;margin-bottom:14px}
+    .example-box h3{font-size:.82rem;color:#f59e0b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.8px}
+    .eg-tabs{display:flex;gap:6px;margin-bottom:10px}
+    .eg-tab{padding:5px 12px;border-radius:5px;font-size:.72rem;cursor:pointer;background:#0f1117;border:1px solid #2d3551;color:#94a3b8;transition:all .2s}
+    .eg-tab.active{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd}
+    .eg-content{display:none;font-size:.76rem;line-height:1.7}
+    .eg-content.show{display:block}
+    .hld-box{background:#0f1929;border:1px solid #1e3a5f;border-radius:7px;padding:10px;margin-bottom:8px}
+    .lld-box{background:#1a0f29;border:1px solid #3b1e5f;border-radius:7px;padding:10px}
+    .box-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
+    code{background:#0d1117;border:1px solid #2d3551;border-radius:4px;padding:1px 5px;font-size:.72rem;color:#a78bfa}
+    .interview-moment{background:#162032;border-left:3px solid #3b82f6;padding:9px 12px;border-radius:0 7px 7px 0;font-size:.75rem;line-height:1.6;margin-top:8px;color:#93c5fd}
+  </style>
+</head>
+<body>
+<h1>🏗️ HLD vs LLD in Frontend Context</h1>
+<p class="subtitle">High-Level Design = What & Why — Low-Level Design = How & Where</p>
+
+<div style="background:#1e2130;border-radius:10px;padding:12px;margin-bottom:14px;border:1px solid #2d3551">
+  <div class="timeline">
+    <div class="t-step">
+      <div class="t-circle" style="border-color:#94a3b8;color:#94a3b8">🎯</div>
+      <div style="font-size:.7rem;font-weight:bold;color:#94a3b8">Clarify</div>
+      <div class="t-label">Requirements & scale</div>
+    </div>
+    <div class="t-step">
+      <div class="t-circle" style="border-color:#60a5fa;color:#60a5fa">🏗️</div>
+      <div style="font-size:.7rem;font-weight:bold;color:#60a5fa">HLD</div>
+      <div class="t-label">Architecture, data flow</div>
+      <span class="t-tag" style="background:#1e3a5f;color:#93c5fd">~10 min</span>
+    </div>
+    <div class="t-step">
+      <div class="t-circle" style="border-color:#a78bfa;color:#a78bfa">🔬</div>
+      <div style="font-size:.7rem;font-weight:bold;color:#a78bfa">LLD</div>
+      <div class="t-label">APIs, state, components</div>
+      <span class="t-tag" style="background:#312e81;color:#c4b5fd">~15 min</span>
+    </div>
+    <div class="t-step">
+      <div class="t-circle" style="border-color:#10b981;color:#10b981">⚖️</div>
+      <div style="font-size:.7rem;font-weight:bold;color:#10b981">Trade-offs</div>
+      <div class="t-label">Justify choices</div>
+    </div>
+    <div class="t-step">
+      <div class="t-circle" style="border-color:#f59e0b;color:#f59e0b">📈</div>
+      <div style="font-size:.7rem;font-weight:bold;color:#f59e0b">Scale</div>
+      <div class="t-label">What breaks at 10×?</div>
+    </div>
+  </div>
+</div>
+
+<div class="split">
+  <div class="panel hld-panel">
+    <h2 style="color:#60a5fa">🏗️ High-Level Design (HLD)</h2>
+    <p class="panel-desc">Answers "WHAT will the system look like?" — boxes and arrows, bird's-eye view. Click each layer to expand.</p>
+    <div class="layer hld-layer active" onclick="toggleLayer(this)">
+      <div class="layer-name">1. User / Client Layer</div>
+      <div class="layer-desc">Who uses the system? Browser/mobile/desktop? Authenticated vs anonymous? This shapes every other decision. Example: "10M DAU, primarily mobile web, 60% on slow 3G."</div>
+    </div>
+    <div class="layer hld-layer" onclick="toggleLayer(this)">
+      <div class="layer-name">2. Data Flow Architecture</div>
+      <div class="layer-desc">How does data move? Client fetches from REST/GraphQL? Websocket for realtime? SSE for server push? Diagram the arrows. Where is the source of truth?</div>
+    </div>
+    <div class="layer hld-layer" onclick="toggleLayer(this)">
+      <div class="layer-name">3. Rendering Strategy</div>
+      <div class="layer-desc">CSR / SSR / SSG / ISR? Hybrid? Decision should be driven by SEO requirements, TTI budget, and content freshness needs — not framework preference.</div>
+    </div>
+    <div class="layer hld-layer" onclick="toggleLayer(this)">
+      <div class="layer-name">4. Deployment & CDN</div>
+      <div class="layer-desc">Static assets on CDN (S3+CloudFront), API behind a load balancer, edge computing for personalisation? Geographic distribution strategy.</div>
+    </div>
+    <div class="layer hld-layer" onclick="toggleLayer(this)">
+      <div class="layer-name">5. Cross-Cutting Concerns</div>
+      <div class="layer-desc">Auth (OAuth/JWT), logging & monitoring, feature flags, error boundaries, A/B experimentation framework. These belong in HLD — they affect the whole system.</div>
+    </div>
+    <div class="interview-moment">At Microsoft: After presenting HLD, pause and ask "Does this overall direction make sense before I dive deeper?" — signals you think collaboratively.</div>
+  </div>
+  <div class="panel lld-panel">
+    <h2 style="color:#a78bfa">🔬 Low-Level Design (LLD)</h2>
+    <p class="panel-desc">Answers "HOW will we build it?" — actual components, APIs, state shape, algorithms. Click each layer to expand.</p>
+    <div class="layer lld-layer active" onclick="toggleLayer(this)">
+      <div class="layer-name">1. Component Hierarchy</div>
+      <div class="layer-desc">Break the UI into named components. Which are smart (data-aware) vs dumb (presentational)? What are the props/events contracts? How does composition work?</div>
+    </div>
+    <div class="layer lld-layer" onclick="toggleLayer(this)">
+      <div class="layer-name">2. State Shape & Management</div>
+      <div class="layer-desc">What lives in global state vs local? Draw the state interface. Context API vs Redux vs Zustand — justified by complexity of sharing. Derived state vs stored state distinction.</div>
+    </div>
+    <div class="layer lld-layer" onclick="toggleLayer(this)">
+      <div class="layer-name">3. API Contract / Interface</div>
+      <div class="layer-desc">Define the REST endpoints or GraphQL queries you need. Request/response shape, pagination strategy (cursor vs offset), error schema, retry logic.</div>
+    </div>
+    <div class="layer lld-layer" onclick="toggleLayer(this)">
+      <div class="layer-name">4. Performance Optimisations</div>
+      <div class="layer-desc">Virtualisation for long lists, memoisation boundaries, code-splitting strategy, image lazy-loading, critical CSS extraction. Applied at the component level.</div>
+    </div>
+    <div class="layer lld-layer" onclick="toggleLayer(this)">
+      <div class="layer-name">5. Error & Loading States</div>
+      <div class="layer-desc">Every async operation needs three states: loading skeleton, success, error with retry. Optimistic UI design. How do you handle partial failures in parallel requests?</div>
+    </div>
+    <div class="interview-moment">At Adobe: They'll ask about the specific component API you chose. Be ready to show TypeScript interface definitions for your major state shapes.</div>
+  </div>
+</div>
+
+<div class="example-box">
+  <h3>📖 Worked Example: Design A Twitter-like Feed</h3>
+  <div class="eg-tabs">
+    <div class="eg-tab active" onclick="showEg('hld', this)">HLD View</div>
+    <div class="eg-tab" onclick="showEg('lld', this)">LLD View</div>
+    <div class="eg-tab" onclick="showEg('boundary', this)">HLD ↔ LLD Boundary</div>
+  </div>
+  <div id="eg-hld" class="eg-content show">
+    <div class="hld-box">
+      <div class="box-label" style="color:#60a5fa">HLD Decisions for Feed</div>
+      <ul style="list-style:none;line-height:2">
+        <li>📦 <strong>CDN</strong>: Static React bundle served via CloudFront. Media via separate media CDN.</li>
+        <li>🔄 <strong>Data flow</strong>: Initial SSR for first ~20 tweets (SEO + LCP). Then CSR for infinite scroll pagination.</li>
+        <li>🔌 <strong>Realtime</strong>: WebSocket for live <em>like count</em> updates; SSE for new tweet notifications.</li>
+        <li>🔐 <strong>Auth</strong>: JWT in httpOnly cookie. Refresh via silent iframe or service worker.</li>
+        <li>📊 <strong>Observability</strong>: Sentry for errors, DataDog RUM for Core Web Vitals.</li>
+      </ul>
+    </div>
+  </div>
+  <div id="eg-lld" class="eg-content">
+    <div class="lld-box">
+      <div class="box-label" style="color:#a78bfa">LLD Decisions for Feed</div>
+      <ul style="list-style:none;line-height:2">
+        <li>🧩 <strong>Components</strong>: <code>FeedContainer</code> → <code>TweetList</code> (virtualised) → <code>TweetCard</code> → <code>TweetActions</code></li>
+        <li>📐 <strong>State</strong>: <code>{`{ tweets: Map&lt;id,Tweet&gt;, cursor: string, hasMore: boolean, optimisticLikes: Map&lt;id,number&gt; }`}</code></li>
+        <li>🌐 <strong>API</strong>: <code>GET /feed?cursor=&lt;cursor&gt;&limit=20</code> returning <code>{`{ data: Tweet[], nextCursor: string }`}</code></li>
+        <li>⚡ <strong>Perf</strong>: <code>react-window</code> for list virtualisation. <code>useMemo</code> on tweet selector. <code>React.memo</code> on <code>TweetCard</code>.</li>
+        <li>❌ <strong>Errors</strong>: Error boundary per <code>TweetCard</code>. Failed tweets show placeholder. Like failures show toast with undo.</li>
+      </ul>
+    </div>
+  </div>
+  <div id="eg-boundary" class="eg-content">
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start">
+      <div class="hld-box">
+        <div class="box-label" style="color:#60a5fa">Belongs in HLD</div>
+        <ul style="list-style:none;font-size:.74rem;line-height:1.8;color:#93c5fd">
+          <li>• Rendering strategy (SSR vs CSR)</li>
+          <li>• CDN topology</li>
+          <li>• Authentication mechanism</li>
+          <li>• Realtime protocol choice</li>
+          <li>• Micro-frontend vs monolith</li>
+          <li>• Overall data flow direction</li>
+        </ul>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#475569">⟺</div>
+      <div class="lld-box">
+        <div class="box-label" style="color:#a78bfa">Belongs in LLD</div>
+        <ul style="list-style:none;font-size:.74rem;line-height:1.8;color:#c4b5fd">
+          <li>• Component tree structure</li>
+          <li>• State interface typings</li>
+          <li>• API endpoint shape</li>
+          <li>• Virtualisation library choice</li>
+          <li>• Error boundary placement</li>
+          <li>• Memoisation strategy</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleLayer(el) {
+  const parent = el.closest('.panel');
+  parent.querySelectorAll('.layer').forEach(l => {
+    if (l !== el) l.classList.remove('active');
+  });
+  el.classList.toggle('active');
+}
+function showEg(id, btn) {
+  document.querySelectorAll('.eg-content').forEach(e => e.classList.remove('show'));
+  document.querySelectorAll('.eg-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('eg-'+id).classList.add('show');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

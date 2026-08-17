@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>RUM Implementation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}button{background:#f59e0b;color:#0f1117;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.82rem;margin:4px}button:hover{opacity:.85}#output{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;margin-top:10px;font-size:.78rem;max-height:250px;overflow-y:auto;font-family:monospace}
+</style>
+</head>
+<body>
+<h1>RUM Implementation</h1>
+<p class="sub">Practical 7.1 · Build a minimal Real User Monitoring data collector</p>
+
+<div class="card">
+  <h3>Live RUM Collector</h3>
+  <button onclick="collectNavTiming()">Collect Navigation Timing</button>
+  <button onclick="collectResources()">Collect Resource Timing</button>
+  <button onclick="collectCWV()">Collect Core Web Vitals</button>
+  <button onclick="beaconAll()">📡 Beacon All Data</button>
+  <div id="output"></div>
+</div>
+
+<div class="card">
+  <h3>Production RUM Implementation</h3>
+  <pre><span class="cm">// Minimal RUM collector — drop into any page</span>
+
+(<span class="kw">function</span>() {
+  <span class="kw">const</span> metrics = {};
+
+  <span class="cm">// 1. Navigation Timing</span>
+  window.addEventListener(<span class="str">'load'</span>, () =&gt; {
+    <span class="kw">const</span> nav = performance.getEntriesByType(<span class="str">'navigation'</span>)[<span class="num">0</span>];
+    metrics.dns = nav.domainLookupEnd - nav.domainLookupStart;
+    metrics.tcp = nav.connectEnd - nav.connectStart;
+    metrics.ttfb = nav.responseStart - nav.requestStart;
+    metrics.domLoad = nav.domContentLoadedEventEnd - nav.startTime;
+    metrics.fullLoad = nav.loadEventEnd - nav.startTime;
+  });
+
+  <span class="cm">// 2. Core Web Vitals via PerformanceObserver</span>
+  <span class="kw">function</span> <span class="fn">observe</span>(type, cb) {
+    <span class="kw">try</span> {
+      <span class="kw">new</span> PerformanceObserver((list) =&gt; {
+        <span class="kw">const</span> entries = list.getEntries();
+        cb(entries[entries.length - <span class="num">1</span>]);
+      }).observe({ type, buffered: <span class="kw">true</span> });
+    } <span class="kw">catch</span>(e) {}
+  }
+
+  observe(<span class="str">'largest-contentful-paint'</span>, (e) =&gt; {
+    metrics.lcp = Math.round(e.startTime);
+  });
+
+  <span class="kw">let</span> cls = <span class="num">0</span>;
+  observe(<span class="str">'layout-shift'</span>, (e) =&gt; {
+    <span class="kw">if</span> (!e.hadRecentInput) cls += e.value;
+    metrics.cls = Math.round(cls * <span class="num">1000</span>) / <span class="num">1000</span>;
+  });
+
+  <span class="kw">let</span> inp = <span class="num">0</span>;
+  <span class="kw">try</span> {
+    <span class="kw">new</span> PerformanceObserver((list) =&gt; {
+      <span class="kw">for</span> (<span class="kw">const</span> e <span class="kw">of</span> list.getEntries()) {
+        <span class="kw">if</span> (e.duration &gt; inp) inp = e.duration;
+      }
+      metrics.inp = inp;
+    }).observe({ type: <span class="str">'event'</span>, durationThreshold: <span class="num">16</span>, buffered: <span class="kw">true</span> });
+  } <span class="kw">catch</span>(e) {}
+
+  <span class="cm">// 3. Beacon on page unload</span>
+  document.addEventListener(<span class="str">'visibilitychange'</span>, () =&gt; {
+    <span class="kw">if</span> (document.visibilityState === <span class="str">'hidden'</span>) {
+      <span class="kw">const</span> payload = JSON.stringify({
+        url: location.href,
+        timestamp: Date.now(),
+        metrics,
+        connection: navigator.connection?.effectiveType,
+        deviceMemory: navigator.deviceMemory,
+      });
+      navigator.sendBeacon(<span class="str">'/api/rum'</span>, payload);
+      <span class="cm">// sendBeacon survives page unload</span>
+    }
+  });
+})();</pre>
+</div>
+
+<script>
+const output = document.getElementById('output');
+const log = (msg) => { output.innerHTML += msg + '\n'; output.scrollTop = output.scrollHeight; };
+
+function collectNavTiming() {
+  const nav = performance.getEntriesByType('navigation')[0];
+  if (!nav) { log('No navigation timing data'); return; }
+  log(`<span style="color:#f59e0b">--- Navigation Timing ---</span>`);
+  log(`DNS:       ${(nav.domainLookupEnd - nav.domainLookupStart).toFixed(1)}ms`);
+  log(`TCP:       ${(nav.connectEnd - nav.connectStart).toFixed(1)}ms`);
+  log(`TTFB:      ${(nav.responseStart - nav.requestStart).toFixed(1)}ms`);
+  log(`DOM Parse: ${(nav.domInteractive - nav.responseEnd).toFixed(1)}ms`);
+  log(`DCL:       ${(nav.domContentLoadedEventEnd - nav.startTime).toFixed(1)}ms`);
+  log(`Load:      ${(nav.loadEventEnd - nav.startTime).toFixed(1)}ms`);
+}
+
+function collectResources() {
+  const resources = performance.getEntriesByType('resource');
+  log(`<span style="color:#f59e0b">--- Resource Timing (${resources.length} resources) ---</span>`);
+  const byType = {};
+  resources.forEach(r => {
+    const type = r.initiatorType || 'other';
+    if (!byType[type]) byType[type] = { count: 0, size: 0 };
+    byType[type].count++;
+    byType[type].size += r.transferSize || 0;
+  });
+  Object.entries(byType).forEach(([type, data]) => {
+    log(`  ${type}: ${data.count} files, ${(data.size/1024).toFixed(1)}KB`);
+  });
+}
+
+function collectCWV() {
+  log(`<span style="color:#f59e0b">--- Core Web Vitals ---</span>`);
+  try {
+    new PerformanceObserver((list) => {
+      const e = list.getEntries().pop();
+      log(`LCP: ${Math.round(e.startTime)}ms (element: ${e.element?.tagName || '?'})`);
+    }).observe({ type: 'largest-contentful-paint', buffered: true });
+  } catch(e) { log('LCP: not supported'); }
+  log(`CLS: observe layout-shift entries (see RUM code above)`);
+  log(`INP: observe event entries (interact with page to generate)`);
+}
+
+function beaconAll() {
+  const data = {
+    url: location.href,
+    timestamp: Date.now(),
+    userAgent: navigator.userAgent.slice(0, 60),
+    connection: navigator.connection?.effectiveType || 'unknown',
+    nav: (() => { const n = performance.getEntriesByType('navigation')[0]; return n ? { ttfb: Math.round(n.responseStart - n.requestStart), load: Math.round(n.loadEventEnd - n.startTime) } : null; })(),
+  };
+  log(`<span style="color:#10b981">📡 Beacon payload (would send to /api/rum):</span>`);
+  log(JSON.stringify(data, null, 2));
+  // In production: navigator.sendBeacon('/api/rum', JSON.stringify(data));
+}
+</script>
+</body>
+</html>

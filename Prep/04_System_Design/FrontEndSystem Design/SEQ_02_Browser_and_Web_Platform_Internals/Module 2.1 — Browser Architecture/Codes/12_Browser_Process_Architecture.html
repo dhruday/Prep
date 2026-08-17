@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Browser Process Architecture</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px}
+    h1{text-align:center;color:#60a5fa;margin-bottom:4px;font-size:1.5rem}
+    .subtitle{text-align:center;color:#94a3b8;margin-bottom:18px;font-size:.88rem}
+    .browser-chrome{border:2px solid #60a5fa;border-radius:12px;padding:14px;background:#0a1520;margin-bottom:16px;position:relative}
+    .browser-label{position:absolute;top:-11px;left:14px;background:#0a1520;padding:0 8px;font-size:.72rem;color:#60a5fa;font-weight:bold;text-transform:uppercase;letter-spacing:.8px}
+    .tab-bar{display:flex;gap:6px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #1e3a5f}
+    .tab-pill{padding:4px 12px;border-radius:4px;font-size:.72rem;cursor:pointer;border:1px solid;transition:all .15s}
+    .tab-pill.active{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd}
+    .tab-pill:not(.active){background:#0d1520;border-color:#1e3a5f;color:#475569}
+    .renderer-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+    .proc-box{flex:1;min-width:140px;border-radius:8px;padding:12px;border:2px solid;cursor:pointer;transition:all .2s;position:relative}
+    .proc-box:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+    .proc-box.highlighted{box-shadow:0 0 0 3px rgba(255,255,255,.3)}
+    .proc-name{font-size:.78rem;font-weight:bold;margin-bottom:4px}
+    .proc-desc{font-size:.68rem;color:#94a3b8;line-height:1.5}
+    .proc-tag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:.62rem;margin-top:5px}
+    .proc-renderer{border-color:#10b981;background:#0a1a0a}
+    .proc-browser{border-color:#60a5fa;background:#0a1520}
+    .proc-gpu{border-color:#f59e0b;background:#1a1000}
+    .proc-network{border-color:#a78bfa;background:#110a1a}
+    .proc-utility{border-color:#ef4444;background:#1a0a0a}
+    .ipc-line{stroke-dasharray:6,3;animation:dash 1s linear infinite}
+    @keyframes dash{to{stroke-dashoffset:-18}}
+    .detail-panel{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:14px;margin-bottom:14px;min-height:80px}
+    .detail-panel h3{font-size:.8rem;text-transform:uppercase;color:#f59e0b;margin-bottom:8px}
+    .spectre-demo{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:14px;margin-bottom:14px}
+    .spectre-demo h2{font-size:.82rem;text-transform:uppercase;color:#ef4444;margin-bottom:10px}
+    .isolation-row{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+    .origin-box{border-radius:7px;padding:8px 12px;font-size:.73rem;border:1px solid}
+    .same-origin{border-color:#10b981;background:#0a1a0a;color:#86efac}
+    .cross-origin{border-color:#ef4444;background:#1a0a0a;color:#fca5a5}
+    .process-badge{border-radius:4px;padding:3px 8px;font-size:.66rem;margin-left:6px}
+    .same-proc{background:#14532d;color:#86efac}
+    .diff-proc{background:#7f1d1d;color:#fca5a5}
+    .memory-chart{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:14px;margin-bottom:14px}
+    .memory-chart h2{font-size:.82rem;text-transform:uppercase;color:#60a5fa;margin-bottom:10px}
+    .mem-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.76rem}
+    .mem-label{width:180px;color:#94a3b8;flex-shrink:0}
+    .mem-bar-bg{flex:1;height:14px;background:#0f1117;border-radius:3px;overflow:hidden}
+    .mem-bar-fill{height:100%;border-radius:3px;transition:width .6s ease;display:flex;align-items:center;justify-content:center;font-size:.62rem;color:#fff;font-weight:bold}
+    .mem-value{width:50px;text-align:right;color:#94a3b8;font-size:.72rem}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:14px}
+    .card h2{font-size:.8rem;text-transform:uppercase;color:#60a5fa;margin-bottom:10px}
+    code{background:#0d1117;border:1px solid #2d3551;border-radius:4px;padding:1px 5px;font-size:.72rem;color:#a78bfa;font-family:monospace}
+    pre{background:#0d1117;border:1px solid #2d3551;border-radius:7px;padding:10px;font-size:.72rem;color:#e2e8f0;font-family:monospace;line-height:1.6;white-space:pre-wrap;margin-top:6px}
+  </style>
+</head>
+<body>
+<h1>🏭 Browser Process Architecture</h1>
+<p class="subtitle">How Chrome/Edge isolates tabs, rendering, GPU, and network into separate OS processes</p>
+
+<div class="browser-chrome">
+  <div class="browser-label">Chrome Browser</div>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+    <div style="background:#1e2130;border-radius:6px;padding:4px 12px;flex:1;font-size:.73rem;color:#475569">https://yourapp.com</div>
+    <div style="width:10px;height:10px;border-radius:50%;background:#10b981"></div>
+    <div style="width:10px;height:10px;border-radius:50%;background:#f59e0b"></div>
+    <div style="width:10px;height:10px;border-radius:50%;background:#ef4444"></div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab-pill active">📄 yourapp.com</div>
+    <div class="tab-pill">📄 docs.microsoft.com</div>
+    <div class="tab-pill">📄 ads.doubleclick.net (iframe)</div>
+    <div style="margin-left:auto;font-size:.68rem;color:#475569;align-self:center">3 tabs = up to 3 renderer processes</div>
+  </div>
+
+  <!-- Browser Process -->
+  <div class="proc-box proc-browser" style="margin-bottom:10px" onclick="showDetail('browser')">
+    <div class="proc-name" style="color:#60a5fa">🏛️ Browser Process (1 instance)</div>
+    <div class="proc-desc">Manages UI chrome (address bar, tabs), orchestrates all child processes, handles top-level navigation decisions. Contains the UI thread and I/O thread.</div>
+    <span class="proc-tag" style="background:#1e3a5f;color:#93c5fd">Privileged (full OS access)</span>
+  </div>
+
+  <!-- Renderer Processes -->
+  <div class="renderer-row">
+    <div class="proc-box proc-renderer" onclick="showDetail('renderer')">
+      <div class="proc-name" style="color:#10b981">🎨 Renderer Process</div>
+      <div class="proc-desc">Runs Blink (HTML/CSS/layout) + V8 (JS). Tab 1: yourapp.com</div>
+      <span class="proc-tag" style="background:#14532d;color:#86efac">Sandboxed 🔒</span>
+    </div>
+    <div class="proc-box proc-renderer" onclick="showDetail('renderer')">
+      <div class="proc-name" style="color:#10b981">🎨 Renderer Process</div>
+      <div class="proc-desc">Runs Blink + V8. Tab 2: docs.microsoft.com</div>
+      <span class="proc-tag" style="background:#14532d;color:#86efac">Sandboxed 🔒</span>
+    </div>
+    <div class="proc-box proc-renderer" onclick="showDetail('renderer')">
+      <div class="proc-name" style="color:#10b981">🎨 Renderer Process</div>
+      <div class="proc-desc">Cross-origin iframe: ads.doubleclick.net (Site Isolation → own process)</div>
+      <span class="proc-tag" style="background:#14532d;color:#86efac">Sandboxed 🔒</span>
+    </div>
+  </div>
+
+  <!-- Supporting Processes -->
+  <div class="renderer-row">
+    <div class="proc-box proc-gpu" onclick="showDetail('gpu')">
+      <div class="proc-name" style="color:#f59e0b">🖥️ GPU Process (1)</div>
+      <div class="proc-desc">Receives compositor commands from all renderers, executes GL/Vulkan calls, draws to screen.</div>
+      <span class="proc-tag" style="background:#451a03;color:#fcd34d">GPU access</span>
+    </div>
+    <div class="proc-box proc-network" onclick="showDetail('network')">
+      <div class="proc-name" style="color:#a78bfa">🌐 Network Service (1)</div>
+      <div class="proc-desc">All HTTP/DNS/QUIC traffic. Manages the shared disk cache. Sandboxed post-Chrome 80.</div>
+      <span class="proc-tag" style="background:#312e81;color:#c4b5fd">Network I/O</span>
+    </div>
+    <div class="proc-box proc-utility" onclick="showDetail('utility')">
+      <div class="proc-name" style="color:#ef4444">⚙️ Utility Processes (n)</div>
+      <div class="proc-desc">Audio service, storage service, extensions. Each extension gets its own isolated process.</div>
+      <span class="proc-tag" style="background:#7f1d1d;color:#fca5a5">Isolated</span>
+    </div>
+  </div>
+</div>
+
+<div id="detail" class="detail-panel">
+  <h3 id="detail-title">🔍 Click any process to learn more</h3>
+  <div id="detail-body" style="font-size:.76rem;color:#94a3b8">Each process type has a specific responsibility. Click to explore.</div>
+</div>
+
+<div class="spectre-demo">
+  <h2>🔒 Site Isolation — Post-Spectre Defence</h2>
+  <div style="font-size:.76rem;color:#94a3b8;margin-bottom:12px">After Spectre (2018), Chrome defaults to same-process only for same-origin iframes. Cross-origin iframes get isolated renderer processes.</div>
+  <div class="isolation-row">
+    <div class="origin-box same-origin">🏠 yourapp.com <span class="process-badge same-proc">Shared Renderer</span></div>
+    <div style="font-size:.8rem;color:#475569">+</div>
+    <div class="origin-box same-origin">📑 yourapp.com/dashboard <span class="process-badge same-proc">Same Renderer ✅</span></div>
+  </div>
+  <div class="isolation-row">
+    <div class="origin-box same-origin">🏠 yourapp.com</div>
+    <div style="font-size:.8rem;color:#475569">+</div>
+    <div class="origin-box cross-origin">🚨 ads.doubleclick.net <span class="process-badge diff-proc">Own Renderer 🔒</span></div>
+    <div style="font-size:.72rem;color:#ef4444;margin-left:4px">Cannot read yourapp.com memory via Spectre timing</div>
+  </div>
+  <div class="isolation-row">
+    <div class="origin-box same-origin">🏦 mybank.com</div>
+    <div style="font-size:.8rem;color:#475569">+</div>
+    <div class="origin-box cross-origin">📊 analytics.evil.com (iframe) <span class="process-badge diff-proc">Own Renderer 🔒</span></div>
+  </div>
+</div>
+
+<div class="memory-chart">
+  <h2>📊 Memory Cost — Why Chrome Uses So Much RAM</h2>
+  <div style="font-size:.74rem;color:#94a3b8;margin-bottom:10px">Each renderer process has a ~50–100MB baseline. This is the explicit trade-off for security. Slide the tab count to visualise.</div>
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+    <span style="font-size:.74rem;color:#94a3b8">Tabs / iframes:</span>
+    <input type="range" id="tab-count" min="1" max="20" value="5" oninput="updateMemory(this.value)" style="flex:1">
+    <span id="tab-val" style="color:#60a5fa;font-weight:bold;width:40px">5</span>
+  </div>
+  <div class="mem-row"><span class="mem-label">Renderer Processes (~75MB each)</span><div class="mem-bar-bg"><div class="mem-bar-fill" id="renderer-bar" style="background:#10b981;width:37.5%">375MB</div></div><span class="mem-value" id="renderer-val">375MB</span></div>
+  <div class="mem-row"><span class="mem-label">Browser Process (fixed ~150MB)</span><div class="mem-bar-bg"><div class="mem-bar-fill" style="background:#60a5fa;width:7.5%">150MB</div></div><span class="mem-value">150MB</span></div>
+  <div class="mem-row"><span class="mem-label">GPU Process (fixed ~100MB)</span><div class="mem-bar-bg"><div class="mem-bar-fill" style="background:#f59e0b;width:5%">100MB</div></div><span class="mem-value">100MB</span></div>
+  <div class="mem-row"><span class="mem-label">Network Service (fixed ~50MB)</span><div class="mem-bar-bg"><div class="mem-bar-fill" style="background:#a78bfa;width:2.5%">50MB</div></div><span class="mem-value">50MB</span></div>
+  <div style="margin-top:8px;padding:8px;background:#0f1117;border-radius:6px;font-size:.74rem">
+    <strong>Total RAM:</strong> <span id="total-ram" style="color:#f59e0b">675MB</span> for 5 tabs. 
+    <span style="color:#94a3b8">This is why Chrome uses substantial memory — it's security by design.</span>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <h2>📡 IPC Flow — How Processes Communicate</h2>
+    <pre>// When a renderer process needs to fetch a URL:
+Renderer → (IPC/Mojo) → Network Service → Internet
+Network Service → (IPC/Mojo) → Renderer (response data)
+
+// When rendering is complete:
+Renderer → (IPC compositor commands) → GPU Process
+GPU Process → (OpenGL/Vulkan) → Screen pixels
+
+// When JS accesses localStorage:
+Renderer JS → (IPC) → Storage Service
+Storage Service → (file I/O) → disk
+Storage Service → (IPC) → Renderer (result)
+
+// postMessage between cross-origin iframes:
+iframe1 Renderer → postMessage() → Browser Process
+Browser Process → validates origin → iframe2 Renderer</pre>
+  </div>
+  <div class="card">
+    <h2>🎯 SAP Micro-Frontend Implications</h2>
+    <pre style="color:#86efac">// At SAP Labs: portal embeds multiple MFE iframes
+// Each cross-origin MFE = separate renderer process
+
+// Problem: 10 MFE iframes × 75MB = 750MB overhead
+// Solution: Lazy-load off-screen iframes
+
+const observer = new IntersectionObserver(
+  (entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const container = entry.target;
+        const src = container.dataset.src;
+        container.innerHTML =
+          `&lt;iframe src="${src}" ...&gt;&lt;/iframe&gt;`;
+        observer.unobserve(container);
+      }
+    });
+  },
+  { rootMargin: '200px' }
+);
+
+// Cross-frame messaging (replaces direct DOM access)
+// Always validate origin in production!
+window.addEventListener('message', (e) => {
+  if (e.origin !== 'https://trusted-mfe.sap.com') return;
+  handleMFEMessage(e.data);
+});</pre>
+  </div>
+</div>
+
+<script>
+const details = {
+  browser: {
+    title: '🏛️ Browser Process — The Orchestrator',
+    body: `The Browser Process is the only process with full OS privileges. It runs the browser UI (address bar, tab strip, bookmarks), manages child process lifecycle (spawns/kills renderers), handles top-level navigation, and coordinates the security model. It has two key threads: <strong>UI thread</strong> (handles user input, tab management) and <strong>I/O thread</strong> (handles IPC with child processes). It does NOT do rendering — that's the renderer's job.`
+  },
+  renderer: {
+    title: '🎨 Renderer Process — The Sandboxed Worker',
+    body: `Each renderer process runs <strong>Blink</strong> (Google's HTML/CSS engine, forked from WebKit) and <strong>V8</strong> (JavaScript engine). It processes the raw HTML bytes into a DOM, calculates CSS, performs layout (position/size), generates paint instructions, and sends compositor commands to the GPU Process via IPC. It is <strong>sandboxed</strong> — it cannot access the filesystem, network, or other processes directly. All such requests go through IPC to the Browser Process or dedicated service processes. This is Chrome's core security guarantee: a compromise of a renderer process cannot directly compromise the OS.`
+  },
+  gpu: {
+    title: '🖥️ GPU Process — The Painter',
+    body: `The GPU Process receives compositor layer commands from all renderer processes and executes the actual GPU draw calls (OpenGL/Vulkan/Metal). Having one GPU process handles synchronisation of multiple renderers drawing to the same screen. It also handles hardware-accelerated video decoding. Without the GPU Process, each renderer would need GPU access — creating race conditions and security risks. Crash in renderer → GPU keeps running. Crash in GPU → all tabs go black, browser restores GPU process.`
+  },
+  network: {
+    title: '🌐 Network Service — The Mailman',
+    body: `Introduced as an isolated process in Chrome 80. Handles all network I/O: DNS resolution, TCP/TLS connection management, HTTP/2 multiplexing, QUIC/HTTP3, disk cache reads/writes, cookie/credential management for requests. By isolating it, a network-level exploit (e.g., a malicious HTTP response causing a buffer overflow) cannot escape to the main browser process. The renderer sends fetch requests via IPC to the Network Service; the Network Service handles the actual bytes and sends back responses.`
+  },
+  utility: {
+    title: '⚙️ Utility Processes — The Specialists',
+    body: `Each Chrome extension runs in its own isolated utility process. Audio playback, speech synthesis, printing, and storage services also run as utility processes. Browser extensions run as utility processes sandboxed to their declared permissions. A crashing extension process doesn't affect the browser or tabs. Extensions that inject into page content (content scripts) still run in the renderer process for DOM access, but the extension background page is isolated.`
+  }
+};
+
+function showDetail(key) {
+  const d = details[key];
+  document.getElementById('detail-title').textContent = d.title;
+  document.getElementById('detail-body').innerHTML = `<span style="font-size:.76rem;line-height:1.7">${d.body}</span>`;
+  document.getElementById('detail').style.borderColor = '#3b82f6';
+}
+
+function updateMemory(tabs) {
+  tabs = parseInt(tabs);
+  document.getElementById('tab-val').textContent = tabs;
+  const rendererMB = tabs * 75;
+  const totalMB = rendererMB + 150 + 100 + 50;
+  const maxBar = 2000;
+  const barWidth = Math.min(rendererMB / maxBar * 100, 100);
+  const bar = document.getElementById('renderer-bar');
+  bar.style.width = barWidth + '%';
+  bar.textContent = rendererMB + 'MB';
+  document.getElementById('renderer-val').textContent = rendererMB + 'MB';
+  document.getElementById('total-ram').textContent = totalMB + 'MB';
+}
+</script>
+</body>
+</html>

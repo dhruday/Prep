@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 03 — CDN Integrity</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a2a1a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>💚 Lab 03 — CDN Integrity Protection</h1>
+<p class="sub">Module 12.3 · CDN compromise scenarios, SRI with popular CDNs, fallback</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">CDN Threats</div>
+  <div class="tab" onclick="setTab(1)">SRI Examples</div>
+  <div class="tab" onclick="setTab(2)">Fallback Pattern</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>CDN Compromise Attack Vectors</h3>
+    <pre><span class="cm">// How CDNs get compromised:</span>
+
+<span class="cm">// 1. Account hijacking</span>
+<span class="cm">//    Attacker compromises CDN admin account</span>
+<span class="cm">//    Replaces files at source</span>
+
+<span class="cm">// 2. DNS hijacking</span>
+<span class="cm">//    Redirect cdn.example.com to attacker's server</span>
+<span class="cm">//    Serve malicious files from lookalike domain</span>
+
+<span class="cm">// 3. BGP hijacking</span>
+<span class="cm">//    Route CDN's IP traffic through attacker's network</span>
+<span class="cm">//    MITM at network layer</span>
+
+<span class="cm">// 4. Supply chain compromise</span>
+<span class="cm">//    npm publish of malicious version</span>
+<span class="cm">//    CDN auto-syncs latest version</span>
+<span class="cm">//    unpkg, jsdelivr serve from npm registry</span>
+
+<span class="cm">// 5. Edge server compromise</span>
+<span class="cm">//    Individual CDN PoP (Point of Presence) hacked</span>
+<span class="cm">//    Only users routed to that PoP affected</span>
+
+<span class="cm">// Impact without SRI:</span>
+<span class="cm">//    ❌ Crypto mining in users' browsers</span>
+<span class="cm">//    ❌ Credential theft (form hijacking)</span>
+<span class="cm">//    ❌ Credit card skimming (Magecart attacks)</span>
+<span class="cm">//    ❌ Malware distribution</span>
+<span class="cm">//    ❌ SEO spam injection</span>
+
+<span class="cm">// With SRI:</span>
+<span class="cm">//    ✅ Browser blocks the modified file</span>
+<span class="cm">//    ✅ CSP reports the violation</span>
+<span class="cm">//    ✅ Fallback to self-hosted copy</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>SRI with Popular CDNs</h3>
+    <pre><span class="cm">// ═══ React from cdnjs ═══</span>
+&lt;script
+  src=<span class="str">"https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"</span>
+  integrity=<span class="str">"sha384-COMPUTED_HASH_HERE"</span>
+  crossorigin=<span class="str">"anonymous"</span>
+&gt;&lt;/script&gt;
+
+<span class="cm">// ═══ Bootstrap from jsdelivr ═══</span>
+&lt;link
+  rel=<span class="str">"stylesheet"</span>
+  href=<span class="str">"https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"</span>
+  integrity=<span class="str">"sha384-COMPUTED_HASH_HERE"</span>
+  crossorigin=<span class="str">"anonymous"</span>
+&gt;
+
+<span class="cm">// ═══ jQuery from Google CDN ═══</span>
+&lt;script
+  src=<span class="str">"https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"</span>
+  integrity=<span class="str">"sha384-COMPUTED_HASH_HERE"</span>
+  crossorigin=<span class="str">"anonymous"</span>
+&gt;&lt;/script&gt;
+
+<span class="cm">// Important notes:</span>
+<span class="cm">// 1. Use exact version URLs (not /latest or unversioned)</span>
+<span class="cm">// 2. crossorigin="anonymous" is REQUIRED for cross-origin SRI</span>
+<span class="cm">// 3. CDN must serve proper CORS headers (Access-Control-Allow-Origin: *)</span>
+<span class="cm">// 4. Hash MUST match the exact bytes served (including gzip differences)</span>
+<span class="cm">//    Note: SRI hashes the decompressed content. Gzip is transparent</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>CDN Fallback Pattern</h3>
+    <pre><span class="cm">// If SRI fails → CDN compromised or down</span>
+<span class="cm">// Fallback to self-hosted copy:</span>
+
+<span class="cm">// Pattern 1: onerror fallback</span>
+&lt;script
+  src=<span class="str">"https://cdn.example.com/lib.js"</span>
+  integrity=<span class="str">"sha384-HASH"</span>
+  crossorigin=<span class="str">"anonymous"</span>
+  onerror=<span class="str">"loadFallback(this, '/static/lib.js')"</span>
+&gt;&lt;/script&gt;
+
+&lt;script&gt;
+<span class="kw">function</span> <span class="fn">loadFallback</span>(el, fallbackSrc) {
+  console.warn(<span class="str">'CDN failed, loading fallback:'</span>, fallbackSrc);
+  <span class="kw">const</span> script = document.createElement(<span class="str">'script'</span>);
+  script.src = fallbackSrc;
+  <span class="cm">// No crossorigin needed for same-origin</span>
+  <span class="cm">// Can add SRI for self-hosted too (defense-in-depth)</span>
+  el.parentNode.insertBefore(script, el.nextSibling);
+}
+&lt;/script&gt;
+
+<span class="cm">// Pattern 2: Feature detection</span>
+&lt;script src=<span class="str">"https://cdn/jquery.min.js"</span> integrity=<span class="str">"sha384-..."</span> crossorigin=<span class="str">"anonymous"</span>&gt;&lt;/script&gt;
+&lt;script&gt;
+<span class="kw">if</span> (!window.jQuery) {
+  document.write(<span class="str">'&lt;script src="/fallback/jquery.min.js"&gt;&lt;\/script&gt;'</span>);
+}
+&lt;/script&gt;
+
+<span class="cm">// Pattern 3: Dynamic loader with retry</span>
+<span class="kw">async function</span> <span class="fn">loadWithFallback</span>(primary, fallback) {
+  <span class="kw">try</span> {
+    <span class="kw">await</span> loadScript(primary);
+  } <span class="kw">catch</span> (e) {
+    console.warn(<span class="str">'Primary failed, trying fallback'</span>);
+    <span class="kw">await</span> loadScript(fallback);
+  }
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CDN Integrity</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How would you design a CDN strategy that balances performance and security?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Layered approach: (1) Self-host critical resources: Your own app bundle, authentication logic, payment forms. No CDN dependency for security-critical code. (2) CDN for libraries with SRI: React, lodash, etc. Versioned URLs + SRI hashes. (3) Fallback chain: CDN → self-hosted copy → graceful degradation. Feature-detect library availability. (4) CSP enforcement: script-src 'self' cdn.jsdelivr.net 'sha384-...'. Restrict which CDNs can serve scripts. (5) CDN monitoring: Automated checks comparing CDN-served content against known hashes. Alert on hash mismatch before users are affected. (6) Version pinning: Never use @latest URLs. Pin to exact versions.Lock file generates SRI manifest. (7) Multi-CDN: Primary and secondary CDN. If Cloudflare is down, fallback to Fastly. (8) Preconnect for performance: <link rel="preconnect" href="https://cdn.jsdelivr.net">. DNS prefetch + TLS handshake happen early. (9) HTTP/2 push: Self-hosted resources can use server push. CDN resources benefit from shared browser cache.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+</script>
+</body></html>

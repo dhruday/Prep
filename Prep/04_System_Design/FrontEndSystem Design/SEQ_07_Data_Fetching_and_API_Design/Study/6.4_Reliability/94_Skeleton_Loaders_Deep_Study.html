@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Skeleton Loaders &amp; Loading State Strategy Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2e2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}.card h3.good{color:#10b981}.card h3.bad{color:#ef4444}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Skeleton Loaders &amp; Loading State Strategy Deep Study</h1>
+<p class="sub">Module 6.4 · FAANG Interview Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Architecture Patterns</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<!-- Tab 0: Deep Theory -->
+<div class="panel active">
+  <div class="card">
+    <h3>1. Loading State Taxonomy</h3>
+    <pre><span class="cm">// Not all loading states are equal — treating them the same is a junior mistake</span>
+<span class="cm">//</span>
+<span class="cm">// INITIAL LOAD     → First ever fetch — show skeleton</span>
+<span class="cm">// REFRESHING       → Has data, fetching update — show stale data + subtle indicator</span>
+<span class="cm">// PAGINATING       → Loading next page — show existing + bottom loader</span>
+<span class="cm">// BACKGROUND       → Silent refresh — no visible indicator at all</span>
+<span class="cm">// SUBMITTING       → User action pending — disable UI + spinner on button</span>
+<span class="cm">// ERROR            → Fetch failed — error state with retry option</span>
+<span class="cm">//</span>
+<span class="cm">// ❌ WRONG: if (isLoading) return &lt;Spinner /&gt;</span>
+<span class="cm">//   → This replaces existing content with spinner on refresh!</span>
+<span class="cm">//   → User sees content disappear and reappear</span>
+<span class="cm">//</span>
+<span class="cm">// ✅ RIGHT: Show skeleton only on INITIAL load</span>
+<span class="cm">//           Show existing data + subtle indicator on refresh</span>
+<span class="cm">//           Show nothing on background refresh</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Why Skeletons Beat Spinners</h3>
+    <pre><span class="cm">// Facebook's research: skeleton loaders improve perceived load time by 20%</span>
+<span class="cm">// even when actual load time is IDENTICAL to spinner</span>
+<span class="cm">//</span>
+<span class="cm">// Why? Skeletons communicate:</span>
+<span class="cm">// 1. WHAT is loading (text, image, avatar — not just "something")</span>
+<span class="cm">// 2. WHERE it will appear (exact position in layout)</span>
+<span class="cm">// 3. HOW MUCH is loading (rough content volume)</span>
+<span class="cm">//</span>
+<span class="cm">// Spinner says:  "Trust me bro, something is happening"</span>
+<span class="cm">// Skeleton says: "Here's exactly what the page will look like in 200ms"</span>
+<span class="cm">//</span>
+<span class="cm">// When to use SPINNER instead of skeleton:</span>
+<span class="cm">// - Button submission (small, localized action)</span>
+<span class="cm">// - Modal loading (unknown content shape)</span>
+<span class="cm">// - Full-page route transitions (brief flash)</span>
+<span class="cm">//</span>
+<span class="cm">// When to use NOTHING:</span>
+<span class="cm">// - Background refresh of existing data (SWR)</span>
+<span class="cm">// - Analytics/tracking calls</span>
+<span class="cm">// - Prefetching future routes</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. CSS Shimmer Animation</h3>
+    <pre><span class="cm">// The "shimmer" effect creates perception of progress/movement</span>
+<span class="cm">// Gradient slides from left to right — feels like "loading bar"</span>
+
+<span class="cm">/* CSS: */</span>
+@keyframes shimmer {
+  <span class="num">0%</span>   { background-position: -<span class="num">200</span>px <span class="num">0</span>; }
+  <span class="num">100%</span> { background-position: <span class="fn">calc</span>(<span class="num">200</span>px + <span class="num">100%</span>) <span class="num">0</span>; }
+}
+
+.skeleton {
+  background: <span class="fn">linear-gradient</span>(
+    <span class="num">90</span>deg,
+    <span class="str">#1e2130</span> <span class="num">25%</span>,    <span class="cm">/* Dark base */</span>
+    <span class="str">#2d3551</span> <span class="num">37%</span>,    <span class="cm">/* Lighter flash */</span>
+    <span class="str">#1e2130</span> <span class="num">63%</span>     <span class="cm">/* Back to dark */</span>
+  );
+  background-size: <span class="num">400</span>px <span class="num">100%</span>;
+  animation: shimmer <span class="num">1.4</span>s ease infinite;
+  border-radius: <span class="num">4</span>px;
+}
+
+<span class="cm">/* Respect user preferences: */</span>
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: <span class="str">#2d3551</span>;  <span class="cm">/* Static gray — no movement */</span>
+  }
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>4. Avoiding Cumulative Layout Shift (CLS)</h3>
+    <pre><span class="cm">// The #1 mistake: skeleton has different dimensions than real content</span>
+<span class="cm">//</span>
+<span class="cm">// ❌ Bad: Skeleton = 50px height, Real card = 120px → CLS when content loads</span>
+<span class="cm">// ✅ Good: Both skeleton and real card = 120px (min-height reserved)</span>
+
+<span class="cm">// Strategy 1: Fixed container with min-height</span>
+<span class="cm">// &lt;article style="min-height: 120px"&gt;</span>
+<span class="cm">//   {user ? &lt;UserCard /&gt; : &lt;UserCardSkeleton /&gt;}</span>
+<span class="cm">// &lt;/article&gt;</span>
+
+<span class="cm">// Strategy 2: aspect-ratio for media</span>
+<span class="cm">// &lt;div style="aspect-ratio: 16/9"&gt;</span>
+<span class="cm">//   {image ? &lt;img /&gt; : &lt;Skeleton /&gt;}</span>
+<span class="cm">// &lt;/div&gt;</span>
+
+<span class="cm">// Strategy 3: CSS Grid with fixed tracks</span>
+<span class="cm">// Grid layout doesn't change when content loads</span>
+<span class="cm">// .card-grid { grid-template-rows: 48px 1fr 32px; }</span>
+
+<span class="cm">// Measure CLS: use web-vitals library</span>
+<span class="cm">// import { onCLS } from 'web-vitals';</span>
+<span class="cm">// onCLS((metric) =&gt; reportToAnalytics(metric));</span>
+<span class="cm">// Target: CLS &lt; 0.1</span></pre>
+  </div>
+</div>
+
+<!-- Tab 1: Architecture Patterns -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Content-Shape Skeleton Components</h3>
+    <pre><span class="cm">// Each skeleton matches the EXACT layout of its real counterpart</span>
+
+<span class="cm">// Reusable base skeleton</span>
+<span class="kw">function</span> <span class="fn">Skeleton</span>({ width = <span class="str">'100%'</span>, height = <span class="str">'1em'</span>, radius = <span class="str">'4px'</span>, circle }) {
+  <span class="kw">return</span> &lt;span
+    className=<span class="str">"skeleton"</span>
+    style={{
+      display: <span class="str">'block'</span>,
+      width: circle ? height : width,
+      height,
+      borderRadius: circle ? <span class="str">'50%'</span> : radius,
+    }}
+    aria-hidden=<span class="str">"true"</span>  <span class="cm">// Hidden from screen readers</span>
+  /&gt;;
+}
+
+<span class="cm">// Mirrors real UserCard exactly:</span>
+<span class="kw">function</span> <span class="fn">UserCardSkeleton</span>() {
+  <span class="kw">return</span> (
+    &lt;article aria-label=<span class="str">"Loading user"</span> aria-busy=<span class="str">"true"</span>&gt;
+      &lt;div style={{ display: <span class="str">'flex'</span>, gap: <span class="num">12</span> }}&gt;
+        &lt;<span class="fn">Skeleton</span> height=<span class="num">48</span> circle /&gt;          <span class="cm">{/* Avatar */}</span>
+        &lt;div style={{ flex: <span class="num">1</span> }}&gt;
+          &lt;<span class="fn">Skeleton</span> width=<span class="str">"60%"</span> height=<span class="num">16</span> /&gt;   <span class="cm">{/* Name */}</span>
+          &lt;<span class="fn">Skeleton</span> width=<span class="str">"40%"</span> height=<span class="num">12</span> /&gt;   <span class="cm">{/* Title */}</span>
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div style={{ display: <span class="str">'flex'</span>, gap: <span class="num">16</span>, marginTop: <span class="num">12</span> }}&gt;
+        &lt;<span class="fn">Skeleton</span> width=<span class="num">60</span> height=<span class="num">20</span> /&gt;       <span class="cm">{/* Stat 1 */}</span>
+        &lt;<span class="fn">Skeleton</span> width=<span class="num">60</span> height=<span class="num">20</span> /&gt;       <span class="cm">{/* Stat 2 */}</span>
+        &lt;<span class="fn">Skeleton</span> width=<span class="num">60</span> height=<span class="num">20</span> /&gt;       <span class="cm">{/* Stat 3 */}</span>
+      &lt;/div&gt;
+    &lt;/article&gt;
+  );
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Smart Loading Decision Hook</h3>
+    <pre><span class="kw">function</span> <span class="fn">useLoadingUX</span>(query) {
+  <span class="kw">const</span> { data, isLoading, isFetching, isError, fetchStatus } = query;
+
+  <span class="cm">// First load — no data yet</span>
+  <span class="kw">if</span> (isLoading &amp;&amp; !data) {
+    <span class="kw">return</span> { state: <span class="str">'skeleton'</span>, showSkeleton: <span class="kw">true</span> };
+  }
+
+  <span class="cm">// Has data, fetching update in background</span>
+  <span class="kw">if</span> (data &amp;&amp; isFetching) {
+    <span class="kw">return</span> { state: <span class="str">'refreshing'</span>, showStaleIndicator: <span class="kw">true</span>, data };
+  }
+
+  <span class="cm">// Error with no previous data</span>
+  <span class="kw">if</span> (isError &amp;&amp; !data) {
+    <span class="kw">return</span> { state: <span class="str">'error'</span>, showError: <span class="kw">true</span> };
+  }
+
+  <span class="cm">// Error but has stale data</span>
+  <span class="kw">if</span> (isError &amp;&amp; data) {
+    <span class="kw">return</span> { state: <span class="str">'stale-error'</span>, showStaleIndicator: <span class="kw">true</span>, data };
+  }
+
+  <span class="cm">// Normal — has fresh data</span>
+  <span class="kw">return</span> { state: <span class="str">'success'</span>, data };
+}
+
+<span class="cm">// Usage in component:</span>
+<span class="kw">function</span> <span class="fn">UserList</span>() {
+  <span class="kw">const</span> query = <span class="fn">useQuery</span>([<span class="str">'users'</span>], fetchUsers);
+  <span class="kw">const</span> { state, data, showSkeleton, showStaleIndicator, showError } = <span class="fn">useLoadingUX</span>(query);
+
+  <span class="kw">if</span> (showSkeleton) <span class="kw">return</span> &lt;<span class="fn">UserListSkeleton</span> count={<span class="num">5</span>} /&gt;;
+  <span class="kw">if</span> (showError) <span class="kw">return</span> &lt;<span class="fn">ErrorState</span> onRetry={query.refetch} /&gt;;
+
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      {showStaleIndicator &amp;&amp; &lt;div className=<span class="str">"stale-banner"</span>&gt;Updating...&lt;/div&gt;}
+      {data.<span class="fn">map</span>(user =&gt; &lt;<span class="fn">UserCard</span> key={user.id} user={user} /&gt;)}
+    &lt;/div&gt;
+  );
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Delayed Skeleton Pattern</h3>
+    <pre><span class="cm">// Don't show skeleton for fast loads (&lt;200ms)</span>
+<span class="cm">// Flashing a skeleton for 100ms is worse than showing nothing</span>
+
+<span class="kw">function</span> <span class="fn">useDelayedLoading</span>(isLoading, delayMs = <span class="num">200</span>) {
+  <span class="kw">const</span> [showSkeleton, setShowSkeleton] = <span class="fn">useState</span>(<span class="kw">false</span>);
+
+  <span class="fn">useEffect</span>(() =&gt; {
+    <span class="kw">if</span> (!isLoading) {
+      <span class="fn">setShowSkeleton</span>(<span class="kw">false</span>);
+      <span class="kw">return</span>;
+    }
+
+    <span class="kw">const</span> timer = <span class="fn">setTimeout</span>(() =&gt; <span class="fn">setShowSkeleton</span>(<span class="kw">true</span>), delayMs);
+    <span class="kw">return</span> () =&gt; <span class="fn">clearTimeout</span>(timer);
+  }, [isLoading, delayMs]);
+
+  <span class="kw">return</span> showSkeleton;
+}
+
+<span class="cm">// Timeline for fast load (150ms):</span>
+<span class="cm">// t=0:   Loading starts, showSkeleton = false (nothing visible)</span>
+<span class="cm">// t=150: Data arrives → showSkeleton still false → no flash ✅</span>
+
+<span class="cm">// Timeline for slow load (800ms):</span>
+<span class="cm">// t=0:   Loading starts, showSkeleton = false</span>
+<span class="cm">// t=200: Timer fires → showSkeleton = true → skeleton appears</span>
+<span class="cm">// t=800: Data arrives → showSkeleton = false → content replaces skeleton</span></pre>
+  </div>
+</div>
+
+<!-- Tab 2: FAANG Interview -->
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+
+    <div class="qa">
+      <div class="q">Q1: How do you decide between a skeleton loader, spinner, and no loading indicator?</div>
+      <div class="a">It depends on three factors: content predictability, duration, and user expectation. Skeleton loaders are best when you know the layout shape in advance (list of cards, profile page, feed) — they communicate what's coming and prevent CLS. Spinners are for unpredictable content (modal dialogs, search results with varying shapes) or short-lived actions (button clicks). No indicator at all is correct for background refreshes (SWR) where you already have stale data displayed, and for prefetching. The key principle: if the user already has content on screen, don't replace it with a loading state. Show a subtle "refreshing" indicator at most. Only show skeletons/spinners when the user would otherwise see a blank area.</div>
+      <div class="followup">Follow-up: What about the "delayed skeleton" pattern to prevent flash of skeleton for fast loads?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: How do skeleton loaders impact CLS (Cumulative Layout Shift)?</div>
+      <div class="a">Skeletons can either help or hurt CLS depending on implementation. Done right, they reserve exact space matching the real content — preventing the layout jump when content loads. The skeleton occupies the same width, height, and position as the final content. Done wrong, a skeleton with different dimensions causes TWO layout shifts: one when the skeleton appears, and another when it's replaced by content. My approach: every skeleton component has min-height matching its real counterpart. For images, I use aspect-ratio CSS on the container. For lists, the list skeleton renders N placeholder items matching real item height. I measure CLS using web-vitals library and set alerts for any page exceeding 0.1 CLS score.</div>
+      <div class="followup">Follow-up: How do you handle dynamic content where the final height is unknown?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q3: How should loading states differ between initial load and data refresh?</div>
+      <div class="a">This is a critical distinction many developers miss. On initial load (no data exists), show a skeleton that matches the expected content shape — the user needs visual feedback that something is happening. On refresh (data already exists), keep showing the existing data with a subtle indicator — a thin progress bar at the top, a small spinner in the header, or a "Last updated 2 min ago" badge. Never replace existing content with a skeleton on refresh. In React Query, I differentiate using isLoading (initial, no data) vs isFetching (any fetch activity). I built a useLoadingUX hook that returns the appropriate state: 'skeleton' for initial, 'refreshing' for background update, 'stale-error' for failed refresh with old data still available.</div>
+      <div class="followup">Follow-up: How does this work with React Suspense boundaries?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q4: How do you make skeleton loaders accessible?</div>
+      <div class="a">Three key accessibility concerns. First, skeletons must be hidden from screen readers with aria-hidden="true" — a screen reader user doesn't benefit from "gray rectangle" descriptions. Instead, the container should have aria-busy="true" and aria-label="Loading content" so screen readers announce "Loading content..." once. Second, respect prefers-reduced-motion — disable the shimmer animation and show a static gray placeholder instead, avoiding the continuous motion that can cause vestibular discomfort. Third, ensure keyboard focus doesn't land on skeleton elements. When content loads, focus should remain stable. If the user was tabbing through a list, their position shouldn't jump when an item transitions from skeleton to content.</div>
+      <div class="followup">Follow-up: Are there any WCAG guidelines specifically about loading indicators?</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 3: Code Walkthrough -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Complete Skeleton Component System</h3>
+    <pre><span class="cm">/* skeleton.css */</span>
+@keyframes shimmer {
+  <span class="num">0%</span> { background-position: -<span class="num">200</span>px <span class="num">0</span>; }
+  <span class="num">100%</span> { background-position: <span class="fn">calc</span>(<span class="num">200</span>px + <span class="num">100%</span>) <span class="num">0</span>; }
+}
+.skeleton {
+  background: <span class="fn">linear-gradient</span>(<span class="num">90</span>deg, <span class="str">#1e2130</span> <span class="num">25%</span>, <span class="str">#2d3551</span> <span class="num">37%</span>, <span class="str">#1e2130</span> <span class="num">63%</span>);
+  background-size: <span class="num">400</span>px <span class="num">100%</span>;
+  animation: shimmer <span class="num">1.4</span>s ease infinite;
+  border-radius: <span class="num">4</span>px;
+  display: block;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; background: <span class="str">#2d3551</span>; }
+}
+
+<span class="cm">/* Product Card Skeleton — matches exact layout */</span>
+.product-card-skeleton {
+  min-height: <span class="num">280</span>px;  <span class="cm">/* Same as real ProductCard */</span>
+  display: grid;
+  grid-template-rows: <span class="num">180</span>px <span class="num">1</span>fr auto;
+  gap: <span class="num">8</span>px;
+  padding: <span class="num">12</span>px;
+}
+.product-card-skeleton .image { aspect-ratio: <span class="num">4</span>/<span class="num">3</span>; border-radius: <span class="num">8</span>px; }
+.product-card-skeleton .title { width: <span class="num">70%</span>; height: <span class="num">20</span>px; }
+.product-card-skeleton .price { width: <span class="num">30%</span>; height: <span class="num">24</span>px; }
+.product-card-skeleton .rating { width: <span class="num">50%</span>; height: <span class="num">14</span>px; }</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Complete useLoadingUX Hook</h3>
+    <pre><span class="kw">function</span> <span class="fn">useLoadingUX</span>(query, options = {}) {
+  <span class="kw">const</span> { delayMs = <span class="num">200</span> } = options;
+  <span class="kw">const</span> showDelayed = <span class="fn">useDelayedLoading</span>(query.isLoading, delayMs);
+
+  <span class="cm">// Initial load — no data yet</span>
+  <span class="kw">if</span> (query.isLoading &amp;&amp; !query.data) {
+    <span class="kw">return</span> {
+      state: <span class="str">'initial'</span>,
+      showSkeleton: showDelayed,      <span class="cm">// Delayed to avoid flash</span>
+      showContent: <span class="kw">false</span>,
+      showError: <span class="kw">false</span>,
+      data: <span class="kw">null</span>,
+    };
+  }
+
+  <span class="cm">// Has data + background refresh</span>
+  <span class="kw">if</span> (query.data &amp;&amp; query.isFetching) {
+    <span class="kw">return</span> {
+      state: <span class="str">'refreshing'</span>,
+      showSkeleton: <span class="kw">false</span>,
+      showContent: <span class="kw">true</span>,
+      showRefreshIndicator: <span class="kw">true</span>,    <span class="cm">// Thin progress bar</span>
+      data: query.data,
+    };
+  }
+
+  <span class="cm">// Error, no data</span>
+  <span class="kw">if</span> (query.isError &amp;&amp; !query.data) {
+    <span class="kw">return</span> {
+      state: <span class="str">'error'</span>,
+      showSkeleton: <span class="kw">false</span>,
+      showContent: <span class="kw">false</span>,
+      showError: <span class="kw">true</span>,
+      error: query.error,
+    };
+  }
+
+  <span class="cm">// Error, has stale data</span>
+  <span class="kw">if</span> (query.isError &amp;&amp; query.data) {
+    <span class="kw">return</span> {
+      state: <span class="str">'stale-error'</span>,
+      showContent: <span class="kw">true</span>,
+      showStaleBanner: <span class="kw">true</span>,
+      data: query.data,
+    };
+  }
+
+  <span class="cm">// Success</span>
+  <span class="kw">return</span> {
+    state: <span class="str">'success'</span>,
+    showContent: <span class="kw">true</span>,
+    data: query.data,
+  };
+}</pre>
+  </div>
+</div>
+
+<!-- Tab 4: Cheat Sheet -->
+<div class="panel">
+  <div class="card">
+    <h3>Loading Indicator Decision Matrix</h3>
+    <table>
+      <tr><th>Scenario</th><th>Has Data?</th><th>Show</th></tr>
+      <tr><td>Initial page load</td><td>No</td><td>Skeleton (content-shaped)</td></tr>
+      <tr><td>Background refresh</td><td>Yes</td><td>Subtle indicator (progress bar) or nothing</td></tr>
+      <tr><td>Button action</td><td>N/A</td><td>Spinner on button + disable</td></tr>
+      <tr><td>Load more / paginate</td><td>Partial</td><td>Skeleton at bottom of list</td></tr>
+      <tr><td>Navigation (route change)</td><td>No</td><td>Progress bar in navbar</td></tr>
+      <tr><td>Failed refresh</td><td>Yes (stale)</td><td>Stale data + error banner</td></tr>
+      <tr><td>Prefetch / hover</td><td>N/A</td><td>Nothing (invisible)</td></tr>
+      <tr><td>Fast load (&lt;200ms)</td><td>No</td><td>Nothing (delayed skeleton avoids flash)</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>CLS Prevention Rules</h3>
+    <pre>1. Skeleton dimensions MUST match real content dimensions
+2. Use min-height on container (not content)
+3. Use aspect-ratio for images/media
+4. Grid with fixed track sizes for card layouts
+5. Never insert/remove elements above fold during load
+6. Target: CLS &lt; 0.1</pre>
+  </div>
+
+  <div class="card">
+    <h3>Accessibility Checklist</h3>
+    <pre>✅ Skeleton elements: aria-hidden="true"
+✅ Container: aria-busy="true" during load
+✅ Container: aria-label="Loading [content type]"
+✅ Respect prefers-reduced-motion (disable shimmer)
+✅ Screen reader: announce once, not per skeleton element
+✅ Focus: don't shift on skeleton → content transition
+✅ Remove aria-busy="true" when content loads</pre>
+  </div>
+
+  <div class="card">
+    <h3>Production Checklist</h3>
+    <pre>✅ Use skeletons for content-predictable areas, spinners for actions
+✅ Delay skeleton display by 200ms (avoid flash for fast loads)
+✅ NEVER replace existing content with skeleton on refresh
+✅ Match skeleton dimensions to real content EXACTLY
+✅ Respect prefers-reduced-motion CSS media query
+✅ aria-hidden="true" on skeleton, aria-busy="true" on container
+✅ Use useLoadingUX hook to centralize loading state decisions
+✅ Measure CLS with web-vitals library
+✅ Test with throttled network (3G) to verify UX
+✅ Build skeleton components alongside real components</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 05 — Secure CI/CD Pipeline</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:500px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟡 Lab 05 — Secure CI/CD Pipeline for Frontend</h1>
+<p class="sub">Module 12.1 · End-to-end pipeline security: build, sign, deploy</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Pipeline Design</div>
+  <div class="tab" onclick="setTab(1)">Configuration Lab</div>
+  <div class="tab" onclick="setTab(2)">Secret Management</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Secure Frontend CI/CD Pipeline</h3>
+    <pre><span class="cm"># Stage 1: INSTALL (Secure Dependencies)</span>
+npm ci --ignore-scripts          <span class="cm"># Lockfile-only, no scripts</span>
+npm run allowed-scripts          <span class="cm"># Run only whitelisted scripts</span>
+lockfile-lint --type npm --path . --validate-https --allowed-hosts npm
+                                 <span class="cm"># Verify all URLs are HTTPS</span>
+
+<span class="cm"># Stage 2: AUDIT (Security Checks)</span>
+npm audit --audit-level=high     <span class="cm"># Block on high+ vulnerabilities</span>
+npx snyk test                    <span class="cm"># Deep vulnerability scan</span>
+npx eslint . --config .eslintrc-security.json  <span class="cm"># Security-focused lint rules</span>
+
+<span class="cm"># Stage 3: BUILD (Isolated Environment)</span>
+NODE_ENV=production npm run build  <span class="cm"># Production build</span>
+<span class="cm"># Verify no secrets in build output:</span>
+grep -r "API_KEY\|SECRET\|PASSWORD" dist/ && exit 1
+
+<span class="cm"># Stage 4: TEST (Security Tests)</span>
+npm run test:security             <span class="cm"># XSS, CSRF, injection tests</span>
+npx lighthouse --chrome-flags="--headless" --only-categories=best-practices
+
+<span class="cm"># Stage 5: SIGN & PUBLISH</span>
+<span class="cm"># Sign build artifacts with Sigstore/cosign</span>
+cosign sign-blob --output-signature dist.sig dist/
+<span class="cm"># Generate SBOM</span>
+npx @cyclonedx/cyclonedx-npm --output-file sbom.json
+
+<span class="cm"># Stage 6: DEPLOY (Secure Delivery)</span>
+<span class="cm"># Deploy to CDN with SRI hashes</span>
+<span class="cm"># Enable CSP headers, HSTS, etc.</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Pipeline Config Generator</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Select your CI platform and security features:</p>
+    <div style="margin-bottom:8px">
+      <label style="font-size:.82rem;color:#94a3b8"><input type="radio" name="ci" value="github" checked> GitHub Actions</label>
+      <label style="font-size:.82rem;color:#94a3b8;margin-left:12px"><input type="radio" name="ci" value="gitlab"> GitLab CI</label>
+    </div>
+    <div style="margin-bottom:8px">
+      <label style="font-size:.82rem;color:#94a3b8"><input type="checkbox" id="chk-audit" checked> npm audit</label>
+      <label style="font-size:.82rem;color:#94a3b8;margin-left:12px"><input type="checkbox" id="chk-snyk"> Snyk</label>
+      <label style="font-size:.82rem;color:#94a3b8;margin-left:12px"><input type="checkbox" id="chk-lint" checked> Security ESLint</label>
+      <label style="font-size:.82rem;color:#94a3b8;margin-left:12px"><input type="checkbox" id="chk-sbom"> SBOM generation</label>
+      <label style="font-size:.82rem;color:#94a3b8;margin-left:12px"><input type="checkbox" id="chk-secret" checked> Secret scanning</label>
+    </div>
+    <button onclick="generatePipeline()">⚡ Generate Pipeline Config</button>
+    <div class="output" id="pipeline-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Secret Management in CI/CD</h3>
+    <pre><span class="cm">// ❌ NEVER: Hardcode secrets</span>
+<span class="kw">const</span> API_KEY = <span class="str">'sk-abc123...'</span>; <span class="danger">// NEVER!</span>
+<span class="kw">const</span> DB_PASS = <span class="str">'password123'</span>;  <span class="danger">// NEVER!</span>
+
+<span class="cm">// ❌ NEVER: Put secrets in .env committed to git</span>
+<span class="cm">//   .env should be in .gitignore</span>
+
+<span class="cm">// ✅ Use environment variables from CI/CD secrets:</span>
+<span class="cm">//   GitHub: Settings → Secrets → Actions</span>
+<span class="cm">//   GitLab: Settings → CI/CD → Variables (masked + protected)</span>
+
+<span class="cm">// ✅ For client-side: ONLY use NEXT_PUBLIC_ / VITE_ prefixed vars</span>
+<span class="cm">//   These ARE visible to users — only use for public API keys</span>
+
+<span class="cm">// ✅ Runtime secrets: Use a secrets manager</span>
+<span class="cm">//   AWS Secrets Manager, HashiCorp Vault, Google Secret Manager</span>
+
+<span class="cm">// ✅ Pre-commit hook to prevent secret commits:</span>
+<span class="cm">//   npx husky add .husky/pre-commit "npx detect-secrets-hook"</span>
+<span class="cm">//   Or: gitleaks protect --staged</span>
+
+<span class="cm">// ✅ Git history scanning (find leaked secrets):</span>
+<span class="cm">//   trufflehog git file://./    -- scans entire git history</span>
+<span class="cm">//   gitleaks detect              -- detects secrets in commits</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CI/CD Security</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Design a CI/CD pipeline for a frontend app that handles financial data (like Google Pay).</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Build isolation: Docker containers with pinned base images (no latest tag). Dep management: npm ci with lockfile + integrity verification. Object.freeze(Object.prototype) in the app entrypoint. Static analysis: ESLint security rules + CodeQL for taint analysis (user input → dangerous sinks). Dynamic testing: Headless browser tests that attempt XSS/CSRF injections. Build signing: Sigstore/cosign for artifact provenance. CSP: Strict nonce-based CSP generated at build time. Deployment: Blue-green with automatic rollback on security metric regression. Monitoring: Real-time CSP violation reporting, SRI checking, anomaly detection on API call patterns. Google's approach: Binary Authorization — only signed, policy-checked builds can be deployed to production.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function generatePipeline(){
+  const el=document.getElementById('pipeline-result');
+  const ci=document.querySelector('input[name="ci"]:checked').value;
+  const audit=document.getElementById('chk-audit').checked;
+  const snyk=document.getElementById('chk-snyk').checked;
+  const lint=document.getElementById('chk-lint').checked;
+  const sbom=document.getElementById('chk-sbom').checked;
+  const secret=document.getElementById('chk-secret').checked;
+
+  if(ci==='github'){
+    let yaml=`name: Secure Frontend Pipeline
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Clean Install
+        run: npm ci --ignore-scripts
+`;
+    if(audit)yaml+=`
+      - name: Security Audit
+        run: npm audit --audit-level=high
+`;
+    if(snyk)yaml+=`
+      - name: Snyk Security Scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: \${{ secrets.SNYK_TOKEN }}
+`;
+    if(lint)yaml+=`
+      - name: Security Linting
+        run: npx eslint . --rule '{"no-eval": "error", "no-implied-eval": "error"}'
+`;
+    if(secret)yaml+=`
+      - name: Secret Scanning
+        run: npx detect-secrets scan
+`;
+    yaml+=`
+      - name: Build
+        run: npm run build
+        env:
+          NODE_ENV: production
+`;
+    if(secret)yaml+=`
+      - name: Check Build for Secrets
+        run: |
+          ! grep -rE '(api[_-]?key|secret|password|token)\\s*[:=]\\s*["\\'"][^"\\'"]{8,}' dist/
+`;
+    if(sbom)yaml+=`
+      - name: Generate SBOM
+        run: npx @cyclonedx/cyclonedx-npm --output-file sbom.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+`;
+    el.textContent=yaml;
+  }else{
+    el.textContent=`# .gitlab-ci.yml
+stages:
+  - install
+  - audit
+  - build
+  - deploy
+
+install:
+  stage: install
+  script:
+    - npm ci --ignore-scripts
+  cache:
+    paths:
+      - node_modules/
+${audit?`
+audit:
+  stage: audit
+  script:
+    - npm audit --audit-level=high
+`:''}${snyk?`
+snyk:
+  stage: audit
+  script:
+    - npx snyk test
+  variables:
+    SNYK_TOKEN: $SNYK_TOKEN
+`:''}
+build:
+  stage: build
+  script:
+    - NODE_ENV=production npm run build${secret?`
+    - '! grep -rE "(api_key|secret|password)" dist/'`:''}${sbom?`
+    - npx @cyclonedx/cyclonedx-npm --output-file sbom.json`:''}
+  artifacts:
+    paths:
+      - dist/${sbom?`
+      - sbom.json`:''}`;
+  }
+}
+</script>
+</body></html>

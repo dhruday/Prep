@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 92 – HTTP Caching</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🔄 HTTP Caching</h1>
+<p class="sub">Topic 92 · Module 9.1 — Caching Layers · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Header Simulator</div>
+  <div class="tab" onclick="setTab(2)">Cache Decision Flow</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>HTTP Caching — the protocol-level cache layer</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:10px">HTTP caching lets browsers and intermediaries (proxies, CDNs) store responses and serve them without hitting the origin server. Properly configured headers cut 70-90% of repeat requests. At SAP, enabling correct Cache-Control on static assets reduced CDN origin hits by 85%.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+      <div>
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Key response headers</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:2">
+          <li><code style="color:#10b981">Cache-Control</code> — main directive (max-age, no-cache, private, immutable)</li>
+          <li><code style="color:#10b981">ETag</code> — fingerprint for conditional GETs (304 Not Modified)</li>
+          <li><code style="color:#10b981">Last-Modified</code> — date-based conditional validation</li>
+          <li><code style="color:#10b981">Vary</code> — vary cache by request headers (Accept-Encoding, Cookie)</li>
+        </ul>
+      </div>
+      <div>
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Key request headers</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:2">
+          <li><code style="color:#f59e0b">If-None-Match</code> — sends cached ETag, gets 304 if unchanged</li>
+          <li><code style="color:#f59e0b">If-Modified-Since</code> — date-based conditional GET</li>
+          <li><code style="color:#f59e0b">Cache-Control: no-cache</code> — force revalidation</li>
+          <li><code style="color:#f59e0b">Pragma: no-cache</code> — legacy HTTP/1.0 (avoid)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Cache-Control directive builder</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.78rem;margin-bottom:10px">
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="cc-pub" onchange="buildCC()">public</label>
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="cc-priv" onchange="buildCC()">private</label>
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="cc-nocache" onchange="buildCC()">no-cache</label>
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="cc-nostore" onchange="buildCC()">no-store</label>
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="cc-imm" onchange="buildCC()">immutable</label>
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="cc-swr" onchange="buildCC()">stale-while-revalidate=30</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span>max-age</span>
+        <input id="cc-maxage" type="number" value="3600" style="width:80px;background:#0f1117;color:#e2e8f0;border:1px solid #2d3551;padding:3px;border-radius:4px" onchange="buildCC()">
+      </div>
+    </div>
+    <pre id="cc-output">Cache-Control: max-age=3600</pre>
+    <div id="cc-explain" style="margin-top:8px;font-size:.75rem;color:#94a3b8">Cached for 1 hour. After that, revalidated with the server.</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>HTTP cache decision flow</h3>
+    <div style="font-size:.78rem;display:grid;gap:6px">
+      <div style="background:#0f1117;border-left:3px solid #60a5fa;padding:8px;border-radius:0 6px 6px 0">1. <strong style="color:#60a5fa">Cache lookup</strong> — is there a cached response for this URL? If no → fetch from origin</div>
+      <div style="background:#0f1117;border-left:3px solid #f59e0b;padding:8px;border-radius:0 6px 6px 0">2. <strong style="color:#f59e0b">Is it fresh?</strong> — compare current time vs max-age + Date header. If fresh → serve without request</div>
+      <div style="background:#0f1117;border-left:3px solid #a78bfa;padding:8px;border-radius:0 6px 6px 0">3. <strong style="color:#a78bfa">Stale — revalidate</strong> — send conditional GET with If-None-Match (ETag) or If-Modified-Since</div>
+      <div style="background:#0f1117;border-left:3px solid #10b981;padding:8px;border-radius:0 6px 6px 0">4a. <strong style="color:#10b981">304 Not Modified</strong> — serve cached body, update headers. Zero bytes transferred for body.</div>
+      <div style="background:#0f1117;border-left:3px solid #ef4444;padding:8px;border-radius:0 6px 6px 0">4b. <strong style="color:#ef4444">200 New response</strong> — content changed. Download new body, replace cache entry.</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Cache-Control patterns by resource type</h3>
+    <pre><span class="cm">// ─── Express: set cache headers by route type ───</span>
+<span class="kw">import</span> { Request, Response, NextFunction } <span class="kw">from</span> <span class="str">'express'</span>;
+
+<span class="kw">const</span> ONE_YEAR = <span class="fn">60</span> * <span class="fn">60</span> * <span class="fn">24</span> * <span class="fn">365</span>;
+
+<span class="cm">// Immutable hashed assets: JS, CSS, fonts</span>
+app.<span class="fn">use</span>(<span class="str">'/static'</span>, (req, res, next) =&gt; {
+  res.<span class="fn">set</span>(<span class="str">'Cache-Control'</span>, <span class="str">`public, max-age=${ONE_YEAR}, immutable`</span>);
+  <span class="fn">next</span>();
+});
+
+<span class="cm">// HTML entry point — always revalidate</span>
+app.<span class="fn">get</span>(<span class="str">'/'</span>, (req, res) =&gt; {
+  res.<span class="fn">set</span>(<span class="str">'Cache-Control'</span>, <span class="str">'no-cache'</span>); <span class="cm">// revalidate but use ETag</span>
+  <span class="fn">sendIndex</span>(res);
+});
+
+<span class="cm">// API: short TTL + stale-while-revalidate</span>
+app.<span class="fn">get</span>(<span class="str">'/api/orders'</span>, (req, res) =&gt; {
+  res.<span class="fn">set</span>(<span class="str">'Cache-Control'</span>, <span class="str">'public, max-age=60, stale-while-revalidate=300'</span>);
+  <span class="fn">sendOrders</span>(res);
+});
+
+<span class="cm">// Per-user data — prevent CDN caching</span>
+app.<span class="fn">get</span>(<span class="str">'/api/profile'</span>, (req, res) =&gt; {
+  res.<span class="fn">set</span>(<span class="str">'Cache-Control'</span>, <span class="str">'private, no-store'</span>);
+  <span class="fn">sendProfile</span>(res);
+});</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+function buildCC(){
+  const pub=document.getElementById('cc-pub').checked;
+  const priv=document.getElementById('cc-priv').checked;
+  const nc=document.getElementById('cc-nocache').checked;
+  const ns=document.getElementById('cc-nostore').checked;
+  const imm=document.getElementById('cc-imm').checked;
+  const swr=document.getElementById('cc-swr').checked;
+  const ma=document.getElementById('cc-maxage').value;
+  const parts=[];
+  if(pub)parts.push('public');
+  if(priv)parts.push('private');
+  if(nc)parts.push('no-cache');
+  if(ns)parts.push('no-store');
+  parts.push(`max-age=${ma}`);
+  if(imm)parts.push('immutable');
+  if(swr)parts.push('stale-while-revalidate=30');
+  document.getElementById('cc-output').textContent='Cache-Control: '+parts.join(', ');
+  let exp='';
+  if(ns)exp='❌ Never stored in cache.';
+  else if(nc)exp=`Cached but must revalidate on every request (304 if unchanged).`;
+  else if(imm)exp=`Cached for ${ma}s and never revalidated (immutable). Change filename to bust cache.`;
+  else exp=`Cached for ${ma}s (${Math.round(ma/3600)}h). ${swr?'Stale cached version served while revalidating in background.':'Revalidates with server after expiry.'}`;
+  document.getElementById('cc-explain').textContent=exp;
+}
+buildCC();
+</script>
+</body>
+</html>

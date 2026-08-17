@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MNIST - Neural Network From Scratch</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+      background: #f7f7f7;
+      color: #222;
+    }
+
+    h1 { margin-bottom: 8px; }
+    .subtitle { color: #555; margin-bottom: 20px; }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .primary { background: #222; color: white; }
+    .secondary { background: white; border: 1px solid #ccc; }
+
+    .status {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 18px;
+      white-space: pre-line;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 18px;
+    }
+
+    canvas {
+      border: 1px solid #ccc;
+      image-rendering: pixelated;
+      background: black;
+      display: block;
+    }
+
+    #sampleCanvas {
+      width: 280px;
+      height: 280px;
+      max-width: 100%;
+    }
+
+    #chart {
+      width: 100%;
+      height: 260px;
+      background: #fff;
+    }
+
+    .big {
+      font-size: 34px;
+      font-weight: 700;
+    }
+
+    .value {
+      font-family: monospace;
+      font-size: 15px;
+    }
+
+    .bars {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 6px;
+      align-items: end;
+      height: 180px;
+      margin-top: 12px;
+    }
+
+    .bar-wrap {
+      display: flex;
+      flex-direction: column;
+      justify-content: end;
+      align-items: center;
+      height: 100%;
+      gap: 4px;
+    }
+
+    .bar {
+      width: 100%;
+      background: #222;
+      min-height: 2px;
+      border-radius: 4px 4px 0 0;
+      transition: height 0.15s ease;
+    }
+
+    .digit-label {
+      font-size: 12px;
+      color: #555;
+    }
+
+    .explain {
+      line-height: 1.6;
+    }
+
+    code {
+      background: #eee;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .metric {
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .metric-label {
+      color: #666;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 700px) {
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>MNIST: Watch a Neural Network Learn</h1>
+  <div class="subtitle">
+    One HTML file • TensorFlow.js • No Python • No backend
+  </div>
+
+  <div class="controls">
+    <button id="loadBtn" class="secondary">1. Load MNIST</button>
+    <button id="trainBtn" class="primary" disabled>2. Train</button>
+    <button id="testBtn" class="secondary" disabled>3. Test Another Digit</button>
+    <button id="clearBtn" class="secondary">Clear Log</button>
+  </div>
+
+  <div id="status" class="status">Ready.</div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Live prediction</h2>
+      <canvas id="sampleCanvas" width="28" height="28"></canvas>
+      <p>
+        <strong>Actual digit:</strong> <span id="actual">-</span>
+      </p>
+      <p>
+        <strong>Prediction:</strong>
+        <span id="prediction" class="big">-</span>
+      </p>
+      <p>
+        <strong>Confidence:</strong>
+        <span id="confidence" class="value">-</span>
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>What the model sees</h2>
+      <div class="explain">
+        <p><strong>Input:</strong> 28 × 28 pixels = <code>784</code> numbers.</p>
+        <p><strong>Output:</strong> 10 probabilities, one for each digit (0–9).</p>
+        <p><strong>Loss:</strong> how wrong the prediction is.</p>
+        <p><strong>Training:</strong> adjust parameters to reduce loss.</p>
+      </div>
+
+      <div id="bars" class="bars"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px;">
+    <h2>Live Training Console</h2>
+    <div id="trainingConsole" style="
+      background:#111;
+      color:#f2f2f2;
+      border-radius:8px;
+      padding:14px;
+      height:220px;
+      overflow:auto;
+      font-family:monospace;
+      font-size:13px;
+      line-height:1.6;
+      white-space:pre-wrap;
+    ">Waiting to start training...</div>
+  </div>
+
+  <div class="card" style="margin-top:18px;">
+    <h2>Training metrics</h2>
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Epoch</div>
+        <div id="epoch" class="value">0</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Loss</div>
+        <div id="loss" class="value">-</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Train Accuracy</div>
+        <div id="accuracy" class="value">-</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Test Accuracy</div>
+        <div id="testAccuracy" class="value">-</div>
+      </div>
+    </div>
+
+    <div id="log" style="margin-top:14px; font-family:monospace; font-size:13px;"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+
+  <script>
+    /*
+      IMPORTANT:
+      This demo uses the public MNIST sprite + labels used by TensorFlow.js examples.
+      The browser downloads the dataset directly. No server-side Python is required.
+    */
+
+    const MNIST_IMAGES =
+      'https://storage.googleapis.com/learnjs-data/model-builder/mnist_images.png';
+    const MNIST_LABELS =
+      'https://storage.googleapis.com/learnjs-data/model-builder/mnist_labels_uint8';
+
+    const IMAGE_SIZE = 28;
+    const NUM_CLASSES = 10;
+
+    // We intentionally use a small subset so the browser demo stays fast.
+    const TRAIN_SAMPLES = 5000;
+    const TEST_SAMPLES = 1000;
+
+    let trainXs;
+    let trainYs;
+    let testXs;
+    let testYs;
+    let model;
+    let loaded = false;
+
+    const $ = id => document.getElementById(id);
+
+    const status = msg => {
+      $('status').textContent = msg;
+    };
+
+    const addLog = msg => {
+      $('log').textContent += msg + '\\n';
+      $('log').scrollTop = $('log').scrollHeight;
+    };
+
+    const trainingConsole = msg => {
+      const el = $('trainingConsole');
+      const time = new Date().toLocaleTimeString();
+      el.textContent += `[${time}] ${msg}\\n`;
+      el.scrollTop = el.scrollHeight;
+    };
+
+    function createBars() {
+      $('bars').innerHTML = '';
+      for (let i = 0; i < 10; i++) {
+        const wrap = document.createElement('div');
+        wrap.className = 'bar-wrap';
+
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.id = 'bar-' + i;
+        bar.style.height = '2px';
+
+        const label = document.createElement('div');
+        label.className = 'digit-label';
+        label.textContent = i;
+
+        wrap.appendChild(bar);
+        wrap.appendChild(label);
+        $('bars').appendChild(wrap);
+      }
+    }
+
+    function renderImage(imageTensor, actualLabel) {
+      const pixels = imageTensor.dataSync();
+      const canvas = $('sampleCanvas');
+      const ctx = canvas.getContext('2d');
+      const image = ctx.createImageData(IMAGE_SIZE, IMAGE_SIZE);
+
+      for (let i = 0; i < pixels.length; i++) {
+        const v = Math.max(0, Math.min(255, Math.round(pixels[i] * 255)));
+        image.data[i * 4] = v;
+        image.data[i * 4 + 1] = v;
+        image.data[i * 4 + 2] = v;
+        image.data[i * 4 + 3] = 255;
+      }
+
+      ctx.putImageData(image, 0, 0);
+      $('actual').textContent = actualLabel;
+    }
+
+    async function loadMnist() {
+      $('loadBtn').disabled = true;
+      status('Loading MNIST labels and image sprite... This may take a little while on the first run.');
+
+      try {
+        // Fetch the labels.
+        const labelResponse = await fetch(MNIST_LABELS);
+        if (!labelResponse.ok) throw new Error('Could not load MNIST labels.');
+
+        const labelBuffer = await labelResponse.arrayBuffer();
+        const labels = new Uint8Array(labelBuffer);
+
+        /*
+          The MNIST image sprite is one huge PNG containing 65,000
+          28x28 grayscale images arranged vertically.
+        */
+        const image = new Image();
+        image.crossOrigin = 'anonymous';
+        image.src = MNIST_IMAGES;
+
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = () => reject(new Error('Could not load MNIST image sprite.'));
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = IMAGE_SIZE;
+        canvas.height = IMAGE_SIZE;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        /*
+          The public sprite stores images in rows.
+          We extract only a small subset for this browser demonstration.
+        */
+        const extract = (start, count) => {
+          const xData = new Float32Array(count * IMAGE_SIZE * IMAGE_SIZE);
+          const yData = new Float32Array(count * NUM_CLASSES);
+
+          // Scale sprite into a temporary canvas with the full image.
+          const fullCanvas = document.createElement('canvas');
+          fullCanvas.width = image.width;
+          fullCanvas.height = image.height;
+          const fullCtx = fullCanvas.getContext('2d', { willReadFrequently: true });
+          fullCtx.drawImage(image, 0, 0);
+
+          for (let n = 0; n < count; n++) {
+            const index = start + n;
+            const sx = 0;
+            const sy = index * IMAGE_SIZE;
+
+            ctx.clearRect(0, 0, IMAGE_SIZE, IMAGE_SIZE);
+            ctx.drawImage(
+              fullCanvas,
+              sx, sy, IMAGE_SIZE, IMAGE_SIZE,
+              0, 0, IMAGE_SIZE, IMAGE_SIZE
+            );
+
+            const data = ctx.getImageData(0, 0, IMAGE_SIZE, IMAGE_SIZE).data;
+            for (let p = 0; p < IMAGE_SIZE * IMAGE_SIZE; p++) {
+              xData[n * IMAGE_SIZE * IMAGE_SIZE + p] = data[p * 4] / 255;
+            }
+
+            const label = labels[index];
+            yData[n * NUM_CLASSES + label] = 1;
+          }
+
+          return {
+            xs: tf.tensor2d(xData, [count, IMAGE_SIZE * IMAGE_SIZE]),
+            ys: tf.tensor2d(yData, [count, NUM_CLASSES])
+          };
+        };
+
+        trainXs = extract(0, TRAIN_SAMPLES);
+        trainYs = trainXs.ys;
+        testXs = extract(TRAIN_SAMPLES, TEST_SAMPLES);
+        testYs = testXs.ys;
+
+        // Show one training example.
+        const firstImage = trainXs.xs.slice([0, 0], [1, 784]).reshape([28, 28]);
+        const actual = trainYs.argMax(1).dataSync()[0];
+        renderImage(firstImage, actual);
+
+        createModel();
+        loaded = true;
+        $('trainBtn').disabled = false;
+
+        status(
+          `MNIST loaded.\\n` +
+          `Training samples: ${TRAIN_SAMPLES}\\n` +
+          `Test samples: ${TEST_SAMPLES}\\n` +
+          `Input size: 784 pixels\\n` +
+          `Output classes: 10 digits`
+        );
+
+        addLog('MNIST loaded successfully.');
+        addLog(`Loaded ${TRAIN_SAMPLES} training images + ${TEST_SAMPLES} test images.`);
+        addLog('Model created. Click "2. Train".');
+
+        trainingConsole('DATA LOADED');
+        trainingConsole(`Training examples available: ${TRAIN_SAMPLES}`);
+        trainingConsole(`Test examples available: ${TEST_SAMPLES}`);
+        trainingConsole('Each image = 28 x 28 pixels = 784 input values.');
+
+        firstImage.dispose();
+
+      } catch (err) {
+        console.error(err);
+        status(
+          'Loading failed.\\n\\n' +
+          'The public MNIST sprite may be blocked by the browser/network.\\n' +
+          'Run this file using a local web server (see instructions below).'
+        );
+        addLog('ERROR: ' + err.message);
+        $('loadBtn').disabled = false;
+      }
+    }
+
+    function createModel() {
+      /*
+        Very small neural network:
+        784 inputs -> 128 neurons -> 10 outputs
+
+        Parameter count:
+        First layer = (784 x 128) + 128 = 100,480
+        Output layer = (128 x 10) + 10 = 1,290
+        Total = 101,770 parameters
+      */
+      model = tf.sequential();
+
+      model.add(tf.layers.dense({
+        inputShape: [784],
+        units: 128,
+        activation: 'relu'
+      }));
+
+      model.add(tf.layers.dense({
+        units: 10,
+        activation: 'softmax'
+      }));
+
+      model.compile({
+        optimizer: tf.train.adam(0.001),
+        loss: 'categoricalCrossentropy',
+        metrics: ['accuracy']
+      });
+
+      trainingConsole('MODEL CREATED');
+      trainingConsole('Architecture: 784 inputs -> 128 hidden neurons -> 10 outputs');
+      trainingConsole('Trainable parameters: 101,770');
+      trainingConsole('Each parameter is a learned value updated during training.');
+    }
+
+    async function train() {
+      $('trainBtn').disabled = true;
+      $('testBtn').disabled = true;
+
+      status('Training started... Watch loss decrease and accuracy increase.');
+
+      const EPOCHS = 5;
+      const BATCH_SIZE = 64;
+      const batchesPerEpoch = Math.ceil(TRAIN_SAMPLES / BATCH_SIZE);
+      const totalBatches = EPOCHS * batchesPerEpoch;
+      let completedBatches = 0;
+
+      $('trainingConsole').textContent = '';
+
+      trainingConsole('TRAINING STARTED');
+      trainingConsole(`Training samples: ${TRAIN_SAMPLES}`);
+      trainingConsole(`Test samples: ${TEST_SAMPLES}`);
+      trainingConsole(`Batch size: ${BATCH_SIZE}`);
+      trainingConsole(`Epochs: ${EPOCHS}`);
+      trainingConsole(`Batches per epoch: ${batchesPerEpoch}`);
+      trainingConsole(`Total parameter-update steps: ~${totalBatches}`);
+      trainingConsole('Each batch -> prediction -> loss -> parameter update');
+      trainingConsole('----------------------------------------');
+
+      addLog('----------------------------------------');
+      addLog('TRAINING STARTED');
+      addLog(`Epochs=${EPOCHS}, Batch=${BATCH_SIZE}`);
+
+      await model.fit(trainXs.xs, trainYs, {
+        epochs: EPOCHS,
+        batchSize: BATCH_SIZE,
+        shuffle: true,
+
+        callbacks: {
+          onBatchEnd: async (batch, logs) => {
+            completedBatches++;
+
+            // Log every 10 batches so the console remains readable.
+            if (completedBatches === 1 || completedBatches % 10 === 0) {
+              const processed = Math.min(
+                completedBatches * BATCH_SIZE,
+                TRAIN_SAMPLES + (Math.floor((completedBatches - 1) / batchesPerEpoch) * TRAIN_SAMPLES)
+              );
+
+              const progress = ((completedBatches / totalBatches) * 100).toFixed(1);
+
+              trainingConsole(
+                `Batch ${completedBatches}/${totalBatches} | ` +
+                `progress=${progress}% | ` +
+                `batch loss=${logs.loss.toFixed(4)}`
+              );
+
+              trainingConsole(
+                `  -> model processed another ${BATCH_SIZE} examples`
+              );
+
+              // Yield so the browser can update the UI.
+              await tf.nextFrame();
+            }
+          },
+
+          onEpochEnd: async (epoch, logs) => {
+            $('epoch').textContent = epoch + 1;
+            $('loss').textContent = logs.loss.toFixed(4);
+            $('accuracy').textContent =
+              (logs.acc ?? logs.accuracy ?? 0).toFixed(4);
+
+            addLog(
+              `Epoch ${epoch + 1}: loss=${logs.loss.toFixed(4)}, ` +
+              `accuracy=${(logs.acc ?? logs.accuracy ?? 0).toFixed(4)}`
+            );
+
+            const result = model.evaluate(
+              testXs.xs,
+              testYs,
+              { batchSize: BATCH_SIZE }
+            );
+
+            const testAccTensor = Array.isArray(result) ? result[1] : result;
+            const testAcc = await testAccTensor.data();
+
+            $('testAccuracy').textContent =
+              Number(testAcc[0]).toFixed(4);
+
+            if (Array.isArray(result)) {
+              result.forEach(t => t.dispose());
+            } else {
+              result.dispose();
+            }
+
+            trainingConsole('----------------------------------------');
+            trainingConsole(
+              `EPOCH ${epoch + 1}/${EPOCHS} COMPLETE`
+            );
+            trainingConsole(
+              `  Full training loss  = ${logs.loss.toFixed(4)}`
+            );
+            trainingConsole(
+              `  Training accuracy   = ${(logs.acc ?? logs.accuracy ?? 0).toFixed(4)}`
+            );
+            trainingConsole(
+              `  Test accuracy       = ${Number(testAcc[0]).toFixed(4)}`
+            );
+            trainingConsole(
+              `  Parameters updated  = 101,770 learned values`
+            );
+            trainingConsole('----------------------------------------');
+
+            await showPrediction();
+            await tf.nextFrame();
+          }
+        }
+      });
+
+      status('Training finished. Now test another MNIST digit.');
+      $('testBtn').disabled = false;
+
+      trainingConsole('TRAINING FINISHED');
+      trainingConsole('The parameters have been updated repeatedly to reduce loss.');
+      trainingConsole('Now the model can predict digits it did not see during training.');
+
+      addLog('TRAINING FINISHED');
+    }
+
+    async function showPrediction() {
+      if (!model || !testXs) return;
+
+      const maxIndex = TEST_SAMPLES - 1;
+      const index = Math.floor(Math.random() * maxIndex);
+
+      const image = testXs.xs.slice([index, 0], [1, 784]);
+      const label = testYs.slice([index, 0], [1, 10]);
+
+      renderImage(image.reshape([28, 28]), label.argMax(1).dataSync()[0]);
+
+      const probs = model.predict(image);
+      const arr = await probs.data();
+
+      let best = 0;
+      for (let i = 1; i < arr.length; i++) {
+        if (arr[i] > arr[best]) best = i;
+      }
+
+      $('prediction').textContent = best;
+      $('confidence').textContent =
+        `${(arr[best] * 100).toFixed(2)}%`;
+
+      for (let i = 0; i < 10; i++) {
+        $('bar-' + i).style.height =
+          `${Math.max(2, arr[i] * 160)}px`;
+      }
+
+      image.dispose();
+      label.dispose();
+      probs.dispose();
+    }
+
+    $('loadBtn').addEventListener('click', loadMnist);
+    $('trainBtn').addEventListener('click', train);
+    $('testBtn').addEventListener('click', showPrediction);
+
+    $('clearBtn').addEventListener('click', () => {
+      $('log').textContent = '';
+      status('Log cleared.');
+    });
+
+    createBars();
+  </script>
+</body>
+</html>

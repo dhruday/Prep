@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 03 — SameSite Cookie Defense</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟡 Lab 03 — SameSite Cookie Defense</h1>
+<p class="sub">Module 12.1 · Web Threats · SameSite=None / Lax / Strict behavior</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Edge Cases</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>SameSite Cookie Attribute</h3>
+    <table>
+      <tr><th>Value</th><th>Cross-origin POST</th><th>Cross-origin GET (top-level)</th><th>Same-origin</th><th>Security</th></tr>
+      <tr><td style="color:#10b981"><strong>Strict</strong></td><td>❌ Blocked</td><td>❌ Blocked</td><td>✅ Sent</td><td>🟢 Maximum</td></tr>
+      <tr><td style="color:#f59e0b"><strong>Lax</strong> (default)</td><td>❌ Blocked</td><td>✅ Sent</td><td>✅ Sent</td><td>🟡 Good</td></tr>
+      <tr><td style="color:#ef4444"><strong>None</strong></td><td>✅ Sent</td><td>✅ Sent</td><td>✅ Sent</td><td>🔴 No protection</td></tr>
+    </table>
+    <div style="margin-top:10px;font-size:.78rem;color:#94a3b8">
+      <strong style="color:#60a5fa">Note:</strong> SameSite=None requires Secure flag (HTTPS only). Chrome defaults to Lax since Feb 2020.
+    </div>
+  </div>
+  <div class="card">
+    <h3>What Counts as "Same-Site"?</h3>
+    <pre><span class="cm">// Same-site = same eTLD+1 (effective top-level domain + 1)</span>
+
+<span class="str">https://app.example.com</span>  →  eTLD+1 = example.com
+<span class="str">https://api.example.com</span>  →  eTLD+1 = example.com  <span class="cm">← SAME SITE</span>
+<span class="str">https://evil.com</span>         →  eTLD+1 = evil.com     <span class="danger">← CROSS SITE</span>
+
+<span class="cm">// Public suffixes (eTLDs) are maintained in the Public Suffix List:</span>
+<span class="cm">// .com, .co.uk, .github.io, .herokuapp.com are all eTLDs</span>
+<span class="cm">// So app1.github.io and app2.github.io are CROSS-SITE!</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Cookie SameSite Behavior Test</h3>
+    <p style="font-size:.82rem;color:#94a3b8">The server sets three cookies with different SameSite values. Watch which ones are sent in different scenarios:</p>
+    <button onclick="setCookies()">🍪 Set All Three Cookies</button>
+    <button onclick="readCookies()">📋 Read Current Cookies</button>
+    <div class="output" id="cookie-status">Click "Set All Three Cookies" to begin...</div>
+  </div>
+  <div class="card">
+    <h3>Test: Same-Origin Request</h3>
+    <button onclick="testSameOrigin()" style="background:#1a3a2a;border-color:#10b981;color:#10b981">✅ Same-Origin POST</button>
+    <div class="output" id="same-result">All three cookies should be sent</div>
+  </div>
+  <div class="card">
+    <h3>Simulated Cross-Origin Scenarios</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Since we can't truly cross-origin from localhost, the server simulates checking SameSite logic:</p>
+    <button onclick="testCrossPost()" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Cross-Origin POST (form)</button>
+    <button onclick="testCrossGet()" style="background:#3a2a1e;border-color:#f59e0b;color:#f59e0b">🟡 Cross-Origin GET (top-level nav)</button>
+    <div class="output" id="cross-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>SameSite Edge Cases & Gotchas</h3>
+    <div style="font-size:.82rem;color:#94a3b8">
+      <p><strong style="color:#ef4444">1. Lax+POST (2-minute window):</strong> Chrome sends Lax cookies on cross-site POST requests for the first 2 minutes after the cookie is set. This is for backward compatibility with OAuth flows. An attacker could exploit this narrow window.</p>
+      <p style="margin-top:8px"><strong style="color:#ef4444">2. Subdomain isolation:</strong> SameSite only checks eTLD+1. So if attacker controls sub.example.com (via XSS), they can attack app.example.com because they're same-site.</p>
+      <p style="margin-top:8px"><strong style="color:#ef4444">3. iframe embedding:</strong> If your site is loaded in an iframe on evil.com, SameSite=Lax blocks cookies on the initial load. SameSite=None + Secure is required for cross-site iframe auth (e.g., embedded payment forms).</p>
+      <p style="margin-top:8px"><strong style="color:#ef4444">4. Scheme consideration:</strong> Chrome now treats HTTP → HTTPS as cross-site ("Schemeful SameSite"). A cookie set on https://example.com won't be sent to http://example.com in a cross-site context.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Set-Cookie Best Practice</h3>
+    <pre><span class="cm">// For auth session cookies:</span>
+Set-Cookie: session=abc123;
+  HttpOnly;        <span class="cm">// JS can't read it</span>
+  Secure;          <span class="cm">// HTTPS only</span>
+  SameSite=Lax;    <span class="cm">// blocks cross-site POST</span>
+  Path=/;          <span class="cm">// available on all paths</span>
+  Max-Age=86400;   <span class="cm">// 24 hours</span>
+
+<span class="cm">// For cross-site cookies (OAuth, analytics):</span>
+Set-Cookie: tracking=xyz;
+  <span class="danger">SameSite=None</span>;   <span class="cm">// must set for cross-site</span>
+  <span class="danger">Secure</span>;          <span class="cm">// REQUIRED with SameSite=None</span>
+  Partitioned;     <span class="cm">// CHIPS: per-top-level-site isolation</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — SameSite Questions</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Chrome plans to deprecate third-party cookies. How does SameSite relate?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">SameSite=None cookies ARE third-party cookies when used cross-site. Chrome's Privacy Sandbox replaces them with APIs like CHIPS (Cookies Having Independent Partitioned State), Topics API, and Attribution Reporting. CHIPS uses the Partitioned attribute — the cookie is scoped to the (top-level site, embedded site) pair, preventing cross-site tracking while allowing embedded functionality.</p>
+      <p><strong style="color:#60a5fa">Q: Your OAuth login requires a cross-site redirect. SameSite=Strict breaks it. What's the fix?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Use SameSite=Lax for the session cookie. Lax allows cookies on top-level GET navigations (which is what the OAuth redirect callback is). If you need Strict for maximum security, use a two-cookie approach: a Lax "landing" cookie that triggers re-authentication, and a Strict "session" cookie for actual API access.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function setCookies(){
+  try{
+    const res=await fetch(`${API}/api/csrf/set-samesite-cookies`,{credentials:'include'});
+    const d=await res.json();
+    document.getElementById('cookie-status').textContent='Cookies set!\n'+JSON.stringify(d,null,2)+'\n\nNote: SameSite behavior is enforced by the browser on cross-site requests.';
+  }catch(e){document.getElementById('cookie-status').textContent='Error: '+e.message+'\n(Is server running on localhost:3001?)'}
+}
+
+function readCookies(){
+  document.getElementById('cookie-status').textContent='document.cookie (JS-readable cookies):\n'+document.cookie+'\n\n(HttpOnly cookies are not visible to JS — they\'re still sent in requests)';
+}
+
+async function testSameOrigin(){
+  try{
+    const res=await fetch(`${API}/api/csrf/check-cookies`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}});
+    const d=await res.json();
+    document.getElementById('same-result').textContent='Same-origin POST:\n'+JSON.stringify(d,null,2);
+  }catch(e){document.getElementById('same-result').textContent='Error: '+e.message}
+}
+
+async function testCrossPost(){
+  try{
+    const res=await fetch(`${API}/api/csrf/simulate-cross-site?method=POST`,{credentials:'include'});
+    const d=await res.json();
+    document.getElementById('cross-result').textContent='Cross-origin POST simulation:\n'+JSON.stringify(d,null,2)+'\n\nResult: Strict ❌ | Lax ❌ | None ✅\n(Both Strict and Lax cookies blocked on cross-site POST)';
+  }catch(e){document.getElementById('cross-result').textContent='Error: '+e.message}
+}
+
+async function testCrossGet(){
+  try{
+    const res=await fetch(`${API}/api/csrf/simulate-cross-site?method=GET`,{credentials:'include'});
+    const d=await res.json();
+    document.getElementById('cross-result').textContent='Cross-origin GET (top-level nav) simulation:\n'+JSON.stringify(d,null,2)+'\n\nResult: Strict ❌ | Lax ✅ | None ✅\n(Only Strict blocked on cross-site GET navigation)';
+  }catch(e){document.getElementById('cross-result').textContent='Error: '+e.message}
+}
+</script>
+</body></html>

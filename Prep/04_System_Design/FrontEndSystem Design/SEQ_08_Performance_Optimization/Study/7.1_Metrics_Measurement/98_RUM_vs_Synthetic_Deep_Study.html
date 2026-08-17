@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>RUM vs Synthetic Testing Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2e1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Real User Monitoring vs Synthetic Testing</h1>
+<p class="sub">Module 7.1 · Metrics &amp; Measurement · Understanding Data Sources</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">RUM Implementation</div>
+  <div class="tab" onclick="setTab(2)">Synthetic Setup</div>
+  <div class="tab" onclick="setTab(3)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. RUM vs Synthetic — Fundamental Difference</h3>
+    <table>
+      <tr><th>Aspect</th><th>RUM (Real User Monitoring)</th><th>Synthetic (Lab Testing)</th></tr>
+      <tr><td>Data Source</td><td>Real users in production</td><td>Simulated browser in controlled env</td></tr>
+      <tr><td>Environment</td><td>Thousands of device/network combos</td><td>Fixed device profile &amp; throttling</td></tr>
+      <tr><td>Metrics</td><td>All CWV including INP</td><td>LCP, FCP, CLS, TBT (no INP)</td></tr>
+      <tr><td>When</td><td>Continuous — every user session</td><td>On-demand or scheduled</td></tr>
+      <tr><td>Reproducible</td><td>No — each visit is unique</td><td>Yes — same config → same results</td></tr>
+      <tr><td>Speed</td><td>Delayed — need traffic</td><td>Instant — run anytime</td></tr>
+      <tr><td>Debugging</td><td>Hard — aggregate data</td><td>Easy — full trace available</td></tr>
+      <tr><td>Coverage</td><td>Only visited pages</td><td>Any URL you configure</td></tr>
+      <tr><td>Google Ranking</td><td>YES — CrUX uses RUM</td><td>NO — Lighthouse doesn't affect rank</td></tr>
+    </table>
+    <div class="info">CRITICAL: Google uses FIELD data (CrUX = aggregated RUM from Chrome users) for ranking. Lighthouse scores are for debugging only. A site can score 100 on Lighthouse but fail CWV in CrUX if real users have slow devices/networks.</div>
+  </div>
+
+  <div class="card">
+    <h3>2. When to Use Each</h3>
+    <pre><span class="cm">// Use SYNTHETIC when:</span>
+<span class="cm">// ✓ Catching regressions in CI/CD (before deploy)</span>
+<span class="cm">// ✓ Debugging specific performance issues (reproducible trace)</span>
+<span class="cm">// ✓ Benchmarking against competitors</span>
+<span class="cm">// ✓ Testing pages with no traffic yet (staging)</span>
+<span class="cm">// ✓ Establishing baselines for new features</span>
+<span class="cm">//</span>
+<span class="cm">// Use RUM when:</span>
+<span class="cm">// ✓ Understanding actual user experience</span>
+<span class="cm">// ✓ Segmenting by device, geography, connection</span>
+<span class="cm">// ✓ Measuring INP (requires real interactions)</span>
+<span class="cm">// ✓ Tracking business impact (correlate metrics with conversion)</span>
+<span class="cm">// ✓ Monitoring CWV for Google ranking (CrUX data)</span>
+<span class="cm">// ✓ Detecting issues on specific devices/browsers</span>
+<span class="cm">//</span>
+<span class="cm">// Use BOTH when:</span>
+<span class="cm">// ✓ You're serious about performance (all FAANG companies do)</span>
+<span class="cm">// ✓ Synthetic catches regressions pre-deploy</span>
+<span class="cm">// ✓ RUM validates that fixes actually improved user experience</span>
+<span class="cm">// ✓ Discrepancies between lab/field reveal real-world factors</span>
+<span class="cm">//   (third-party scripts, browser extensions, slow devices)</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. CrUX — Chrome UX Report</h3>
+    <pre><span class="cm">// CrUX is Google's RUM dataset — aggregated from Chrome users who opted in</span>
+<span class="cm">//</span>
+<span class="cm">// How data flows:</span>
+<span class="cm">// Chrome browser → anonymous performance data → Google servers</span>
+<span class="cm">// → Aggregated over 28-day rolling window</span>
+<span class="cm">// → Published monthly in BigQuery + API</span>
+<span class="cm">//</span>
+<span class="cm">// Available at two levels:</span>
+<span class="cm">// 1. Origin level: https://example.com (entire site)</span>
+<span class="cm">// 2. URL level: https://example.com/products (specific page)</span>
+<span class="cm">//    URL-level only available if page has enough traffic</span>
+<span class="cm">//</span>
+<span class="cm">// Metrics in CrUX:</span>
+<span class="cm">// LCP, INP, CLS, FCP, TTFB</span>
+<span class="cm">// + navigation types, form factors, effective connection types</span>
+<span class="cm">//</span>
+<span class="cm">// Tools powered by CrUX:</span>
+<span class="cm">// - PageSpeed Insights (field data section)</span>
+<span class="cm">// - Search Console (Core Web Vitals report)</span>
+<span class="cm">// - CrUX Dashboard (Data Studio template)</span>
+<span class="cm">// - BigQuery (raw SQL queries)</span>
+<span class="cm">// - CrUX API (programmatic access)</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>RUM Implementation with web-vitals</h3>
+    <pre><span class="cm">// Production RUM setup — collect from all users, sample 10%</span>
+<span class="kw">import</span> { onLCP, onINP, onCLS, onFCP, onTTFB } <span class="kw">from</span> <span class="str">'web-vitals/attribution'</span>;
+
+<span class="cm">// Sampling — don't overwhelm analytics endpoint</span>
+<span class="kw">const</span> SAMPLE_RATE = <span class="num">0.1</span>; <span class="cm">// 10% of users</span>
+<span class="kw">const</span> shouldSample = Math.random() &lt; SAMPLE_RATE;
+
+<span class="kw">if</span> (shouldSample) {
+  <span class="kw">const</span> queue = [];
+
+  <span class="kw">function</span> <span class="fn">addToQueue</span>(metric) {
+    queue.push({
+      name: metric.name,
+      value: metric.value,
+      rating: metric.rating,
+      delta: metric.delta,
+      id: metric.id,
+      attribution: <span class="fn">getAttribution</span>(metric),
+      page: location.pathname,
+      deviceType: <span class="fn">getDeviceType</span>(),
+      connection: navigator.connection?.effectiveType ?? <span class="str">'unknown'</span>,
+      country: <span class="fn">getCountryFromCDN</span>(), <span class="cm">// Cloudflare/Fastly header</span>
+      timestamp: Date.now(),
+      sessionId: <span class="fn">getSessionId</span>(),
+      deployVersion: __DEPLOY_VERSION__,
+    });
+  }
+
+  <span class="kw">function</span> <span class="fn">getAttribution</span>(metric) {
+    <span class="kw">switch</span> (metric.name) {
+      <span class="kw">case</span> <span class="str">'LCP'</span>:
+        <span class="kw">return</span> {
+          element: metric.attribution.element,
+          url: metric.attribution.url,
+          ttfb: metric.attribution.timeToFirstByte,
+          loadDelay: metric.attribution.resourceLoadDelay,
+          loadTime: metric.attribution.resourceLoadTime,
+          renderDelay: metric.attribution.elementRenderDelay,
+        };
+      <span class="kw">case</span> <span class="str">'INP'</span>:
+        <span class="kw">return</span> {
+          eventTarget: metric.attribution.eventTarget,
+          eventType: metric.attribution.eventType,
+          inputDelay: metric.attribution.inputDelay,
+          processingDuration: metric.attribution.processingDuration,
+          presentationDelay: metric.attribution.presentationDelay,
+        };
+      <span class="kw">case</span> <span class="str">'CLS'</span>:
+        <span class="kw">return</span> {
+          largestShiftTarget: metric.attribution.largestShiftTarget,
+          largestShiftValue: metric.attribution.largestShiftValue,
+        };
+      <span class="kw">default</span>: <span class="kw">return</span> {};
+    }
+  }
+
+  <span class="fn">onLCP</span>(addToQueue);
+  <span class="fn">onINP</span>(addToQueue);
+  <span class="fn">onCLS</span>(addToQueue);
+  <span class="fn">onFCP</span>(addToQueue);
+  <span class="fn">onTTFB</span>(addToQueue);
+
+  <span class="cm">// Flush on page hide (user navigates away)</span>
+  document.addEventListener(<span class="str">'visibilitychange'</span>, () =&gt; {
+    <span class="kw">if</span> (document.visibilityState === <span class="str">'hidden'</span> &amp;&amp; queue.length) {
+      navigator.<span class="fn">sendBeacon</span>(<span class="str">'/api/rum'</span>, JSON.stringify(queue));
+      queue.length = <span class="num">0</span>;
+    }
+  });
+}</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Synthetic Monitoring Setup</h3>
+    <pre><span class="cm">// WebPageTest API — scheduled synthetic monitoring</span>
+<span class="kw">const</span> <span class="fn">runTest</span> = <span class="kw">async</span> () =&gt; {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'https://www.webpagetest.org/runtest.php'</span>, {
+    method: <span class="str">'POST'</span>,
+    body: <span class="kw">new</span> URLSearchParams({
+      url: <span class="str">'https://yoursite.com'</span>,
+      k: API_KEY,
+      f: <span class="str">'json'</span>,
+      location: <span class="str">'Dulles:Chrome.4G'</span>,
+      runs: <span class="str">'3'</span>,
+      video: <span class="str">'1'</span>,       <span class="cm">// Record filmstrip</span>
+      lighthouse: <span class="str">'1'</span>, <span class="cm">// Include Lighthouse</span>
+    }),
+  });
+  <span class="kw">return</span> res.json();
+};
+
+<span class="cm">// Schedule with cron (every 4 hours)</span>
+<span class="cm">// 0 */4 * * * node run-synthetic.js</span>
+
+<span class="cm">// Lighthouse programmatic API</span>
+<span class="kw">const</span> lighthouse = <span class="fn">require</span>(<span class="str">'lighthouse'</span>);
+<span class="kw">const</span> chromeLauncher = <span class="fn">require</span>(<span class="str">'chrome-launcher'</span>);
+
+<span class="kw">async function</span> <span class="fn">runLighthouse</span>(url) {
+  <span class="kw">const</span> chrome = <span class="kw">await</span> chromeLauncher.<span class="fn">launch</span>({ chromeFlags: [<span class="str">'--headless'</span>] });
+  <span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">lighthouse</span>(url, {
+    port: chrome.port,
+    output: <span class="str">'json'</span>,
+    onlyCategories: [<span class="str">'performance'</span>],
+  });
+  <span class="kw">await</span> chrome.<span class="fn">kill</span>();
+  <span class="kw">return</span> result.lhr;
+}</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: Explain the difference between RUM and Synthetic monitoring. When would you use each?</div>
+      <div class="a">Synthetic monitoring runs automated tests in controlled environments — fixed device, network, and location. It's reproducible and great for CI/CD regression detection, debugging, and benchmarking. RUM (Real User Monitoring) collects performance data from actual user sessions in production — real devices, real networks, real-world conditions. It captures what users actually experience, including INP (which requires real interactions). Key insight: Lighthouse (synthetic) doesn't affect Google ranking — only CrUX (field/RUM data) does. I use both: synthetic in CI to catch regressions before deploy, and RUM in production to validate that fixes improved real user experience. Common trap: a page scores 98 on Lighthouse but fails CWV because real users on budget Android phones with 3G have a completely different experience than Lighthouse's simulated mobile profile.</div>
+      <div class="followup">Follow-up: How do you handle the data volume of RUM at 100M monthly users?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: How does CrUX work and why does Google use 75th percentile?</div>
+      <div class="a">CrUX (Chrome UX Report) collects anonymous performance data from Chrome users who've opted into usage statistics sharing. Data is aggregated over a 28-day rolling window and published at origin-level and URL-level. Google uses the 75th percentile because it balances capturing the majority experience without being skewed by extreme outliers. If your p75 LCP is 2.4s, that means 75% of your users see LCP under 2.4s. The remaining 25% might be on very slow networks — acceptable. But if p75 is 4s, a significant chunk of users (25-50%) have a poor experience. Google chose 75th over median (p50) because the median can hide a bimodal distribution — half the users might be fine, but the other half terrible. The p75 catches this.</div>
+      <div class="followup">Follow-up: Can you access CrUX data programmatically? How would you use it?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Quick Reference</h3>
+    <table>
+      <tr><th>Tool</th><th>Type</th><th>CWV Metrics</th><th>Free</th></tr>
+      <tr><td>web-vitals library</td><td>RUM</td><td>LCP, INP, CLS, FCP, TTFB</td><td>Yes</td></tr>
+      <tr><td>CrUX API</td><td>RUM (aggregated)</td><td>LCP, INP, CLS, FCP, TTFB</td><td>Yes</td></tr>
+      <tr><td>Lighthouse</td><td>Synthetic</td><td>LCP, CLS, TBT, FCP, SI</td><td>Yes</td></tr>
+      <tr><td>WebPageTest</td><td>Synthetic</td><td>LCP, CLS, TBT, FCP, TTFB</td><td>Free tier</td></tr>
+      <tr><td>Datadog RUM</td><td>RUM</td><td>All + custom</td><td>Paid</td></tr>
+      <tr><td>SpeedCurve</td><td>Both</td><td>All</td><td>Paid</td></tr>
+      <tr><td>Sentry Performance</td><td>RUM</td><td>LCP, CLS, FCP, TTFB</td><td>Free tier</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Production Checklist</h3>
+    <pre>✅ web-vitals library deployed with attribution build
+✅ RUM data sampled at 5-10% with sendBeacon
+✅ Segmentation: device type, connection, geography, page
+✅ Lighthouse CI in CI/CD pipeline (synthetic)
+✅ CrUX data monitored monthly via Search Console
+✅ Dashboard: p75 trending per metric per page group
+✅ Alerts: regression > 10% vs 7-day baseline
+✅ Deploy markers on timeline for correlation
+✅ Quarterly performance review with RUM data
+✅ Lab vs Field gap analysis (identify real-world factors)</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

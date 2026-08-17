@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 03 — Frame-Ancestors CSP</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1a1a;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🔴 Lab 03 — CSP frame-ancestors</h1>
+<p class="sub">Module 12.3 · Modern clickjacking protection via Content Security Policy</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">frame-ancestors</div>
+  <div class="tab" onclick="setTab(1)">Config Examples</div>
+  <div class="tab" onclick="setTab(2)">vs X-Frame-Options</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>CSP frame-ancestors Directive</h3>
+    <pre><span class="cm">// frame-ancestors: controls WHO can embed your page</span>
+<span class="cm">// (The opposite of frame-src, which controls what YOU embed)</span>
+
+<span class="kw">Content-Security-Policy: frame-ancestors 'none'</span>
+<span class="cm">// No one can frame this page (equivalent to X-Frame-Options: DENY)</span>
+
+<span class="kw">Content-Security-Policy: frame-ancestors 'self'</span>
+<span class="cm">// Only same origin can frame (equiv to SAMEORIGIN)</span>
+
+<span class="kw">Content-Security-Policy: frame-ancestors 'self' https://partner.com</span>
+<span class="cm">// Same origin + specific partner</span>
+
+<span class="kw">Content-Security-Policy: frame-ancestors *.trusted.com</span>
+<span class="cm">// Any subdomain of trusted.com</span>
+
+<span class="cm">// IMPORTANT distinctions:</span>
+<span class="cm">// frame-ancestors → WHO can embed ME (clickjacking defense)</span>
+<span class="cm">// frame-src      → WHAT can I embed (what iframes I load)</span>
+<span class="cm">// child-src      → Legacy, use frame-src + worker-src instead</span>
+
+<span class="cm">// Express.js:</span>
+app.use((req, res, next) =&gt; {
+  res.setHeader(<span class="str">'Content-Security-Policy'</span>,
+    <span class="str">"frame-ancestors 'self' https://partner.com"</span>);
+  next();
+});</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Configuration Scenarios</h3>
+    <pre><span class="cm">// ═══ Scenario 1: Banking App ═══</span>
+<span class="cm">// Never allow framing</span>
+Content-Security-Policy: frame-ancestors <span class="str">'none'</span>
+
+<span class="cm">// ═══ Scenario 2: SaaS Dashboard ═══</span>
+<span class="cm">// Only frame within own app</span>
+Content-Security-Policy: frame-ancestors <span class="str">'self'</span>
+
+<span class="cm">// ═══ Scenario 3: Embeddable Widget ═══</span>
+<span class="cm">// Payment form embedded by approved merchants</span>
+Content-Security-Policy: frame-ancestors
+  https://merchant1.com
+  https://merchant2.com
+  https://*.bigretailer.com
+
+<span class="cm">// ═══ Scenario 4: OAuth Popup ═══</span>
+<span class="cm">// Consent page in popup, not iframe</span>
+Content-Security-Policy: frame-ancestors <span class="str">'none'</span>
+<span class="cm">// Use window.open() for OAuth, not iframes</span>
+
+<span class="cm">// ═══ Anti-pattern: Too permissive ═══</span>
+Content-Security-Policy: frame-ancestors <span class="danger">*</span>
+<span class="cm">// ❌ Anyone can embed your page = NO clickjacking protection</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>frame-ancestors vs X-Frame-Options</h3>
+    <pre><span class="cm">Feature             | X-Frame-Options | frame-ancestors</span>
+<span class="cm">─────────────────────┼─────────────────┼────────────────</span>
+<span class="cm">Multiple origins     | ❌              | ✅</span>
+<span class="cm">Wildcard subdomains  | ❌              | ✅</span>
+<span class="cm">Browser support      | All (legacy)    | All modern</span>
+<span class="cm">Priority when both   | Lower           | Higher (wins)</span>
+<span class="cm">Meta tag support     | ❌              | ❌</span>
+<span class="cm">Report-only mode     | ❌              | ✅ (via CSP)</span>
+
+<span class="cm">// Key insight: frame-ancestors CANNOT be set via &lt;meta&gt; tag</span>
+<span class="cm">// It MUST be set as an HTTP header</span>
+<span class="cm">// This is by design — if it were in meta, an attacker</span>
+<span class="cm">// could inject a meta tag to override it via XSS</span>
+
+<span class="cm">// When both are present:</span>
+<span class="cm">// Modern browsers use frame-ancestors and IGNORE X-Frame-Options</span>
+<span class="cm">// Old browsers (IE11) use X-Frame-Options</span>
+
+<span class="cm">// Best practice: Set BOTH</span>
+X-Frame-Options: DENY
+Content-Security-Policy: frame-ancestors <span class="str">'none'</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — frame-ancestors</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Your app needs to be embedded by partners. How do you securely configure frame-ancestors?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">(1) Maintain an allowlist of partner origins in server config (not hardcoded). (2) Set frame-ancestors dynamically per request: check Referer/Origin header against allowlist, set CSP header with matching origins. (3) Use report-uri to monitor embedding: Content-Security-Policy-Report-Only to test before enforcing. (4) For embeddable widgets: serve from a separate subdomain (widget.yourapp.com) with its own relaxed CSP. The main app (app.yourapp.com) keeps strict frame-ancestors 'none'. (5) Communication between parent and iframe: window.postMessage with strict origin validation. Never use '*' as target origin. (6) Consider: iframes from different origins don't get cookies with SameSite=Strict. Use token-based auth for embedded content. (7) Regular audits: who is embedding your content? CSP reports + server logs.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+</script>
+</body></html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 52 – Cache-Based State Management</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🗄️ Cache-Based State Management</h1>
+<p class="sub">Topic 52 · Module 5.2 — State Tools & Patterns · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Cache Lifecycle Simulator</div>
+  <div class="tab" onclick="setTab(2)">Strategies</div>
+  <div class="tab" onclick="setTab(3)">Code (TanStack / SWR)</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Cache as state — the key insight</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Instead of storing fetched data in Redux, treat the <strong>HTTP cache as the state layer</strong>. Libraries like TanStack Query and SWR maintain a normalised in-memory cache keyed by queryKey. They handle stale → fetch → fresh transitions automatically.</p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:.78rem;margin-bottom:12px">
+      <div style="background:#0f1117;border:1px solid #60a5fa;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:1.4rem">🆕</div>
+        <div style="color:#60a5fa;font-weight:700;margin:4px 0">fresh</div>
+        <div style="color:#94a3b8">Data within staleTime window</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #f59e0b;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:1.4rem">🕰️</div>
+        <div style="color:#f59e0b;font-weight:700;margin:4px 0">stale</div>
+        <div style="color:#94a3b8">Past staleTime; shown while refetching</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:1.4rem">⬇️</div>
+        <div style="color:#a78bfa;font-weight:700;margin:4px 0">fetching</div>
+        <div style="color:#94a3b8">Active network request in-flight</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;text-align:center">
+        <div style="font-size:1.4rem">🗑️</div>
+        <div style="color:#94a3b8;font-weight:700;margin:4px 0">garbage</div>
+        <div style="color:#94a3b8">Past gcTime; removed from memory</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Cache lifecycle — step through stages</h3>
+    <div style="text-align:center;margin-bottom:12px">
+      <div id="lifecycle-display" style="font-size:3rem;margin-bottom:4px">🆕</div>
+      <div id="state-label" style="font-size:1.2rem;font-weight:700;color:#60a5fa">fresh</div>
+      <div id="state-desc" style="color:#94a3b8;font-size:.82rem;margin-top:4px">Data just fetched — served from cache. No network request.</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px">
+      <button onclick="setLifecycle(0)" style="padding:7px 14px;border:none;background:#1e3a5f;color:#60a5fa;border-radius:8px;cursor:pointer;font-size:.8rem">fresh</button>
+      <button onclick="setLifecycle(1)" style="padding:7px 14px;border:none;background:#1c1300;color:#f59e0b;border-radius:8px;cursor:pointer;font-size:.8rem">stale</button>
+      <button onclick="setLifecycle(2)" style="padding:7px 14px;border:none;background:#1a1040;color:#a78bfa;border-radius:8px;cursor:pointer;font-size:.8rem">fetching</button>
+      <button onclick="setLifecycle(3)" style="padding:7px 14px;border:none;background:#0a2010;color:#10b981;border-radius:8px;cursor:pointer;font-size:.8rem">success</button>
+      <button onclick="setLifecycle(4)" style="padding:7px 14px;border:none;background:#300010;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.8rem">error</button>
+      <button onclick="setLifecycle(5)" style="padding:7px 14px;border:none;background:#1e2130;color:#94a3b8;border-radius:8px;cursor:pointer;font-size:.8rem">garbage collected</button>
+    </div>
+    <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-size:.78rem">
+      <div style="color:#60a5fa;margin-bottom:6px;font-weight:600">SAP scenario: Purchase order list</div>
+      <div id="sap-scenario" style="color:#94a3b8">staleTime: 5 min — PO list shown instantly from cache, background refresh after 5 minutes passes.</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Cache invalidation strategies</h3>
+    <div style="font-size:.8rem;display:grid;gap:8px">
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:10px;border-radius:8px">
+        <strong style="color:#60a5fa">Time-based (staleTime)</strong><br>
+        <span style="color:#94a3b8">Mark data stale after N milliseconds. Next observer triggers a background refetch while stale data remains visible.</span>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:10px;border-radius:8px">
+        <strong style="color:#10b981">Mutation-triggered invalidation</strong><br>
+        <span style="color:#94a3b8">After a POST/PATCH, call <code style="color:#f59e0b">queryClient.invalidateQueries({ queryKey: ['orders'] })</code>. Forces a fresh fetch for all matching queries.</span>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;padding:10px;border-radius:8px">
+        <strong style="color:#a78bfa">Optimistic updates</strong><br>
+        <span style="color:#94a3b8">Immediately update the cache with the expected result before the server responds. Roll back on error.</span>
+      </div>
+      <div style="background:#0f1117;border:1px solid #f59e0b;padding:10px;border-radius:8px">
+        <strong style="color:#f59e0b">Focus / reconnect refetch</strong><br>
+        <span style="color:#94a3b8">TanStack Query auto-refetches stale data when the window regains focus or the network reconnects.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>TanStack Query cache patterns</h3>
+    <pre><span class="cm">// Basic cache query with staleTime</span>
+<span class="kw">const</span> { data, isLoading, isFetching } = <span class="fn">useQuery</span>({
+  queryKey: [<span class="str">'sap-orders'</span>, { status: <span class="str">'pending'</span> }],
+  queryFn: () =&gt; <span class="fn">fetchOrders</span>({ status: <span class="str">'pending'</span> }),
+  staleTime: 5 * 60 * 1000,  <span class="cm">// fresh for 5 min</span>
+  gcTime: 10 * 60 * 1000,    <span class="cm">// kept in memory 10 min after unmount</span>
+  refetchOnWindowFocus: <span class="kw">true</span>, <span class="cm">// auto-refresh on tab switch</span>
+});
+
+<span class="cm">// Mutation with optimistic update</span>
+<span class="kw">const</span> approve = <span class="fn">useMutation</span>({
+  mutationFn: (id: <span class="kw">string</span>) =&gt; <span class="fn">approveOrder</span>(id),
+  <span class="attr">onMutate</span>: async (id) =&gt; {
+    <span class="kw">await</span> queryClient.<span class="fn">cancelQueries</span>({ queryKey: [<span class="str">'sap-orders'</span>] });
+    <span class="kw">const</span> prev = queryClient.<span class="fn">getQueryData</span>([<span class="str">'sap-orders'</span>]);
+    queryClient.<span class="fn">setQueryData</span>([<span class="str">'sap-orders'</span>], (old: Order[]) =&gt;
+      old.<span class="fn">map</span>(o =&gt; o.id === id ? { ...o, status: <span class="str">'approved'</span> } : o)
+    );
+    <span class="kw">return</span> { prev };             <span class="cm">// rollback context</span>
+  },
+  <span class="attr">onError</span>: (_err, _id, ctx) =&gt; queryClient.<span class="fn">setQueryData</span>([<span class="str">'sap-orders'</span>], ctx?.prev),
+  <span class="attr">onSettled</span>: () =&gt; queryClient.<span class="fn">invalidateQueries</span>({ queryKey: [<span class="str">'sap-orders'</span>] }),
+});</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const stages=[
+  {icon:'🆕',label:'fresh',color:'#60a5fa',desc:'Data just fetched — served from cache. No network request made.',sap:'staleTime: 5 min — PO list shown instantly from cache, background refresh after 5 minutes.'},
+  {icon:'🕰️',label:'stale',color:'#f59e0b',desc:'Past staleTime. On next access, data is shown from cache WHILE a background request runs.',sap:'SAP report data older than 5 min. Old figures displayed instantly; fresh figures replace silently.'},
+  {icon:'⬇️',label:'fetching',color:'#a78bfa',desc:'Background or foreground network request is in flight. isFetching=true.',sap:'Spinner shows in corner (not blocking); user can still navigate the current stale data.'},
+  {icon:'✅',label:'success',color:'#10b981',desc:'Network request succeeded. Cache updated. State moves to fresh.',sap:'New PO list received. Cache key updated, all subscribed components re-render with fresh data.'},
+  {icon:'❌',label:'error',color:'#ef4444',desc:'Network request failed. Error stored in cache. Previous data STILL available via data field.',sap:'Toast: "Failed to refresh orders." Old data still visible — no white-screen of death.'},
+  {icon:'🗑️',label:'garbage collected',color:'#475569',desc:'All observers unmounted + gcTime passed. Entry removed from memory.',sap:'User navigated to another page. 10 min later the PO cache key is GC'd. Next visit fetches fresh.'},
+];
+function setLifecycle(i){const s=stages[i];document.getElementById('lifecycle-display').textContent=s.icon;document.getElementById('state-label').textContent=s.label;document.getElementById('state-label').style.color=s.color;document.getElementById('state-desc').textContent=s.desc;document.getElementById('sap-scenario').textContent=s.sap;}
+</script>
+</body>
+</html>

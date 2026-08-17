@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — Promise Map</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+</style>
+</head>
+<body>
+<h1>Lab 01 — Promise Map Pattern</h1>
+<p class="sub">5 components request /api/rest/products simultaneously — deduplicate with a shared promise map</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Code</div>
+  <div class="tab" onclick="setTab(2)">Live Demo</div>
+  <div class="tab" onclick="setTab(3)">Key Takeaways</div>
+</div>
+
+<!-- Tab 0 — Concept -->
+<div class="panel active">
+  <div class="card">
+    <h3>The Problem</h3>
+    <p>When 5 independent components mount and each calls <code>fetch('/api/rest/products')</code>, the browser fires 5 identical network requests — wasting bandwidth and server resources.</p>
+  </div>
+  <div class="card">
+    <h3>Promise Map Solution</h3>
+    <p>A <strong>promise map</strong> (also called an inflight map) stores the pending promise keyed by URL. If a request for a key already exists, we return the same promise instead of starting a new fetch. Once resolved, the entry is removed so future calls get fresh data.</p>
+    <div class="info">Result: 5 callers → 1 network request → all 5 receive the same response.</div>
+  </div>
+  <div class="card">
+    <h3>Flow Diagram</h3>
+<pre>
+Component A ─┐
+Component B ─┤
+Component C ─┼─► promiseMap.has(key)?
+Component D ─┤       ├─ YES → return existing promise
+Component E ─┘       └─ NO  → fetch(), store in map, return promise
+                                   └─► on settle → delete from map
+</pre>
+  </div>
+</div>
+
+<!-- Tab 1 — Code -->
+<div class="panel">
+  <div class="card">
+    <h3>dedupFetch.js</h3>
+<pre>
+<span class="kw">const</span> inflightMap = <span class="kw">new</span> <span class="fn">Map</span>();
+
+<span class="kw">async function</span> <span class="fn">dedupFetch</span>(url, options = {}) {
+  <span class="kw">const</span> key = url + JSON.<span class="fn">stringify</span>(options);
+
+  <span class="kw">if</span> (inflightMap.<span class="fn">has</span>(key)) {
+    <span class="cm">// Return the already-inflight promise</span>
+    <span class="kw">return</span> inflightMap.<span class="fn">get</span>(key);
+  }
+
+  <span class="kw">const</span> promise = <span class="fn">fetch</span>(url, options)
+    .<span class="fn">then</span>(r =&gt; r.<span class="fn">json</span>())
+    .<span class="fn">finally</span>(() =&gt; inflightMap.<span class="fn">delete</span>(key));
+
+  inflightMap.<span class="fn">set</span>(key, promise);
+  <span class="kw">return</span> promise;
+}
+</pre>
+  </div>
+  <div class="card">
+    <h3>Usage — 5 Components</h3>
+<pre>
+<span class="cm">// All 5 calls share one network request</span>
+<span class="kw">const</span> [a, b, c, d, e] = <span class="kw">await</span> Promise.<span class="fn">all</span>([
+  <span class="fn">dedupFetch</span>(<span class="str">'/api/rest/products'</span>),
+  <span class="fn">dedupFetch</span>(<span class="str">'/api/rest/products'</span>),
+  <span class="fn">dedupFetch</span>(<span class="str">'/api/rest/products'</span>),
+  <span class="fn">dedupFetch</span>(<span class="str">'/api/rest/products'</span>),
+  <span class="fn">dedupFetch</span>(<span class="str">'/api/rest/products'</span>),
+]);
+<span class="cm">// a === b === c === d === e  (same reference)</span>
+</pre>
+  </div>
+</div>
+
+<!-- Tab 2 — Live Demo -->
+<div class="panel">
+  <div class="card">
+    <h3>Without Dedup (5 requests)</h3>
+    <button onclick="runNaive()">Fire 5 naive fetches</button>
+    <div class="output" id="naiveOut">Click to run…</div>
+  </div>
+  <div class="card">
+    <h3>With Promise Map (1 request)</h3>
+    <button onclick="runDedup()">Fire 5 deduped fetches</button>
+    <div class="output" id="dedupOut">Click to run…</div>
+  </div>
+  <div class="info">Open DevTools → Network tab to verify the actual request count.</div>
+</div>
+
+<!-- Tab 3 — Key Takeaways -->
+<div class="panel">
+  <div class="card">
+    <h3>When to Use</h3>
+    <p>• Multiple UI components that mount simultaneously and need the same data.<br>
+       • SPA route transitions where shared data is fetched by independent modules.<br>
+       • Micro-frontend architectures where separate apps query the same API.</p>
+  </div>
+  <div class="card">
+    <h3>Gotchas</h3>
+    <p>• The key must include method + body for POST dedup (be careful with mutable bodies).<br>
+       • Only works within a single page context — cross-tab needs Service Workers.<br>
+       • If one caller needs different headers, the key diverges and dedup won't apply.<br>
+       • Always clean up on <code>.finally()</code> to avoid stale entries on errors.</p>
+  </div>
+  <div class="card">
+    <h3>Comparison</h3>
+<pre>
+Approach          │ Scope      │ Complexity │ Cross-Tab
+──────────────────┼────────────┼────────────┼──────────
+Promise Map       │ Single page│ Low        │ No
+React Query       │ Single page│ Medium     │ No
+Service Worker    │ Cross-tab  │ High       │ Yes
+HTTP Cache (304)  │ Browser    │ None       │ Yes
+</pre>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const inflightMap = new Map();
+function dedupFetch(url) {
+  if (inflightMap.has(url)) return inflightMap.get(url);
+  const p = fetch(url).then(r => r.json()).finally(() => inflightMap.delete(url));
+  inflightMap.set(url, p);
+  return p;
+}
+
+let naiveCount = 0, dedupCount = 0;
+
+async function runNaive() {
+  const out = document.getElementById('naiveOut');
+  out.textContent = '⏳ Firing 5 independent fetch calls…\n';
+  naiveCount = 0;
+  const origFetch = window.fetch;
+  window.fetch = function(...args) { naiveCount++; return origFetch.apply(this, args); };
+  try {
+    const t0 = performance.now();
+    const results = await Promise.all(
+      Array.from({length:5}, () => fetch(API+'/api/rest/products').then(r=>r.json()))
+    );
+    const ms = (performance.now()-t0).toFixed(1);
+    out.textContent += `✅ Done in ${ms}ms\n`;
+    out.textContent += `📡 Network requests fired: ${naiveCount}\n`;
+    out.textContent += `📦 Each caller got ${results[0]?.length ?? '?'} products\n`;
+    out.textContent += `🔍 Same reference? ${results[0]===results[1] ? 'Yes':'No (different objects)'}`;
+  } catch(e) { out.textContent += '❌ '+e.message; }
+  finally { window.fetch = origFetch; }
+}
+
+async function runDedup() {
+  const out = document.getElementById('dedupOut');
+  out.textContent = '⏳ Firing 5 deduped fetch calls…\n';
+  dedupCount = 0;
+  const origFetch = window.fetch;
+  window.fetch = function(...args) { dedupCount++; return origFetch.apply(this, args); };
+  try {
+    const t0 = performance.now();
+    const results = await Promise.all(
+      Array.from({length:5}, () => dedupFetch(API+'/api/rest/products'))
+    );
+    const ms = (performance.now()-t0).toFixed(1);
+    out.textContent += `✅ Done in ${ms}ms\n`;
+    out.textContent += `📡 Network requests fired: ${dedupCount}\n`;
+    out.textContent += `📦 Each caller got ${results[0]?.length ?? '?'} products\n`;
+    out.textContent += `🔍 Same reference? ${results[0]===results[1] ? 'Yes (shared promise!)':'No'}`;
+  } catch(e) { out.textContent += '❌ '+e.message; }
+  finally { window.fetch = origFetch; }
+}
+</script>
+</body>
+</html>

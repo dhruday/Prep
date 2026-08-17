@@ -1,0 +1,299 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 03 — Normalized Cache</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#60a5fa;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#60a5fa;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.err{color:#ef4444}.num{color:#f59e0b}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#60a5fa;color:#60a5fa}button.blue{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #60a5fa;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}.ok{border-left-color:#10b981}.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.78rem;margin:12px 0}.flow span{background:#1e2130;border:1px solid #2d3551;padding:6px 10px;border-radius:6px}.flow .arrow{background:none;border:none;color:#60a5fa;font-weight:bold}
+.cache-entry{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;margin:4px 0;font-size:.78rem;font-family:monospace;transition:all .3s}.cache-entry.highlight{border-color:#f59e0b;box-shadow:0 0 12px rgba(245,158,11,.25)}.cache-key{color:#a78bfa;font-weight:bold}.cache-ref{color:#60a5fa;text-decoration:underline;cursor:pointer}
+</style></head><body>
+
+<h1>Lab 03 — Normalized Cache</h1>
+<p class="sub">Apollo-style __typename:id normalization · Shared references · Auto-updating UI</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Cache Inspector</div>
+  <div class="tab" onclick="setTab(2)">Live Update</div>
+  <div class="tab" onclick="setTab(3)">Interview</div>
+</div>
+
+<!-- ───── CONCEPT ───── -->
+<div class="panel active">
+  <div class="card">
+    <h3>🗄️ How Normalized Cache Works</h3>
+    <p style="font-size:.82rem;margin-bottom:10px">Apollo Client flattens nested responses into a dictionary keyed by <code>__typename:id</code>. Nested objects become references.</p>
+    <div class="flow">
+      <span>Server Response (nested)</span><span class="arrow">→</span>
+      <span>Normalize by __typename:id</span><span class="arrow">→</span>
+      <span style="border-color:#10b981;color:#10b981">Flat Cache Map</span>
+    </div>
+  </div>
+  <div class="card">
+    <h3 class="bad">❌ Without Normalization (document cache)</h3>
+<pre><span class="cm">// Query A result stored as-is:</span>
+cache["query:UserProfile(1)"] = { user: { id:1, name:"Alex", posts:[...] } }
+
+<span class="cm">// Query B also stores same user:</span>
+cache["query:PostsByUser(1)"] = { posts: [{ author: { id:1, name:"Alex" } }] }
+
+<span class="cm">// Update user name → must update BOTH entries manually</span>
+<span class="cm">// Miss one? UI shows stale "Alex" in one place, "Alexander" in another</span></pre>
+  </div>
+  <div class="card">
+    <h3 class="good">✅ With Normalization</h3>
+<pre><span class="cm">// Flat cache — single source of truth:</span>
+{
+  <span class="str">"User:1"</span>: { id:<span class="num">1</span>, __typename:<span class="str">"User"</span>, name:<span class="str">"Alex"</span>, avatar:<span class="str">"..."</span> },
+  <span class="str">"Post:10"</span>: { id:<span class="num">10</span>, __typename:<span class="str">"Post"</span>, title:<span class="str">"..."</span>, author: { <span class="kw">__ref</span>:<span class="str">"User:1"</span> } },
+  <span class="str">"Post:11"</span>: { id:<span class="num">11</span>, __typename:<span class="str">"Post"</span>, title:<span class="str">"..."</span>, author: { <span class="kw">__ref</span>:<span class="str">"User:1"</span> } }
+}
+<span class="cm">// Update User:1.name → ALL queries reading User:1 auto-update</span></pre>
+  </div>
+</div>
+
+<!-- ───── CACHE INSPECTOR ───── -->
+<div class="panel">
+  <div class="card">
+    <h3>🔍 Cache Inspector</h3>
+    <p style="font-size:.82rem;margin-bottom:10px">Run queries to populate the cache. Click cache entries to see references.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="blue" onclick="runQuery('profile')">Query: UserProfile</button>
+      <button class="blue" onclick="runQuery('posts')">Query: UserPosts</button>
+      <button class="blue" onclick="runQuery('comments')">Query: PostComments</button>
+      <button onclick="clearCache()" style="border-color:#ef4444;color:#ef4444">Clear Cache</button>
+    </div>
+    <div class="grid2">
+      <div>
+        <strong style="font-size:.8rem;color:#94a3b8">Queries Executed</strong>
+        <div class="output" id="queryLog">No queries yet…</div>
+      </div>
+      <div>
+        <strong style="font-size:.8rem;color:#94a3b8">Normalized Cache Store</strong>
+        <div id="cacheView" style="max-height:320px;overflow:auto"></div>
+      </div>
+    </div>
+    <div id="cacheStats" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- ───── LIVE UPDATE ───── -->
+<div class="panel">
+  <div class="card">
+    <h3>⚡ Update Propagation Demo</h3>
+    <p style="font-size:.82rem;margin-bottom:10px">Run all 3 queries, then update a user's name. Watch it propagate to all query results instantly.</p>
+    <button class="blue" onclick="runAllQueries()">1. Run All 3 Queries</button>
+    <div class="grid2" style="margin-top:10px">
+      <div>
+        <strong style="font-size:.8rem;color:#94a3b8">Query: UserProfile result</strong>
+        <div class="output" id="q1Result">—</div>
+      </div>
+      <div>
+        <strong style="font-size:.8rem;color:#94a3b8">Query: UserPosts result (author field)</strong>
+        <div class="output" id="q2Result">—</div>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <strong style="font-size:.8rem;color:#94a3b8">Query: PostComments result (comment authors)</strong>
+      <div class="output" id="q3Result">—</div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:.82rem">New name for User:1 →</label>
+      <input id="newName" value="Alexander Chen" style="background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:6px 10px;color:#e2e8f0;font-size:.82rem;width:180px">
+      <button class="green" onclick="updateUserName()">2. Update Cache</button>
+    </div>
+    <div id="updateLog" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<!-- ───── INTERVIEW ───── -->
+<div class="panel">
+  <div class="card">
+    <h3>💬 "Explain Apollo's cache normalization"</h3>
+<pre><span class="cm">// Apollo InMemoryCache normalizes in 3 steps:</span>
+
+<span class="cm">// 1. Traverse response tree</span>
+<span class="cm">// 2. For each object with __typename + id → create cache key</span>
+<span class="kw">const</span> key = `${obj.__typename}:${obj.id}`; <span class="cm">// e.g. "User:1"</span>
+
+<span class="cm">// 3. Replace nested objects with __ref pointers</span>
+{ author: { __ref: <span class="str">"User:1"</span> } }
+
+<span class="cm">// Custom key fields:</span>
+<span class="kw">new</span> <span class="fn">InMemoryCache</span>({
+  typePolicies: {
+    Product: { keyFields: [<span class="str">"sku"</span>] }, <span class="cm">// "Product:WH-1000"</span>
+    CartItem: { keyFields: [<span class="str">"product"</span>, [<span class="str">"sku"</span>]] } <span class="cm">// nested key</span>
+  }
+});</pre>
+  </div>
+  <div class="card">
+    <h3>💬 "How does cache eviction work?"</h3>
+    <div class="info"><strong>cache.evict({ id: 'User:1' })</strong> — removes the entity. But other objects may still hold stale <code>__ref: "User:1"</code> → dangling reference.</div>
+    <div class="info ok"><strong>cache.gc()</strong> — garbage collects unreachable entities. Any object not referenced by any ROOT_QUERY path is removed. Run after evictions.</div>
+<pre><span class="cm">// Evict + GC pattern:</span>
+cache.<span class="fn">evict</span>({ id: <span class="str">'Post:42'</span> });
+cache.<span class="fn">evict</span>({ id: <span class="str">'Post:42'</span>, fieldName: <span class="str">'comments'</span> }); <span class="cm">// field-level</span>
+cache.<span class="fn">gc</span>(); <span class="cm">// clean up orphans</span>
+
+<span class="cm">// Cache write policies:</span>
+<span class="cm">// merge: true  → deep merge incoming with existing</span>
+<span class="cm">// merge: false → replace existing entirely (default for arrays)</span>
+typePolicies: {
+  User: { fields: {
+    posts: { <span class="fn">merge</span>(existing = [], incoming) {
+      <span class="kw">return</span> [...existing, ...incoming]; <span class="cm">// pagination merge</span>
+    }}
+  }}
+}</pre>
+  </div>
+  <div class="card">
+    <h3>💬 "Document cache vs normalized cache?"</h3>
+    <div class="grid2">
+      <div class="info warn">
+        <strong>Document Cache</strong> (React Query, SWR)<br>
+        • Key = query string/URL<br>
+        • Stores full response per query<br>
+        • Duplicate data across queries<br>
+        • Manual invalidation<br>
+        • Simpler mental model
+      </div>
+      <div class="info ok">
+        <strong>Normalized Cache</strong> (Apollo, Relay, URQL)<br>
+        • Key = __typename:id<br>
+        • Flat entity store<br>
+        • Single source of truth<br>
+        • Auto-update on mutation<br>
+        • Complex but powerful
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+// ─── Simulated normalized cache ───
+let cache = {};
+let queries = [];
+
+const RESPONSES = {
+  profile: {
+    query: 'query UserProfile { user(id:1) { id name avatar email } }',
+    data: { user: { __typename:'User', id:'1', name:'Alex Chen', avatar:'alex.jpg', email:'alex@dev.io' } }
+  },
+  posts: {
+    query: 'query UserPosts { user(id:1) { id posts { id title author { id name } } } }',
+    data: { user: { __typename:'User', id:'1', posts: [
+      { __typename:'Post', id:'10', title:'GraphQL Caching Deep Dive', author:{ __typename:'User', id:'1', name:'Alex Chen' }},
+      { __typename:'Post', id:'11', title:'React Server Components', author:{ __typename:'User', id:'1', name:'Alex Chen' }}
+    ]}}
+  },
+  comments: {
+    query: 'query PostComments { post(id:10) { id comments { id body author { id name } } } }',
+    data: { post: { __typename:'Post', id:'10', comments: [
+      { __typename:'Comment', id:'c1', body:'Amazing article!', author:{ __typename:'User', id:'1', name:'Alex Chen' }},
+      { __typename:'Comment', id:'c2', body:'Very helpful', author:{ __typename:'User', id:'2', name:'Sara Kim' }}
+    ]}}
+  }
+};
+
+function normalize(obj, store) {
+  if (Array.isArray(obj)) return obj.map(item => normalize(item, store));
+  if (obj && typeof obj === 'object' && obj.__typename && obj.id) {
+    const key = obj.__typename + ':' + obj.id;
+    const entry = {};
+    for (const [k,v] of Object.entries(obj)) {
+      if (v && typeof v === 'object') {
+        entry[k] = Array.isArray(v) ? normalize(v, store) : normalize(v, store);
+      } else { entry[k] = v; }
+    }
+    store[key] = { ...(store[key]||{}), ...entry };
+    return { __ref: key };
+  }
+  return obj;
+}
+
+function runQuery(name) {
+  const resp = RESPONSES[name];
+  queries.push({ name, query: resp.query, time: new Date().toLocaleTimeString() });
+  const data = JSON.parse(JSON.stringify(resp.data));
+  normalize(data, cache);
+  renderCache();
+  renderQueryLog();
+}
+
+function clearCache() { cache = {}; queries = []; renderCache(); renderQueryLog(); }
+
+function renderQueryLog() {
+  document.getElementById('queryLog').textContent =
+    queries.length ? queries.map((q,i) => `${i+1}. [${q.time}] ${q.name}`).join('\n') : 'No queries yet…';
+}
+
+function renderCache() {
+  const view = document.getElementById('cacheView');
+  const keys = Object.keys(cache);
+  if (!keys.length) { view.innerHTML = '<div style="color:#475569;padding:12px;font-size:.78rem">Cache empty</div>'; }
+  else {
+    view.innerHTML = keys.map(k => {
+      const obj = cache[k];
+      const fields = Object.entries(obj).map(([fk,fv]) => {
+        if (fv && fv.__ref) return `  ${fk}: <span class="cache-ref">${fv.__ref}</span>`;
+        if (Array.isArray(fv)) return `  ${fk}: [${fv.map(i => i.__ref ? `<span class="cache-ref">${i.__ref}</span>` : JSON.stringify(i)).join(', ')}]`;
+        return `  ${fk}: ${JSON.stringify(fv)}`;
+      }).join('\n');
+      return `<div class="cache-entry" id="ce-${k}"><span class="cache-key">${k}</span>\n${fields}</div>`;
+    }).join('');
+  }
+  const stats = document.getElementById('cacheStats');
+  if (stats) {
+    const refs = JSON.stringify(cache).match(/__ref/g);
+    stats.innerHTML = keys.length
+      ? `<div class="info ok">${keys.length} entities · ${refs ? refs.length : 0} references · User:1 shared across ${queries.length} queries</div>`
+      : '';
+  }
+}
+
+// ─── Live Update tab ───
+function runAllQueries() {
+  cache = {}; queries = [];
+  runQuery('profile'); runQuery('posts'); runQuery('comments');
+  renderResults();
+}
+
+function renderResults() {
+  const u = cache['User:1'];
+  document.getElementById('q1Result').textContent = u
+    ? `user: { name: "${u.name}", email: "${u.email||'—'}", avatar: "${u.avatar||'—'}" }` : '—';
+  const p = cache['Post:10'];
+  const p2 = cache['Post:11'];
+  document.getElementById('q2Result').textContent = (p && u)
+    ? `posts: [\n  { title: "${p.title}", author.name: "${u.name}" },\n  { title: "${p2?.title}", author.name: "${u.name}" }\n]` : '—';
+  const c1 = cache['Comment:c1'];
+  const c2 = cache['Comment:c2'];
+  const u2 = cache['User:2'];
+  document.getElementById('q3Result').textContent = (c1)
+    ? `comments: [\n  { body: "${c1.body}", author.name: "${u?.name}" },\n  { body: "${c2?.body}", author.name: "${u2?.name}" }\n]` : '—';
+}
+
+function updateUserName() {
+  const name = document.getElementById('newName').value.trim();
+  if (!name || !cache['User:1']) {
+    document.getElementById('updateLog').innerHTML = '<div class="info warn">Run all queries first, then enter a name.</div>';
+    return;
+  }
+  const old = cache['User:1'].name;
+  cache['User:1'].name = name;
+  renderResults();
+  renderCache();
+
+  // Highlight updated entries
+  document.querySelectorAll('.cache-entry').forEach(el => el.classList.remove('highlight'));
+  const el = document.getElementById('ce-User:1');
+  if (el) { el.classList.add('highlight'); setTimeout(() => el.classList.remove('highlight'), 2000); }
+
+  document.getElementById('updateLog').innerHTML =
+    `<div class="info ok">✅ Updated User:1.name: "${old}" → "${name}"<br>All 3 query results now reflect the new name — zero extra network requests.</div>`;
+}
+
+renderCache();
+</script>
+</body></html>

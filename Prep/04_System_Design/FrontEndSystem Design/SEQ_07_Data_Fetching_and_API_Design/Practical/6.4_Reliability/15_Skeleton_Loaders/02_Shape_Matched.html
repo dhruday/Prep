@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shape-Matched Skeletons</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.sk{background:linear-gradient(90deg,#1e2130 25%,#2d3551 50%,#1e2130 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+.profile-skel,.profile-real{width:100%;height:200px;border-radius:8px;padding:14px;background:#161925;border:1px solid #2d3551}
+.profile-real{display:flex;flex-direction:column;gap:8px}
+</style>
+</head>
+<body>
+<h1>Shape-Matched Skeletons</h1>
+<p class="sub">Skeleton dimensions exactly match content — zero layout shift on load</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Code</div>
+  <div class="tab" onclick="setTab(2)">Live Demo</div>
+  <div class="tab" onclick="setTab(3)">Key Points</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card"><h3>Why Shape Matching Matters</h3>
+    <p>A generic spinner → content appearing causes <b>layout shift</b> (CLS). Shape-matched skeletons reserve the exact space content will occupy:</p>
+    <p style="margin-top:8px;font-size:.82rem">• Avatar placeholder = exact circle size as real avatar</p>
+    <p style="font-size:.82rem">• Text lines = same height, width proportions as expected text</p>
+    <p style="font-size:.82rem">• Card skeleton = same padding, border-radius, height as real card</p>
+    <p style="font-size:.82rem">• Result: content swaps in with <b>CLS ≈ 0</b></p>
+  </div>
+  <div class="info">The skeleton IS the layout — content fills the same container, no reflow needed.</div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card"><h3>Shape-Matched Component</h3>
+<pre><span class="cm">/* Skeleton and content share SAME dimensions */</span>
+<span class="kw">.card-skeleton</span>,
+<span class="kw">.card-content</span> {
+  width: <span class="str">100%</span>;
+  height: <span class="str">200px</span>;       <span class="cm">/* exact same height */</span>
+  padding: <span class="str">14px</span>;       <span class="cm">/* exact same padding */</span>
+  border-radius: <span class="str">8px</span>; <span class="cm">/* exact same radius */</span>
+}
+
+<span class="kw">.avatar-skeleton</span>,
+<span class="kw">.avatar-img</span> {
+  width: <span class="str">48px</span>;
+  height: <span class="str">48px</span>;
+  border-radius: <span class="str">50%</span>;
+}
+
+<span class="kw">.text-skeleton</span> {
+  height: <span class="str">14px</span>;         <span class="cm">/* matches line-height */</span>
+  margin-bottom: <span class="str">8px</span>;   <span class="cm">/* matches text spacing */</span>
+  border-radius: <span class="str">4px</span>;
+}
+
+<span class="cm">/* Swap: just change inner content, container stays */</span>
+<span class="kw">function</span> <span class="fn">replaceWithContent</span>(container, html) {
+  container.innerHTML = html;
+  <span class="cm">// No layout shift — same outer dimensions</span>
+}</pre></div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card"><h3>Side-by-Side: Skeleton vs Content</h3>
+    <button onclick="toggleState()">Toggle Skeleton ↔ Content</button>
+    <button onclick="animateTransition()">Animated Transition</button>
+    <div class="grid2" style="margin-top:12px">
+      <div>
+        <b style="font-size:.82rem">Skeleton (exact dimensions)</b>
+        <div class="profile-skel" style="margin-top:8px">
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+            <div class="sk" style="width:48px;height:48px;border-radius:50%;flex-shrink:0"></div>
+            <div style="flex:1"><div class="sk" style="height:14px;width:60%;border-radius:4px;margin-bottom:6px"></div><div class="sk" style="height:14px;width:40%;border-radius:4px"></div></div>
+          </div>
+          <div class="sk" style="height:80px;border-radius:6px;margin-bottom:8px"></div>
+          <div class="sk" style="height:14px;width:75%;border-radius:4px;margin-bottom:6px"></div>
+          <div class="sk" style="height:14px;width:50%;border-radius:4px"></div>
+        </div>
+      </div>
+      <div>
+        <b style="font-size:.82rem" id="state-label">Content (same dimensions)</b>
+        <div id="swap-target" class="profile-real" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="output" id="log">Skeleton and content occupy exactly 200px height with 14px padding — zero layout shift.</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card"><h3>Key Points</h3>
+    <p>• Skeleton and content MUST share the same container dimensions (height, padding, margin)</p>
+    <p>• Use explicit heights for skeleton elements matching real text line-height</p>
+    <p>• Avatar skeletons must be exact size/shape of real avatars</p>
+    <p>• Component-level skeletons are better than page-level — each part loads independently</p>
+    <p>• Test with Lighthouse or PerformanceObserver to verify CLS ≈ 0</p>
+  </div>
+  <div class="info">Interview tip: "Our skeletons are shape-matched to content — same height, padding, radius — so CLS stays near zero."</div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+let showingContent=true;
+const CONTENT_HTML=`<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px"><div style="width:48px;height:48px;border-radius:50%;background:#3a1e1e;display:flex;align-items:center;justify-content:center;font-size:1.2rem">👤</div><div><b>Jane Doe</b><br><span style="color:#94a3b8;font-size:.78rem">Senior Engineer @ Acme</span></div></div><div style="height:80px;border-radius:6px;background:linear-gradient(135deg,#1a2332,#2a1a1a);display:flex;align-items:center;justify-content:center;color:#ef4444;font-size:.85rem">📊 42,381 revenue this month</div><p style="margin-top:8px;font-size:.82rem;line-height:1.5">Completed 12 tasks this sprint with a 98% success rate across all projects.</p>`;
+const SKEL_HTML=`<div style="display:flex;gap:12px;align-items:center;margin-bottom:12px"><div class="sk" style="width:48px;height:48px;border-radius:50%;flex-shrink:0"></div><div style="flex:1"><div class="sk" style="height:14px;width:60%;border-radius:4px;margin-bottom:6px"></div><div class="sk" style="height:14px;width:40%;border-radius:4px"></div></div></div><div class="sk" style="height:80px;border-radius:6px;margin-bottom:8px"></div><div class="sk" style="height:14px;width:75%;border-radius:4px;margin-bottom:6px"></div><div class="sk" style="height:14px;width:50%;border-radius:4px"></div>`;
+
+function render(){const t=document.getElementById('swap-target');const l=document.getElementById('state-label');t.innerHTML=showingContent?CONTENT_HTML:SKEL_HTML;l.textContent=showingContent?'Content (same dimensions)':'Skeleton (same dimensions)';}
+function toggleState(){showingContent=!showingContent;render();document.getElementById('log').textContent=`Swapped to ${showingContent?'content':'skeleton'}\nContainer height: 200px (unchanged)\nLayout shift: 0`;}
+function animateTransition(){showingContent=false;render();document.getElementById('log').textContent='Loading skeleton...';setTimeout(()=>{showingContent=true;render();document.getElementById('log').textContent='Content loaded — skeleton replaced\nContainer size: unchanged → CLS = 0';},1500);}
+render();
+</script>
+</body>
+</html>

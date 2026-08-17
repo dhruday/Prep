@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CSS Traffic Light</title>
+    <style>
+        .traffic-light {
+            width: 80px;
+            background: #333;
+            padding: 20px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .light {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #111;
+            opacity: 0.3;
+        }
+
+        .red {
+            animation: redLight 7.5s infinite;
+        }
+
+        .yellow {
+            animation: yellowLight 7.5s infinite;
+        }
+
+        .green {
+            animation: greenLight 7.5s infinite;
+        }
+
+        @keyframes redLight {
+
+            0%,
+            53.3% {
+                background-color: red;
+                opacity: 1;
+            }
+
+            53.4%,
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        @keyframes yellowLight {
+            53.3%,
+            60% {
+                background-color: yellow;
+                opacity: 1;
+
+            }
+
+            0%, 53.2%, 60.01%, 100% {
+                background-color: transparent;
+            }
+        }
+        @keyframes greenLight {
+            60%, 100%{
+                background-color: green;
+                opacity: 1;
+            }
+            0%, 59.9%{
+                background-color: transparent;
+            }
+
+            
+        }
+    </style>
+</head>
+
+<body>
+    <div class="traffic-light">
+        <div class="light red"></div>
+        <div class="light yellow"></div>
+        <div class="light green"></div>
+    </div>
+</body>
+
+</html>

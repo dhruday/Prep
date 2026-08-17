@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 34 – Client-Side Rendering (CSR)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.step{display:flex;align-items:flex-start;gap:12px;margin:8px 0;font-size:.83rem}
+.badge{background:#1e3a5f;color:#60a5fa;border-radius:6px;padding:2px 8px;font-size:.75rem;font-weight:700;white-space:nowrap}
+.bar-wrap{background:#0f1117;border-radius:6px;overflow:hidden;height:14px;margin:4px 0}
+.bar{height:14px;border-radius:6px;transition:width .6s ease}
+.green{color:#10b981}.red{color:#ef4444}.amber{color:#f59e0b}
+</style>
+</head>
+<body>
+<h1>⚙️ Client-Side Rendering (CSR)</h1>
+<p class="sub">Topic 34 · Module 4.1 — Rendering Models · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">How CSR Works</div>
+  <div class="tab" onclick="setTab(1)">Timeline Simulation</div>
+  <div class="tab" onclick="setTab(2)">CSR Trade-offs</div>
+  <div class="tab" onclick="setTab(3)">Code Pattern</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>CSR Request Lifecycle</h3>
+    <div class="step"><span class="badge">1</span><div><strong>Browser requests URL</strong> → Server returns a near-empty HTML shell with a <code>&lt;div id="root"&gt;</code></div></div>
+    <div class="step"><span class="badge">2</span><div><strong>Browser downloads JS bundle</strong> (main.js, vendor.js etc.) — this is the "blank screen" phase</div></div>
+    <div class="step"><span class="badge">3</span><div><strong>JS executes</strong> → React/Angular/Vue bootstrap, hydrates the root container</div></div>
+    <div class="step"><span class="badge">4</span><div><strong>API calls fire</strong> (data fetching inside useEffect / ngOnInit)</div></div>
+    <div class="step"><span class="badge">5</span><div><strong>DOM painted</strong> — only now does the user see content (FCP ≈ LCP lags behind SSR)</div></div>
+    <div style="margin-top:14px;font-size:.83rem;color:#94a3b8">
+      <strong style="color:#e2e8f0">Key metrics affected:</strong><br>
+      ✦ <span class="amber">Large JS bundle</span> → high TBT, poor TTI<br>
+      ✦ <span class="amber">No HTML content at FCP</span> → Google deducts SEO points<br>
+      ✦ <span class="green">Excellent for logged-in dashboards</span> (SAP Fiori, Salesforce LWC)
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Timeline: 3G connection, 200KB JS bundle</h3>
+    <div id="timeline" style="font-size:.81rem"></div>
+    <button onclick="runTimeline()" style="margin-top:12px;padding:8px 20px;background:#1e3a5f;color:#60a5fa;border:1px solid #60a5fa;border-radius:8px;cursor:pointer">▶ Simulate</button>
+    <div id="tlog" style="margin-top:10px;font-family:monospace;font-size:.78rem;color:#10b981;background:#0a0e14;border:1px solid #2d3551;border-radius:6px;padding:10px;min-height:60px"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>CSR Pros &amp; Cons</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <div style="font-size:.8rem;font-weight:700;color:#10b981;margin-bottom:8px">✅ Advantages</div>
+        <div style="font-size:.8rem;color:#94a3b8;line-height:2">Rich interactivity after load<br>Simple static hosting (CDN only)<br>Full SPA navigation, no page reloads<br>Ideal for authenticated apps<br>Easy caching of JS/CSS assets</div>
+      </div>
+      <div>
+        <div style="font-size:.8rem;font-weight:700;color:#ef4444;margin-bottom:8px">❌ Disadvantages</div>
+        <div style="font-size:.8rem;color:#94a3b8;line-height:2">Blank screen until JS loads<br>Poor SEO (empty initial HTML)<br>Slow FCP on slow networks<br>Large bundle → high TBT<br>Accessibility issues (screen readers)</div>
+      </div>
+    </div>
+    <h3>When to use CSR at SAP?</h3>
+    <div style="font-size:.82rem;color:#94a3b8;line-height:1.9">SAP Fiori dashboards, analytics workbench, ERP configuration portals — all benefit from CSR because users are authenticated, SEO is irrelevant, and rich interactivity is paramount. Hruday optimised Fiori bundles from 2.8MB→800KB via lazy routes reducing TTI by 60%.</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Typical CSR bootstrap (React)</h3>
+    <pre><span class="cm">// index.html — server serves this shell for ALL routes</span>
+<span class="str">&lt;!DOCTYPE html&gt;</span>
+<span class="str">&lt;html&gt;&lt;body&gt;</span>
+  <span class="str">&lt;div id="root"&gt;&lt;/div&gt;</span>   <span class="cm">&lt;!-- empty --&gt;</span>
+  <span class="str">&lt;script defer src="/main.js"&gt;&lt;/script&gt;</span>
+<span class="str">&lt;/body&gt;&lt;/html&gt;</span>
+
+<span class="cm">// main.tsx — client entry point</span>
+<span class="kw">import</span> { createRoot } <span class="kw">from</span> <span class="str">'react-dom/client'</span>;
+<span class="kw">import</span> App <span class="kw">from</span> <span class="str">'./App'</span>;
+
+createRoot(document.<span class="attr">getElementById</span>(<span class="str">'root'</span>)!).<span class="attr">render</span>(&lt;App /&gt;);
+
+<span class="cm">// App.tsx — data fetched client-side</span>
+<span class="kw">function</span> <span class="attr">Dashboard</span>() {
+  <span class="kw">const</span> [data, setData] = useState(<span class="kw">null</span>);
+  useEffect(() =&gt; {
+    fetch(<span class="str">'/api/dashboard'</span>)
+      .then(r =&gt; r.json())
+      .then(setData);
+  }, []);
+  <span class="kw">return</span> data ? &lt;<span class="attr">DashboardContent</span> data={data} /&gt; : &lt;<span class="attr">Spinner</span> /&gt;;
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const steps=[
+  {t:0,label:'Browser sends GET /',color:'#60a5fa'},
+  {t:200,label:'Server responds: empty HTML shell (2KB)',color:'#10b981'},
+  {t:400,label:'Browser parses HTML, requests main.js',color:'#60a5fa'},
+  {t:1800,label:'JS downloaded (200KB on 3G ≈ 1.4s)',color:'#f59e0b'},
+  {t:2200,label:'React bootstraps, app renders loading state',color:'#f59e0b'},
+  {t:2500,label:'API call fires: GET /api/data',color:'#60a5fa'},
+  {t:3100,label:'API responds, DOM fully painted — FCP/LCP here',color:'#10b981'},
+];
+function runTimeline(){
+  const tl=document.getElementById('timeline');
+  const log=document.getElementById('tlog');
+  tl.innerHTML='';log.innerHTML='';
+  steps.forEach((s,i)=>{
+    setTimeout(()=>{
+      tl.innerHTML+=`<div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span style="color:#475569;width:55px">${s.t}ms</span><div style="flex:1;background:#0f1117;border-radius:4px;height:12px"><div style="width:${Math.min(100,(s.t/3100)*100)}%;height:12px;background:${s.color};border-radius:4px;transition:width .4s"></div></div><span style="color:${s.color};font-size:.77rem">${s.label}</span></div>`;
+      log.innerHTML+=`<span style="color:${s.color}">+${s.t}ms → ${s.label}</span><br>`;
+      log.scrollTop=log.scrollHeight;
+    },i*350);
+  });
+}
+</script>
+</body>
+</html>

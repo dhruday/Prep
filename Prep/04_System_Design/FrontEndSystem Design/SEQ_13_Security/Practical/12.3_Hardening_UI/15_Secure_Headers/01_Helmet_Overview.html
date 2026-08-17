@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — Helmet.js & Security Headers</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a2a1a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟢 Lab 01 — Helmet.js & Security Headers</h1>
+<p class="sub">Module 12.3 · Express middleware for HTTP security headers</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Helmet Overview</div>
+  <div class="tab" onclick="setTab(1)">All Headers</div>
+  <div class="tab" onclick="setTab(2)">Live Scan</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Helmet.js — Security Headers Middleware</h3>
+    <pre><span class="cm">// Helmet sets 11+ security headers with one line:</span>
+<span class="kw">const</span> helmet = require(<span class="str">'helmet'</span>);
+app.use(helmet());
+
+<span class="cm">// Default headers set by helmet():</span>
+<span class="cm">// Content-Security-Policy: default-src 'self'; ...</span>
+<span class="cm">// Cross-Origin-Embedder-Policy: require-corp</span>
+<span class="cm">// Cross-Origin-Opener-Policy: same-origin</span>
+<span class="cm">// Cross-Origin-Resource-Policy: same-origin</span>
+<span class="cm">// Origin-Agent-Cluster: ?1</span>
+<span class="cm">// Referrer-Policy: no-referrer</span>
+<span class="cm">// Strict-Transport-Security: max-age=15552000; includeSubDomains</span>
+<span class="cm">// X-Content-Type-Options: nosniff</span>
+<span class="cm">// X-DNS-Prefetch-Control: off</span>
+<span class="cm">// X-Download-Options: noopen</span>
+<span class="cm">// X-Frame-Options: SAMEORIGIN</span>
+<span class="cm">// X-Permitted-Cross-Domain-Policies: none</span>
+<span class="cm">// X-XSS-Protection: 0 (disabled — CSP is better)</span>
+
+<span class="cm">// Customize:</span>
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: [<span class="str">"'self'"</span>],
+      scriptSrc: [<span class="str">"'self'"</span>, <span class="str">"'nonce-abc123'"</span>],
+    }
+  },
+  frameguard: { action: <span class="str">'deny'</span> }
+}));</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Essential Security Headers</h3>
+    <pre><span class="cm">// ═══ 1. X-Content-Type-Options ═══</span>
+X-Content-Type-Options: nosniff
+<span class="cm">// Prevents MIME sniffing. Browser trusts Content-Type header.</span>
+<span class="cm">// Without it: browser might execute text/plain as JavaScript</span>
+
+<span class="cm">// ═══ 2. X-Frame-Options ═══</span>
+X-Frame-Options: DENY
+<span class="cm">// Prevents clickjacking (legacy — use frame-ancestors too)</span>
+
+<span class="cm">// ═══ 3. Strict-Transport-Security (HSTS) ═══</span>
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+<span class="cm">// Forces HTTPS for 2 years, all subdomains, preload eligible</span>
+
+<span class="cm">// ═══ 4. Referrer-Policy ═══</span>
+Referrer-Policy: strict-origin-when-cross-origin
+<span class="cm">// Controls what URL info is sent in Referer header</span>
+
+<span class="cm">// ═══ 5. Permissions-Policy (formerly Feature-Policy) ═══</span>
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+<span class="cm">// Blocks/controls powerful browser APIs</span>
+
+<span class="cm">// ═══ 6. Cross-Origin headers ═══</span>
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+Cross-Origin-Resource-Policy: same-origin
+<span class="cm">// Enables SharedArrayBuffer, prevents Spectre-style attacks</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🧪 Scan Server Headers</h3>
+    <button onclick="scanHeaders()">🔍 Scan localhost:3001</button>
+    <div class="output" id="scan-result">Click to scan server security headers</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Security Headers</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Which security headers should every web app have?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Tier 1 (Must have): (1) Content-Security-Policy — XSS prevention. (2) Strict-Transport-Security — force HTTPS. (3) X-Content-Type-Options: nosniff — prevent MIME confusion. (4) X-Frame-Options + frame-ancestors — clickjacking. Tier 2 (Important): (5) Referrer-Policy — prevent URL leakage. (6) Permissions-Policy — disable unused APIs. (7) Cross-Origin-Opener-Policy — isolate browsing contexts. Tier 3 (Defense-in-depth): (8) Cross-Origin-Embedder-Policy — cross-origin isolation. (9) Cross-Origin-Resource-Policy — prevent cross-origin reads. (10) X-XSS-Protection: 0 — deliberately DISABLED (old XSS auditor had its own vulnerabilities; CSP replaces it). Common mistake: Removing X-Powered-By but not Server header. Both reveal technology stack. Helmet removes X-Powered-By automatically.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function scanHeaders(){
+  const el=document.getElementById('scan-result');
+  el.textContent='Scanning http://localhost:3001...\n'+('='.repeat(50))+'\n\n';
+  const required=[
+    {name:'content-security-policy',label:'Content-Security-Policy',tier:'CRITICAL'},
+    {name:'strict-transport-security',label:'Strict-Transport-Security',tier:'CRITICAL'},
+    {name:'x-content-type-options',label:'X-Content-Type-Options',tier:'CRITICAL'},
+    {name:'x-frame-options',label:'X-Frame-Options',tier:'CRITICAL'},
+    {name:'referrer-policy',label:'Referrer-Policy',tier:'IMPORTANT'},
+    {name:'permissions-policy',label:'Permissions-Policy',tier:'IMPORTANT'},
+    {name:'cross-origin-opener-policy',label:'Cross-Origin-Opener-Policy',tier:'GOOD'},
+    {name:'cross-origin-embedder-policy',label:'Cross-Origin-Embedder-Policy',tier:'GOOD'},
+    {name:'cross-origin-resource-policy',label:'Cross-Origin-Resource-Policy',tier:'GOOD'},
+  ];
+  const bad=['x-powered-by','server'];
+  try{
+    const resp=await fetch('http://localhost:3001/api/sensitive/data');
+    let score=0;
+    required.forEach(h=>{
+      const val=resp.headers.get(h.name);
+      const present=!!val;
+      if(present)score++;
+      el.textContent+=`${present?'✅':'❌'} [${h.tier}] ${h.label}\n   ${val||'MISSING'}\n\n`;
+    });
+    bad.forEach(h=>{
+      const val=resp.headers.get(h);
+      if(val){el.textContent+=`⚠️ ${h}: ${val} (should be removed)\n\n`;score--}
+      else{el.textContent+=`✅ ${h}: not exposed\n\n`;score++}
+    });
+    el.textContent+=`\nScore: ${score}/${required.length+bad.length}\n`;
+    el.textContent+=score>=9?'🏆 Excellent!':score>=6?'👍 Good, but room for improvement':'⚠️ Needs work';
+  }catch(e){el.textContent+=`Server not reachable: ${e.message}\nStart: cd server && node server.js`}
+}
+</script>
+</body></html>

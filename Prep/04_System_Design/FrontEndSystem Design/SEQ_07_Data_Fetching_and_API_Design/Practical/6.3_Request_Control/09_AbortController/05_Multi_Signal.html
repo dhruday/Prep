@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab 05 — Multi Signal</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}button.red{background:#3a1e1e;border-color:#ef4444;color:#ef4444}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+.signal-tag{display:inline-block;padding:3px 8px;border-radius:4px;font-size:.75rem;margin:2px}
+.signal-timeout{background:#3a2a1a;color:#f59e0b;border:1px solid #f59e0b}
+.signal-manual{background:#1a2a3a;color:#60a5fa;border:1px solid #60a5fa}
+</style>
+</head>
+<body>
+<h1>Lab 05 — Multi Signal</h1>
+<p class="sub">Combine timeout + manual cancel with AbortSignal.any(). Know exactly which signal triggered the abort.</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">🏃 Live Demo</div>
+  <div class="tab" onclick="setTab(1)">📖 AbortSignal.any()</div>
+  <div class="tab" onclick="setTab(2)">🔍 Detecting Source</div>
+  <div class="tab" onclick="setTab(3)">📊 Results Log</div>
+</div>
+
+<!-- Tab 0: Live Demo -->
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>🎯 Combined Timeout + Manual Cancel</h3>
+    <p style="color:#94a3b8;font-size:.82rem;margin-bottom:10px">
+      Fetch hits <code>/api/unreliable/timeout</code>. The request aborts if EITHER the timeout expires OR you hit cancel.
+    </p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <span style="color:#94a3b8;font-size:.82rem">Timeout:</span>
+      <button onclick="startMulti(2000)">2s</button>
+      <button onclick="startMulti(4000)">4s</button>
+      <button onclick="startMulti(8000)">8s</button>
+      <button class="red" onclick="manualCancel()">🛑 Manual Cancel</button>
+    </div>
+    <div class="output" id="demoOut">Choose a timeout and start the request. Cancel manually before it times out to see the difference.</div>
+    <div style="margin-top:8px">
+      <span class="signal-tag signal-timeout">⏱ Timeout Signal</span>
+      <span class="signal-tag signal-manual">🖐 Manual Signal</span>
+      <span style="color:#94a3b8;font-size:.75rem;margin-left:8px">— combined via AbortSignal.any()</span>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 1: AbortSignal.any() -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>📖 AbortSignal.any() — Combine Multiple Signals</h3>
+<pre><span class="cm">// Two independent abort sources</span>
+<span class="kw">const</span> manualController = <span class="kw">new</span> <span class="fn">AbortController</span>();
+<span class="kw">const</span> timeoutSignal = AbortSignal.<span class="fn">timeout</span>(<span class="str">5000</span>);
+
+<span class="cm">// Combine: abort if EITHER fires</span>
+<span class="kw">const</span> combined = AbortSignal.<span class="fn">any</span>([
+  manualController.signal,
+  timeoutSignal
+]);
+
+<span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(url, { signal: combined });
+
+<span class="cm">// Cancel button calls:</span>
+manualController.<span class="fn">abort</span>(); <span class="cm">// Triggers combined signal</span></pre>
+  </div>
+  <div class="card">
+    <h3>🧩 Use Cases for Multi-Signal</h3>
+<pre><span class="cm">// 1. Timeout + user cancel (this lab)</span>
+<span class="cm">// 2. Component unmount + request timeout</span>
+<span class="cm">// 3. Route change + API deadline</span>
+<span class="cm">// 4. User idle timeout + manual refresh</span>
+<span class="cm">// 5. Parent controller + child controller (nested scopes)</span></pre>
+  </div>
+  <div class="info">AbortSignal.any() creates a signal that aborts when ANY of the input signals abort. Available in modern browsers (Chrome 116+, Firefox 124+, Safari 17.4+).</div>
+</div>
+
+<!-- Tab 2: Detecting Source -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🔍 Identifying Which Signal Triggered Abort</h3>
+<pre><span class="kw">const</span> manual = <span class="kw">new</span> <span class="fn">AbortController</span>();
+<span class="kw">const</span> timeout = AbortSignal.<span class="fn">timeout</span>(<span class="str">5000</span>);
+<span class="kw">const</span> combined = AbortSignal.<span class="fn">any</span>([manual.signal, timeout]);
+
+<span class="kw">try</span> {
+  <span class="kw">await</span> <span class="fn">fetch</span>(url, { signal: combined });
+} <span class="kw">catch</span> (e) {
+  <span class="kw">if</span> (e.name === <span class="str">'TimeoutError'</span>) {
+    <span class="cm">// Triggered by AbortSignal.timeout()</span>
+    console.<span class="fn">log</span>(<span class="str">'⏱ Request timed out'</span>);
+  } <span class="kw">else if</span> (e.name === <span class="str">'AbortError'</span>) {
+    <span class="cm">// Triggered by manual controller.abort()</span>
+    console.<span class="fn">log</span>(<span class="str">'🖐 User cancelled'</span>);
+  }
+}
+
+<span class="cm">// You can also check signal.reason:</span>
+combined.<span class="fn">addEventListener</span>(<span class="str">'abort'</span>, () => {
+  console.<span class="fn">log</span>(combined.reason); <span class="cm">// DOMException or TimeoutError</span>
+});</pre>
+  </div>
+  <div class="info">TimeoutError comes from <code>AbortSignal.timeout()</code>. AbortError comes from <code>controller.abort()</code>. This lets you show different UIs for each case.</div>
+</div>
+
+<!-- Tab 3: Results Log -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>📊 Abort Results History</h3>
+    <button class="red" onclick="document.getElementById('logOut').textContent='No results yet...'">Clear Log</button>
+    <div class="output" id="logOut">No results yet. Run some requests from the Live Demo tab...</div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+let manualCtrl = null, runCount = 0, inFlight = false;
+
+async function startMulti(timeoutMs) {
+  if (inFlight) { appendOut('⚠️ Request already in-flight. Cancel it first.\n'); return; }
+  inFlight = true;
+  runCount++;
+  const run = runCount;
+  manualCtrl = new AbortController();
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const combined = AbortSignal.any([manualCtrl.signal, timeoutSignal]);
+
+  const out = document.getElementById('demoOut');
+  out.textContent = `🚀 Run #${run}: Fetching with ${timeoutMs}ms timeout...\n`;
+  out.textContent += `   Signals: ⏱ timeout(${timeoutMs}ms) + 🖐 manual cancel\n\n`;
+
+  const t0 = performance.now();
+  try {
+    const res = await fetch(`${API}/api/unreliable/timeout`, { signal: combined });
+    const data = await res.json();
+    const ms = (performance.now() - t0).toFixed(0);
+    out.textContent += `✅ Success in ${ms}ms! Neither signal fired.\n`;
+    out.textContent += `Data: ${JSON.stringify(data).slice(0, 120)}\n`;
+    addLog(run, timeoutMs, ms, 'success', '—');
+  } catch (e) {
+    const ms = (performance.now() - t0).toFixed(0);
+    if (e.name === 'TimeoutError') {
+      out.textContent += `⏱ TIMEOUT after ${ms}ms (limit was ${timeoutMs}ms)\n`;
+      out.textContent += `Signal source: AbortSignal.timeout()\n`;
+      out.textContent += `Error type: ${e.name}\n`;
+      addLog(run, timeoutMs, ms, 'timeout', 'AbortSignal.timeout()');
+    } else if (e.name === 'AbortError') {
+      out.textContent += `🖐 MANUAL CANCEL after ${ms}ms\n`;
+      out.textContent += `Signal source: AbortController.abort()\n`;
+      out.textContent += `Error type: ${e.name}\n`;
+      addLog(run, timeoutMs, ms, 'manual', 'AbortController.abort()');
+    } else {
+      out.textContent += `❌ ${e.name}: ${e.message}\n`;
+      addLog(run, timeoutMs, ms, 'error', e.name);
+    }
+  }
+  inFlight = false;
+}
+
+function manualCancel() {
+  if (manualCtrl && inFlight) {
+    manualCtrl.abort();
+  } else {
+    appendOut('⚠️ No in-flight request to cancel.\n');
+  }
+}
+
+function appendOut(text) {
+  document.getElementById('demoOut').textContent += text;
+}
+
+function addLog(run, timeout, elapsed, result, source) {
+  const out = document.getElementById('logOut');
+  if (out.textContent === 'No results yet. Run some requests from the Live Demo tab...') out.textContent = '';
+  const icons = { success: '✅', timeout: '⏱', manual: '🖐', error: '❌' };
+  out.textContent += `${icons[result]} #${run} | timeout=${timeout}ms | elapsed=${elapsed}ms | result=${result} | source=${source}\n`;
+}
+</script>
+</body>
+</html>

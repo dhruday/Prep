@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — Prototype Pollution to XSS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ec4899;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e3a;border-color:#ec4899;color:#ec4899}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ec4899;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ec4899;color:#ec4899}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🩷 Lab 02 — Prototype Pollution → XSS (Gadget Chains)</h1>
+<p class="sub">Module 12.1 · Web Threats · From prototype manipulation to script execution</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Known Gadgets</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Pollution → XSS via Gadgets</h3>
+    <p style="font-size:.83rem;color:#94a3b8">A "gadget" is a piece of existing code that uses a property from an object without checking if it's an own property. If that property is polluted, the gadget becomes a vector for XSS.</p>
+    <pre><span class="cm">// Example gadget in a template engine:</span>
+<span class="kw">function</span> <span class="fn">render</span>(template, data) {
+  <span class="kw">let</span> html = template;
+  <span class="kw">for</span> (<span class="kw">let</span> key <span class="kw">in</span> data) {  <span class="cm">// ← 'in' operator walks prototype chain!</span>
+    html = html.replace(<span class="str">`{{${key}}}`</span>, data[key]);
+  }
+  element.innerHTML = html; <span class="cm">// ← dangerous sink</span>
+}
+
+<span class="cm">// Attacker pollutes Object.prototype:</span>
+Object.prototype[<span class="str">'innerHTML'</span>] = <span class="str">'&lt;img src=x onerror=alert(1)&gt;'</span>;
+
+<span class="cm">// Now any code that reads obj.innerHTML from the prototype gets XSS</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Gadget Demo: Template Renderer</h3>
+    <p style="font-size:.82rem;color:#94a3b8">This demo shows a vulnerable template engine that uses <code>for...in</code>:</p>
+    <button onclick="demoGadget()" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Pollute & Render (shows XSS payload)</button>
+    <button onclick="demoSafe()" style="background:#1a3a2a;border-color:#10b981;color:#10b981">✅ Safe Render (hasOwnProperty check)</button>
+    <button onclick="cleanup()">🧹 Clean Up</button>
+    <div class="output" id="gadget-result"></div>
+    <div id="gadget-render" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;margin-top:8px;min-height:40px"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 Real-World Gadget: jQuery $.extend</h3>
+    <pre><span class="cm">// jQuery (before 3.4.0) was vulnerable:</span>
+$.extend(<span class="str">true</span>, {}, JSON.parse(<span class="str">'{"__proto__": {"devMode": true}}'</span>));
+
+<span class="cm">// After merge, ALL objects had devMode: true</span>
+<span class="cm">// If the app checked: if (config.devMode) enableDebugPanel()</span>
+<span class="cm">// → Debug panel exposed to all users</span>
+
+<span class="cm">// CVE-2019-11358 — fixed in jQuery 3.4.0</span>
+<span class="cm">// Fix: Skip __proto__ key in the extend loop</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Known Gadget Chains</h3>
+    <pre><span class="cm">// 1. Lodash/jQuery merge → Admin access</span>
+<span class="cm">// Pollute: __proto__.isAdmin = true</span>
+<span class="cm">// Gadget: if (user.isAdmin) showAdminPanel()</span>
+
+<span class="cm">// 2. Handlebars template → XSS</span>
+<span class="cm">// Pollute: __proto__.pendingContent = "&lt;script&gt;alert(1)&lt;/script&gt;"</span>
+<span class="cm">// Gadget: Handlebars internal template compilation reads this</span>
+
+<span class="cm">// 3. Pug template → RCE on server</span>
+<span class="cm">// Pollute: __proto__.block = {"type":"Text","val":"...process.exit()..."}</span>
+<span class="cm">// Gadget: Pug compiler processes this during template compilation</span>
+
+<span class="cm">// 4. Express ejs → RCE</span>
+<span class="cm">// Pollute: __proto__.outputFunctionName = "x;process.mainModule..."</span>
+<span class="cm">// Gadget: EJS template compilation includes the poisoned function name</span>
+
+<span class="cm">// 5. Any code using 'for...in' on user objects</span>
+<span class="cm">// Gadget: The 'in' operator traverses the full prototype chain</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Prototype Pollution to XSS</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: In a security review, you find a library using for...in without hasOwnProperty. How critical is this?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Severity depends on: (1) Can user input reach Object.prototype? (any merge/extend of user data), (2) What does the for...in loop write to? (innerHTML = Critical, style property = Medium, log message = Low). If both conditions are met (user-controlled merge + for...in writing to DOM), it's a Critical XSS via prototype pollution gadget. Flag it and require: switch to Object.keys() or Object.entries(), or add hasOwnProperty check.</p>
+      <p><strong style="color:#60a5fa">Q: How does Object.freeze(Object.prototype) interact with third-party libraries?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Object.freeze prevents any modification to Object.prototype — no new properties, no changes, no deletions. Most well-written libraries work fine because they don't extend Object.prototype. But some polyfills (e.g., for Array.flat, String.padStart in old environments) add methods to prototypes and would break. Test thoroughly. At Google, this is used in security-critical applications like Google Pay where prototype pollution would be catastrophic.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+// Vulnerable template renderer
+function vulnerableRender(template,data){
+  let html=template;
+  for(let key in data){ // walks prototype chain!
+    html=html.replace(`{{${key}}}`,data[key]);
+  }
+  return html;
+}
+
+function safeRender(template,data){
+  let html=template;
+  for(let key of Object.keys(data)){ // only own properties
+    html=html.replace(`{{${key}}}`,data[key]);
+  }
+  return html;
+}
+
+function demoGadget(){
+  const el=document.getElementById('gadget-result');
+  const render=document.getElementById('gadget-render');
+  cleanup();
+  // Pollute
+  Object.prototype['injected']='<img src=x onerror="document.getElementById(\'gadget-result\').textContent+=\'\\n⚠️ XSS EXECUTED!\'">';
+  const template='<div>Hello {{name}}! {{injected}}</div>';
+  const data={name:'Alice'};
+  const result=vulnerableRender(template,data);
+  el.textContent=`Template: ${template}\nData: ${JSON.stringify(data)}\nObject.prototype.injected = (malicious HTML)\n\nRendered HTML:\n${result}\n\n⚠️ The for...in loop picked up "injected" from Object.prototype!`;
+  render.innerHTML=result; // This would execute the XSS
+}
+
+function demoSafe(){
+  const el=document.getElementById('gadget-result');
+  const render=document.getElementById('gadget-render');
+  Object.prototype['injected']='<img src=x onerror=alert(1)>';
+  const template='<div>Hello {{name}}! {{injected}}</div>';
+  const data={name:'Alice'};
+  const result=safeRender(template,data);
+  el.textContent=`Template: ${template}\nData: ${JSON.stringify(data)} (only own keys)\nObject.prototype.injected still exists but...\n\nRendered HTML:\n${result}\n\n✅ Object.keys() only returns own properties — pollution is ignored!`;
+  render.textContent=result;
+  cleanup();
+}
+
+function cleanup(){
+  delete Object.prototype['injected'];
+  delete Object.prototype['isAdmin'];
+}
+</script>
+</body></html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — CORS Fundamentals</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2d1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 01 — CORS Fundamentals</h1>
+<p class="sub">Module 12.1 · Web Threats · Same-Origin Policy & Cross-Origin Resource Sharing</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Same-Origin Policy</div>
+  <div class="tab" onclick="setTab(1)">CORS Headers</div>
+  <div class="tab" onclick="setTab(2)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Same-Origin Policy (SOP)</h3>
+    <p style="font-size:.83rem;color:#94a3b8">The browser's fundamental security model. JavaScript on origin A <strong>cannot read</strong> responses from origin B. An "origin" = <code>scheme + host + port</code>.</p>
+    <table>
+      <tr><th>URL A</th><th>URL B</th><th>Same Origin?</th><th>Why?</th></tr>
+      <tr><td>https://app.com/page1</td><td>https://app.com/page2</td><td style="color:#10b981">✅ Yes</td><td>Same scheme+host+port</td></tr>
+      <tr><td>https://app.com</td><td>http://app.com</td><td style="color:#ef4444">❌ No</td><td>Different scheme</td></tr>
+      <tr><td>https://app.com</td><td>https://api.app.com</td><td style="color:#ef4444">❌ No</td><td>Different host (subdomain)</td></tr>
+      <tr><td>https://app.com</td><td>https://app.com:8443</td><td style="color:#ef4444">❌ No</td><td>Different port</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3>What SOP Blocks vs Allows</h3>
+    <pre><span class="cm">// SOP BLOCKS JavaScript from READING cross-origin responses:</span>
+<span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">'https://api.other.com/data'</span>); <span class="cm">// request IS sent, but</span>
+<span class="cm">// response.json() throws TypeError — JS can't read it</span>
+
+<span class="cm">// SOP ALLOWS cross-origin EMBEDDING:</span>
+<span class="cm">// &lt;img src="https://other.com/pic.jpg"&gt;      ← allowed</span>
+<span class="cm">// &lt;script src="https://cdn.com/lib.js"&gt;       ← allowed</span>
+<span class="cm">// &lt;link href="https://cdn.com/style.css"&gt;     ← allowed</span>
+<span class="cm">// &lt;iframe src="https://other.com"&gt;            ← allowed (can't read content)</span>
+
+<span class="cm">// SOP ALLOWS cross-origin WRITES (form submissions):</span>
+<span class="cm">// &lt;form action="https://other.com/submit"&gt;   ← allowed (CSRF!)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>CORS Response Headers</h3>
+    <table>
+      <tr><th>Header</th><th>Purpose</th><th>Example</th></tr>
+      <tr><td>Access-Control-Allow-Origin</td><td>Which origins can read response</td><td>https://myapp.com or *</td></tr>
+      <tr><td>Access-Control-Allow-Methods</td><td>Allowed HTTP methods</td><td>GET, POST, PUT, DELETE</td></tr>
+      <tr><td>Access-Control-Allow-Headers</td><td>Allowed request headers</td><td>Content-Type, Authorization</td></tr>
+      <tr><td>Access-Control-Allow-Credentials</td><td>Allow cookies/auth</td><td>true</td></tr>
+      <tr><td>Access-Control-Expose-Headers</td><td>Headers JS can read</td><td>X-Total-Count, X-Request-Id</td></tr>
+      <tr><td>Access-Control-Max-Age</td><td>Preflight cache (seconds)</td><td>86400</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🧪 Same-Origin vs Cross-Origin Requests</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Our page is served from one origin. Test requests to same-origin and cross-origin endpoints:</p>
+    <div class="grid2">
+      <div>
+        <button onclick="testSameOrigin()">✅ Same-Origin Request (port 3001)</button>
+        <div class="output" id="same-result"></div>
+      </div>
+      <div>
+        <button onclick="testCrossOrigin()">🔴 Cross-Origin Request (port 3002)</button>
+        <div class="output" id="cross-result"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🧪 CORS Headers Inspection</h3>
+    <button onclick="testCorsHeaders('allowed')">✅ Request to CORS-allowed endpoint</button>
+    <button onclick="testCorsHeaders('blocked')">⚠️ Request to CORS-blocked endpoint</button>
+    <div class="output" id="cors-result"></div>
+  </div>
+  <div class="card">
+    <h3>DevTools Walkthrough</h3>
+    <pre><span class="cm">// Open DevTools → Network tab</span>
+<span class="cm">// Click one of the buttons above</span>
+<span class="cm">// Look at the response headers:</span>
+<span class="cm">//   Access-Control-Allow-Origin: should match your page's origin</span>
+<span class="cm">// For blocked requests:</span>
+<span class="cm">//   Console shows: "Access to fetch at 'X' from origin 'Y' has been blocked by CORS policy"</span>
+<span class="cm">// Key: the request WAS sent and server processed it — only the RESPONSE is blocked</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CORS Questions</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Explain CORS to a junior developer who says "CORS blocks my requests."</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">CORS doesn't block requests — it blocks JavaScript from reading responses. The request is still sent and the server still processes it. CORS is NOT a security feature for the server; it's the server giving PERMISSION to another origin's JavaScript to read the response. If you're getting CORS errors, the server needs to include the proper Access-Control-Allow-Origin header. Don't "fix" CORS by adding a proxy — understand why the server should (or shouldn't) allow it.</p>
+      <p><strong style="color:#60a5fa">Q: When should you use Access-Control-Allow-Origin: * vs specific origins?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Use * only for truly public APIs with no auth (public data, CDN assets). For any API that uses cookies or auth, you MUST use specific origins. The wildcard is incompatible with credentials (browser enforces this). At Google: API Gateway validates the Origin header against a per-service allowlist, dynamically sets the ACAO header to the matching origin.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+const ATTACKER='http://localhost:3002';
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function testSameOrigin(){
+  const el=document.getElementById('same-result');
+  try{
+    const res=await fetch(`${API}/api/cors/public`);
+    const d=await res.json();
+    const acao=res.headers.get('access-control-allow-origin');
+    el.textContent=`✅ Same-origin request succeeded!\n\nStatus: ${res.status}\nAccess-Control-Allow-Origin: ${acao||'(not set)'}\nData: ${JSON.stringify(d,null,2)}`;
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+
+async function testCrossOrigin(){
+  const el=document.getElementById('cross-result');
+  try{
+    const res=await fetch(`${ATTACKER}/api/data`);
+    const d=await res.json();
+    el.textContent=`Response from cross-origin:\n${JSON.stringify(d,null,2)}`;
+  }catch(e){el.textContent=`❌ Cross-origin blocked!\n\nError: ${e.message}\n\nThis is SOP in action. The request was sent (check Network tab),\nbut the browser blocked JS from reading the response.\n\n(If server at port 3002 isn't running, you'd get a network error instead)`}
+}
+
+async function testCorsHeaders(type){
+  const el=document.getElementById('cors-result');
+  const url=type==='allowed'?`${API}/api/cors/public`:`${ATTACKER}/api/no-cors`;
+  el.textContent=`Fetching ${url}...\n`;
+  try{
+    const res=await fetch(url);
+    const headers=['access-control-allow-origin','access-control-allow-methods','access-control-allow-headers','access-control-allow-credentials','access-control-expose-headers','access-control-max-age'];
+    el.textContent+=`\nStatus: ${res.status}\n\nCORS Headers:\n`;
+    headers.forEach(h=>{const v=res.headers.get(h);if(v)el.textContent+=`  ${h}: ${v}\n`});
+    const d=await res.json();
+    el.textContent+=`\nBody: ${JSON.stringify(d)}`;
+  }catch(e){el.textContent+=`\n❌ Blocked: ${e.message}\n\nThe browser blocked JS from reading this response because the server\ndid not include the appropriate Access-Control-Allow-Origin header.`}
+}
+</script>
+</body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — CORS Fundamentals</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2d1e4f;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 01 — CORS Fundamentals</h1>
+<p class="sub">Module 12.1 · Web Threats · Same-Origin Policy & Cross-Origin Resource Sharing</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Same-Origin Policy (SOP)</h3>
+    <p style="font-size:.83rem;color:#94a3b8">SOP is the browser's fundamental security model. It prevents scripts on one origin from reading responses from a different origin. An <strong>origin</strong> = scheme + host + port.</p>
+    <table>
+      <tr><th>URL A</th><th>URL B</th><th>Same Origin?</th><th>Why?</th></tr>
+      <tr><td>https://app.com/a</td><td>https://app.com/b</td><td style="color:#10b981">✅ Yes</td><td>Same scheme, host, port</td></tr>
+      <tr><td>https://app.com</td><td>http://app.com</td><td style="color:#ef4444">❌ No</td><td>Different scheme</td></tr>
+      <tr><td>https://app.com</td><td>https://api.app.com</td><td style="color:#ef4444">❌ No</td><td>Different host (subdomain)</td></tr>
+      <tr><td>https://app.com</td><td>https://app.com:3000</td><td style="color:#ef4444">❌ No</td><td>Different port</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3>CORS — The Controlled Exception</h3>
+    <pre><span class="cm">// CORS allows servers to opt-in to cross-origin access.</span>
+<span class="cm">// The server sends response headers telling the browser:</span>
+<span class="cm">//   "These origins are allowed to read my responses."</span>
+
+<span class="cm">// Response headers:</span>
+Access-Control-Allow-Origin: <span class="str">https://trusted-app.com</span>
+Access-Control-Allow-Methods: <span class="str">GET, POST, PUT</span>
+Access-Control-Allow-Headers: <span class="str">Content-Type, Authorization</span>
+Access-Control-Allow-Credentials: <span class="str">true</span>
+Access-Control-Max-Age: <span class="str">86400</span>  <span class="cm">← cache preflight for 24h</span>
+
+<span class="cm">// IMPORTANT: CORS is enforced by the BROWSER, not the server.</span>
+<span class="cm">// curl, Postman, and server-to-server requests bypass CORS entirely.</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 CORS Live Test — Same Origin vs Cross Origin</h3>
+    <p style="font-size:.82rem;color:#94a3b8">This page is loaded from the filesystem or localhost. Watch how CORS headers affect response access:</p>
+    <div class="grid2">
+      <div>
+        <button onclick="testCors('same')" style="background:#1a3a2a;border-color:#10b981;color:#10b981">✅ Same-Origin Request</button>
+        <div class="output" id="same-result">Click to test...</div>
+      </div>
+      <div>
+        <button onclick="testCors('cross')" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Cross-Origin (port 3002)</button>
+        <div class="output" id="cross-result">Click to test...</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>🧪 Test Different CORS Configurations</h3>
+    <button onclick="testConfig('allow-all')">Access-Control-Allow-Origin: *</button>
+    <button onclick="testConfig('allow-specific')">Allow specific origin</button>
+    <button onclick="testConfig('no-cors')">No CORS headers</button>
+    <button onclick="testConfig('credentials')">With credentials</button>
+    <div class="output" id="config-result">Click a configuration to test...</div>
+  </div>
+  <div class="card">
+    <h3>📡 DevTools Inspection</h3>
+    <pre><span class="cm">// Open DevTools → Network tab</span>
+<span class="cm">// Look for:</span>
+<span class="cm">// 1. OPTIONS requests (preflight)</span>
+<span class="cm">// 2. Response headers: Access-Control-Allow-*</span>
+<span class="cm">// 3. Console errors: "has been blocked by CORS policy"</span>
+<span class="cm">// 4. Request headers: Origin, Access-Control-Request-*</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🔬 How CORS Works in the Browser Engine</h3>
+    <div style="font-size:.82rem;color:#94a3b8">
+      <p><strong style="color:#60a5fa">1. Request Classification:</strong> Before sending, the browser classifies the request as "simple" or "preflighted" based on method, headers, and content-type.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">2. Simple Request Flow:</strong> Request is sent immediately. Browser adds Origin header. Server responds with Access-Control-Allow-Origin. Browser checks if the response's ACAO header includes the requestor's origin. If no match → JS gets a TypeError and can't read the response body. Note: the request WAS sent and processed — the server-side effect occurred.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">3. Preflight Flow:</strong> Browser sends OPTIONS first with Access-Control-Request-Method and Access-Control-Request-Headers. If server approves, the actual request follows. If denied, the actual request is NEVER sent.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">4. Credential Mode:</strong> fetch with <code>credentials: 'include'</code> sends cookies. Server MUST respond with specific origin (not *) and <code>Access-Control-Allow-Credentials: true</code>. Without this, the browser blocks the response AND doesn't send cookies.</p>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CORS Questions</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Why can &lt;img&gt; and &lt;script&gt; load cross-origin but fetch can't?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Historical web compat. &lt;img&gt;, &lt;script&gt;, &lt;link&gt; predate SOP and are "opaque" — JS can't read the response content (you can't read pixel data from a cross-origin image on canvas without CORS). fetch/XHR are programmable APIs that give JS full access to response data, so they enforce SOP. CORS is the opt-in mechanism for servers to permit this.</p>
+      <p><strong style="color:#60a5fa">Q: How would you configure CORS for a microservices architecture at Google?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Centralize CORS at the API gateway/load balancer, not in individual services. Maintain an allowlist of trusted origins (from config, not hardcoded). Never reflect the Origin header dynamically without validation. Return Vary: Origin to prevent CDN cache poisoning. Set Access-Control-Max-Age to reduce preflight overhead. For internal service-to-service: no CORS needed (server-to-server bypasses CORS), use mTLS authentication instead.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function testCors(type){
+  const url=type==='same'?`${API}/api/cors/test`:'http://localhost:3002/api/test';
+  const el=document.getElementById(type==='same'?'same-result':'cross-result');
+  el.textContent=`Fetching ${url}...\n`;
+  try{
+    const res=await fetch(url);
+    const acao=res.headers.get('access-control-allow-origin');
+    const data=await res.json();
+    el.textContent+=`✅ Success!\nStatus: ${res.status}\nACAO Header: ${acao||'(none)'}\nBody: ${JSON.stringify(data,null,2)}`;
+  }catch(e){
+    el.textContent+=`❌ CORS Error: ${e.message}\n\nOpen Console (F12) for the full CORS error message.\nThe request was sent but the browser blocked JS from reading the response.`;
+  }
+}
+
+async function testConfig(config){
+  const el=document.getElementById('config-result');
+  const url=`${API}/api/cors/test-config/${config}`;
+  el.textContent=`Testing: ${config}\n→ GET ${url}\n`;
+  try{
+    const opts=config==='credentials'?{credentials:'include'}:{};
+    const res=await fetch(url,opts);
+    const headers={};
+    for(const [k,v] of res.headers){if(k.startsWith('access-control'))headers[k]=v}
+    const data=await res.json();
+    el.textContent+=`✅ Success!\nCORS Response Headers:\n${JSON.stringify(headers,null,2)}\n\nBody:\n${JSON.stringify(data,null,2)}`;
+  }catch(e){
+    el.textContent+=`❌ Blocked! ${e.message}\n\nThis is the CORS policy working as intended.\nThe server either didn't send CORS headers or they didn't match our origin.`;
+  }
+}
+</script>
+</body></html>

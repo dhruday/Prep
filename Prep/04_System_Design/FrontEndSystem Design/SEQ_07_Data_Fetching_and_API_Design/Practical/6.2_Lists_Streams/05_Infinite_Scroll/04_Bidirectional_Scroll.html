@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 04 — Bidirectional Scroll</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a3a2a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #10b981;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}
+#chat-box{height:400px;overflow-y:auto;border:1px solid #2d3551;border-radius:10px;background:#161922;padding:10px;position:relative}#sentinel-top,#sentinel-bottom{height:30px;display:flex;align-items:center;justify-content:center;color:#475569;font-size:.75rem}.msg{padding:10px 14px;border-radius:10px;margin-bottom:6px;max-width:80%;font-size:.84rem}.msg.sent{background:#1a3a2a;border:1px solid #10b981;margin-left:auto;color:#e2e8f0}.msg.recv{background:#1e2130;border:1px solid #2d3551;color:#94a3b8}.msg .ts{font-size:.7rem;color:#475569;margin-top:4px}#chat-stats{color:#94a3b8;font-size:.8rem;margin-bottom:8px;display:flex;gap:16px;flex-wrap:wrap}#chat-stats span{color:#10b981;font-weight:600}
+</style>
+</head>
+<body>
+<h1>Lab 04 — Bidirectional Scroll</h1>
+<div class="sub">Module 6.2 Infinite Scroll · Load older (up) and newer (down) messages — chat pattern</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Live Demo</div>
+  <div class="tab" onclick="setTab(2)">Deep Dive</div>
+  <div class="tab" onclick="setTab(3)">Interview</div>
+</div>
+
+<!-- Tab 0 — Concept -->
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Two-Sentinel Pattern</h3>
+    <p style="font-size:.84rem;color:#94a3b8;margin-bottom:12px">Place sentinels at both top and bottom of the scrollable area. Top sentinel triggers loading older content; bottom sentinel triggers newer content.</p>
+    <pre><span class="cm">// Two observers, two sentinels</span>
+<span class="kw">const</span> topSentinel = document.<span class="fn">getElementById</span>(<span class="str">'sentinel-top'</span>);
+<span class="kw">const</span> bottomSentinel = document.<span class="fn">getElementById</span>(<span class="str">'sentinel-bottom'</span>);
+
+<span class="kw">const</span> topObserver = <span class="kw">new</span> <span class="fn">IntersectionObserver</span>(([e]) =&gt; {
+  <span class="kw">if</span> (e.isIntersecting) <span class="fn">loadOlderMessages</span>();
+}, { root: chatContainer, rootMargin: <span class="str">'200px 0px 0px 0px'</span> });
+
+<span class="kw">const</span> bottomObserver = <span class="kw">new</span> <span class="fn">IntersectionObserver</span>(([e]) =&gt; {
+  <span class="kw">if</span> (e.isIntersecting) <span class="fn">loadNewerMessages</span>();
+}, { root: chatContainer, rootMargin: <span class="str">'0px 0px 200px 0px'</span> });
+
+topObserver.<span class="fn">observe</span>(topSentinel);
+bottomObserver.<span class="fn">observe</span>(bottomSentinel);</pre>
+  </div>
+  <div class="info">
+    <strong>Critical challenge:</strong> When prepending items at the top, the scroll position jumps. You must compensate by adjusting scrollTop by the height of the prepended content.
+  </div>
+</div>
+
+<!-- Tab 1 — Live Demo -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Chat — Scroll Up for Older, Down for Newer</h3>
+    <div id="chat-stats">
+      Messages: <span id="msg-count">0</span> &nbsp;·&nbsp;
+      Oldest ID: <span id="oldest-id">—</span> &nbsp;·&nbsp;
+      Newest ID: <span id="newest-id">—</span> &nbsp;·&nbsp;
+      Fetches: <span id="fetch-count">0</span>
+    </div>
+    <button class="green" onclick="resetChat()">Reset Chat</button>
+    <button onclick="scrollToBottom()">↓ Jump to Bottom</button>
+    <div id="chat-box">
+      <div id="sentinel-top">↑ Scroll up for older messages</div>
+      <div id="messages"></div>
+      <div id="sentinel-bottom">↓ Loading newer…</div>
+    </div>
+    <div class="output" id="log"></div>
+  </div>
+</div>
+
+<!-- Tab 2 — Deep Dive -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Maintaining Scroll Position on Prepend</h3>
+    <pre><span class="cm">// THE PROBLEM: Prepending content shifts everything down</span>
+<span class="cm">// Before prepend: scrollTop = 100, content height = 2000</span>
+<span class="cm">// After prepend:  20 new items add 800px at top</span>
+<span class="cm">// User sees a jarring jump to different content</span>
+
+<span class="cm">// THE FIX: Adjust scrollTop by the height of added content</span>
+<span class="kw">async function</span> <span class="fn">loadOlderMessages</span>() {
+  <span class="kw">const</span> container = chatRef.current;
+  <span class="kw">const</span> prevHeight = container.scrollHeight;
+  <span class="kw">const</span> prevScrollTop = container.scrollTop;
+
+  <span class="cm">// Prepend new messages</span>
+  <span class="kw">const</span> older = <span class="kw">await</span> <span class="fn">fetchOlder</span>(oldestCursor);
+  <span class="fn">prependMessages</span>(older);
+
+  <span class="cm">// Compensate scroll position</span>
+  <span class="kw">const</span> addedHeight = container.scrollHeight - prevHeight;
+  container.scrollTop = prevScrollTop + addedHeight;
+}</pre>
+  </div>
+  <div class="card">
+    <h3>Modern API: scrollTo with anchor</h3>
+    <pre><span class="cm">// Chrome 108+ supports CSS overflow-anchor</span>
+<span class="cm">// But for cross-browser, manual adjustment is safest</span>
+
+<span class="cm">// CSS approach (partial support):</span>
+#messages { overflow-anchor: <span class="str">auto</span>; }
+#anchor   { overflow-anchor: <span class="str">auto</span>; }
+* { overflow-anchor: <span class="str">none</span>; }  <span class="cm">// disable on others</span>
+
+<span class="cm">// The anchor element stays in place while content</span>
+<span class="cm">// is prepended above it</span></pre>
+    <div class="info">
+      <strong>overflow-anchor CSS</strong> — browser auto-adjusts scroll when content is added above the anchor. Works in Chrome/Edge but not Safari. Always have a JS fallback.
+    </div>
+  </div>
+</div>
+
+<!-- Tab 3 — Interview -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Q: How to prevent layout shift on prepend?</h3>
+    <p style="font-size:.84rem;color:#94a3b8">
+      <strong>Method 1 — ScrollHeight delta:</strong><br>
+      Record <code>scrollHeight</code> before prepend. After DOM update, calculate delta = newScrollHeight - oldScrollHeight. Set <code>scrollTop += delta</code>. Wrap in <code>requestAnimationFrame</code> for timing.<br><br>
+      <strong>Method 2 — CSS overflow-anchor:</strong><br>
+      Set <code>overflow-anchor: none</code> on all items, <code>overflow-anchor: auto</code> on a stable anchor element. Browser handles the math. Limited browser support.<br><br>
+      <strong>Method 3 — Reverse flex column:</strong><br>
+      Use <code>flex-direction: column-reverse</code>. New items appended at the "bottom" of the flex container appear at the top visually. Scroll position naturally maintained. Used by Facebook Messenger.
+    </p>
+  </div>
+  <div class="card">
+    <h3>Q: Chat app scroll UX patterns</h3>
+    <pre><span class="cm">// Pattern 1: Auto-scroll to bottom on new message</span>
+<span class="cm">//   ONLY if user is already near bottom (within 100px)</span>
+<span class="kw">const</span> isNearBottom = container.scrollHeight -
+  container.scrollTop - container.clientHeight &lt; <span class="str">100</span>;
+<span class="kw">if</span> (isNearBottom) container.scrollTop = container.scrollHeight;
+
+<span class="cm">// Pattern 2: "New messages ↓" badge</span>
+<span class="cm">//   If user scrolled up, show badge instead of auto-scrolling</span>
+<span class="kw">if</span> (!isNearBottom) <span class="fn">showNewMessageBadge</span>(newCount);
+
+<span class="cm">// Pattern 3: Unread marker</span>
+<span class="cm">//   Track last-read message ID</span>
+<span class="cm">//   Insert "── New Messages ──" divider</span>
+
+<span class="cm">// Pattern 4: Jump to bottom on send</span>
+<span class="cm">//   Always scroll to bottom when USER sends a message</span></pre>
+    <div class="info">FAANG answer: Auto-scroll only when near bottom. Show "N new messages" badge when scrolled up. Always scroll on own send. Save unread marker based on visibility (IntersectionObserver on last message).</div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+// Chat demo state
+let messages = [];
+let oldestId = 50;
+let newestId = 50;
+let loadingOlder = false;
+let loadingNewer = false;
+let fetchCount = 0;
+let topObs, botObs;
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function updateStats() {
+  document.getElementById('msg-count').textContent = messages.length;
+  document.getElementById('oldest-id').textContent = messages.length ? messages[0].id : '—';
+  document.getElementById('newest-id').textContent = messages.length ? messages[messages.length-1].id : '—';
+  document.getElementById('fetch-count').textContent = fetchCount;
+}
+
+function createMsgEl(msg) {
+  const div = document.createElement('div');
+  div.className = `msg ${msg.id % 3 === 0 ? 'sent' : 'recv'}`;
+  div.innerHTML = `<div>${msg.text}</div><div class="ts">#${msg.id} · ${msg.time}</div>`;
+  return div;
+}
+
+function generateMsg(id) {
+  const texts = ['Hey, how are you?','Working on the infinite scroll lab','Check this PR when you get a chance','LGTM, shipping it 🚀','Can we sync on the system design?','The observer pattern works great','Need to handle edge cases','Almost done with the refactor','Deployed to staging','Let me know your thoughts'];
+  return { id, text: texts[Math.abs(id) % texts.length], time: `${10 + (Math.abs(id) % 12)}:${String(Math.abs(id) % 60).padStart(2,'0')}` };
+}
+
+async function loadOlder() {
+  if (loadingOlder || oldestId <= 0) return;
+  loadingOlder = true;
+  const chatBox = document.getElementById('chat-box');
+  const msgContainer = document.getElementById('messages');
+  const prevScrollHeight = chatBox.scrollHeight;
+
+  log(`Loading older messages (before #${oldestId})…`);
+
+  // Simulate fetch delay
+  await new Promise(r => setTimeout(r, 400));
+  fetchCount++;
+
+  const batch = [];
+  for (let i = 0; i < 10 && oldestId > 0; i++) {
+    oldestId--;
+    const msg = generateMsg(oldestId);
+    batch.unshift(msg);
+  }
+
+  messages = [...batch, ...messages];
+  const frag = document.createDocumentFragment();
+  batch.forEach(m => frag.appendChild(createMsgEl(m)));
+  msgContainer.insertBefore(frag, msgContainer.firstChild);
+
+  // Maintain scroll position
+  const addedHeight = chatBox.scrollHeight - prevScrollHeight;
+  chatBox.scrollTop += addedHeight;
+
+  log(`Prepended ${batch.length} msgs. Adjusted scrollTop by ${addedHeight}px`);
+  updateStats();
+  loadingOlder = false;
+
+  if (oldestId <= 0) {
+    document.getElementById('sentinel-top').textContent = '— Beginning of chat —';
+    topObs?.disconnect();
+  }
+}
+
+async function loadNewer() {
+  if (loadingNewer || newestId >= 100) return;
+  loadingNewer = true;
+  log(`Loading newer messages (after #${newestId})…`);
+
+  await new Promise(r => setTimeout(r, 300));
+  fetchCount++;
+
+  const batch = [];
+  for (let i = 0; i < 10 && newestId < 100; i++) {
+    newestId++;
+    batch.push(generateMsg(newestId));
+  }
+
+  messages = [...messages, ...batch];
+  const msgContainer = document.getElementById('messages');
+  batch.forEach(m => msgContainer.appendChild(createMsgEl(m)));
+
+  log(`Appended ${batch.length} msgs`);
+  updateStats();
+  loadingNewer = false;
+
+  if (newestId >= 100) {
+    document.getElementById('sentinel-bottom').textContent = '— Latest messages —';
+    botObs?.disconnect();
+  }
+}
+
+function scrollToBottom() {
+  const chatBox = document.getElementById('chat-box');
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function initObservers() {
+  const chatBox = document.getElementById('chat-box');
+  topObs = new IntersectionObserver(([e]) => { if (e.isIntersecting) loadOlder(); }, { root: chatBox, rootMargin: '200px 0px 0px 0px' });
+  botObs = new IntersectionObserver(([e]) => { if (e.isIntersecting) loadNewer(); }, { root: chatBox, rootMargin: '0px 0px 200px 0px' });
+  topObs.observe(document.getElementById('sentinel-top'));
+  botObs.observe(document.getElementById('sentinel-bottom'));
+}
+
+function resetChat() {
+  topObs?.disconnect(); botObs?.disconnect();
+  messages = []; oldestId = 50; newestId = 50; fetchCount = 0;
+  loadingOlder = false; loadingNewer = false;
+  document.getElementById('messages').innerHTML = '';
+  document.getElementById('sentinel-top').textContent = '↑ Scroll up for older messages';
+  document.getElementById('sentinel-bottom').textContent = '↓ Loading newer…';
+  document.getElementById('log').textContent = '';
+  updateStats();
+  initObservers();
+  // Load initial batch
+  loadNewer();
+  log('Chat reset. Scroll up for older, down for newer.');
+}
+
+initObservers();
+loadNewer();
+log('Chat initialized at message #50. Scroll to load more in both directions.');
+</script>
+</body>
+</html>

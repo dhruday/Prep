@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 129 – OAuth 2.0 & OIDC</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-Radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🔐 OAuth 2.0 & OIDC</h1>
+<p class="sub">Topic 129 · Part 12 / 12.2 Auth and Tokens · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Token Types</div>
+  <div class="tab" onclick="setTab(2">Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>OAuth 2.0 = authorization framework; OIDC = identity layer on top of OAuth 2.0</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">OAuth 2.0 answers "can App X access Resource Y on behalf of User?" — it issues access tokens for authorization. OIDC (OpenID Connect) adds "who is the user?" — it adds an ID token (JWT) containing identity claims. Use OAuth 2.0 alone for API authorization; use OIDC when you need to know who the user is (login). SAP Identity Authentication Service (IAS) is an OIDC-compliant IdP used across all SAP BTP applications.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:4px">Access Token</div>
+        <div style="color:#94a3b8">Short-lived (15min). Sent with every API request. Opaque or JWT. Does NOT contain login info.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:4px">ID Token (OIDC)</div>
+        <div style="color:#94a3b8">JWT with user claims (sub, name, email, roles). Read by client. Verify signature before trusting.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:4px">Refresh Token</div>
+        <div style="color:#94a3b8">Long-lived (30d). Exchanged for new access token. Store in HttpOnly cookie.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>JWT anatomy — decode an ID token</h3>
+    <div style="font-size:.78rem;color:#94a3b8;margin-bottom:10px">A JWT has 3 parts: Header.Payload.Signature — base64url encoded, NOT encrypted</div>
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px">
+      <div>
+        <div style="color:#f59e0b;font-size:.76rem;font-weight:700;margin-bottom:6px">Header</div>
+        <pre style="font-size:.74rem">{ "alg": "RS256", "typ": "JWT" }</pre>
+        <div style="color:#a78bfa;font-size:.76rem;font-weight:700;margin:8px 0 6px">Payload (claims)</div>
+        <pre style="font-size:.74rem">{
+  "sub": "user-123",
+  "email": "hruday@sap.com",
+  "name": "Hruday Kasyap",
+  "roles": ["admin"],
+  "iss": "https://idp.sap.com",
+  "aud": "my-app-client",
+  "exp": 1736000000,
+  "iat": 1735996400
+}</pre>
+      </div>
+      <div>
+        <div style="color:#10b981;font-size:.76rem;font-weight:700;margin-bottom:6px">Critical validation steps</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:.77rem">
+          <div style="background:#0f1117;border:1px solid #1e3a2e;border-radius:6px;padding:8px;color:#94a3b8">✅ Verify <code style="color:#10b981">iss</code> matches your expected issuer</div>
+          <div style="background:#0f1117;border:1px solid #1e3a2e;border-radius:6px;padding:8px;color:#94a3b8">✅ Verify <code style="color:#10b981">aud</code> matches your client ID</div>
+          <div style="background:#0f1117;border:1px solid #1e3a2e;border-radius:6px;padding:8px;color:#94a3b8">✅ Check <code style="color:#10b981">exp</code> — reject if expired</div>
+          <div style="background:#0f1117;border:1px solid #1e3a2e;border-radius:6px;padding:8px;color:#94a3b8">✅ Verify RS256 signature via JWKS endpoint</div>
+          <div style="background:#0f1117;border:1px solid #3a1e1e;border-radius:6px;padding:8px;color:#ef4444">❌ Don't trust claims without verifying signature</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>OAuth 2.0 vs OIDC</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Aspect</th>
+        <th style="padding:8px;border:1px solid #2d3551">OAuth 2.0</th>
+        <th style="padding:8px;border:1px solid #2d3551">OIDC</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Purpose</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Authorization (can App access API?)</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Authentication (who is the user?)</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Token issued</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Access token + Refresh token</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">ID token + Access token + Refresh token</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">User info</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">No user identity claims</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">ID token contains user claims</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Discovery</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">No standard</td><td style="padding:8px;border:1px solid #2d3551;color:#10b981">/.well-known/openid-configuration</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>OIDC with auth-js library + JWT validation</h3>
+    <pre><span class="cm">// ─── Using @auth0/auth0-spa-js (or @azure/msal-browser) ───</span>
+<span class="kw">import</span> { <span class="fn">createAuth0Client</span> } <span class="kw">from</span> <span class="str">'@auth0/auth0-spa-js'</span>;
+
+<span class="kw">const</span> auth = <span class="kw">await</span> <span class="fn">createAuth0Client</span>({
+  domain: <span class="str">'sap-tenant.eu.auth0.com'</span>,
+  clientId: <span class="str">'MY_CLIENT_ID'</span>,
+  authorizationParams: {
+    redirect_uri: window.location.origin,
+    scope: <span class="str">'openid profile email'</span>
+  }
+});
+
+<span class="cm">// Triggers PKCE flow, handles callback</span>
+<span class="kw">if</span> (location.search.<span class="fn">includes</span>(<span class="str">'code='</span>)) {
+  <span class="kw">await</span> auth.<span class="fn">handleRedirectCallback</span>();
+  history.<span class="fn">replaceState</span>({}, <span class="str">''</span>, <span class="str">'/'</span>);
+}
+
+<span class="cm">// Get user claims from ID token</span>
+<span class="kw">const</span> user = <span class="kw">await</span> auth.<span class="fn">getUser</span>(); <span class="cm">// { sub, email, name }</span>
+<span class="cm">// Get access token silently (from cache or silent refresh)</span>
+<span class="kw">const</span> token = <span class="kw">await</span> auth.<span class="fn">getTokenSilently</span>();
+
+<span class="cm">// ─── Manual JWKS validation (Node.js backend) ───</span>
+<span class="kw">import</span> * <span class="kw">as</span> jose <span class="kw">from</span> <span class="str">'jose'</span>;
+<span class="kw">const</span> JWKS = jose.<span class="fn">createRemoteJWKSet</span>(<span class="kw">new</span> <span class="fn">URL</span>(<span class="str">'https://idp.sap.com/.well-known/jwks.json'</span>));
+<span class="kw">const</span> { payload } = <span class="kw">await</span> jose.<span class="fn">jwtVerify</span>(token, JWKS, {
+  issuer: <span class="str">'https://idp.sap.com'</span>, audience: <span class="str">'my-api'</span>
+});</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+</script>
+</body>
+</html>

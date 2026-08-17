@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 06 — Token Refresh Best Practices</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟠 Lab 06 — Token Refresh Best Practices</h1>
+<p class="sub">Module 12.3 · Production-ready refresh architecture</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Best Practices</div>
+  <div class="tab" onclick="setTab(1)">Server Implementation</div>
+  <div class="tab" onclick="setTab(2)">Security Checklist</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Token Refresh Best Practices</h3>
+    <pre><span class="cm">// ═══ ACCESS TOKEN ═══</span>
+<span class="cm">✅ Short lifetime: 5-15 minutes</span>
+<span class="cm">✅ Stored in memory only (not localStorage)</span>
+<span class="cm">✅ Sent as Authorization: Bearer header</span>
+<span class="cm">✅ Stateless JWT (no server-side tracking)</span>
+<span class="cm">✅ Include: userId, roles, exp, iat, jti</span>
+
+<span class="cm">// ═══ REFRESH TOKEN ═══</span>
+<span class="cm">✅ HttpOnly Secure SameSite=Strict cookie</span>
+<span class="cm">✅ OR: Encrypted in secure storage (mobile)</span>
+<span class="cm">✅ Rotation: new refresh token on every use</span>
+<span class="cm">✅ Family tracking for theft detection</span>
+<span class="cm">✅ Grace period: 30s for lost-response recovery</span>
+<span class="cm">✅ Absolute expiry: 7-30 days max</span>
+<span class="cm">✅ Bound to: user-agent, IP range (optional)</span>
+
+<span class="cm">// ═══ CLIENT ═══</span>
+<span class="cm">✅ Proactive refresh at 75% of access token lifetime</span>
+<span class="cm">✅ Request queue: deduplicate concurrent refreshes</span>
+<span class="cm">✅ Multi-tab sync via BroadcastChannel</span>
+<span class="cm">✅ Graceful degradation: redirect to login on failure</span>
+<span class="cm">✅ AbortController for refresh timeout (10s)</span>
+
+<span class="cm">// ═══ SERVER ═══</span>
+<span class="cm">✅ Rate limit refresh endpoint (5/min per user)</span>
+<span class="cm">✅ Reuse detection → revoke entire family</span>
+<span class="cm">✅ Audit log every refresh event</span>
+<span class="cm">✅ Support forced logout (revoke all families)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Server-Side Refresh Implementation</h3>
+    <pre><span class="cm">// Express.js refresh endpoint</span>
+app.post(<span class="str">'/api/auth/refresh'</span>, <span class="kw">async</span> (req, res) =&gt; {
+  <span class="kw">const</span> refreshToken = req.cookies.refreshToken 
+    || req.body.refreshToken;
+  
+  <span class="kw">if</span> (!refreshToken) {
+    <span class="kw">return</span> res.status(401).json({ error: <span class="str">'No refresh token'</span> });
+  }
+
+  <span class="kw">const</span> stored = <span class="kw">await</span> db.findRefreshToken(refreshToken);
+  
+  <span class="kw">if</span> (!stored || stored.revoked) {
+    <span class="kw">return</span> res.status(401).json({ error: <span class="str">'Invalid token'</span> });
+  }
+
+  <span class="cm">// REUSE DETECTION</span>
+  <span class="kw">if</span> (stored.used) {
+    <span class="cm">// Theft detected! Revoke entire family</span>
+    <span class="kw">await</span> db.revokeTokenFamily(stored.familyId);
+    <span class="kw">await</span> alertSecurity(stored.userId, <span class="str">'token_reuse'</span>);
+    <span class="kw">return</span> res.status(401).json({ error: <span class="str">'Token reuse detected'</span> });
+  }
+
+  <span class="cm">// Mark old token as used</span>
+  <span class="kw">await</span> db.markTokenUsed(stored.id);
+
+  <span class="cm">// Generate new pair</span>
+  <span class="kw">const</span> accessToken = jwt.sign(
+    { userId: stored.userId, role: stored.role },
+    SECRET, { expiresIn: <span class="str">'15m'</span> }
+  );
+  <span class="kw">const</span> newRefresh = <span class="kw">await</span> db.createRefreshToken({
+    userId: stored.userId,
+    familyId: stored.familyId, <span class="cm">// same family</span>
+  });
+
+  res.cookie(<span class="str">'refreshToken'</span>, newRefresh.token, {
+    httpOnly: <span class="kw">true</span>, secure: <span class="kw">true</span>,
+    sameSite: <span class="str">'strict'</span>, maxAge: 7 * 24 * 60 * 60 * 1000
+  });
+  res.json({ accessToken });
+});</pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Security Checklist</h3>
+    <pre><span class="cm">// Token Refresh Security Audit</span>
+
+<span class="cm">☐ Access token stored in memory only (not localStorage)</span>
+<span class="cm">☐ Refresh token in HttpOnly Secure SameSite cookie</span>
+<span class="cm">☐ Token rotation enabled (new refresh token per use)</span>
+<span class="cm">☐ Token family tracking for reuse detection</span>
+<span class="cm">☐ Grace period for lost-response recovery</span>
+<span class="cm">☐ Refresh endpoint rate-limited</span>
+<span class="cm">☐ Concurrent refresh deduplication on client</span>
+<span class="cm">☐ Cross-tab sync (BroadcastChannel/storage events)</span>
+<span class="cm">☐ Proactive refresh (before expiry)</span>
+<span class="cm">☐ Forced logout capability (revoke all families)</span>
+<span class="cm">☐ Refresh token bound to device/fingerprint</span>
+<span class="cm">☐ Audit logging for all refresh events</span>
+<span class="cm">☐ Absolute expiry on refresh tokens (7-30 days)</span>
+<span class="cm">☐ Sliding window idle timeout (30 minutes)</span>
+<span class="cm">☐ Error handling: redirect to login on refresh failure</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Complete Auth Design</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Design the auth system for a Google-scale app.</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Architecture: (1) BFF pattern (Backend for Frontend): Thin server between SPA and API. BFF holds refresh token in server-side session. SPA gets short access tokens only. No sensitive tokens in browser. (2) Token details: Access: 10-min JWT with userId, role, scopes. Refresh: opaque token (not JWT) stored server-side, 7-day expiry, rotated on use. (3) Multi-device: Each device gets its own token family. Revoking one device doesn't affect others. "Sign out all devices" revokes all families. (4) Monitoring: Prometheus metrics: refresh_rate, reuse_detection_count, refresh_failure_rate. Alert on: spike in reuse detection (mass token theft), refresh rate > 10x normal (automated attack), single user refreshing from multiple IPs simultaneously. (5) Graceful degradation: If auth service is down: accept access tokens until they expire (stateless). Queue refreshes with exponential backoff. Show degraded UI after 3 failed retries.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+</script>
+</body></html>

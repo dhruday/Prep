@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Web Workers, Service Workers & Worklets</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e2e8f0; padding: 20px; }
+    h1 { text-align: center; color: #60a5fa; margin-bottom: 4px; font-size: 1.5rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.88rem; }
+
+    /* Stack-based layout */
+    .tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: 18px; flex-wrap: wrap; }
+    .tab {
+      padding: 8px 18px; border: 2px solid #2d3551; border-radius: 8px;
+      cursor: pointer; font-size: 0.83rem; font-weight: 600; transition: all 0.2s;
+      background: #1e2130; color: #94a3b8;
+    }
+    .tab:hover { border-color: #3b82f6; }
+    .tab.active { background: #1e3a5f; border-color: #3b82f6; color: #fff; }
+    .tab.purple.active { background: #312e81; border-color: #7c3aed; }
+    .tab.green.active  { background: #14532d; border-color: #16a34a; }
+    .tab.amber.active  { background: #451a03; border-color: #d97706; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .card { background: #1e2130; border: 1px solid #2d3551; border-radius: 12px; padding: 16px; }
+    .card h2 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+    /* Worker demo */
+    .demo-area { background: #0f1117; border-radius: 8px; padding: 14px; min-height: 80px; }
+    .log-box {
+      background: #060a0e; border-radius: 8px; padding: 10px; height: 180px; overflow-y: auto;
+      font-family: 'Courier New', monospace; font-size: 0.77rem;
+    }
+    .log-main   { color: #93c5fd; }
+    .log-worker { color: #c4b5fd; }
+    .log-sw     { color: #86efac; }
+    .log-info   { color: #475569; }
+    .log-warn   { color: #fbbf24; }
+
+    /* Cache visual */
+    .cache-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 8px; }
+    .cache-table th { background: #1a2035; color: #60a5fa; padding: 7px 10px; text-align: left; }
+    .cache-table td { padding: 7px 10px; border-top: 1px solid #2d3551; }
+    .cache-table tr.hit td { background: #001a0e; }
+    .cache-table tr.miss td { background: #1a0000; }
+
+    /* Lifecycle diagram */
+    .lifecycle { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .lc-step {
+      padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: bold;
+      border: 1px solid; transition: all 0.3s;
+    }
+    .lc-arrow { color: #475569; font-size: 1.1rem; }
+    .lc-install   { border-color: #3b82f6; color: #93c5fd; }
+    .lc-activate  { border-color: #10b981; color: #86efac; }
+    .lc-fetch     { border-color: #8b5cf6; color: #c4b5fd; }
+    .lc-update    { border-color: #f59e0b; color: #fbbf24; }
+    .lc-active.active { background: rgba(66,133,244,0.2); }
+    .lc-install.active-step  { background: #1e3a5f; }
+    .lc-activate.active-step { background: #14532d; }
+    .lc-fetch.active-step    { background: #312e81; }
+
+    /* Worklet visual */
+    .worklet-canvas {
+      width: 100%; height: 140px; background: #060a0e; border-radius: 8px; margin-top: 8px;
+      position: relative; overflow: hidden;
+    }
+    .worklet-particle {
+      position: absolute; width: 8px; height: 8px; border-radius: 50%;
+      transition: transform 0.1s;
+    }
+
+    /* Controls */
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    button { padding: 7px 15px; border: none; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 0.8rem; transition: opacity 0.2s; }
+    button:hover { opacity: 0.8; }
+    .btn-a { background: #3b82f6; color: #fff; }
+    .btn-b { background: #8b5cf6; color: #fff; }
+    .btn-c { background: #10b981; color: #fff; }
+    .btn-d { background: #f59e0b; color: #000; }
+    .btn-e { background: #ef4444; color: #fff; }
+
+    /* Comparison table */
+    .compare-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+    .compare-table th { background: #1a2035; color: #60a5fa; padding: 8px; text-align: left; }
+    .compare-table td { padding: 7px 8px; border-top: 1px solid #2d3551; vertical-align: top; }
+    .compare-table tr:nth-child(even) td { background: #161b2e; }
+
+    .insight { background: #162032; border: 1px solid #1e3a5f; border-radius: 7px; padding: 10px; font-size: 0.76rem; color: #93c5fd; margin-top: 10px; }
+    .insight strong { color: #fff; }
+
+    .tag { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 0.68rem; font-weight: bold; margin: 1px; }
+    .tag-y { background: #14532d; color: #86efac; }
+    .tag-n { background: #7f1d1d; color: #fca5a5; }
+    .tag-p { background: #1e3a5f; color: #93c5fd; }
+
+    /* Value display */
+    .val-display { font-size: 1.8rem; font-weight: bold; text-align: center; padding: 10px; }
+    .progress { height: 8px; background: #2d3551; border-radius: 4px; overflow: hidden; margin: 6px 0; }
+    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.15s; background: #8b5cf6; }
+  </style>
+</head>
+<body>
+<h1>🛠 Web Workers, Service Workers & Worklets</h1>
+<p class="subtitle">Interactive demos for all three browser worker types</p>
+
+<div class="tabs">
+  <div class="tab active"        onclick="switchTab('web-worker')">🧵 Web Worker</div>
+  <div class="tab purple"        onclick="switchTab('service-worker')">⚙️ Service Worker</div>
+  <div class="tab green"         onclick="switchTab('worklets')">🎨 Worklets (CSS/Audio)</div>
+  <div class="tab amber"         onclick="switchTab('compare')">📊 All 3 Compared</div>
+</div>
+
+<!-- Panel 1: Web Worker -->
+<div id="panel-web-worker" class="panel active">
+  <div class="grid2">
+    <div class="card">
+      <h2 style="color:#3b82f6">🧵 Web Worker — Offload CPU Work</h2>
+      <div class="controls">
+        <button class="btn-a" onclick="workerCalc('fibonacci')">Calculate Fibonacci(40)</button>
+        <button class="btn-b" onclick="workerCalc('primes')">Find Primes up to 500k</button>
+        <button class="btn-e" onclick="terminateWorker()">Terminate Worker</button>
+      </div>
+
+      <div class="demo-area">
+        <div class="progress-label" style="font-size:0.75rem;color:#64748b;margin-bottom:6px">Computation Progress</div>
+        <div class="progress"><div class="progress-fill" id="ww-progress" style="width:0%"></div></div>
+        <div class="val-display" id="ww-result" style="color:#3b82f6">—</div>
+        <div style="font-size:0.75rem;color:#64748b;text-align:center" id="ww-time">Click to run a computation</div>
+      </div>
+
+      <div class="insight">
+        <strong>Web Worker:</strong> Runs JS in a background thread. Communicate via <code>postMessage</code>.
+        No DOM access. Great for heavy CPU tasks, WASM, parsing large JSON, crypto operations.
+        Lives as long as you keep the reference.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="color:#94a3b8">📋 Worker Communication Log</h2>
+      <div class="log-box" id="ww-log">
+        <div class="log-info">// Waiting for computation...</div>
+      </div>
+      <div style="margin-top:12px;font-size:0.78rem;color:#94a3b8">
+        <strong style="color:#e2e8f0">postMessage flow:</strong><br><br>
+        <code style="color:#93c5fd">main → worker.postMessage({ task, data })</code><br>
+        <code style="color:#c4b5fd">worker → self.postMessage({ result })</code><br>
+        <code style="color:#fbbf24">main → worker.onmessage = (e) => use(e.data)</code><br><br>
+        Data is <strong style="color:#fca5a5">structured-cloned</strong> (copied) by default.<br>
+        Use <code>Transferable</code> (ArrayBuffer) for zero-copy transfer.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Panel 2: Service Worker -->
+<div id="panel-service-worker" class="panel">
+  <div class="grid2">
+    <div class="card">
+      <h2 style="color:#10b981">⚙️ Service Worker — Network Proxy</h2>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.78rem;color:#94a3b8;margin-bottom:8px">SW Lifecycle Stages:</div>
+        <div class="lifecycle" id="sw-lifecycle">
+          <div class="lc-step lc-install" id="lc-1">📦 Registered</div>
+          <div class="lc-arrow">→</div>
+          <div class="lc-step lc-install" id="lc-2">⬇️ Installing</div>
+          <div class="lc-arrow">→</div>
+          <div class="lc-step lc-activate" id="lc-3">✅ Activated</div>
+          <div class="lc-arrow">→</div>
+          <div class="lc-step lc-fetch" id="lc-4">🌐 Fetch Intercepted</div>
+          <div class="lc-arrow">→</div>
+          <div class="lc-step lc-update" id="lc-5">🔄 Updated</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn-c" onclick="swRegister()">📦 Register SW + Pre-cache</button>
+        <button class="btn-a" onclick="swFetch('cached')">🎯 Fetch Cached Asset</button>
+        <button class="btn-b" onclick="swFetch('uncached')">🌐 Fetch Uncached Asset</button>
+        <button class="btn-d" onclick="clearCache()">🗑 Clear Cache</button>
+      </div>
+
+      <div class="insight">
+        <strong>Service Worker:</strong> A network proxy between your app and the network. Can cache resources,
+        enable offline mode, push notifications, and background sync. Runs in its own thread, persists between page loads.
+        Requires HTTPS (except localhost).
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="color:#94a3b8">🗃 Cache Storage State</h2>
+      <table class="cache-table">
+        <thead>
+          <tr><th>URL / Resource</th><th>Status</th><th>Source</th><th>Time</th></tr>
+        </thead>
+        <tbody id="cache-display">
+          <tr><td colspan="4" style="color:#475569;text-align:center;padding:14px">No cached assets yet</td></tr>
+        </tbody>
+      </table>
+      <div class="log-box" id="sw-log" style="margin-top:10px;height:120px">
+        <div class="log-info">// SW not registered yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Panel 3: Worklets -->
+<div id="panel-worklets" class="panel">
+  <div class="grid2">
+    <div class="card">
+      <h2 style="color:#f59e0b">🎨 CSS Paint Worklet (Houdini)</h2>
+      <div style="font-size:0.78rem;color:#94a3b8;margin-bottom:10px">
+        CSS Paint Worklets run on the compositor thread — no main thread involvement.
+        They let you create custom CSS background patterns in JS.
+      </div>
+      <canvas id="paint-canvas" width="400" height="150" style="width:100%;background:#060a0e;border-radius:8px"></canvas>
+      <div class="controls" style="margin-top:10px">
+        <button class="btn-d" onclick="drawPaintWorklet('dots')">🔵 Dots Pattern</button>
+        <button class="btn-b" onclick="drawPaintWorklet('grid')">⊞ Grid Pattern</button>
+        <button class="btn-c" onclick="drawPaintWorklet('waves')">〜 Waves Pattern</button>
+        <button class="btn-a" onclick="animatePaintWorklet()">✨ Animated</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="color:#8b5cf6">🎵 Audio Worklet (Web Audio API)</h2>
+      <div style="font-size:0.78rem;color:#94a3b8;margin-bottom:10px">
+        Audio Worklets run on the high-priority audio thread. They process audio samples
+        in real-time without ever touching the main thread.
+      </div>
+      <div class="worklet-canvas" id="audio-viz">
+        <!-- audio visualization bars rendered here -->
+      </div>
+      <div class="controls" style="margin-top:10px">
+        <button class="btn-a" onclick="startAudio()">🔊 Simulate Audio Worklet</button>
+        <button class="btn-e" onclick="stopAudio()">⏹ Stop</button>
+      </div>
+
+      <div class="insight" style="margin-top:10px">
+        <strong>Worklets vs Workers:</strong><br>
+        Worklets run on specialized threads (compositor / audio). They cannot be communicated with freely — they hook into specific browser pipelines. They're lower-level and higher-performance than regular workers.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Panel 4: Comparison -->
+<div id="panel-compare" class="panel">
+  <div class="card">
+    <h2 style="color:#94a3b8">📊 Web Worker vs Service Worker vs Worklet</h2>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>🧵 Web Worker</th>
+          <th>⚙️ Service Worker</th>
+          <th>🎨 CSS Worklet</th>
+          <th>🎵 Audio Worklet</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Thread</strong></td>
+          <td>Background JS thread</td>
+          <td>Background SW thread</td>
+          <td>Compositor thread</td>
+          <td>Audio rendering thread</td>
+        </tr>
+        <tr>
+          <td><strong>DOM Access</strong></td>
+          <td><span class="tag tag-n">NO</span></td>
+          <td><span class="tag tag-n">NO</span></td>
+          <td><span class="tag tag-n">NO</span></td>
+          <td><span class="tag tag-n">NO</span></td>
+        </tr>
+        <tr>
+          <td><strong>Persists across pages</strong></td>
+          <td><span class="tag tag-n">NO</span></td>
+          <td><span class="tag tag-y">YES</span></td>
+          <td><span class="tag tag-n">NO</span></td>
+          <td><span class="tag tag-n">NO</span></td>
+        </tr>
+        <tr>
+          <td><strong>fetch() access</strong></td>
+          <td><span class="tag tag-y">YES</span></td>
+          <td><span class="tag tag-y">YES (+ intercept!)</span></td>
+          <td><span class="tag tag-n">NO</span></td>
+          <td><span class="tag tag-n">NO</span></td>
+        </tr>
+        <tr>
+          <td><strong>Primary Use</strong></td>
+          <td>CPU-heavy tasks, parsing, WASM</td>
+          <td>Caching, offline, push, bg sync</td>
+          <td>Custom CSS paint/layout</td>
+          <td>Real-time audio DSP</td>
+        </tr>
+        <tr>
+          <td><strong>Communication</strong></td>
+          <td>postMessage</td>
+          <td>postMessage + fetch events</td>
+          <td>CSS properties (one-way)</td>
+          <td>AudioNode ports</td>
+        </tr>
+        <tr>
+          <td><strong>Requires HTTPS</strong></td>
+          <td><span class="tag tag-n">NO</span></td>
+          <td><span class="tag tag-y">YES (+ localhost ok)</span></td>
+          <td><span class="tag tag-n">NO</span></td>
+          <td><span class="tag tag-n">NO</span></td>
+        </tr>
+        <tr>
+          <td><strong>Number per page</strong></td>
+          <td>Many (each = a thread)</td>
+          <td>One per origin scope</td>
+          <td>One module</td>
+          <td>One per AudioContext</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  let currentWorker = null;
+  let audioAnimId = null;
+  let paintAnimId = null;
+  let swRegistered = false;
+  let cacheStore = {};
+  let wwLogLines = [];
+
+  function switchTab(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    const tabs = { 'web-worker': 0, 'service-worker': 1, 'worklets': 2, 'compare': 3 };
+    document.querySelectorAll('.tab')[tabs[name]].classList.add('active');
+  }
+
+  // --- WEB WORKER ---
+  function wwLog(msg, type = 'info') {
+    wwLogLines.push(`<div class="log-${type}">${msg}</div>`);
+    if (wwLogLines.length > 30) wwLogLines.shift();
+    document.getElementById('ww-log').innerHTML = wwLogLines.join('');
+    document.getElementById('ww-log').scrollTop = 9999;
+  }
+
+  function workerCalc(task) {
+    if (currentWorker) currentWorker.terminate();
+    document.getElementById('ww-result').textContent = '⏳';
+    document.getElementById('ww-time').textContent = 'Computing in Worker thread...';
+    document.getElementById('ww-progress').style.width = '0%';
+
+    const t0 = performance.now();
+    wwLog(`[main] postMessage({ task: '${task}' }) → Worker`, 'main');
+
+    const workerSrc = `
+      self.onmessage = function(e) {
+        const task = e.data.task;
+        let result, label;
+        if (task === 'fibonacci') {
+          function fib(n) { return n <= 1 ? n : fib(n-1) + fib(n-2); }
+          result = fib(38);
+          label = 'fib(38)';
+        } else {
+          let count = 0;
+          for (let n = 2; n < 200000; n++) {
+            let isPrime = true;
+            for (let d = 2; d * d <= n; d++) { if (n % d === 0) { isPrime = false; break; } }
+            if (isPrime) count++;
+          }
+          result = count;
+          label = 'primes < 200k';
+        }
+        self.postMessage({ result, label });
+      };
+    `;
+    const blob = new Blob([workerSrc], { type: 'application/javascript' });
+    currentWorker = new Worker(URL.createObjectURL(blob));
+    wwLog(`[worker] Started. Running ${task}...`, 'worker');
+
+    let prog = 0;
+    const interval = setInterval(() => {
+      prog = Math.min(prog + 3, 94);
+      document.getElementById('ww-progress').style.width = prog + '%';
+    }, 50);
+
+    currentWorker.onmessage = (e) => {
+      clearInterval(interval);
+      document.getElementById('ww-progress').style.width = '100%';
+      const elapsed = (performance.now() - t0).toFixed(0);
+      document.getElementById('ww-result').textContent = e.data.result.toLocaleString();
+      document.getElementById('ww-time').textContent = `${e.data.label} = ${e.data.result.toLocaleString()} (took ${elapsed}ms in Worker)`;
+      wwLog(`[worker] postMessage({ result: ${e.data.result} }) → Main`, 'worker');
+      wwLog(`[main] Received result. Worker took ${elapsed}ms. UI was unblocked. ✔`, 'main');
+    };
+    currentWorker.postMessage({ task });
+  }
+
+  function terminateWorker() {
+    if (currentWorker) { currentWorker.terminate(); currentWorker = null; wwLog('[main] Worker terminated.', 'warn'); }
+  }
+
+  // --- SERVICE WORKER (simulated) ---
+  let swLogLines = [];
+  let swCacheEntries = [];
+  let swActive = false;
+  let lcStep = 0;
+
+  function swLog(msg, type = 'info') {
+    swLogLines.push(`<div class="log-${type}">${msg}</div>`);
+    if (swLogLines.length > 25) swLogLines.shift();
+    document.getElementById('sw-log').innerHTML = swLogLines.join('');
+    document.getElementById('sw-log').scrollTop = 9999;
+  }
+
+  function setLcStep(step) {
+    for (let i = 1; i <= 5; i++) {
+      const el = document.getElementById('lc-' + i);
+      el.classList.toggle('active-step', i === step);
+    }
+  }
+
+  async function swRegister() {
+    swLog('[SW] navigator.serviceWorker.register("/sw.js")', 'main');
+    setLcStep(1);
+    await sleep(500);
+    swLog('[SW] Installing... caching assets', 'sw');
+    setLcStep(2);
+    await sleep(600);
+    const assets = ['/index.html', '/styles.css', '/app.js', '/logo.png'];
+    assets.forEach(url => {
+      cacheStore[url] = { status: 200, time: new Date().toLocaleTimeString() };
+      swLog(`  cache.put('${url}') ✔`, 'sw');
+    });
+    swCacheEntries = assets;
+    renderCache();
+    await sleep(500);
+    swLog('[SW] Activated. Controlling all matching requests.', 'sw');
+    setLcStep(3);
+    swActive = true;
+
+    function renderCache() {
+      const tbody = document.getElementById('cache-display');
+      if (swCacheEntries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="color:#475569;text-align:center;padding:14px">No cached assets</td></tr>';
+        return;
+      }
+      tbody.innerHTML = swCacheEntries.map(url => `
+        <tr class="hit">
+          <td>${url}</td>
+          <td style="color:#86efac">✅ Cached</td>
+          <td>Cache Storage</td>
+          <td>${cacheStore[url]?.time || '—'}</td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  async function swFetch(type) {
+    if (!swActive) { swLog('[SW] Not registered yet! Click Register first.', 'warn'); return; }
+    setLcStep(4);
+    const url = type === 'cached' ? '/app.js' : '/api/data.json';
+    swLog(`[main] fetch('${url}')`, 'main');
+    await sleep(400);
+
+    if (cacheStore[url]) {
+      swLog(`[SW] fetch event intercepted for '${url}'`, 'sw');
+      swLog(`[SW] ✅ Cache HIT → returning cached response`, 'sw');
+      const tbody = document.getElementById('cache-display');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const row = rows.find(r => r.textContent.includes(url));
+      if (row) { row.style.background = '#003300'; setTimeout(() => row.style.background = '', 800); }
+    } else {
+      swLog(`[SW] fetch event intercepted for '${url}'`, 'sw');
+      swLog(`[SW] ❌ Cache MISS → fetching from network...`, 'warn');
+      await sleep(500);
+      swLog(`[SW] Network responded. Caching for next time.`, 'sw');
+      cacheStore[url] = { status: 200, time: new Date().toLocaleTimeString() };
+      swCacheEntries.push(url);
+      const tbody = document.getElementById('cache-display');
+      tbody.innerHTML = swCacheEntries.map(u => `
+        <tr class="${cacheStore[u] ? 'hit' : 'miss'}">
+          <td>${u}</td>
+          <td style="color:${cacheStore[u] ? '#86efac' : '#f87171'}">${cacheStore[u] ? '✅ Cached' : '❌ Miss'}</td>
+          <td>Cache Storage</td>
+          <td>${cacheStore[u]?.time || '—'}</td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  function clearCache() {
+    cacheStore = {};
+    swCacheEntries = [];
+    document.getElementById('cache-display').innerHTML = '<tr><td colspan="4" style="color:#475569;text-align:center;padding:14px">Cache cleared</td></tr>';
+    swLog('[main] caches.delete(\'v1\') ✔', 'warn');
+    swActive = false;
+    setLcStep(0);
+  }
+
+  // --- WORKLETS ---
+  function drawPaintWorklet(type) {
+    cancelAnimationFrame(paintAnimId);
+    const canvas = document.getElementById('paint-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#060a0e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (type === 'dots') {
+      for (let y = 10; y < canvas.height; y += 18) {
+        for (let x = 10; x < canvas.width; x += 18) {
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = `hsl(${(x + y) % 360}, 70%, 55%)`;
+          ctx.fill();
+        }
+      }
+    } else if (type === 'grid') {
+      ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 0.5;
+      for (let x = 0; x < canvas.width; x += 20) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+      for (let y = 0; y < canvas.height; y += 20) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+    } else if (type === 'waves') {
+      ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 2;
+      for (let j = 0; j < 6; j++) {
+        ctx.beginPath();
+        for (let x = 0; x < canvas.width; x++) {
+          const y = (canvas.height / 2) + Math.sin((x + j * 20) * 0.04) * 20 + j * 16 - 40;
+          j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = `hsl(${260 + j*15}, 70%, 60%)`;
+        ctx.stroke();
+      }
+    }
+  }
+
+  function animatePaintWorklet() {
+    cancelAnimationFrame(paintAnimId);
+    const canvas = document.getElementById('paint-canvas');
+    const ctx = canvas.getContext('2d');
+    let frame = 0;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#060a0e'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        for (let x = 0; x <= canvas.width; x += 2) {
+          const y = canvas.height/2 + Math.sin((x + frame + i*40) * 0.05) * 18 + i * 22 - 44;
+          x === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+        }
+        ctx.strokeStyle = `hsl(${(frame*2 + i*60) % 360}, 80%, 60%)`;
+        ctx.lineWidth = 2; ctx.stroke();
+      }
+      frame++;
+      paintAnimId = requestAnimationFrame(draw);
+    }
+    draw();
+  }
+
+  let audioCtx = null;
+  let audioAnimIdLocal = null;
+  function startAudio() {
+    cancelAnimationFrame(audioAnimIdLocal);
+    const viz = document.getElementById('audio-viz');
+    const bars = 32;
+    viz.innerHTML = Array.from({ length: bars }, (_, i) =>
+      `<div style="position:absolute;bottom:0;left:${(i/bars)*100}%;width:${(1/bars)*96}%;background:hsl(${270+i*3},70%,60%);border-radius:3px 3px 0 0;height:10px;transition:height 0.05s"></div>`
+    ).join('');
+    const barEls = viz.querySelectorAll('div');
+    let t = 0;
+    function animFrame() {
+      t += 0.08;
+      barEls.forEach((b, i) => {
+        const h = Math.abs(Math.sin(t + i * 0.4) * 55 + Math.sin(t * 1.7 + i * 0.2) * 25 + 15);
+        b.style.height = h + 'px';
+      });
+      audioAnimIdLocal = requestAnimationFrame(animFrame);
+    }
+    animFrame();
+  }
+
+  function stopAudio() {
+    cancelAnimationFrame(audioAnimIdLocal);
+    const barEls = document.getElementById('audio-viz').querySelectorAll('div');
+    barEls.forEach(b => b.style.height = '5px');
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // initial paint
+  drawPaintWorklet('dots');
+</script>
+</body>
+</html>

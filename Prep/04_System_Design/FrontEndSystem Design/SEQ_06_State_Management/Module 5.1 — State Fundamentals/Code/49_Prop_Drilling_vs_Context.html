@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 49 – Prop Drilling vs Context</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.green{color:#10b981}.amber{color:#f59e0b}.red{color:#ef4444}
+.node{border-radius:8px;padding:8px 12px;font-size:.78rem;margin:4px 2px;display:inline-block}
+</style>
+</head>
+<body>
+<h1>🪣 Prop Drilling vs Context API</h1>
+<p class="sub">Topic 49 · Module 5.1 — State Fundamentals · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">The Problem</div>
+  <div class="tab" onclick="setTab(1)">Visual Comparison</div>
+  <div class="tab" onclick="setTab(2)">Context Performance</div>
+  <div class="tab" onclick="setTab(3)">Code</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Prop Drilling — passing through intermediaries</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Prop drilling occurs when a prop is passed through multiple component layers that don't use it — just forward it to their children. It creates tight coupling, makes refactoring painful, and violates the principle that components should only know what they need.</p>
+    <div style="font-size:.82rem;line-height:2;background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px">
+      <div><span class="red">🔴 Drilling pain</span> — App → Layout → Page → Section → Widget → Button all take <code>user</code> prop</div>
+      <div><span class="red">🔴 Coupling</span> — If user structure changes, update every intermediate component</div>
+      <div><span class="green">✔ Context fix</span> — App provides UserContext, Button reads it directly</div>
+      <div><span class="amber">⚠ Context is NOT free</span> — every consumer re-renders on context value change</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Prop drilling vs Context — tree visualisation</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:.78rem">
+      <div>
+        <div style="color:#ef4444;font-weight:700;margin-bottom:8px">❌ Prop Drilling</div>
+        <div style="font-family:monospace;background:#0f1117;border:1px solid #2d3551;padding:12px;border-radius:8px;line-height:2">
+          <div style="color:#60a5fa">App (user state)</div>
+          <div style="margin-left:12px;color:#94a3b8">▸ Layout <span style="color:#ef4444">(user)</span></div>
+          <div style="margin-left:24px;color:#94a3b8">▸ Page <span style="color:#ef4444">(user)</span></div>
+          <div style="margin-left:36px;color:#94a3b8">▸ Section <span style="color:#ef4444">(user)</span></div>
+          <div style="margin-left:48px;color:#94a3b8">▸ Widget <span style="color:#ef4444">(user)</span></div>
+          <div style="margin-left:60px;color:#10b981">▸ UserAvatar ← <em>needs user</em></div>
+        </div>
+        <div style="margin-top:6px;font-size:.75rem;color:#ef4444">5 components pass user they don't use</div>
+      </div>
+      <div>
+        <div style="color:#10b981;font-weight:700;margin-bottom:8px">✅ Context API</div>
+        <div style="font-family:monospace;background:#0f1117;border:1px solid #10b981;padding:12px;border-radius:8px;line-height:2">
+          <div style="color:#60a5fa">App (UserContext.Provider)</div>
+          <div style="margin-left:12px;color:#94a3b8">▸ Layout</div>
+          <div style="margin-left:24px;color:#94a3b8">▸ Page</div>
+          <div style="margin-left:36px;color:#94a3b8">▸ Section</div>
+          <div style="margin-left:48px;color:#94a3b8">▸ Widget</div>
+          <div style="margin-left:60px;color:#10b981">▸ UserAvatar → useContext(User)</div>
+        </div>
+        <div style="margin-top:6px;font-size:.75rem;color:#10b981">UserAvatar reads context directly — no coupling</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Context performance gotcha — split contexts</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:10px">When context value changes, ALL consumers of that context re-render — even if they don't use the changed part. Solution: split context by update frequency.</p>
+    <pre><span class="cm">// ❌ Single fat context — theme change re-renders user consumers</span>
+<span class="kw">const</span> AppContext = <span class="attr">createContext</span>({ user: ..., theme: ..., lang: ... });
+
+<span class="cm">// ✅ Split contexts by change frequency</span>
+<span class="kw">const</span> UserContext = <span class="attr">createContext</span>(user);    <span class="cm">// changes on login only</span>
+<span class="kw">const</span> ThemeContext = <span class="attr">createContext</span>(theme);  <span class="cm">// changes on toggle</span>
+<span class="kw">const</span> LangContext = <span class="attr">createContext</span>(lang);    <span class="cm">// changes rarely</span>
+
+<span class="cm">// Each component subscribes to only the context it needs</span>
+<span class="kw">const</span> theme = <span class="attr">useContext</span>(ThemeContext); <span class="cm">// only re-renders on theme change</span></pre>
+    <div style="font-size:.8rem;color:#94a3b8;margin-top:10px">💡 Use <code>useMemo</code> for context value to prevent object identity changes causing re-renders: <code>const value = useMemo(() => ({user}), [user])</code></div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Context API — SAP theme example</h3>
+    <pre><span class="cm">// contexts/ThemeContext.tsx</span>
+<span class="kw">import</span> { createContext, useContext, useState, useMemo } <span class="kw">from</span> <span class="str">'react'</span>;
+
+<span class="kw">type</span> Theme = <span class="str">'light'</span> | <span class="str">'dark'</span> | <span class="str">'sap-belize'</span>;
+
+<span class="kw">interface</span> ThemeContextValue {
+  theme: Theme;
+  setTheme: (t: Theme) =&gt; <span class="kw">void</span>;
+}
+
+<span class="kw">const</span> ThemeContext = <span class="attr">createContext</span>&lt;ThemeContextValue | <span class="kw">null</span>&gt;(<span class="kw">null</span>);
+
+<span class="kw">export function</span> <span class="attr">ThemeProvider</span>({ children }) {
+  <span class="kw">const</span> [theme, setTheme] = <span class="attr">useState</span>&lt;Theme&gt;(<span class="str">'sap-belize'</span>);
+  <span class="cm">// useMemo prevents new object on every parent render</span>
+  <span class="kw">const</span> value = <span class="attr">useMemo</span>(() =&gt; ({ theme, setTheme }), [theme]);
+  <span class="kw">return</span> &lt;<span class="attr">ThemeContext.Provider</span> value={value}&gt;{children}&lt;/<span class="attr">ThemeContext.Provider</span>&gt;;
+}
+
+<span class="kw">export function</span> <span class="attr">useTheme</span>() {
+  <span class="kw">const</span> ctx = <span class="attr">useContext</span>(ThemeContext);
+  <span class="kw">if</span> (!ctx) <span class="kw">throw new</span> Error(<span class="str">'useTheme must be used within ThemeProvider'</span>);
+  <span class="kw">return</span> ctx;
+}
+
+<span class="cm">// Usage — anywhere in tree, no drilling</span>
+<span class="kw">function</span> <span class="attr">Header</span>() {
+  <span class="kw">const</span> { theme, setTheme } = <span class="attr">useTheme</span>();
+  <span class="kw">return</span> &lt;<span class="attr">button</span> onClick={() =&gt; <span class="attr">setTheme</span>(<span class="str">'dark'</span>)}&gt;Toggle&lt;/<span class="attr">button</span>&gt;;
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+</script>
+</body>
+</html>

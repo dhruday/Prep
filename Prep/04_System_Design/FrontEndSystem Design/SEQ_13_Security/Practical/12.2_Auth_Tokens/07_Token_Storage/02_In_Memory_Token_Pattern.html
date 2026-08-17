@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — In-Memory Token Pattern</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 02 — In-Memory Token Pattern</h1>
+<p class="sub">Module 12.2 · Closure-based token storage with automatic refresh</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Pattern</div>
+  <div class="tab" onclick="setTab(1)">Implementation</div>
+  <div class="tab" onclick="setTab(2)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Why In-Memory?</h3>
+    <pre><span class="cm">// Problem: Every persistent storage is vulnerable</span>
+<span class="cm">// localStorage → XSS reads it directly</span>
+<span class="cm">// sessionStorage → XSS reads it directly</span>
+<span class="cm">// Cookie without HttpOnly → XSS reads it</span>
+<span class="cm">// Cookie with HttpOnly → CSRF sends it automatically</span>
+
+<span class="cm">// Solution: Store access token ONLY in JavaScript memory</span>
+<span class="cm">// Benefits:</span>
+<span class="cm">// ✅ Not in any persistent storage → survives XSS theft (attacker</span>
+<span class="cm">//    can read it during execution, but can't exfiltrate for later)</span>
+<span class="cm">// ✅ Cleared on page reload → limits exposure</span>
+<span class="cm">// ✅ Not auto-sent → no CSRF</span>
+<span class="cm">// ✅ Not visible in DevTools storage panels</span>
+
+<span class="cm">// Trade-off: Token lost on refresh → need silent refresh via cookie</span>
+<span class="cm">// Flow: Page load → fetch /api/refresh (sends HttpOnly cookie)</span>
+<span class="cm">//       → server returns new access token → store in memory</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Full Implementation</h3>
+    <pre><span class="cm">// authManager.ts — Singleton auth manager using closure</span>
+
+<span class="kw">interface</span> AuthManager {
+  login(username: <span class="kw">string</span>, password: <span class="kw">string</span>): Promise&lt;boolean&gt;;
+  logout(): Promise&lt;void&gt;;
+  getToken(): <span class="kw">string</span> | <span class="kw">null</span>;
+  fetchWithAuth(url: <span class="kw">string</span>, options?: RequestInit): Promise&lt;Response&gt;;
+}
+
+<span class="kw">function</span> <span class="fn">createAuthManager</span>(): AuthManager {
+  <span class="kw">let</span> accessToken: <span class="kw">string</span> | <span class="kw">null</span> = <span class="str">null</span>;
+  <span class="kw">let</span> refreshTimer: NodeJS.Timeout | <span class="kw">null</span> = <span class="str">null</span>;
+
+  <span class="kw">const</span> <span class="fn">scheduleRefresh</span> = (expiresIn: <span class="kw">number</span>) => {
+    <span class="kw">if</span> (refreshTimer) clearTimeout(refreshTimer);
+    <span class="cm">// Refresh 1 minute before expiration</span>
+    refreshTimer = setTimeout(<span class="fn">silentRefresh</span>, (expiresIn - 60) * 1000);
+  };
+
+  <span class="kw">const</span> <span class="fn">silentRefresh</span> = <span class="kw">async</span> () => {
+    <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="str">'/api/auth/refresh'</span>, {
+      method: <span class="str">'POST'</span>,
+      credentials: <span class="str">'include'</span> <span class="cm">// sends HttpOnly refresh cookie</span>
+    });
+    <span class="kw">if</span> (res.ok) {
+      <span class="kw">const</span> { token, expiresIn } = <span class="kw">await</span> res.json();
+      accessToken = token;
+      <span class="fn">scheduleRefresh</span>(expiresIn);
+    } <span class="kw">else</span> {
+      accessToken = <span class="str">null</span>;
+      <span class="cm">// Redirect to login</span>
+    }
+  };
+
+  <span class="kw">return</span> {
+    <span class="kw">async</span> <span class="fn">login</span>(username, password) { <span class="cm">/* ... */</span> },
+    <span class="kw">async</span> <span class="fn">logout</span>() { accessToken = <span class="str">null</span>; },
+    <span class="fn">getToken</span>: () => accessToken,
+    <span class="kw">async</span> <span class="fn">fetchWithAuth</span>(url, options = {}) {
+      <span class="kw">if</span> (!accessToken) <span class="kw">await</span> <span class="fn">silentRefresh</span>();
+      <span class="kw">let</span> res = <span class="kw">await</span> fetch(url, {
+        ...options,
+        headers: { ...options.headers, Authorization: <span class="str">`Bearer ${accessToken}`</span> }
+      });
+      <span class="kw">if</span> (res.status === 401) { <span class="cm">// token expired mid-request</span>
+        <span class="kw">await</span> <span class="fn">silentRefresh</span>();
+        res = <span class="kw">await</span> fetch(url, {
+          ...options,
+          headers: { ...options.headers, Authorization: <span class="str">`Bearer ${accessToken}`</span> }
+        });
+      }
+      <span class="kw">return</span> res;
+    }
+  };
+}
+
+<span class="kw">export const</span> auth = <span class="fn">createAuthManager</span>();</pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🧪 Live In-Memory Auth Demo</h3>
+    <button onclick="memLogin()">🔑 Login (store in memory)</button>
+    <button onclick="memAccess()">🔍 Access Protected Route</button>
+    <button onclick="memCheck()">🧠 Check Memory State</button>
+    <button onclick="memLogout()">🚪 Logout (clear memory)</button>
+    <div class="output" id="mem-result">Login to store token in memory</div>
+  </div>
+  <div class="card">
+    <h3>🧪 XSS Theft Attempt</h3>
+    <button onclick="xssAttempt()" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Simulate XSS stealing token</button>
+    <div class="output" id="xss-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — In-Memory Pattern</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: If XSS can still call auth.getToken() during execution, isn't memory storage just security theater?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">No, it's defense in depth. Key differences: (1) No persistence: XSS that runs once (e.g., reflected XSS) can't steal a token that's gone after page reload. (2) No offline access: Attacker can't browse DevTools → Storage → copy token at leisure. (3) Reduces blast radius: Stored XSS in localStorage means the attacker's payload runs on EVERY page load and always has the token. In memory, the token must be present at the exact moment the XSS executes. (4) Combined with short TTL (15min), even if stolen, the window is tiny. It's not perfect — but it's significantly better than localStorage.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+// In-memory auth manager (closure pattern)
+const authManager=(()=>{
+  let _token=null; // private
+  return{
+    setToken:(t)=>{_token=t},
+    getToken:()=>_token,
+    clear:()=>{_token=null},
+    hasToken:()=>!!_token,
+  };
+})();
+
+async function memLogin(){
+  const el=document.getElementById('mem-result');
+  try{
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'alice',password:'Password123!'})});
+    const d=await res.json();
+    if(d.token){
+      authManager.setToken(d.token);
+      el.textContent=`✅ Login successful — token stored in memory\n\nToken: ${d.token.slice(0,40)}...\n\nStorage check:\n  localStorage: ${localStorage.getItem('token')||'(empty)'}\n  sessionStorage: ${sessionStorage.getItem('token')||'(empty)'}\n  document.cookie: "${document.cookie}"\n  In-memory: ${authManager.hasToken()?'✅ Present':'❌ Empty'}\n\nThe token is ONLY in JavaScript memory.\nRefresh this page → the token is gone.`;
+    }
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+
+async function memAccess(){
+  const el=document.getElementById('mem-result');
+  const token=authManager.getToken();
+  if(!token){el.textContent='No token in memory. Login first.';return}
+  try{
+    const res=await fetch(`${API}/api/auth/me`,{headers:{Authorization:`Bearer ${token}`}});
+    const d=await res.json();
+    el.textContent=`Protected route response:\n${JSON.stringify(d,null,2)}\n\nToken sent via Authorization header (from memory).\nNot via cookie → immune to CSRF.`;
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+
+function memCheck(){
+  const el=document.getElementById('mem-result');
+  el.textContent=`Memory State Check:\n${'='.repeat(40)}\n`;
+  el.textContent+=`authManager.hasToken(): ${authManager.hasToken()}\n`;
+  el.textContent+=`authManager.getToken(): ${authManager.getToken()?authManager.getToken().slice(0,30)+'...':'null'}\n\n`;
+  el.textContent+=`window.authManager: ${typeof window.authManager}\n`;
+  el.textContent+=`(The closure variable _token is not on window/globalThis)\n\n`;
+  el.textContent+=`Try in DevTools console:\n  > window._token  → undefined\n  > authManager._token  → undefined\n  > authManager.getToken()  → works (but only during execution)`;
+}
+
+function memLogout(){
+  authManager.clear();
+  document.getElementById('mem-result').textContent='🚪 Logged out — token cleared from memory\nauthManager.hasToken(): '+authManager.hasToken();
+}
+
+function xssAttempt(){
+  const el=document.getElementById('xss-result');
+  el.textContent=`XSS Attack Simulation:\n${'='.repeat(40)}\n\n`;
+  // Try localStorage
+  el.textContent+=`localStorage.token: ${localStorage.getItem('token')||'NOT FOUND ✅'}\n`;
+  // Try sessionStorage
+  el.textContent+=`sessionStorage.token: ${sessionStorage.getItem('token')||'NOT FOUND ✅'}\n`;
+  // Try document.cookie
+  el.textContent+=`document.cookie: "${document.cookie||'EMPTY ✅'}"\n`;
+  // Try closure
+  const token=authManager.getToken();
+  el.textContent+=`authManager.getToken(): ${token?'⚠️ READABLE during execution: '+token.slice(0,20)+'...':'NOT FOUND ✅'}\n\n`;
+  el.textContent+=`Verdict:\n`;
+  if(token){
+    el.textContent+=`  ⚠️ XSS CAN read the token right now via authManager.getToken()\n  BUT: This requires the XSS to execute while the user is logged in.\n  After page reload, the token is GONE.\n  localStorage would persist the token for the attacker FOREVER.`;
+  }else{
+    el.textContent+=`  ✅ No token in memory — nothing to steal.\n  The user hasn't logged in yet (or token was cleared on reload).`;
+  }
+}
+</script>
+</body></html>

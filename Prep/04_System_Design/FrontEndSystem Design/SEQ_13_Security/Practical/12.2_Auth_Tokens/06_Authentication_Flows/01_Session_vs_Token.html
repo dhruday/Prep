@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — Session vs Token Authentication</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1e3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 01 — Session vs Token Authentication</h1>
+<p class="sub">Module 12.2 · Auth & Tokens · Comparing auth strategies for SPAs and SSR</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Comparison</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Architecture</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Session-Based vs Token-Based Auth</h3>
+    <table>
+      <tr><th>Aspect</th><th>Session (Cookie)</th><th>Token (JWT)</th></tr>
+      <tr><td>State</td><td>Server stores session data</td><td>Stateless — token contains all info</td></tr>
+      <tr><td>Storage</td><td>HttpOnly cookie (auto-sent)</td><td>localStorage/memory/cookie</td></tr>
+      <tr><td>CSRF</td><td>Vulnerable (cookies auto-sent)</td><td>Immune if in header (not cookie)</td></tr>
+      <tr><td>XSS</td><td>HttpOnly protects cookie</td><td>localStorage vulnerable to XSS</td></tr>
+      <tr><td>Scalability</td><td>Need shared session store (Redis)</td><td>Any server can validate</td></tr>
+      <tr><td>Revocation</td><td>Delete session from store</td><td>Need blacklist (defeats stateless)</td></tr>
+      <tr><td>Mobile</td><td>Cookies awkward on mobile</td><td>Tokens work natively</td></tr>
+      <tr><td>Best For</td><td>SSR apps (Next.js, Rails)</td><td>SPAs, mobile, microservices</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Session-Based Authentication (Real Server)</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <input id="s-user" placeholder="username" value="alice" style="width:100%;padding:6px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-size:.78rem">
+      </div>
+      <div>
+        <input id="s-pass" placeholder="password" value="Password123!" type="password" style="width:100%;padding:6px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-size:.78rem">
+      </div>
+    </div>
+    <button onclick="sessionLogin()">🔑 Session Login</button>
+    <button onclick="sessionCheck()">🔍 Check Session</button>
+    <button onclick="sessionLogout()">🚪 Logout</button>
+    <div class="output" id="session-result">Click "Session Login" to create a server-side session</div>
+  </div>
+  <div class="card">
+    <h3>🧪 Token-Based Authentication (Real Server)</h3>
+    <button onclick="tokenLogin()">🔐 Token Login</button>
+    <button onclick="tokenProtected()">🔍 Access Protected Route</button>
+    <div class="output" id="token-result">Click "Token Login" to get a JWT</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Architecture Flows</h3>
+    <pre><span class="cm">// SESSION FLOW:</span>
+<span class="cm">// 1. Client → POST /login {user, pass}</span>
+<span class="cm">// 2. Server: create session in Redis, set Set-Cookie: sid=abc123; HttpOnly; Secure</span>
+<span class="cm">// 3. Client → GET /api/data (Cookie: sid=abc123 auto-attached)</span>
+<span class="cm">// 4. Server: lookup session in Redis → return data</span>
+
+<span class="cm">// TOKEN FLOW:</span>
+<span class="cm">// 1. Client → POST /login {user, pass}</span>
+<span class="cm">// 2. Server: create JWT, return { token: "eyJ..." }</span>
+<span class="cm">// 3. Client stores token (memory/cookie/localStorage)</span>
+<span class="cm">// 4. Client → GET /api/data (Authorization: Bearer eyJ...)</span>
+<span class="cm">// 5. Server: verify JWT signature → return data</span>
+
+<span class="cm">// HYBRID (Best practice for SPAs):</span>
+<span class="cm">// Short-lived JWT (15min) + Refresh token in HttpOnly cookie</span>
+<span class="cm">// Access token in memory (XSS-safe), refresh in cookie (CSRF-safe with SameSite)</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Authentication</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: You're building a new SPA. Sessions or tokens? Justify your choice.</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">For a modern SPA: Hybrid approach. Access token (JWT, 15min TTL) stored in JavaScript memory (closure or module-scoped variable — not localStorage). Refresh token in HttpOnly, Secure, SameSite=Strict cookie. Why: Memory storage is immune to XSS persistence (cleared on page reload). HttpOnly cookie is immune to XSS theft. SameSite=Strict prevents CSRF. Short access token limits damage window. This is what Google uses for many of their SPAs.</p>
+      <p><strong style="color:#60a5fa">Q: How does Google handle session management at scale?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Google uses a layered approach: (1) SID cookie for google.com domain (session identifier). (2) SSID/HSID cookies for secure-only sessions. (3) Server-side session store (Spanner/Bigtable) with the actual session data. (4) Anti-session-fixation: session ID rotates on privilege changes. (5) Device fingerprinting for anomaly detection. (6) 2FA challenges on suspicious activity. The key insight: Google treats cookies as opaque identifiers, with all the intelligence server-side.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+let jwtToken=null;
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function sessionLogin(){
+  const el=document.getElementById('session-result');
+  try{
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({username:document.getElementById('s-user').value,password:document.getElementById('s-pass').value})});
+    const d=await res.json();
+    el.textContent=`Session Login Response:\n${JSON.stringify(d,null,2)}\n\nStatus: ${res.status}\nCookies set: Check DevTools → Application → Cookies\n\nNote: The session ID is stored in a HttpOnly cookie.\nJavaScript CANNOT read it: document.cookie = "${document.cookie}"`;
+  }catch(e){el.textContent=`Error: ${e.message}\n\nMake sure the server is running: cd server && node server.js`}
+}
+
+async function sessionCheck(){
+  const el=document.getElementById('session-result');
+  try{
+    const res=await fetch(`${API}/api/auth/me`,{credentials:'include'});
+    const d=await res.json();
+    el.textContent=`Session Check:\n${JSON.stringify(d,null,2)}\n\nThe session cookie was automatically sent with the request.\nThis is why sessions are vulnerable to CSRF — the cookie is sent\neven from cross-origin form submissions.`;
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+
+async function sessionLogout(){
+  const el=document.getElementById('session-result');
+  try{
+    const res=await fetch(`${API}/api/auth/logout`,{method:'POST',credentials:'include'});
+    const d=await res.json();
+    el.textContent=`Logout: ${JSON.stringify(d,null,2)}\n\nSession destroyed on server.\nCookie cleared.`;
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+
+async function tokenLogin(){
+  const el=document.getElementById('token-result');
+  try{
+    const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'alice',password:'Password123!'})});
+    const d=await res.json();
+    jwtToken=d.token;
+    el.textContent=`Token Login Response:\n${JSON.stringify(d,null,2)}\n\nToken stored in JavaScript variable (memory).\nNOT in localStorage, NOT in cookie.\n\nToken parts:\n  Header: ${atob(jwtToken.split('.')[0])}\n  Payload: ${atob(jwtToken.split('.')[1])}\n  Signature: ${jwtToken.split('.')[2].slice(0,20)}...`;
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+
+async function tokenProtected(){
+  const el=document.getElementById('token-result');
+  if(!jwtToken){el.textContent='Login first to get a token';return}
+  try{
+    const res=await fetch(`${API}/api/auth/me`,{headers:{'Authorization':`Bearer ${jwtToken}`}});
+    const d=await res.json();
+    el.textContent=`Protected route response:\n${JSON.stringify(d,null,2)}\n\nThe JWT was sent via Authorization header.\nUnlike cookies, this header is NOT auto-sent.\nThe client must explicitly add it → immune to CSRF.`;
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+</script>
+</body></html>

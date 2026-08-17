@@ -1,0 +1,18 @@
+{
+  "name": "data-fetching-labs-server",
+  "version": "1.0.0",
+  "description": "Express server for Data Fetching & API Design Hands-On Labs — FAANG Senior Frontend Prep",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "uuid": "^10.0.0"
+  }
+}

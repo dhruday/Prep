@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Parallel &amp; Sequential Requests Deep Study — Orchestration Patterns</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2e2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}.card h3.good{color:#10b981}.card h3.bad{color:#ef4444}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Parallel &amp; Sequential Requests Deep Study — Orchestration Patterns</h1>
+<p class="sub">Module 6.3 · FAANG Interview Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Architecture Patterns</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<!-- Tab 0: Deep Theory -->
+<div class="panel active">
+  <div class="card">
+    <h3>1. Browser Connection Limits</h3>
+    <pre><span class="cm">// HTTP/1.1: Max 6 connections per origin (Chrome/Firefox)</span>
+<span class="cm">// 7th request QUEUES until a connection frees up</span>
+
+<span class="cm">// Timeline with 10 parallel requests on HTTP/1.1:</span>
+<span class="cm">// Batch 1 (connections 1-6): ████████ simultaneous</span>
+<span class="cm">// Batch 2 (connections 7-10): ....████ queued, start after batch 1</span>
+<span class="cm">// Total time ≈ 2x single request time</span>
+
+<span class="cm">// HTTP/2: Multiplexed streams on SINGLE connection</span>
+<span class="cm">// All 10 requests share one TCP connection</span>
+<span class="cm">// No head-of-line blocking at HTTP level</span>
+<span class="cm">// Chrome limits ~100 concurrent streams per connection</span>
+
+<span class="cm">// HTTP/3 (QUIC): Independent streams</span>
+<span class="cm">// No TCP head-of-line blocking (stream-level loss recovery)</span>
+<span class="cm">// Even better for parallel requests</span>
+
+<span class="cm">// Why this matters for request orchestration:</span>
+<span class="cm">// On HTTP/1.1: Limit parallel requests to 6 per origin</span>
+<span class="cm">// On HTTP/2: Can fire many parallel requests efficiently</span>
+<span class="cm">// Check: window.performance.getEntries() → see protocol field</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Promise Combinators Deep Dive</h3>
+    <pre><span class="cm">// Promise.all — ALL succeed or first rejection</span>
+<span class="cm">// Behavior: Waits for all. Rejects on FIRST failure.</span>
+<span class="cm">// Use: Independent requests where ALL are required</span>
+Promise.<span class="fn">all</span>([fetchA(), fetchB(), fetchC()])
+<span class="cm">// If B fails: A and C results DISCARDED (but requests complete)</span>
+<span class="cm">// A and C are NOT aborted! They run to completion wastefully.</span>
+
+<span class="cm">// Promise.allSettled — Wait for ALL, never rejects</span>
+<span class="cm">// Returns: [{status:'fulfilled',value}, {status:'rejected',reason}]</span>
+<span class="cm">// Use: Dashboard widgets — show what succeeded, error what failed</span>
+Promise.<span class="fn">allSettled</span>([fetchA(), fetchB(), fetchC()])
+<span class="cm">// Always resolves. No short-circuit.</span>
+
+<span class="cm">// Promise.race — First to settle (resolve OR reject)</span>
+<span class="cm">// Use: Timeout pattern, fastest mirror selection</span>
+Promise.<span class="fn">race</span>([fetchA(), timeout(<span class="num">5000</span>)])
+<span class="cm">// If timeout resolves first → treat as timeout error</span>
+
+<span class="cm">// Promise.any — First to RESOLVE (ignores rejections)</span>
+<span class="cm">// Rejects only if ALL reject (AggregateError)</span>
+<span class="cm">// Use: Redundant servers, CDN fallback</span>
+Promise.<span class="fn">any</span>([fetchFromCDN1(), fetchFromCDN2(), fetchFromCDN3()])</pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Waterfall vs Parallel — Impact on LCP</h3>
+    <pre><span class="cm">// Sequential (waterfall) — 3 dependent requests:</span>
+<span class="cm">// [user 200ms] → [posts 300ms] → [comments 150ms]</span>
+<span class="cm">// Total: 200 + 300 + 150 = 650ms</span>
+
+<span class="cm">// Parallel (independent) — 3 independent requests:</span>
+<span class="cm">// [user 200ms    ]</span>
+<span class="cm">// [posts 300ms       ]</span>
+<span class="cm">// [comments 150ms]</span>
+<span class="cm">// Total: max(200, 300, 150) = 300ms ← 2.2x faster!</span>
+
+<span class="cm">// Mixed — some dependent, some not:</span>
+<span class="cm">// [user 200ms] → [user-posts 300ms]</span>
+<span class="cm">// [config 100ms]   (independent, parallel with user)</span>
+<span class="cm">// Total: 200 + 300 = 500ms (config hidden during user fetch)</span>
+
+<span class="cm">// LCP impact: Every 100ms of data fetching delay</span>
+<span class="cm">// adds ~100ms to Largest Contentful Paint</span>
+<span class="cm">// Google: LCP should be &lt; 2.5s for "Good" rating</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>4. Concurrency Control — Why Unlimited Parallel Is Bad</h3>
+    <pre><span class="cm">// Problem: Dashboard with 20 widget APIs</span>
+<span class="cm">// Promise.all(widgets.map(w => fetch(w.url)))</span>
+<span class="cm">// This fires ALL 20 simultaneously!</span>
+
+<span class="cm">// Issues:</span>
+<span class="cm">// 1. HTTP/1.1: Only 6 connections → 14 queue → waterfall</span>
+<span class="cm">// 2. Server overload: 20 requests from one client</span>
+<span class="cm">// 3. Memory: 20 response bodies buffered simultaneously</span>
+<span class="cm">// 4. Mobile: Network contention with other tabs/apps</span>
+
+<span class="cm">// Solution: Concurrency limiter (pool pattern)</span>
+<span class="cm">// Process max N requests at a time</span>
+<span class="cm">// When one completes, start the next queued request</span>
+
+<span class="cm">// Common limits:</span>
+<span class="cm">// HTTP/1.1: concurrency = 4-6</span>
+<span class="cm">// HTTP/2: concurrency = 10-20</span>
+<span class="cm">// Image loading: concurrency = 3</span>
+<span class="cm">// API batch processing: concurrency = 5</span></pre>
+  </div>
+</div>
+
+<!-- Tab 1: Architecture Patterns -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Data Dependency Graph</h3>
+    <pre><span class="cm">// Model requests as a DAG (Directed Acyclic Graph):</span>
+
+      ┌──── auth ────┐
+      │              │
+      ▼              ▼
+    user          config
+      │              │
+      ├──────┬───────┘
+      ▼      ▼
+    posts  preferences
+      │
+      ▼
+   comments
+
+<span class="cm">// Execution plan:</span>
+<span class="cm">// Level 0: auth (must be first)</span>
+<span class="cm">// Level 1: [user, config] (parallel, both depend on auth)</span>
+<span class="cm">// Level 2: [posts, preferences] (parallel, different deps)</span>
+<span class="cm">// Level 3: comments (depends on posts)</span>
+
+<span class="cm">// Optimal execution:</span>
+<span class="cm">// auth → [user || config] → [posts || preferences] → comments</span>
+<span class="cm">// Each level runs in parallel where dependencies allow</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Suspense Waterfall Prevention</h3>
+    <pre><span class="cm">// React Suspense creates UNINTENTIONAL waterfalls:</span>
+
+<span class="cm">// ❌ BAD: Each component suspends independently</span>
+<span class="kw">function</span> <span class="fn">Page</span>() {
+  <span class="kw">return</span> (
+    &lt;Suspense fallback={&lt;Spinner/&gt;}&gt;
+      &lt;UserProfile /&gt;   <span class="cm">// suspends → fetches user</span>
+      &lt;UserPosts /&gt;     <span class="cm">// WAITS for UserProfile to resolve!</span>
+    &lt;/Suspense&gt;         <span class="cm">// Sequential waterfall!</span>
+  );
+}
+
+<span class="cm">// ✅ GOOD: Prefetch all data before render</span>
+<span class="kw">function</span> <span class="fn">Page</span>() {
+  <span class="cm">// Both queries start simultaneously</span>
+  <span class="kw">const</span> userQuery = <span class="fn">useSuspenseQuery</span>({queryKey: [<span class="str">'user'</span>]});
+  <span class="kw">const</span> postsQuery = <span class="fn">useSuspenseQuery</span>({queryKey: [<span class="str">'posts'</span>]});
+  <span class="cm">// React Query batches: since both fire before first suspend,</span>
+  <span class="cm">// they run in parallel! Component suspends once for both.</span>
+}
+
+<span class="cm">// ✅ ALSO GOOD: Nested Suspense boundaries</span>
+&lt;Suspense&gt;
+  &lt;UserProfile /&gt;
+  &lt;Suspense&gt;&lt;UserPosts /&gt;&lt;/Suspense&gt; <span class="cm">// Independent boundary</span>
+&lt;/Suspense&gt;</pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Request Queue with Priority</h3>
+    <pre><span class="cm">// Priority queue for mixed-criticality requests:</span>
+
+<span class="kw">class</span> <span class="fn">PriorityRequestQueue</span> {
+  <span class="cm">// Priority levels:</span>
+  <span class="cm">// CRITICAL: auth, core data (process immediately)</span>
+  <span class="cm">// HIGH: above-the-fold content</span>
+  <span class="cm">// NORMAL: interactive features</span>
+  <span class="cm">// LOW: analytics, prefetch, below-fold images</span>
+  
+  <span class="cm">// Architecture:</span>
+  <span class="cm">// ┌─────────────┐</span>
+  <span class="cm">// │ CRITICAL [■] │ → immediate (no queue)</span>
+  <span class="cm">// │ HIGH [■■■]   │ → concurrency: 4</span>
+  <span class="cm">// │ NORMAL [■■]  │ → concurrency: 2 (after HIGH)</span>
+  <span class="cm">// │ LOW [■■■■■]  │ → concurrency: 1 (idle only)</span>
+  <span class="cm">// └─────────────┘</span>
+  
+  <span class="cm">// When a HIGH request completes:</span>
+  <span class="cm">// 1. Check HIGH queue first</span>
+  <span class="cm">// 2. If empty, promote from NORMAL</span>
+  <span class="cm">// 3. If empty, promote from LOW</span>
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>4. Batching Pattern</h3>
+    <pre><span class="cm">// Instead of N individual requests, batch into 1:</span>
+
+<span class="cm">// ❌ N+1 problem:</span>
+posts.<span class="fn">forEach</span>(post =&gt; <span class="fn">fetch</span>(<span class="str">`/api/users/${post.authorId}`</span>));
+<span class="cm">// 100 posts = 100 HTTP requests to /api/users/!</span>
+
+<span class="cm">// ✅ Batch request:</span>
+<span class="kw">const</span> uniqueIds = [...<span class="kw">new</span> Set(posts.<span class="fn">map</span>(p =&gt; p.authorId))];
+<span class="fn">fetch</span>(<span class="str">`/api/users/batch?ids=${uniqueIds.join(',')}`</span>);
+<span class="cm">// 1 HTTP request for all authors!</span>
+
+<span class="cm">// DataLoader pattern (auto-batching):</span>
+<span class="cm">// Collects all load(id) calls in current tick</span>
+<span class="cm">// Then fires single batch request in next microtask</span>
+<span class="kw">const</span> userLoader = <span class="kw">new</span> <span class="fn">DataLoader</span>(<span class="kw">async</span> (ids) =&gt; {
+  <span class="kw">const</span> users = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`/api/users/batch?ids=${ids}`</span>);
+  <span class="kw">return</span> ids.<span class="fn">map</span>(id =&gt; users.<span class="fn">find</span>(u =&gt; u.id === id));
+});
+<span class="cm">// Multiple components call: userLoader.load(authorId)</span>
+<span class="cm">// All calls in same tick batched into ONE request</span></pre>
+  </div>
+</div>
+
+<!-- Tab 2: FAANG Interview -->
+<div class="panel">
+  <div class="qa">
+    <div class="q">Q1: Implement a concurrency limiter for Promise-based operations. Max N at a time.</div>
+    <div class="a">See Code Walkthrough for full implementation. Key design:<br>
+    1. Maintain running count and waiting queue<br>
+    2. When add(task) called: if running &lt; limit, execute immediately; else queue<br>
+    3. When task completes: decrement running, dequeue and start next<br>
+    4. Use Promise chaining to return original task's result<br>
+    5. Handle rejections without stopping the queue<br>
+    Time complexity: O(1) per enqueue/dequeue. Space: O(queue size).</div>
+    <div class="followup">Follow-up: How would you add priority to this?</div>
+    <div class="a">Replace FIFO queue with a priority queue (min-heap or sorted array). Each task has a priority. On dequeue, pop highest priority task. For equal priorities, maintain insertion order (FIFO within priority level).</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q2: Your dashboard loads 15 widgets. Some users see partial data. Diagnose.</div>
+    <div class="a">Likely cause: Promise.all fails fast on first rejection, discarding all other results.<br><br>
+    <strong>Fix</strong>: Switch to Promise.allSettled:<br>
+    1. All 15 requests complete regardless of individual failures<br>
+    2. Map results: fulfilled → render widget, rejected → show error per widget<br>
+    3. Individual error boundaries per widget component<br>
+    4. Retry option per failed widget<br><br>
+    <strong>Additional improvements</strong>:<br>
+    - Concurrency limit of 6 (HTTP/1.1 friendly)<br>
+    - Priority: critical widgets first (revenue, active users), enrichment widgets last<br>
+    - Timeouts per widget: fast timeout (3s) for quick APIs, long timeout (10s) for analytics<br>
+    - Progressive rendering: show each widget as it resolves</div>
+    <div class="followup">Follow-up: How do you show progress as widgets load?</div>
+    <div class="a">Track resolution count: const resolved = ref(0). On each promise settlement, increment and update progress bar (resolved/total). With allSettled, you can even show "12/15 loaded, 2 failed, 1 loading" in real-time.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q3: Promise.all vs Promise.allSettled vs Promise.race vs Promise.any — when each?</div>
+    <div class="a"><strong>Promise.all</strong>: Login flow (auth → token → user). If ANY fails, entire flow is invalid. Fast-fail is desired.<br>
+    <strong>Promise.allSettled</strong>: Dashboard. Show what works, error what doesn't. Analytics batch (some events may fail). Feature flag fetching.<br>
+    <strong>Promise.race</strong>: Request timeout (race against setTimeout). Fastest CDN selection. "Show loading spinner after 200ms" pattern.<br>
+    <strong>Promise.any</strong>: Redundant API calls to multiple regions. CDN fallback (try CDN1, CDN2, origin — first success wins). Cache layers (try memory → disk → network).</div>
+    <div class="followup">Follow-up: What happens to the "losing" promises in Promise.race?</div>
+    <div class="a">They continue executing! Race doesn't cancel losers. Critical: use AbortController to cancel losing requests. Otherwise you waste bandwidth and server resources. Pattern: store AbortControllers, abort all on first resolution.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q4: How would you fetch data for a page that needs user profile, recent posts, notifications, and recommendations?</div>
+    <div class="a"><strong>Dependency analysis</strong>:<br>
+    - user profile: no dependency (auth token only)<br>
+    - recent posts: depends on user.id<br>
+    - notifications: no dependency (auth token only)<br>
+    - recommendations: depends on user.id + user.preferences<br><br>
+    <strong>Optimal execution</strong>:<br>
+    Level 1: [user, notifications] (parallel — both independent)<br>
+    Level 2: [posts, recommendations] (parallel — both need user, but independent of each other)<br><br>
+    <strong>Code</strong>:<br>
+    const [user, notifications] = await Promise.all([fetchUser(), fetchNotifications()]);<br>
+    const [posts, recs] = await Promise.all([fetchPosts(user.id), fetchRecs(user.id)]);<br><br>
+    Total time: max(user, notif) + max(posts, recs) instead of sum of all four.</div>
+    <div class="followup">Follow-up: What if recommendations is slow (2s) but not critical?</div>
+    <div class="a">Don't block render on it. Render page with user + posts + notifications immediately. Load recommendations lazily with Suspense boundary or loading skeleton. Or: use Promise.race with timeout — show "recommendations coming soon" after 500ms, load in background.</div>
+  </div>
+
+  <div class="qa">
+    <div class="q">Q5: Explain the request waterfall problem in React and how to solve it.</div>
+    <div class="a"><strong>Problem</strong>: Component tree creates waterfall:<br>
+    Parent renders → fetches data → Child renders → fetches data → Grandchild...<br>
+    Each level waits for parent to render before starting its own fetch.<br><br>
+    <strong>Solutions</strong>:<br>
+    1. <strong>Hoist fetches</strong>: Parent fetches all data, passes to children<br>
+    2. <strong>Parallel queries</strong>: useQueries([query1, query2, query3]) at top level<br>
+    3. <strong>Prefetch</strong>: queryClient.prefetchQuery on route navigation (before component mounts)<br>
+    4. <strong>React Router loaders</strong>: loader() functions fetch before component renders<br>
+    5. <strong>Server Components</strong>: Fetch on server, send rendered HTML (no client waterfall)<br>
+    6. <strong>GraphQL</strong>: Single query returns all needed data (no component-level fetches)</div>
+  </div>
+</div>
+
+<!-- Tab 3: Code Walkthrough -->
+<div class="panel">
+  <div class="card">
+    <h3>1. Concurrency Limiter</h3>
+    <pre><span class="kw">function</span> <span class="fn">createPool</span>(concurrency) {
+  <span class="kw">let</span> running = <span class="num">0</span>;
+  <span class="kw">const</span> queue = [];
+  
+  <span class="kw">function</span> <span class="fn">next</span>() {
+    <span class="kw">while</span> (running &lt; concurrency &amp;&amp; queue.length) {
+      <span class="kw">const</span> { task, resolve, reject } = queue.<span class="fn">shift</span>();
+      running++;
+      task()
+        .<span class="fn">then</span>(resolve, reject)
+        .<span class="fn">finally</span>(() =&gt; {
+          running--;
+          <span class="fn">next</span>(); <span class="cm">// Process next queued task</span>
+        });
+    }
+  }
+  
+  <span class="kw">return</span> {
+    <span class="fn">add</span>(task) {
+      <span class="kw">return new</span> Promise((resolve, reject) =&gt; {
+        queue.<span class="fn">push</span>({ task, resolve, reject });
+        <span class="fn">next</span>();
+      });
+    },
+    <span class="kw">get</span> <span class="fn">size</span>() { <span class="kw">return</span> queue.length; },
+    <span class="kw">get</span> <span class="fn">active</span>() { <span class="kw">return</span> running; }
+  };
+}
+
+<span class="cm">// Usage:</span>
+<span class="kw">const</span> pool = <span class="fn">createPool</span>(<span class="num">5</span>); <span class="cm">// Max 5 concurrent</span>
+<span class="kw">const</span> results = <span class="kw">await</span> Promise.<span class="fn">all</span>(
+  urls.<span class="fn">map</span>(url =&gt; pool.<span class="fn">add</span>(() =&gt; <span class="fn">fetch</span>(url)))
+);</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Dependency-Aware Parallel Fetcher</h3>
+    <pre><span class="cm">// Execute requests respecting dependency graph</span>
+<span class="kw">async function</span> <span class="fn">fetchWithDeps</span>(tasks) {
+  <span class="cm">// tasks = [</span>
+  <span class="cm">//   { id: 'user', fn: fetchUser, deps: [] },</span>
+  <span class="cm">//   { id: 'posts', fn: (results) => fetchPosts(results.user.id), deps: ['user'] },</span>
+  <span class="cm">//   { id: 'config', fn: fetchConfig, deps: [] },</span>
+  <span class="cm">// ]</span>
+  
+  <span class="kw">const</span> results = {};
+  <span class="kw">const</span> completed = <span class="kw">new</span> Set();
+  <span class="kw">const</span> pending = <span class="kw">new</span> Map(tasks.<span class="fn">map</span>(t =&gt; [t.id, t]));
+  
+  <span class="kw">while</span> (pending.size &gt; <span class="num">0</span>) {
+    <span class="cm">// Find tasks whose dependencies are ALL completed</span>
+    <span class="kw">const</span> ready = [...pending.<span class="fn">values</span>()].<span class="fn">filter</span>(
+      t =&gt; t.deps.<span class="fn">every</span>(d =&gt; completed.<span class="fn">has</span>(d))
+    );
+    
+    <span class="kw">if</span> (ready.length === <span class="num">0</span>) <span class="kw">throw new</span> Error(<span class="str">'Circular dependency'</span>);
+    
+    <span class="cm">// Execute all ready tasks in parallel</span>
+    <span class="kw">const</span> batch = <span class="kw">await</span> Promise.<span class="fn">allSettled</span>(
+      ready.<span class="fn">map</span>(<span class="kw">async</span> (t) =&gt; {
+        results[t.id] = <span class="kw">await</span> t.<span class="fn">fn</span>(results);
+        completed.<span class="fn">add</span>(t.id);
+        pending.<span class="fn">delete</span>(t.id);
+      })
+    );
+  }
+  
+  <span class="kw">return</span> results;
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>3. React useQueries for Parallel Fetching</h3>
+    <pre><span class="cm">// React Query: parallel independent queries</span>
+<span class="kw">function</span> <span class="fn">Dashboard</span>() {
+  <span class="kw">const</span> results = <span class="fn">useQueries</span>({
+    queries: [
+      { queryKey: [<span class="str">'revenue'</span>], queryFn: <span class="fn">fetchRevenue</span> },
+      { queryKey: [<span class="str">'users'</span>], queryFn: <span class="fn">fetchActiveUsers</span> },
+      { queryKey: [<span class="str">'orders'</span>], queryFn: <span class="fn">fetchRecentOrders</span> },
+      { queryKey: [<span class="str">'alerts'</span>], queryFn: <span class="fn">fetchAlerts</span> },
+    ],
+  });
+  <span class="cm">// All 4 fire simultaneously on mount!</span>
+  <span class="cm">// Each has independent loading/error state</span>
+  
+  <span class="kw">return</span> (
+    &lt;div&gt;
+      {results.<span class="fn">map</span>((result, i) =&gt; (
+        &lt;Widget
+          key={i}
+          isLoading={result.isLoading}
+          error={result.error}
+          data={result.data}
+        /&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}
+
+<span class="cm">// For dependent queries — use enabled option:</span>
+<span class="kw">const</span> user = <span class="fn">useQuery</span>({ queryKey: [<span class="str">'user'</span>], queryFn: <span class="fn">fetchUser</span> });
+<span class="kw">const</span> posts = <span class="fn">useQuery</span>({
+  queryKey: [<span class="str">'posts'</span>, user.data?.id],
+  queryFn: () =&gt; <span class="fn">fetchPosts</span>(user.data.id),
+  enabled: !!user.data?.id, <span class="cm">// Only fetch after user loads</span>
+});</pre>
+  </div>
+</div>
+
+<!-- Tab 4: Cheat Sheet -->
+<div class="panel">
+  <div class="card">
+    <h3>Promise Combinator Quick Reference</h3>
+    <table>
+      <tr><th>Combinator</th><th>Settles when</th><th>Result</th><th>Use case</th></tr>
+      <tr><td>Promise.all</td><td>All fulfill OR first reject</td><td>Array of values</td><td>Dependent batch, login flow</td></tr>
+      <tr><td>Promise.allSettled</td><td>All settle</td><td>Array of {status, value/reason}</td><td>Dashboard, partial success OK</td></tr>
+      <tr><td>Promise.race</td><td>First to settle</td><td>First settled value/reason</td><td>Timeout, fastest CDN</td></tr>
+      <tr><td>Promise.any</td><td>First to fulfill</td><td>First fulfilled value</td><td>Redundancy, fallback chain</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Orchestration Decision Tree</h3>
+    <pre>Requests independent? ──── No ──→ <span class="fn">Sequential</span> (await in order)
+         │ Yes
+         ▼
+All must succeed? ─────── Yes ──→ <span class="fn">Promise.all</span>
+         │ No
+         ▼
+Show partial results? ─── Yes ──→ <span class="fn">Promise.allSettled</span>
+         │ No
+         ▼
+Need fastest only? ─────── Yes ──→ <span class="fn">Promise.any</span> or <span class="fn">Promise.race</span>
+         │
+         ▼
+Many requests (&gt;6)? ────── Yes ──→ <span class="fn">Concurrency limiter</span> (pool)
+         │ No
+         ▼
+Mixed dependencies? ─────── Yes ──→ <span class="fn">Dependency graph executor</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>React Patterns Quick Reference</h3>
+    <pre><span class="cm">// Parallel independent:</span>
+<span class="fn">useQueries</span>({ queries: [...] })
+
+<span class="cm">// Sequential dependent:</span>
+<span class="kw">const</span> q1 = <span class="fn">useQuery</span>({...});
+<span class="kw">const</span> q2 = <span class="fn">useQuery</span>({..., enabled: !!q1.data });
+
+<span class="cm">// Prefetch before render:</span>
+queryClient.<span class="fn">prefetchQuery</span>({...})
+
+<span class="cm">// Route-level parallel (React Router v6.4):</span>
+{ path: <span class="str">'/dashboard'</span>, loader: () =&gt; ({
+    user: <span class="fn">fetchUser</span>(),
+    stats: <span class="fn">fetchStats</span>()
+  })
+}</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

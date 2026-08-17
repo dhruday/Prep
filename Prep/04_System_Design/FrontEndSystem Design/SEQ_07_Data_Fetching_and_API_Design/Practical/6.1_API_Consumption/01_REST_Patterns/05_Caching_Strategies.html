@@ -1,0 +1,217 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Lab 05 — Caching Strategies</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.5rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}
+.tab.active{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}
+.card h3{color:#60a5fa;margin-bottom:10px;font-size:.95rem}
+.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.err{color:#ef4444}.num{color:#f59e0b}
+input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}
+button:hover{border-color:#60a5fa;color:#60a5fa}
+button.blue{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}
+button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}
+button.red{background:#3a1e1e;border-color:#ef4444;color:#ef4444}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+.info{background:#0f1117;border-left:3px solid #60a5fa;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+.warn{border-left-color:#ef4444}.ok{border-left-color:#10b981}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.78rem;margin:12px 0}
+.flow span{background:#1e2130;border:1px solid #2d3551;padding:6px 10px;border-radius:6px}
+.flow .arrow{background:none;border:none;color:#60a5fa;font-weight:bold}
+.metric{display:inline-block;padding:6px 14px;border-radius:8px;font-size:.82rem;margin:4px}
+.metric.g{background:#1a3a2a;color:#10b981;border:1px solid #10b981}
+.metric.b{background:#1e2a4a;color:#60a5fa;border:1px solid #60a5fa}
+.metric.r{background:#3a1e1e;color:#ef4444;border:1px solid #ef4444}
+</style></head><body>
+<h1>Lab 05 — Caching Strategies</h1>
+<p class="sub">Module 6.1 · API Consumption · ETag, stale-while-revalidate, If-None-Match</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&amp;A</div>
+</div>
+
+<!-- TAB 0: Concept -->
+<div class="panel active">
+  <div class="card">
+    <h3>HTTP Caching Headers</h3>
+    <pre><span class="kw">Cache-Control:</span> max-age=<span class="num">60</span>              <span class="cm">// Fresh for 60s</span>
+<span class="kw">Cache-Control:</span> stale-while-revalidate=<span class="num">30</span> <span class="cm">// Serve stale 30s while refetching</span>
+<span class="kw">Cache-Control:</span> no-cache                  <span class="cm">// Always revalidate (NOT "don't cache")</span>
+<span class="kw">Cache-Control:</span> no-store                  <span class="cm">// Never cache at all</span>
+<span class="kw">ETag:</span> <span class="str">"abc123"</span>                           <span class="cm">// Content hash for validation</span>
+<span class="kw">If-None-Match:</span> <span class="str">"abc123"</span>                   <span class="cm">// Client sends to validate</span>
+<span class="kw">Last-Modified:</span> <span class="str">Mon, 01 Jan 2024 00:00:00 GMT</span></pre>
+  </div>
+  <div class="card">
+    <h3>Decision Tree</h3>
+    <div class="flow">
+      <span>Is data stale?</span><span class="arrow">→ Yes →</span><span>Stale data acceptable?</span>
+      <span class="arrow">→ Yes →</span><span style="color:#10b981">stale-while-revalidate</span>
+    </div>
+    <div class="flow">
+      <span style="visibility:hidden">Is data stale?</span><span class="arrow" style="visibility:hidden">→</span>
+      <span style="visibility:hidden">Stale data ok?</span>
+      <span class="arrow">→ No →</span><span style="color:#f59e0b">Refetch &amp; wait</span>
+    </div>
+  </div>
+  <div class="card">
+    <h3>304 Not Modified</h3>
+    <p style="font-size:.82rem;color:#94a3b8">When the client sends <code>If-None-Match: "etag"</code> and the resource hasn't changed, the server returns <b>304 Not Modified</b> with <b>no body</b> — the browser uses its cached copy. This saves bandwidth while ensuring freshness.</p>
+  </div>
+</div>
+
+<!-- TAB 1: Hands-On Lab -->
+<div class="panel">
+  <div class="card">
+    <h3>ETag Validation</h3>
+    <button class="green" onclick="fetchFirst()">1. Fetch Products (get ETag)</button>
+    <button class="blue" onclick="fetchWithEtag()">2. Fetch Again (with If-None-Match)</button>
+    <div class="grid2" style="margin-top:12px">
+      <div>
+        <b style="font-size:.8rem;color:#f59e0b">First Request (200)</b>
+        <div class="output" id="first">Click "Fetch Products" first…</div>
+      </div>
+      <div>
+        <b style="font-size:.8rem;color:#10b981">Second Request (304?)</b>
+        <div class="output" id="second">Then click "Fetch Again"…</div>
+      </div>
+    </div>
+    <div id="comparison" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <h3>Stale-While-Revalidate</h3>
+    <button class="blue" onclick="fetchDetail()">Fetch Product Detail</button>
+    <div class="output" id="detailOut">Click to see Cache-Control headers…</div>
+    <div id="staleTimer" style="margin-top:8px;font-size:.82rem;color:#94a3b8"></div>
+  </div>
+  <div class="card">
+    <h3>Cache Log</h3>
+    <div class="output" id="cacheLog">Waiting…</div>
+  </div>
+</div>
+
+<!-- TAB 2: Browser Internals -->
+<div class="panel">
+  <div class="card">
+    <h3>Browser Cache Layers</h3>
+    <div class="flow">
+      <span style="color:#a78bfa">Memory Cache</span><span class="arrow">→</span>
+      <span style="color:#60a5fa">Disk Cache</span><span class="arrow">→</span>
+      <span style="color:#10b981">Service Worker Cache</span><span class="arrow">→</span>
+      <span style="color:#f59e0b">Network</span>
+    </div>
+    <div class="info"><b>Memory cache:</b> Very fast, cleared on tab close. Used for resources loaded in the same page load (preloaded images, scripts).</div>
+    <div class="info"><b>Disk cache:</b> Persists across sessions. Respects Cache-Control headers. Slower than memory but larger capacity.</div>
+  </div>
+  <div class="card">
+    <h3>Cache-Control → Storage Duration</h3>
+    <pre><span class="str">max-age=3600</span>       → disk cache for 1 hour, no revalidation
+<span class="str">no-cache</span>            → stored in disk cache but MUST revalidate every time
+<span class="str">no-store</span>            → never written to any cache layer
+<span class="str">private</span>             → only in browser cache, not CDN/proxy
+<span class="str">public, max-age=0</span>  → cacheable by CDN but always revalidate</pre>
+  </div>
+  <div class="card">
+    <h3>Cache Partitioning (Chrome)</h3>
+    <p style="font-size:.82rem;color:#94a3b8">Since Chrome 86, the HTTP cache is <b>partitioned by top-level site</b>. A resource cached under <code>siteA.com</code> cannot be reused when embedded in <code>siteB.com</code> — even if it's the same URL. This prevents cross-site tracking via cache timing attacks.</p>
+  </div>
+  <div class="card">
+    <h3>DevTools Network: Cache Status</h3>
+    <pre><span class="str">(from memory cache)</span>  → retrieved from RAM, 0ms, no network
+<span class="str">(from disk cache)</span>    → retrieved from disk, ~1ms, no network
+<span class="num">304 Not Modified</span>     → revalidated with server, no body transferred
+<span class="kw">200 OK</span>               → full fetch from server</pre>
+  </div>
+</div>
+
+<!-- TAB 3: Interview Q&A -->
+<div class="panel">
+  <div class="card">
+    <h3>Q: What's the difference between no-cache and no-store?</h3>
+    <p style="font-size:.85rem;color:#94a3b8"><b>no-cache</b> = the browser CAN store the response but MUST revalidate with the server before using it (sends If-None-Match/If-Modified-Since). <b>no-store</b> = the browser must NOT store the response at all — not in memory, not on disk. Use <code>no-store</code> for sensitive data (banking, PII).</p>
+  </div>
+  <div class="card">
+    <h3>Q: When would you use ETag vs Last-Modified?</h3>
+    <p style="font-size:.85rem;color:#94a3b8"><b>ETag</b> is more precise — it's a content hash, so it detects any change regardless of timestamp. <b>Last-Modified</b> has 1-second granularity and can't detect sub-second changes. ETags also work for dynamically generated content where timestamps are meaningless. Use both for maximum compatibility.</p>
+  </div>
+  <div class="card">
+    <h3>Q: How does stale-while-revalidate improve perceived performance?</h3>
+    <p style="font-size:.85rem;color:#94a3b8">The browser serves the <b>stale cached response immediately</b> (0ms latency) while firing a background revalidation request. The user sees instant data, and the next request gets fresh data. This is the core UX pattern behind SWR/React Query's <code>staleTime</code> concept.</p>
+  </div>
+  <div class="card">
+    <h3>Q: How do you bust cache when deploying new API versions?</h3>
+    <p style="font-size:.85rem;color:#94a3b8"><b>(1) URL versioning:</b> <code>/api/v2/products</code>. <b>(2) Query param:</b> <code>?v=2.1</code> (fragile, some CDNs ignore query strings). <b>(3) Content-based ETags:</b> Server generates new ETag on code deploy, 304 stops matching. <b>(4) Short max-age + stale-while-revalidate:</b> Cached data refreshes within seconds of deploy.</p>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';
+const tabs=document.querySelectorAll('.tab');
+const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i);});}
+function log(id,msg){const el=document.getElementById(id);el.textContent+='\n'+new Date().toLocaleTimeString()+' '+msg;el.scrollTop=el.scrollHeight;}
+
+let savedEtag='',firstSize=0;
+
+async function fetchFirst(){
+  const el=document.getElementById('first');
+  const comp=document.getElementById('comparison');
+  el.textContent='Fetching…';comp.innerHTML='';
+  const start=performance.now();
+  const res=await fetch(API+'/api/rest/products?limit=3');
+  const dur=Math.round(performance.now()-start);
+  const body=await res.text();firstSize=body.length;
+  savedEtag=res.headers.get('etag')||res.headers.get('ETag')||'';
+  const headers={};res.headers.forEach((v,k)=>headers[k]=v);
+  el.textContent=`Status: ${res.status}\nDuration: ${dur}ms\nBody size: ${body.length} bytes\nETag: ${savedEtag}\n\nHeaders:\n${JSON.stringify(headers,null,2)}\n\nBody (preview):\n${body.slice(0,300)}…`;
+  log('cacheLog',`First fetch: ${res.status}, ${body.length}B, ETag=${savedEtag}`);
+}
+
+async function fetchWithEtag(){
+  const el=document.getElementById('second');
+  const comp=document.getElementById('comparison');
+  if(!savedEtag){el.textContent='No ETag saved — click "Fetch Products" first!';return;}
+  el.textContent='Fetching with If-None-Match: '+savedEtag;
+  const start=performance.now();
+  const res=await fetch(API+'/api/rest/products?limit=3',{headers:{'If-None-Match':savedEtag}});
+  const dur=Math.round(performance.now()-start);
+  const body=await res.text();
+  const headers={};res.headers.forEach((v,k)=>headers[k]=v);
+  el.textContent=`Status: ${res.status}${res.status===304?' (Not Modified)':''}\nDuration: ${dur}ms\nBody size: ${body.length} bytes\n\nHeaders:\n${JSON.stringify(headers,null,2)}`;
+  const secondSize=body.length;
+  comp.innerHTML=`<span class="metric b">First: ${firstSize} bytes transferred</span><span class="metric ${res.status===304?'g':'b'}">Second: ${secondSize} bytes${res.status===304?' (headers only)':''}</span><span class="metric ${res.status===304?'g':'r'}">${res.status===304?'Saved '+(firstSize-secondSize)+' bytes!':'Full re-download'}</span>`;
+  log('cacheLog',`Second fetch: ${res.status}, ${secondSize}B, saved=${firstSize-secondSize}B`);
+}
+
+let staleInterval;
+async function fetchDetail(){
+  const el=document.getElementById('detailOut');
+  const timer=document.getElementById('staleTimer');
+  if(staleInterval)clearInterval(staleInterval);
+  el.textContent='Fetching…';
+  const res=await fetch(API+'/api/rest/products/1');
+  const body=await res.text();
+  const cc=res.headers.get('cache-control')||'(none)';
+  const headers={};res.headers.forEach((v,k)=>headers[k]=v);
+  el.textContent=`Status: ${res.status}\nCache-Control: ${cc}\n\nAll Headers:\n${JSON.stringify(headers,null,2)}\n\nBody:\n${body.slice(0,400)}`;
+  const match=cc.match(/max-age=(\d+)/);
+  if(match){
+    const maxAge=parseInt(match[1]);let elapsed=0;
+    timer.textContent=`Fresh for ${maxAge}s — elapsed: 0s`;
+    staleInterval=setInterval(()=>{elapsed++;timer.textContent=`Fresh for ${maxAge}s — elapsed: ${elapsed}s`+(elapsed>=maxAge?' — STALE NOW':'');if(elapsed>maxAge+30)clearInterval(staleInterval);},1000);
+  }
+  log('cacheLog',`Detail fetch: ${res.status}, Cache-Control: ${cc}`);
+}
+</script>
+</body></html>

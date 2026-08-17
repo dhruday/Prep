@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Tree Shaking Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2e1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Tree Shaking Deep Study</h1>
+<p class="sub">Module 7.2 · Code Optimization · Dead Code Elimination via ES Modules</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Side Effects</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Configuration</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. What Is Tree Shaking?</h3>
+    <pre><span class="cm">// Tree shaking = removing unused exports from the final bundle</span>
+<span class="cm">// Named after "shaking a tree to remove dead leaves"</span>
+<span class="cm">//</span>
+<span class="cm">// Example: lodash is 70KB minified</span>
+<span class="cm">// You only use: import { debounce } from 'lodash'</span>
+<span class="cm">// Without tree shaking: 70KB in bundle</span>
+<span class="cm">// With tree shaking: ~2KB in bundle (only debounce + its deps)</span>
+<span class="cm">//</span>
+<span class="cm">// REQUIREMENT: Only works with ES Modules (import/export)</span>
+<span class="cm">// Does NOT work with CommonJS (require/module.exports)</span>
+<span class="cm">//</span>
+<span class="cm">// Why ES Modules?</span>
+<span class="cm">// - Static structure: imports/exports known at compile time</span>
+<span class="cm">// - No conditional imports: always at top level</span>
+<span class="cm">// - Bundler can statically analyze dependency graph</span>
+<span class="cm">//</span>
+<span class="cm">// Why NOT CommonJS?</span>
+<span class="cm">// - Dynamic: require() can be called conditionally</span>
+<span class="cm">// - module.exports can be reassigned at runtime</span>
+<span class="cm">// - Bundler can't determine what's used without executing code</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. How Bundlers Tree Shake</h3>
+    <pre><span class="cm">// Step 1: Build dependency graph</span>
+<span class="cm">// Start from entry point, follow all import statements</span>
+<span class="cm">// Create a graph of modules and their exports</span>
+<span class="cm">//</span>
+<span class="cm">// Step 2: Mark used exports</span>
+<span class="cm">// Starting from entry, mark every import as "used"</span>
+<span class="cm">// Follow the chain: entry → imports A.foo → A.foo imports B.bar</span>
+<span class="cm">// Everything not marked = dead code</span>
+<span class="cm">//</span>
+<span class="cm">// Step 3: Remove unused exports</span>
+<span class="cm">// Terser/SWC minifier removes code marked as unused</span>
+<span class="cm">// Only in production mode (development keeps everything for debugging)</span>
+<span class="cm">//</span>
+<span class="cm">// Example:</span>
+<span class="cm">// utils.js</span>
+<span class="kw">export function</span> <span class="fn">used</span>() { <span class="kw">return</span> <span class="str">'I stay'</span>; }
+<span class="kw">export function</span> <span class="fn">unused</span>() { <span class="kw">return</span> <span class="str">'I get removed'</span>; }
+
+<span class="cm">// app.js</span>
+<span class="kw">import</span> { used } <span class="kw">from</span> <span class="str">'./utils'</span>;
+console.log(<span class="fn">used</span>());
+
+<span class="cm">// After tree shaking: unused() is removed from bundle</span>
+<span class="cm">// Minifier also removes the export statement itself</span>
+
+<span class="cm">// Webpack marks unused exports with a comment:</span>
+<span class="cm">// /* unused harmony export unused */</span>
+<span class="cm">// Terser sees this and removes the dead code</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. ESM vs CommonJS — Tree Shaking Impact</h3>
+    <table>
+      <tr><th>Feature</th><th>ES Modules (ESM)</th><th>CommonJS (CJS)</th></tr>
+      <tr><td>Syntax</td><td>import / export</td><td>require() / module.exports</td></tr>
+      <tr><td>Analysis</td><td>Static (compile-time)</td><td>Dynamic (runtime)</td></tr>
+      <tr><td>Tree Shakeable</td><td>✅ Yes</td><td>❌ No</td></tr>
+      <tr><td>Conditional Import</td><td>❌ Not at top level</td><td>✅ require() anywhere</td></tr>
+      <tr><td>Circular Deps</td><td>Handled (live bindings)</td><td>Partial (cached exports)</td></tr>
+      <tr><td>Browser Support</td><td>All modern browsers</td><td>Node.js only</td></tr>
+    </table>
+    <div class="info">Always check if a library has an ESM build. Use lodash-es instead of lodash. Use date-fns instead of moment. The ESM version enables tree shaking — the CJS version bundles everything.</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Side Effects — The Tree Shaking Killer</h3>
+    <pre><span class="cm">// A "side effect" is code that does something besides export a value</span>
+<span class="cm">// If a module has side effects, bundler CAN'T safely remove it</span>
+<span class="cm">//</span>
+<span class="cm">// Side effects include:</span>
+<span class="cm">// - Modifying global state: window.myGlobal = 42;</span>
+<span class="cm">// - Polyfills: import 'core-js/features/promise';</span>
+<span class="cm">// - CSS imports: import './styles.css';</span>
+<span class="cm">// - Class with static initializers that mutate globals</span>
+<span class="cm">// - Module-level console.log, fetch, DOM manipulation</span>
+<span class="cm">//</span>
+<span class="cm">// Examples:</span>
+
+<span class="cm">// ❌ HAS side effects — can't be tree-shaken:</span>
+<span class="kw">import</span> <span class="str">'./polyfill'</span>; <span class="cm">// No specific import — runs module body</span>
+
+<span class="cm">// ❌ HAS side effects — the class expression mutates prototype:</span>
+<span class="kw">export class</span> <span class="fn">MyClass</span> {
+  static instances = [];
+  <span class="fn">constructor</span>() { MyClass.instances.push(<span class="kw">this</span>); }
+}
+<span class="cm">// Even if MyClass is never imported elsewhere, the static field</span>
+<span class="cm">// initializer runs when the module is loaded → side effect</span>
+
+<span class="cm">// ✅ NO side effects — pure export, safe to tree shake:</span>
+<span class="kw">export function</span> <span class="fn">add</span>(a, b) { <span class="kw">return</span> a + b; }
+<span class="kw">export function</span> <span class="fn">multiply</span>(a, b) { <span class="kw">return</span> a * b; }</pre>
+  </div>
+
+  <div class="card">
+    <h3>The sideEffects Field in package.json</h3>
+    <pre><span class="cm">// Tell the bundler which files are safe to tree shake</span>
+
+<span class="cm">// package.json — ALL files are side-effect free:</span>
+{
+  <span class="str">"name"</span>: <span class="str">"my-utils"</span>,
+  <span class="str">"sideEffects"</span>: <span class="kw">false</span>
+}
+<span class="cm">// → Bundler can safely remove ANY unused export</span>
+
+<span class="cm">// package.json — Only CSS has side effects:</span>
+{
+  <span class="str">"sideEffects"</span>: [<span class="str">"*.css"</span>, <span class="str">"*.scss"</span>, <span class="str">"./src/polyfills.js"</span>]
+}
+<span class="cm">// → CSS is kept, polyfills are kept, everything else is tree-shakeable</span>
+
+<span class="cm">// HOW IT WORKS:</span>
+<span class="cm">// 1. When sideEffects: false, webpack skips entire modules</span>
+<span class="cm">//    if none of their exports are used</span>
+<span class="cm">// 2. Without the flag, webpack must keep the module body</span>
+<span class="cm">//    "just in case" it has side effects</span>
+<span class="cm">// 3. This is why lodash (CJS, no flag) bundles 70KB</span>
+<span class="cm">//    but lodash-es (ESM + sideEffects: false) tree-shakes to 2KB</span>
+
+<span class="cm">// PURE annotations for function calls:</span>
+<span class="kw">const</span> result = <span class="cm">/*#__PURE__*/</span> <span class="fn">createHelper</span>();
+<span class="cm">// Tells minifier: this call has no side effects</span>
+<span class="cm">// If result is unused, the call can be removed entirely</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: Explain tree shaking. Why does it only work with ES Modules?</div>
+      <div class="a">Tree shaking is a dead code elimination technique where bundlers remove unused exports from the final bundle. It only works with ES Modules because ESM has static structure — all imports and exports are declared at the top level and known at compile time. The bundler can build a complete dependency graph and determine which exports are actually referenced. CommonJS uses require() which can be called conditionally, inside functions, or with dynamic paths — the bundler can't statically determine what's used without executing the code. Example: lodash uses CJS, so importing { debounce } from 'lodash' still includes all 70KB. Switching to lodash-es (ESM version) allows the bundler to include only debounce and its internal dependencies (~2KB).</div>
+      <div class="followup">Follow-up: What are "side effects" in the context of tree shaking?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: A library you depend on is 200KB but you only use two functions. How do you reduce its bundle impact?</div>
+      <div class="a">Layered approach: (1) Check if an ESM build exists — many libraries publish both CJS and ESM. Look for "module" or "exports" field in package.json, or a separate -es variant (lodash-es, rxjs). (2) Check if the library supports deep imports — import debounce from 'lodash/debounce' instead of import { debounce } from 'lodash'. This bypasses tree shaking issues by importing only the specific file. (3) Check sideEffects flag — if the library's package.json doesn't have "sideEffects": false, the bundler may include dead code. You can add module overrides in your webpack config. (4) Use babel-plugin-transform-imports to auto-convert named imports to deep imports. (5) Last resort: find a smaller alternative — replace moment (300KB) with date-fns (tree-shakeable, ~2KB per function) or dayjs (2KB total). Use bundle analysis tools to verify the impact.</div>
+      <div class="followup">Follow-up: How would you audit your entire bundle for tree-shaking opportunities?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q3: Why might tree shaking fail even with ES Modules?</div>
+      <div class="a">Several gotchas: (1) Side effects — if a module modifies globals, registers polyfills, or has top-level code that runs on import, the bundler keeps the entire module. Mark with "sideEffects": false if safe. (2) Re-exports through barrel files — exporting everything from an index.ts means the bundler must analyze ALL re-exported modules. Deep import paths are sometimes faster. (3) Class declarations — some bundlers treat class creation as potentially having side effects (static properties, decorators). The /*#__PURE__*/ annotation helps. (4) Transpiler output — Babel/TypeScript can produce code patterns that look like side effects to the bundler (IIFE wrappers, Object.defineProperty for enums). Using TypeScript const enums or targeting ESNext avoids this. (5) Dynamic property access — export const utils = { foo, bar }; then using utils[key] prevents tree shaking because the bundler doesn't know which properties are used at runtime.</div>
+      <div class="followup">Follow-up: How do barrel files (index.ts re-exports) affect tree shaking performance?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>webpack Tree Shaking Config</h3>
+    <pre><span class="cm">// webpack.config.js</span>
+module.exports = {
+  mode: <span class="str">'production'</span>, <span class="cm">// Required for tree shaking!</span>
+  optimization: {
+    usedExports: <span class="kw">true</span>,  <span class="cm">// Mark unused exports</span>
+    minimize: <span class="kw">true</span>,     <span class="cm">// Terser removes marked code</span>
+    sideEffects: <span class="kw">true</span>,  <span class="cm">// Respect package.json sideEffects</span>
+    concatenateModules: <span class="kw">true</span>, <span class="cm">// Scope hoisting (more efficient)</span>
+  },
+};
+
+<span class="cm">// Verify tree shaking is working:</span>
+<span class="cm">// 1. Build with --stats</span>
+<span class="cm">//    webpack --mode production --stats detailed</span>
+<span class="cm">// 2. Look for "harmony export" markers in output</span>
+<span class="cm">// 3. Check unused exports: "unused harmony export foo"</span>
+<span class="cm">// 4. Use webpack-bundle-analyzer to visualize</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>Common Library Tree Shaking Fixes</h3>
+    <table>
+      <tr><th>Library</th><th>Problem</th><th>Fix</th></tr>
+      <tr><td>lodash</td><td>CJS, no tree shaking</td><td>Use lodash-es or lodash/method imports</td></tr>
+      <tr><td>moment</td><td>CJS, 300KB, includes all locales</td><td>Replace with date-fns or dayjs</td></tr>
+      <tr><td>rxjs</td><td>Old versions CJS</td><td>rxjs 7+ has ESM + sideEffects: false</td></tr>
+      <tr><td>Material UI</td><td>Barrel file re-exports</td><td>Import from @mui/material/Button directly</td></tr>
+      <tr><td>antd</td><td>CSS side effects</td><td>Use babel-plugin-import for on-demand loading</td></tr>
+      <tr><td>core-js</td><td>Polyfill = pure side effects</td><td>Use @babel/preset-env with useBuiltIns: 'usage'</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Tree Shaking Checklist</h3>
+    <pre>✅ All internal modules use ESM (import/export)
+✅ package.json has "sideEffects": false (or explicit array)
+✅ Libraries have ESM builds (check "module" field)
+✅ webpack mode: 'production' enabled
+✅ No barrel files re-exporting unused modules (when possible)
+✅ Large libraries use deep imports (lodash/debounce)
+✅ /*#__PURE__*/ annotation on factory functions
+✅ TypeScript targets ESNext or ES2020 (preserves ESM)
+✅ Bundle analyzer verifies dead code removal
+✅ CI budget catches bundle size regressions</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

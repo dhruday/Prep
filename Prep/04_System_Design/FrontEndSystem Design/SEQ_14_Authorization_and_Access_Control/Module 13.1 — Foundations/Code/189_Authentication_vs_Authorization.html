@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>189 – Authentication vs Authorization</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#f472b6}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:700}
+.authn{background:#1e3a5f;color:#60a5fa;border:1px solid #3b82f6}
+.authz{background:#1b1f3a;color:#a78bfa;border:1px solid #7c3aed}
+</style>
+</head>
+<body>
+<h1>🔑 Authentication vs Authorization</h1>
+<p class="sub">Topic 189 · Part 13 / Module 13.1 — Foundations · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Request Simulator</div>
+  <div class="tab" onclick="setTab(2)">Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>The fundamental distinction</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="background:#0f1117;border:1px solid #3b82f6;border-radius:8px;padding:14px">
+        <div style="color:#60a5fa;font-size:1rem;font-weight:700;margin-bottom:8px">🔐 Authentication (AuthN)</div>
+        <div style="color:#94a3b8;font-size:.8rem;line-height:1.9">
+          <strong style="color:#e2e8f0">Who are you?</strong><br>
+          Verifies identity<br>
+          Done once per session<br>
+          Result: identity token<br><br>
+          Examples:<br>
+          • Password + MFA login<br>
+          • OAuth 2.0 / OIDC flow<br>
+          • Passkey / WebAuthn<br>
+          • Corporate SSO / SAML
+        </div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #7c3aed;border-radius:8px;padding:14px">
+        <div style="color:#a78bfa;font-size:1rem;font-weight:700;margin-bottom:8px">🛡️ Authorization (AuthZ)</div>
+        <div style="color:#94a3b8;font-size:.8rem;line-height:1.9">
+          <strong style="color:#e2e8f0">What can you do?</strong><br>
+          Verifies permissions<br>
+          Checked on EVERY request<br>
+          Result: allow / deny<br><br>
+          Examples:<br>
+          • Can user edit document?<br>
+          • Can user access /admin?<br>
+          • Can user see salary field?<br>
+          • Can user call DELETE /users/:id?
+        </div>
+      </div>
+    </div>
+    <div style="background:#0f1117;border:1px solid #ef444455;border-radius:8px;padding:12px;margin-top:12px;font-size:.79rem">
+      <div style="color:#ef4444;font-weight:700;margin-bottom:4px">⚠️ Frontend hides UI — Server enforces authorization</div>
+      <div style="color:#94a3b8">Hiding a button or route in the frontend is <strong style="color:#f59e0b">UX only</strong>, never security. A user with DevTools can manipulate client-side state and call any API directly. The server MUST independently check authorization on every request regardless of what the UI shows.</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>HTTP response simulator — 401 vs 403 scenarios</h3>
+    <div style="font-size:.79rem;color:#94a3b8;margin-bottom:12px">Select a scenario to see what the server returns and how the frontend should respond:</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button onclick="simulate('no-token')">No token (unauthenticated)</button>
+      <button onclick="simulate('expired')">Expired token</button>
+      <button onclick="simulate('wrong-role')">Valid token, wrong role</button>
+      <button onclick="simulate('ok')">Valid token + permission</button>
+    </div>
+    <div id="simOut" style="font-size:.79rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>AuthN vs AuthZ — full comparison</h3>
+    <table>
+      <tr><th>Dimension</th><th>Authentication (AuthN)</th><th>Authorization (AuthZ)</th></tr>
+      <tr><td>Question</td><td>Who are you?</td><td>What can you do?</td></tr>
+      <tr><td>When</td><td>Once per session (login)</td><td>Every request, every action</td></tr>
+      <tr><td>Result</td><td>Identity token (JWT, session)</td><td>Allow / Deny decision</td></tr>
+      <tr><td>HTTP status on failure</td><td>401 Unauthorized</td><td>403 Forbidden</td></tr>
+      <tr><td>Frontend action on failure</td><td>Redirect to login</td><td>Show "Access Denied" page</td></tr>
+      <tr><td>Examples</td><td>OAuth, SAML, passkeys, passwords</td><td>RBAC, ABAC, ACL, Policy-based</td></tr>
+      <tr><td>Stored in token</td><td>sub, email, iss, exp</td><td>roles, permissions, scopes</td></tr>
+      <tr><td>Frontend enforcement</td><td>Route guard (redirect to login)</td><td>UI conditional (UX only)</td></tr>
+      <tr><td>Server enforcement</td><td>JWT signature verify</td><td>Role/permission check per endpoint</td></tr>
+    </table>
+    <div style="background:#0f1117;border:1px solid #60a5fa44;border-radius:8px;padding:10px;margin-top:12px;font-size:.78rem">
+      <div style="color:#60a5fa;font-weight:700;margin-bottom:4px">Passport analogy:</div>
+      <div style="color:#94a3b8"><span class="badge authn">Passport</span> = Authentication — proves who you are. <span class="badge authz">Visa</span> = Authorization — specifies which countries you can enter and what you can do. You need both — a valid passport doesn't mean all visas are granted.</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Separating AuthN and AuthZ in Angular</h3>
+    <pre><span class="cm">// auth.service.ts — AUTHENTICATION only</span>
+<span class="kw">@Injectable</span>({ providedIn: <span class="str">'root'</span> })
+<span class="kw">export class</span> <span class="dec">AuthService</span> {
+  <span class="kw">private</span> currentUser$ = <span class="kw">new</span> <span class="fn">BehaviorSubject</span>&lt;<span class="dec">User</span> | <span class="kw">null</span>&gt;(<span class="kw">null</span>);
+
+  <span class="fn">isAuthenticated</span>(): <span class="dec">boolean</span> {
+    <span class="kw">return</span> <span class="kw">this</span>.currentUser$.value !== <span class="kw">null</span>;
+  }
+  <span class="fn">getIdentity</span>(): <span class="dec">User</span> | <span class="kw">null</span> { <span class="kw">return</span> <span class="kw">this</span>.currentUser$.value; }
+}
+
+<span class="cm">// permissions.service.ts — AUTHORIZATION only (separate concern)</span>
+<span class="kw">@Injectable</span>({ providedIn: <span class="str">'root'</span> })
+<span class="kw">export class</span> <span class="dec">PermissionsService</span> {
+  <span class="fn">can</span>(permission: <span class="dec">string</span>): <span class="dec">boolean</span> {
+    <span class="kw">const</span> user = <span class="kw">this</span>.auth.<span class="fn">getIdentity</span>();
+    <span class="kw">if</span> (!user) <span class="kw">return false</span>;
+    <span class="kw">return</span> user.permissions.<span class="fn">includes</span>(permission);  <span class="cm">// UX only!</span>
+  }
+}
+
+<span class="cm">// HTTP interceptor — correct 401 vs 403 handling</span>
+<span class="kw">const</span> <span class="fn">httpErrorInterceptor</span>: <span class="dec">HttpInterceptorFn</span> = (req, next) =>
+  <span class="fn">next</span>(req).<span class="fn">pipe</span>(
+    <span class="fn">catchError</span>((err: <span class="dec">HttpErrorResponse</span>) => {
+      <span class="kw">if</span> (err.status === <span class="num">401</span>) {
+        router.<span class="fn">navigate</span>([<span class="str">'/login'</span>]);       <span class="cm">// not authenticated</span>
+      } <span class="kw">else if</span> (err.status === <span class="num">403</span>) {
+        router.<span class="fn">navigate</span>([<span class="str">'/access-denied'</span>]); <span class="cm">// not authorized</span>
+      }
+      <span class="kw">return</span> <span class="fn">throwError</span>(() => err);
+    })
+  );</pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+const scenarios = {
+  'no-token': {
+    status: 401, label: 'No token — unauthenticated',
+    serverSays: '401 Unauthorized — no Authorization header present. Server cannot identify who is making the request.',
+    frontendAction: 'Redirect to /login (user needs to authenticate first)',
+    color: '#ef4444', type: 'authn-fail'
+  },
+  'expired': {
+    status: 401, label: 'Expired access token',
+    serverSays: '401 Unauthorized — JWT has expired (exp claim in the past). Server cannot verify current identity.',
+    frontendAction: 'Silent refresh attempt → if fails, redirect to /login',
+    color: '#f59e0b', type: 'authn-fail'
+  },
+  'wrong-role': {
+    status: 403, label: 'Valid token, insufficient role',
+    serverSays: '403 Forbidden — JWT valid, user authenticated as "viewer" role. Endpoint requires "admin" role. Permission denied.',
+    frontendAction: 'Show Access Denied page — do NOT redirect to login (logging in again won\'t help)',
+    color: '#a78bfa', type: 'authz-fail'
+  },
+  'ok': {
+    status: 200, label: 'Valid token + correct permission',
+    serverSays: '200 OK — JWT valid, user has "admin" role and "user:delete" permission. Request processed.',
+    frontendAction: 'Render response data normally',
+    color: '#10b981', type: 'success'
+  }
+};
+
+function simulate(type) {
+  const s = scenarios[type];
+  const out = document.getElementById('simOut');
+  const isError = s.status !== 200;
+  
+  out.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="background:#0f1117;border:1px solid ${s.color}55;border-radius:8px;padding:12px">
+        <div style="color:${s.color};font-weight:700;font-size:.88rem;margin-bottom:8px">${s.status === 401 ? '🔐 AuthN Failure' : s.status === 403 ? '🛡️ AuthZ Failure' : '✅ Success'} — ${s.label}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.76rem">
+          <div style="background:#1e2130;border-radius:6px;padding:10px">
+            <div style="color:#60a5fa;font-weight:600;margin-bottom:4px">🔧 Server responds:</div>
+            <div style="color:#94a3b8">${s.serverSays}</div>
+          </div>
+          <div style="background:#1e2130;border-radius:6px;padding:10px">
+            <div style="color:#f59e0b;font-weight:600;margin-bottom:4px">🖥️ Frontend action:</div>
+            <div style="color:#94a3b8">${s.frontendAction}</div>
+          </div>
+        </div>
+        ${s.status === 403 ? '<div style="font-size:.72rem;color:#ef4444;margin-top:8px;padding:6px;background:#450a0a33;border-radius:4px">⚠️ Common mistake: Returning 401 for this scenario causes a login redirect loop. Users are already logged in — they just lack permission.</div>' : ''}
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

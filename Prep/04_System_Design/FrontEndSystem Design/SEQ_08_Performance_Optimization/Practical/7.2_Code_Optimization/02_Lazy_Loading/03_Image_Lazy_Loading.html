@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Image Lazy Loading</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}</style>
+</head>
+<body>
+<h1>Image Lazy Loading</h1>
+<p class="sub">Practical 7.2 · Native and advanced image loading strategies</p>
+
+<div class="card">
+  <h3>1. Native Lazy Loading (Simplest)</h3>
+  <pre><span class="cm">&lt;!-- loading="lazy" — built into all modern browsers --&gt;</span>
+&lt;img
+  src=<span class="str">"product.jpg"</span>
+  loading=<span class="str">"lazy"</span>
+  width=<span class="str">"400"</span>
+  height=<span class="str">"300"</span>
+  alt=<span class="str">"Product photo"</span>
+/&gt;
+
+<span class="cm">&lt;!-- IMPORTANT: Always set width/height to prevent CLS --&gt;</span>
+<span class="cm">&lt;!-- Browser loads when ~1250px from viewport (Chrome) --&gt;</span>
+<span class="cm">&lt;!-- Does NOT lazy-load above-the-fold images (smart!) --&gt;</span>
+
+<span class="cm">&lt;!-- For hero/LCP images: eager loading (default) --&gt;</span>
+&lt;img
+  src=<span class="str">"hero.webp"</span>
+  loading=<span class="str">"eager"</span>
+  fetchpriority=<span class="str">"high"</span>
+  width=<span class="str">"1200"</span>
+  height=<span class="str">"600"</span>
+  alt=<span class="str">"Hero banner"</span>
+/&gt;
+
+<span class="cm">&lt;!-- Native lazy for iframes too: --&gt;</span>
+&lt;iframe src=<span class="str">"https://youtube.com/embed/..."</span> loading=<span class="str">"lazy"</span>&gt;&lt;/iframe&gt;</pre>
+</div>
+
+<div class="card">
+  <h3>2. Responsive Images + Lazy Loading</h3>
+  <pre><span class="cm">&lt;!-- srcset + loading="lazy" — responsive AND lazy --&gt;</span>
+&lt;img
+  src=<span class="str">"product-400.webp"</span>
+  srcset=<span class="str">"
+    product-400.webp 400w,
+    product-800.webp 800w,
+    product-1200.webp 1200w
+  "</span>
+  sizes=<span class="str">"(max-width: 600px) 400px, (max-width: 1000px) 800px, 1200px"</span>
+  loading=<span class="str">"lazy"</span>
+  width=<span class="str">"800"</span>
+  height=<span class="str">"600"</span>
+  alt=<span class="str">"Product"</span>
+/&gt;
+
+<span class="cm">&lt;!-- &lt;picture&gt; for format fallback + lazy loading --&gt;</span>
+&lt;picture&gt;
+  &lt;source srcset=<span class="str">"photo.avif"</span> type=<span class="str">"image/avif"</span>&gt;
+  &lt;source srcset=<span class="str">"photo.webp"</span> type=<span class="str">"image/webp"</span>&gt;
+  &lt;img src=<span class="str">"photo.jpg"</span> loading=<span class="str">"lazy"</span> width=<span class="str">"800"</span> height=<span class="str">"600"</span> alt=<span class="str">"Photo"</span>&gt;
+&lt;/picture&gt;</pre>
+</div>
+
+<div class="card">
+  <h3>3. LQIP (Low Quality Image Placeholder)</h3>
+  <pre><span class="cm">// Blur-up technique: show tiny placeholder, then load full image</span>
+
+<span class="cm">// Next.js Image component does this automatically:</span>
+<span class="kw">import</span> Image <span class="kw">from</span> <span class="str">'next/image'</span>;
+
+&lt;Image
+  src=<span class="str">"/hero.jpg"</span>
+  width={<span class="num">1200</span>}
+  height={<span class="num">600</span>}
+  placeholder=<span class="str">"blur"</span>
+  blurDataURL=<span class="str">"data:image/jpeg;base64,/9j/4AAQ..."</span> <span class="cm">// tiny 10px version</span>
+  priority={<span class="kw">true</span>} <span class="cm">// For LCP image: disables lazy loading</span>
+/&gt;
+
+<span class="cm">// Manual CSS blur-up:</span>
+.image-container {
+  position: relative;
+  overflow: hidden;
+}
+.image-container .placeholder {
+  filter: blur(20px);
+  transform: scale(1.1); <span class="cm">/* Hide blur edges */</span>
+  transition: opacity 0.3s;
+}
+.image-container .full-image {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.image-container .full-image.loaded {
+  opacity: 1;
+}</pre>
+</div>
+
+<div class="card">
+  <h3>Decision Tree</h3>
+  <pre><span class="cm">Is it the LCP/hero image?</span>
+<span class="cm">├── Yes → loading="eager" + fetchpriority="high" + preload</span>
+<span class="cm">└── No → Is it above the fold?</span>
+<span class="cm">    ├── Yes → loading="eager" (default)</span>
+<span class="cm">    └── No → loading="lazy" + width/height for CLS</span>
+
+<span class="cm">Format priority: AVIF > WebP > JPEG</span>
+<span class="cm">Always provide width + height (or aspect-ratio)</span>
+<span class="cm">Always use srcset for responsive images</span></pre>
+</div>
+</body>
+</html>

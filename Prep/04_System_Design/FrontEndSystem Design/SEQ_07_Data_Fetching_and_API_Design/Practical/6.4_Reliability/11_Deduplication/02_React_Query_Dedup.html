@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — React Query Dedup</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+</style>
+</head>
+<body>
+<h1>Lab 02 — React Query Dedup</h1>
+<p class="sub">queryKey-based automatic deduplication — multiple useQuery hooks, one network request</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Code</div>
+  <div class="tab" onclick="setTab(2)">Simulation</div>
+  <div class="tab" onclick="setTab(3)">Key Takeaways</div>
+</div>
+
+<!-- Tab 0 — Concept -->
+<div class="panel active">
+  <div class="card">
+    <h3>How React Query Deduplicates</h3>
+    <p>React Query (TanStack Query) uses the <code>queryKey</code> as a unique identifier. When multiple components call <code>useQuery</code> with the same key, the library:</p>
+    <p>1. Checks if an inflight fetch for that key already exists<br>
+       2. If yes → subscribes the new observer to the existing promise<br>
+       3. If no → starts a new fetch and stores it in the query cache<br>
+       4. All subscribers receive the same data once the request resolves</p>
+  </div>
+  <div class="card">
+    <h3>queryKey Identity</h3>
+<pre>
+<span class="cm">// These two keys are considered EQUAL (deep comparison):</span>
+[<span class="str">'products'</span>, { page: 1 }]
+[<span class="str">'products'</span>, { page: 1 }]
+
+<span class="cm">// These are DIFFERENT (different page):</span>
+[<span class="str">'products'</span>, { page: 1 }]
+[<span class="str">'products'</span>, { page: 2 }]
+</pre>
+    <div class="info">React Query uses deterministic JSON serialization — key order doesn't matter: <code>{a:1,b:2}</code> equals <code>{b:2,a:1}</code>.</div>
+  </div>
+</div>
+
+<!-- Tab 1 — Code -->
+<div class="panel">
+  <div class="card">
+    <h3>Shared Hook</h3>
+<pre>
+<span class="cm">// useProducts.ts</span>
+<span class="kw">export function</span> <span class="fn">useProducts</span>() {
+  <span class="kw">return</span> <span class="fn">useQuery</span>({
+    queryKey: [<span class="str">'products'</span>],
+    queryFn:  () =&gt; <span class="fn">fetch</span>(<span class="str">'/api/rest/products'</span>)
+                      .<span class="fn">then</span>(r =&gt; r.<span class="fn">json</span>()),
+    staleTime: 30_000,  <span class="cm">// data is fresh for 30s</span>
+  });
+}
+</pre>
+  </div>
+  <div class="card">
+    <h3>Multiple Components — Same Key</h3>
+<pre>
+<span class="kw">function</span> <span class="fn">Header</span>()  { <span class="kw">const</span> { data } = <span class="fn">useProducts</span>(); ... }
+<span class="kw">function</span> <span class="fn">Sidebar</span>() { <span class="kw">const</span> { data } = <span class="fn">useProducts</span>(); ... }
+<span class="kw">function</span> <span class="fn">Grid</span>()    { <span class="kw">const</span> { data } = <span class="fn">useProducts</span>(); ... }
+<span class="kw">function</span> <span class="fn">Footer</span>()  { <span class="kw">const</span> { data } = <span class="fn">useProducts</span>(); ... }
+<span class="kw">function</span> <span class="fn">Badge</span>()   { <span class="kw">const</span> { data } = <span class="fn">useProducts</span>(); ... }
+
+<span class="cm">// All 5 mount → only 1 network request</span>
+<span class="cm">// React Query shares the inflight promise via queryKey</span>
+</pre>
+  </div>
+  <div class="card">
+    <h3>Under the Hood — QueryCache</h3>
+<pre>
+<span class="cm">// Simplified internal logic</span>
+<span class="kw">class</span> <span class="fn">QueryCache</span> {
+  queries = <span class="kw">new</span> <span class="fn">Map</span>();
+
+  <span class="fn">build</span>(queryKey, queryFn) {
+    <span class="kw">const</span> hash = <span class="fn">hashKey</span>(queryKey);
+    <span class="kw">if</span> (!<span class="kw">this</span>.queries.<span class="fn">has</span>(hash)) {
+      <span class="kw">this</span>.queries.<span class="fn">set</span>(hash, <span class="kw">new</span> <span class="fn">Query</span>(queryKey, queryFn));
+    }
+    <span class="kw">return this</span>.queries.<span class="fn">get</span>(hash);
+  }
+}
+</pre>
+  </div>
+</div>
+
+<!-- Tab 2 — Simulation -->
+<div class="panel">
+  <div class="card">
+    <h3>Simulated React Query Behavior</h3>
+    <button onclick="simulate()">Mount 5 Components</button>
+    <button onclick="clearSim()">Reset</button>
+    <div class="output" id="simOut">Click "Mount 5 Components" to see dedup in action…</div>
+  </div>
+  <div class="card">
+    <h3>staleTime Comparison</h3>
+    <button onclick="staleDemo(0)">staleTime = 0 (always refetch)</button>
+    <button onclick="staleDemo(5000)">staleTime = 5s</button>
+    <button onclick="staleDemo(30000)">staleTime = 30s</button>
+    <div class="output" id="staleOut">Choose a staleTime to see refetch behavior…</div>
+  </div>
+</div>
+
+<!-- Tab 3 — Key Takeaways -->
+<div class="panel">
+  <div class="card">
+    <h3>Why React Query Dedup is Powerful</h3>
+    <p>• Zero setup — dedup is automatic via queryKey matching<br>
+       • Works across deeply nested component trees<br>
+       • Pairs with staleTime/gcTime for cache lifespan control<br>
+       • DevTools show observer count per query</p>
+  </div>
+  <div class="card">
+    <h3>Common Pitfalls</h3>
+    <p>• <strong>Unstable queryKey</strong> — if the key includes a new object reference each render, dedup breaks<br>
+       • <strong>Different queryFn</strong> — React Query warns if two useQuery with the same key have different fetchers<br>
+       • <strong>enabled: false</strong> — a disabled query won't participate in dedup<br>
+       • <strong>Structural sharing</strong> — React Query returns stable references when data is unchanged</p>
+  </div>
+  <div class="card">
+    <h3>Dedup vs Caching</h3>
+<pre>
+Feature            │ Dedup               │ Caching
+───────────────────┼─────────────────────┼───────────────────
+When               │ Parallel requests   │ Sequential requests
+Duration           │ While inflight      │ staleTime + gcTime
+Trigger            │ Same queryKey       │ Same queryKey
+Network calls      │ 1 (shared promise)  │ 0 (cached result)
+</pre>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+// Mini React Query simulation
+class MiniQueryClient {
+  constructor() { this.cache = new Map(); this.log = []; }
+  getOrFetch(key, fn) {
+    if (this.cache.has(key) && this.cache.get(key).inflight) {
+      this.log.push(`[QueryCache] Key "${key}" → DEDUP (reuse inflight promise)`);
+      return this.cache.get(key).promise;
+    }
+    this.log.push(`[QueryCache] Key "${key}" → NEW fetch started`);
+    const promise = fn().then(data => {
+      this.cache.set(key, { data, inflight: false, fetchedAt: Date.now(), promise: null });
+      return data;
+    });
+    this.cache.set(key, { data: null, inflight: true, fetchedAt: null, promise });
+    return promise;
+  }
+}
+
+const qc = new MiniQueryClient();
+
+async function simulate() {
+  const out = document.getElementById('simOut');
+  qc.log = [];
+  out.textContent = '⏳ Mounting 5 components with useQuery(["products"])…\n\n';
+  const url = API + '/api/rest/products';
+  const fetcher = () => fetch(url).then(r => r.json());
+  const results = await Promise.all([
+    qc.getOrFetch('products', fetcher),
+    qc.getOrFetch('products', fetcher),
+    qc.getOrFetch('products', fetcher),
+    qc.getOrFetch('products', fetcher),
+    qc.getOrFetch('products', fetcher),
+  ]);
+  out.textContent += qc.log.join('\n') + '\n\n';
+  out.textContent += `✅ All 5 observers received ${results[0]?.length ?? '?'} products\n`;
+  out.textContent += `📡 Actual network requests: 1\n`;
+  out.textContent += `🔗 Same data reference: ${results[0] === results[1]}`;
+}
+
+function clearSim() {
+  qc.cache.clear();
+  document.getElementById('simOut').textContent = 'Cache cleared. Click to run again…';
+}
+
+async function staleDemo(staleTime) {
+  const out = document.getElementById('staleOut');
+  out.textContent = `⏳ staleTime = ${staleTime}ms\n\n`;
+  out.textContent += `[T=0s]   Component A mounts → FETCH (no cache)\n`;
+  out.textContent += `[T=0s]   Component B mounts → DEDUP (inflight)\n`;
+  out.textContent += `[T=0s]   Response arrives → cached\n\n`;
+  if (staleTime === 0) {
+    out.textContent += `[T=1s]   Component C mounts → REFETCH (staleTime=0, data always stale)\n`;
+    out.textContent += `[T=2s]   Component D mounts → REFETCH (always stale)\n`;
+    out.textContent += `\n⚠️ Total requests: 3 (no dedup benefit after initial resolve)`;
+  } else {
+    const secs = staleTime / 1000;
+    out.textContent += `[T=1s]   Component C mounts → CACHE HIT (data fresh for ${secs}s)\n`;
+    out.textContent += `[T=2s]   Component D mounts → CACHE HIT (still fresh)\n`;
+    out.textContent += `[T=${secs}s]  Data becomes stale\n`;
+    out.textContent += `[T=${secs+1}s]  Component E mounts → REFETCH (stale data)\n`;
+    out.textContent += `\n✅ Total requests: 2 (1 initial + 1 after staleTime)`;
+  }
+}
+</script>
+</body>
+</html>

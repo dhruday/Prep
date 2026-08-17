@@ -1,0 +1,202 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Lab 04 — Request/Response Logging</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.5rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}
+.tab.active{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}
+.card h3{color:#60a5fa;margin-bottom:10px;font-size:.95rem}
+.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.err{color:#ef4444}.num{color:#f59e0b}
+input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}
+button:hover{border-color:#60a5fa;color:#60a5fa}
+button.blue{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}
+button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}
+button.red{background:#3a1e1e;border-color:#ef4444;color:#ef4444}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+.info{background:#0f1117;border-left:3px solid #60a5fa;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+.warn{border-left-color:#ef4444}.ok{border-left-color:#10b981}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.78rem;margin:12px 0}
+.flow span{background:#1e2130;border:1px solid #2d3551;padding:6px 10px;border-radius:6px}
+.flow .arrow{background:none;border:none;color:#60a5fa;font-weight:bold}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}
+th,td{padding:6px 8px;border:1px solid #2d3551;text-align:left}
+th{background:#1e2a4a;color:#60a5fa}
+td{color:#94a3b8}
+.bar-container{height:14px;background:#1e2130;border-radius:4px;overflow:hidden;margin:2px 0}
+.bar{height:100%;border-radius:4px}
+</style></head><body>
+<h1>Lab 04 — Request/Response Logging</h1>
+<p class="sub">Module 6.1 · API Consumption · Debug logging, timing, correlation IDs</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&amp;A</div>
+</div>
+
+<!-- TAB 0: Concept -->
+<div class="panel active">
+  <div class="card">
+    <h3>Why Log Every API Call?</h3>
+    <ul style="margin:8px 0 0 18px;color:#94a3b8;font-size:.85rem">
+      <li><b>Debugging:</b> Quickly trace failures to a specific request</li>
+      <li><b>Performance monitoring:</b> Identify slow endpoints before users complain</li>
+      <li><b>Correlation:</b> Link frontend requests to backend traces via shared IDs</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Logging Interceptor Pattern</h3>
+    <div class="flow">
+      <span style="color:#f59e0b">Log Request</span><span class="arrow">→</span><span>method, URL, headers, body size</span>
+    </div>
+    <div class="flow">
+      <span style="color:#10b981">Log Response</span><span class="arrow">→</span><span>status, timing, body size, cache hit</span>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Correlation ID Pattern</h3>
+    <pre><span class="cm">// Generate UUID per request</span>
+<span class="kw">const</span> requestId = <span class="fn">crypto.randomUUID</span>();
+headers[<span class="str">'X-Request-ID'</span>] = requestId;
+<span class="cm">// Server echoes it back for distributed tracing</span>
+<span class="cm">// Response header: X-Request-ID: &lt;same uuid&gt;</span>
+<span class="cm">// Now you can correlate frontend log ↔ backend log ↔ DB query</span></pre>
+  </div>
+</div>
+
+<!-- TAB 1: Hands-On Lab -->
+<div class="panel">
+  <div class="card">
+    <h3>Send &amp; Log Requests</h3>
+    <button class="green" onclick="send5Requests()">Send 5 Parallel Requests</button>
+    <button class="blue" onclick="toggleVerbose()">Toggle Verbose Mode</button>
+    <button onclick="exportLog()">Export Log (clipboard)</button>
+    <div id="logTable" style="margin-top:12px;overflow-x:auto"></div>
+  </div>
+  <div class="card">
+    <h3>Timing Waterfall</h3>
+    <div id="waterfall"></div>
+  </div>
+  <div class="card">
+    <h3>Full Log</h3>
+    <div class="output" id="fullLog">Waiting…</div>
+  </div>
+</div>
+
+<!-- TAB 2: Browser Internals -->
+<div class="panel">
+  <div class="card">
+    <h3>Performance API</h3>
+    <pre><span class="fn">performance.mark</span>(<span class="str">'fetch-start'</span>);
+<span class="kw">await</span> <span class="fn">fetch</span>(url);
+<span class="fn">performance.mark</span>(<span class="str">'fetch-end'</span>);
+<span class="fn">performance.measure</span>(<span class="str">'api-call'</span>, <span class="str">'fetch-start'</span>, <span class="str">'fetch-end'</span>);
+<span class="cm">// Result: { duration: 142.5, startTime: 1023.8, ... }</span></pre>
+  </div>
+  <div class="card">
+    <h3>Resource Timing API — Full Breakdown</h3>
+    <pre><span class="kw">const</span> entries = performance.<span class="fn">getEntriesByType</span>(<span class="str">'resource'</span>);
+<span class="cm">// Each entry provides:</span>
+  domainLookupEnd - domainLookupStart   <span class="cm">// DNS lookup</span>
+  connectEnd - connectStart             <span class="cm">// TCP handshake</span>
+  secureConnectionStart → connectEnd    <span class="cm">// TLS negotiation</span>
+  responseStart - requestStart          <span class="cm">// TTFB (server think time)</span>
+  responseEnd - responseStart           <span class="cm">// Download time</span></pre>
+  </div>
+  <div class="card">
+    <h3>console.time vs Performance API</h3>
+    <p style="font-size:.82rem;color:#94a3b8"><code>console.time()</code>/<code>console.timeEnd()</code> are convenient but imprecise (milliseconds, no programmatic access). The <b>Performance API</b> uses <code>DOMHighResTimeStamp</code> (microsecond precision) and entries are queryable for dashboards and analytics.</p>
+  </div>
+</div>
+
+<!-- TAB 3: Interview Q&A -->
+<div class="panel">
+  <div class="card">
+    <h3>Q: How do you implement distributed tracing in the frontend?</h3>
+    <p style="font-size:.85rem;color:#94a3b8">Generate a unique <b>correlation ID</b> (UUID) per request. Pass it as <code>X-Request-ID</code> header. The backend propagates it through microservice calls. Additionally, use <b>W3C Trace Context</b> headers (<code>traceparent</code>, <code>tracestate</code>) and baggage headers for OpenTelemetry-compatible traces.</p>
+  </div>
+  <div class="card">
+    <h3>Q: What's the performance cost of logging every request?</h3>
+    <p style="font-size:.85rem;color:#94a3b8"><b>Minimal if async:</b> buffering logs in memory and flushing in batches to a collector (e.g., beacon API) has negligible overhead. <b>Dangerous if synchronous:</b> <code>console.log</code> with large payloads in production blocks the main thread. In production, use log levels (ERROR only) and strip verbose logs at build time via tree-shaking or babel plugins.</p>
+  </div>
+  <div class="card">
+    <h3>Q: How do you strip logs in production?</h3>
+    <p style="font-size:.85rem;color:#94a3b8"><b>(1) Build-time removal:</b> Babel plugin <code>transform-remove-console</code> or Terser's <code>drop_console</code>. <b>(2) Log levels:</b> A logger utility that checks <code>LOG_LEVEL</code> env var and no-ops below threshold. <b>(3) Conditional compilation:</b> <code>if (process.env.NODE_ENV !== 'production')</code> — dead-code eliminated by bundlers.</p>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';
+const tabs=document.querySelectorAll('.tab');
+const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i);});}
+function log(id,msg){const el=document.getElementById(id);el.textContent+='\n'+new Date().toLocaleTimeString()+' '+msg;el.scrollTop=el.scrollHeight;}
+
+let verbose=false,logEntries=[];
+function uuid(){return crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16);});}
+function toggleVerbose(){verbose=!verbose;document.getElementById('fullLog').textContent='Verbose: '+(verbose?'ON':'OFF');}
+
+const endpoints=[
+  {path:'/api/rest/products?limit=2',label:'Products'},
+  {path:'/api/rest/products/1',label:'Product #1'},
+  {path:'/api/rest/products/2',label:'Product #2'},
+  {path:'/api/rest/categories',label:'Categories'},
+  {path:'/api/rest/products?limit=1&offset=3',label:'Products p2'}
+];
+
+async function send5Requests(){
+  logEntries=[];
+  document.getElementById('fullLog').textContent='Sending 5 requests…';
+  const baseline=performance.now();
+  const results=await Promise.allSettled(endpoints.map(async(ep)=>{
+    const id=uuid();const start=performance.now();
+    const res=await fetch(API+ep.path,{headers:{'X-Request-ID':id}});
+    const body=await res.text();const dur=Math.round(performance.now()-start);
+    const entry={id:id.slice(0,8),method:'GET',url:ep.label,status:res.status,duration:dur,size:body.length,start:Math.round(start-baseline)};
+    logEntries.push(entry);
+    if(verbose)log('fullLog',JSON.stringify({...entry,headers:Object.fromEntries(res.headers)},null,2));
+    else log('fullLog',`[${entry.id}] ${entry.status} ${entry.url} ${dur}ms ${entry.size}B`);
+    return entry;
+  }));
+  renderTable();renderWaterfall();
+}
+
+function renderTable(){
+  const t=document.getElementById('logTable');
+  let h='<table><tr><th>Request ID</th><th>Method</th><th>URL</th><th>Status</th><th>Duration</th><th>Size</th></tr>';
+  logEntries.sort((a,b)=>a.start-b.start).forEach(e=>{
+    h+=`<tr><td>${e.id}</td><td>${e.method}</td><td>${e.url}</td><td style="color:${e.status<400?'#10b981':'#ef4444'}">${e.status}</td><td>${e.duration}ms</td><td>${e.size}B</td></tr>`;
+  });
+  t.innerHTML=h+'</table>';
+}
+
+function renderWaterfall(){
+  const w=document.getElementById('waterfall');
+  const max=Math.max(...logEntries.map(e=>e.start+e.duration),1);
+  const colors=['#60a5fa','#10b981','#a78bfa','#f59e0b','#ef4444'];
+  let h='';
+  logEntries.forEach((e,i)=>{
+    const left=((e.start/max)*100).toFixed(1);
+    const width=Math.max(((e.duration/max)*100),2).toFixed(1);
+    h+=`<div style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:.75rem">
+      <span style="width:70px;color:#94a3b8">${e.url}</span>
+      <div style="flex:1;position:relative"><div class="bar-container"><div class="bar" style="margin-left:${left}%;width:${width}%;background:${colors[i%5]}"></div></div></div>
+      <span style="color:${colors[i%5]}">${e.duration}ms</span></div>`;
+  });
+  w.innerHTML=h||'<span style="color:#475569;font-size:.8rem">Send requests first</span>';
+}
+
+function exportLog(){
+  navigator.clipboard.writeText(JSON.stringify(logEntries,null,2)).then(()=>log('fullLog','✓ Log copied to clipboard'));
+}
+</script>
+</body></html>

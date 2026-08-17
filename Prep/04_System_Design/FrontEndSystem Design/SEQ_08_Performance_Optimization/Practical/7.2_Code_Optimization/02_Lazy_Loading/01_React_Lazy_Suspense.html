@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>React.lazy + Suspense Lab</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.4rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.82rem;margin-bottom:16px}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:8px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}button{background:#f59e0b;color:#0f1117;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;font-size:.82rem;margin:4px}#output{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px;margin-top:10px;font-size:.78rem;max-height:200px;overflow-y:auto;font-family:monospace}</style>
+</head>
+<body>
+<h1>React.lazy + Suspense Lab</h1>
+<p class="sub">Practical 7.2 · Lazy loading components with fallback UI</p>
+
+<div class="card">
+  <h3>Simulated Lazy Loading</h3>
+  <button onclick="simulateLazy(500)">Load Component (500ms)</button>
+  <button onclick="simulateLazy(2000)">Load Component (2s)</button>
+  <button onclick="simulateError()">Load with Error</button>
+  <div id="lazy-target" style="margin-top:10px;min-height:80px;border:1px dashed #2d3551;border-radius:8px;padding:12px"></div>
+</div>
+
+<div class="card">
+  <h3>Full Pattern</h3>
+  <pre><span class="cm">// React.lazy + Suspense + ErrorBoundary</span>
+<span class="kw">const</span> HeavyComponent = <span class="fn">lazy</span>(() =&gt; <span class="kw">import</span>(<span class="str">'./HeavyComponent'</span>));
+
+<span class="kw">function</span> <span class="fn">App</span>() {
+  <span class="kw">return</span> (
+    &lt;ErrorBoundary fallback={&lt;ErrorUI /&gt;}&gt;
+      &lt;Suspense fallback={&lt;Skeleton /&gt;}&gt;
+        &lt;HeavyComponent /&gt;
+      &lt;/Suspense&gt;
+    &lt;/ErrorBoundary&gt;
+  );
+}
+
+<span class="cm">// Error boundary for lazy load failures:</span>
+<span class="kw">class</span> <span class="fn">ErrorBoundary</span> <span class="kw">extends</span> Component {
+  state = { hasError: <span class="kw">false</span> };
+  <span class="kw">static</span> <span class="fn">getDerivedStateFromError</span>() { <span class="kw">return</span> { hasError: <span class="kw">true</span> }; }
+  <span class="fn">render</span>() {
+    <span class="kw">if</span> (<span class="kw">this</span>.state.hasError) {
+      <span class="kw">return</span> (
+        &lt;div&gt;
+          &lt;p&gt;Failed to load component.&lt;/p&gt;
+          &lt;button onClick={() =&gt; {
+            <span class="kw">this</span>.setState({ hasError: <span class="kw">false</span> });
+            window.location.reload(); <span class="cm">// Retry</span>
+          }}&gt;Retry&lt;/button&gt;
+        &lt;/div&gt;
+      );
+    }
+    <span class="kw">return</span> <span class="kw">this</span>.props.children;
+  }
+}
+
+<span class="cm">// Retry pattern with exponential backoff:</span>
+<span class="kw">const</span> <span class="fn">lazyWithRetry</span> = (importFn, retries = <span class="num">3</span>) =&gt;
+  <span class="fn">lazy</span>(<span class="kw">async</span> () =&gt; {
+    <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; retries; i++) {
+      <span class="kw">try</span> { <span class="kw">return await</span> importFn(); }
+      <span class="kw">catch</span> (e) {
+        <span class="kw">if</span> (i === retries - <span class="num">1</span>) <span class="kw">throw</span> e;
+        <span class="kw">await new</span> Promise(r =&gt; setTimeout(r, <span class="num">1000</span> * <span class="num">2</span> ** i));
+      }
+    }
+  });</pre>
+</div>
+
+<script>
+const target = document.getElementById('lazy-target');
+
+function simulateLazy(delay) {
+  target.innerHTML = '<div style="color:#f59e0b;animation:pulse 1s infinite">⏳ Loading component...</div>';
+  target.innerHTML += '<div style="background:#f59e0b22;border-radius:8px;height:40px;margin-top:8px;animation:pulse 1s infinite"></div>';
+  setTimeout(() => {
+    target.innerHTML = '<div style="color:#10b981;font-weight:600">✅ Component loaded!</div><div style="background:#10b98122;border:1px solid #10b981;border-radius:8px;padding:12px;margin-top:8px;font-size:.85rem">This is the lazy-loaded component content. In a real app, this would be a heavy component like a chart, editor, or dashboard.</div>';
+  }, delay);
+}
+
+function simulateError() {
+  target.innerHTML = '<div style="color:#f59e0b">⏳ Loading component...</div>';
+  setTimeout(() => {
+    target.innerHTML = '<div style="color:#ef4444;font-weight:600">❌ ChunkLoadError: Loading chunk 42 failed.</div><div style="margin-top:8px"><button onclick="simulateLazy(500)" style="background:#f59e0b;color:#0f1117;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:.8rem">🔄 Retry</button></div>';
+  }, 800);
+}
+</script>
+<style>@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}</style>
+</body>
+</html>

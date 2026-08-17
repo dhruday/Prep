@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 32 – Design System Architecture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.token-box{display:inline-block;padding:6px 12px;border-radius:6px;margin:4px;font-size:.8rem;cursor:pointer;transition:all .2s;border:1px solid transparent}
+.token-box:hover{transform:scale(1.04)}
+.comp-preview{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;margin:8px 0}
+input[type=range]{accent-color:#60a5fa}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<h1>🎨 Design System Architecture</h1>
+<p class="sub">Topic 32 · Module 3.3 — Scale-Oriented Architectures · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Token System</div>
+  <div class="tab" onclick="setTab(1)">Component Library</div>
+  <div class="tab" onclick="setTab(2)">Versioning Strategy</div>
+  <div class="tab" onclick="setTab(3)">Code Structure</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Design Tokens — Click to inspect</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:12px">Tokens are the single source of truth for visual values. Changing a token updates every component that references it, across all platforms.</p>
+    <div style="margin-bottom:12px">
+      <div style="font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:6px">COLOR TOKENS</div>
+      <div id="color-tokens"></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:6px">SPACING TOKENS</div>
+      <div id="spacing-tokens"></div>
+    </div>
+    <div id="token-detail" style="display:none;margin-top:12px;padding:12px;background:#0f1117;border-radius:8px;font-family:monospace;font-size:.8rem;color:#10b981"></div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Live Component Theming — adjust tokens</h3>
+    <div class="grid2">
+      <div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:.75rem;color:#94a3b8;display:block;margin-bottom:4px">--color-primary</label>
+          <input type="color" value="#60a5fa" id="color-primary" oninput="updateTheme()" style="width:100%;height:32px;border-radius:4px;border:1px solid #2d3551;background:#0f1117">
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:.75rem;color:#94a3b8;display:block;margin-bottom:4px">--radius-base: <span id="radius-val">6px</span></label>
+          <input type="range" min="0" max="20" value="6" id="radius-range" oninput="updateTheme()">
+        </div>
+        <div>
+          <label style="font-size:.75rem;color:#94a3b8;display:block;margin-bottom:4px">--space-base: <span id="space-val">16px</span></label>
+          <input type="range" min="8" max="24" value="16" id="space-range" oninput="updateTheme()">
+        </div>
+      </div>
+      <div>
+        <div style="font-size:.75rem;font-weight:700;color:#94a3b8;margin-bottom:8px">COMPONENT PREVIEW</div>
+        <div class="comp-preview" id="comp-preview">
+          <button id="ds-btn" style="padding:10px 20px;border-radius:6px;border:none;cursor:pointer;font-size:.85rem;font-weight:600;transition:all .2s">Primary Button</button>
+          <div id="ds-card" style="margin-top:10px;padding:14px;border-radius:6px;background:#1e2130;border:1px solid #2d3551;font-size:.82rem;color:#94a3b8">Design System Card</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Design System Versioning</h3>
+    <div style="font-size:.85rem;color:#94a3b8;linear-height:1.9;margin-bottom:14px">
+      SAP Fundamental-Styles follows semver. Breaking changes (token renames, API changes) need major bumps. Teams pin to a major version and upgrade on a schedule.
+    </div>
+    <div id="version-timeline" style="font-family:monospace;font-size:.8rem"></div>
+    <div style="margin-top:14px;padding:12px;background:#0f1117;border-radius:8px;border-left:3px solid #f59e0b;font-size:.8rem;color:#94a3b8">
+      <strong style="color:#f59e0b">Breaking change protocol at SAP:</strong><br>
+      1. Deprecation notice in v3.x (console.warn)<br>
+      2. Migration guide published<br>
+      3. Breaking change in v4.0<br>
+      4. Design system team provides codemods for automated migration
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Design System folder structure</h3>
+    <pre><span class="str">design-system/
+  tokens/
+    colors.json        </span><span class="cm">// Raw token values — sync with Figma</span>
+<span class="str">    spacing.json
+    typography.json
+  </span><span class="cm">// Style Dictionary generates CSS vars, SCSS, JS constants</span>
+<span class="str">  build/
+    css/tokens.css     </span><span class="cm">// --color-primary: #60a5fa</span>
+<span class="str">    scss/_tokens.scss
+    js/tokens.ts
+  components/
+    Button/
+      Button.tsx
+      Button.styles.ts  </span><span class="cm">// Uses token constants</span>
+<span class="str">      Button.stories.tsx
+      Button.test.tsx
+    Input/
+    Modal/
+  docs/                 </span><span class="cm">// Storybook — living documentation</span>
+<span class="str">  CHANGELOG.md          </span><span class="cm">// Semver + breaking changes</span></pre>
+    <pre style="margin-top:12px"><span class="cm">// Token usage in component (TypeScript + CSS-in-JS)</span>
+<span class="kw">import</span> { tokens } <span class="kw">from</span> <span class="str">'@sap/ds-tokens'</span>;
+
+<span class="kw">const</span> ButtonStyles = {
+  background: tokens.color.primary,         <span class="cm">// '#60a5fa'</span>
+  padding: `${tokens.space.sm} ${tokens.space.md}`,
+  borderRadius: tokens.radius.base,
+  <span class="cm">// Changing tokens.color.primary updates ALL consumers</span>
+};</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const colors=[
+  {name:'--color-primary','value':'#60a5fa',bg:'#60a5fa',text:'#fff'},
+  {name:'--color-success','value':'#10b981',bg:'#10b981',text:'#fff'},
+  {name:'--color-warning','value':'#f59e0b',bg:'#f59e0b',text:'#000'},
+  {name:'--color-error','value':'#ef4444',bg:'#ef4444',text:'#fff'},
+  {name:'--color-purple','value':'#a78bfa',bg:'#a78bfa',text:'#fff'},
+  {name:'--color-bg-surface','value':'#1e2130',bg:'#1e2130',text:'#e2e8f0'},
+];
+const ct=document.getElementById('color-tokens');
+ct.innerHTML=colors.map((c,i)=>`<div class="token-box" style="background:${c.bg};color:${c.text};border-color:${c.bg}" onclick="showToken(${i},'color')">${c.name}</div>`).join('');
+
+const spacings=[
+  {name:'--space-xs','value':'4px'},
+  {name:'--space-sm','value':'8px'},
+  {name:'--space-md','value':'16px'},
+  {name:'--space-lg','value':'24px'},
+  {name:'--space-xl','value':'32px'},
+];
+const st=document.getElementById('spacing-tokens');
+st.innerHTML=spacings.map((s,i)=>`<div class="token-box" style="background:#1e2130;border-color:#2d3551;color:#94a3b8" onclick="showToken(${i},'spacing')">${s.name}</div>`).join('');
+
+function showToken(i,type){
+  const d=document.getElementById('token-detail');
+  d.style.display='block';
+  if(type==='color') d.innerHTML=`${colors[i].name}: ${colors[i].value};\n// Usage: color: var(${colors[i].name})`;
+  else d.innerHTML=`${spacings[i].name}: ${spacings[i].value};\n// Usage: margin: var(${spacings[i].name})`;
+}
+
+function updateTheme(){
+  const col=document.getElementById('color-primary').value;
+  const rad=document.getElementById('radius-range').value;
+  const sp=document.getElementById('space-range').value;
+  document.getElementById('radius-val').textContent=rad+'px';
+  document.getElementById('space-val').textContent=sp+'px';
+  const btn=document.getElementById('ds-btn');
+  const card=document.getElementById('ds-card');
+  btn.style.background=col; btn.style.color='#fff'; btn.style.borderRadius=rad+'px'; btn.style.padding=`${+sp/2}px ${sp}px`;
+  card.style.borderRadius=rad+'px'; card.style.padding=sp+'px';
+}
+updateTheme();
+
+const versions=[
+  {v:'v1.0.0',date:'2021',note:'Initial SAP design token system'},
+  {v:'v2.0.0',date:'2022',note:'Breaking: renamed --sap-primary → --color-primary. Semver major.'},
+  {v:'v2.4.0',date:'2022',note:'Added --space-* tokens, new Icon system'},
+  {v:'v3.0.0',date:'2023',note:'Breaking: CSS vars only (dropped SCSS vars)'},
+  {v:'v3.2.0',date:'2024',note:'Added dark theme token layer'},
+];
+document.getElementById('version-timeline').innerHTML=versions.map(v=>`<div style="margin:6px 0;color:${v.note.includes('Breaking')?'#ef4444':'#10b981'}">${v.v} <span style="color:#94a3b8">(${v.date})</span> — ${v.note}</div>`).join('');
+</script>
+</body>
+</html>

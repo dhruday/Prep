@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 05 — N+1 Problem</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#60a5fa;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#60a5fa;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.err{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#60a5fa;color:#60a5fa}button.blue{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #60a5fa;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}.ok{border-left-color:#10b981}</style>
+</head>
+<body>
+<h1>Lab 05 — N+1 Problem</h1>
+<p class="sub">Visualizing the N+1 query problem and the DataLoader batching solution</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&amp;A</div>
+</div>
+
+<!-- TAB 0: Concept -->
+<div class="panel active">
+  <div class="card">
+    <h3>What Is the N+1 Problem?</h3>
+    <p>When resolving a list of N items plus a related field, a naive resolver fires <b>1 query for the list + N queries for each related item</b> = N+1 total queries.</p>
+    <div class="info warn">Fetching 10 posts + each author = <b>11 HTTP requests</b> instead of 2.</div>
+  </div>
+  <div class="card">
+    <h3 class="bad">❌ Naive Resolver — N+1 Queries</h3>
+<pre><span class="cm">// GraphQL resolver</span>
+Post: {
+  author: <span class="kw">async</span> (post) => {
+    <span class="cm">// Called ONCE PER POST — N times!</span>
+    <span class="kw">return await</span> db.<span class="fn">query</span>(<span class="str">`SELECT * FROM users WHERE id = ${post.authorId}`</span>);
+  }
+}
+
+<span class="cm">// Query: { posts { title author { name } } }</span>
+<span class="err">// 1 query for posts + 10 queries for authors = 11 queries!</span></pre>
+  </div>
+  <div class="card">
+    <h3 class="good">✅ DataLoader — Batched to 2 Queries</h3>
+<pre><span class="kw">const</span> authorLoader = <span class="kw">new</span> <span class="fn">DataLoader</span>(<span class="kw">async</span> (authorIds) => {
+  <span class="cm">// Called ONCE with all collected IDs</span>
+  <span class="kw">const</span> authors = <span class="kw">await</span> db.<span class="fn">query</span>(
+    <span class="str">`SELECT * FROM users WHERE id IN (${authorIds.join(',')})`</span>
+  );
+  <span class="cm">// Return in same order as input IDs</span>
+  <span class="kw">return</span> authorIds.<span class="fn">map</span>(id => authors.<span class="fn">find</span>(a => a.id === id));
+});
+
+Post: {
+  author: (post) => authorLoader.<span class="fn">load</span>(post.authorId)
+  <span class="cm">// DataLoader defers & batches all .load() calls in one tick</span>
+}</pre>
+  </div>
+  <div class="card">
+    <h3>Request Comparison</h3>
+<pre><b>N+1 Pattern (11 requests):</b>
+  GET /api/posts?limit=10              → 10 posts
+  GET /api/users/1                     → author for post 1
+  GET /api/users/2                     → author for post 2
+  ... (8 more individual requests)
+
+<b>DataLoader Batched (2 requests):</b>
+  GET /api/posts?limit=10              → 10 posts
+  GET /api/users?ids=1,2,3,4,5,6,7,8  → all authors at once</pre>
+  </div>
+</div>
+
+<!-- TAB 1: Hands-On Lab -->
+<div class="panel">
+  <div class="card">
+    <h3>🧪 N+1 vs Batched — Side by Side</h3>
+    <p style="margin-bottom:10px;">Watch the request waterfall for each approach.</p>
+    <div class="grid2">
+      <div>
+        <button class="blue" onclick="runNaive()">Run N+1 (11 requests)</button>
+        <div id="naive-out" class="output">Click to simulate N+1...</div>
+      </div>
+      <div>
+        <button class="green" onclick="runBatched()">Run Batched (2 requests)</button>
+        <div id="batch-out" class="output">Click to simulate batched...</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>📊 Request Waterfall</h3>
+    <div id="waterfall" class="output" style="min-height:200px;">Run a simulation to see the waterfall...</div>
+  </div>
+  <div class="card">
+    <h3>Stats Comparison</h3>
+    <div class="grid2">
+      <div class="info warn" id="naive-stats">N+1: — requests, — ms</div>
+      <div class="info ok" id="batch-stats">Batched: — requests, — ms</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: Browser Internals -->
+<div class="panel">
+  <div class="card">
+    <h3>DataLoader Batching — How It Works</h3>
+<pre><b>Event Loop Tick Batching:</b>
+
+  Tick 1 (microtask):
+    resolver post1.author → loader.load(1)  <span class="cm">// queued</span>
+    resolver post2.author → loader.load(2)  <span class="cm">// queued</span>
+    resolver post3.author → loader.load(5)  <span class="cm">// queued</span>
+
+  Tick 2 (next microtask via process.nextTick / Promise.resolve):
+    DataLoader dispatches: batchFn([1, 2, 5])
+    → Single SQL: SELECT * FROM users WHERE id IN (1, 2, 5)
+
+<b>Key insight:</b> DataLoader uses <span class="fn">process.nextTick()</span> to defer the
+batch function until all synchronous .load() calls in the current
+event loop tick have been collected.</pre>
+  </div>
+  <div class="card">
+    <h3>Per-Request Caching</h3>
+<pre><span class="cm">// DataLoader caches within a single request</span>
+loader.<span class="fn">load</span>(1) <span class="cm">// → hits DB</span>
+loader.<span class="fn">load</span>(1) <span class="cm">// → returns cached Promise (no DB hit)</span>
+
+<span class="cm">// IMPORTANT: Create a new DataLoader per request!</span>
+app.<span class="fn">use</span>((req, res, next) => {
+  req.loaders = {
+    author: <span class="kw">new</span> <span class="fn">DataLoader</span>(batchAuthors),
+    <span class="cm">// Fresh loader per request — no cross-request cache pollution</span>
+  };
+  <span class="fn">next</span>();
+});</pre>
+  </div>
+  <div class="card">
+    <h3>Browser Connection Limits</h3>
+    <div class="info warn">Browsers allow only <b>6 concurrent connections</b> per origin (HTTP/1.1). 11 requests means 5 are queued, adding latency. Batching to 2 requests avoids this bottleneck entirely.</div>
+  </div>
+</div>
+
+<!-- TAB 3: Interview Q&A -->
+<div class="panel">
+  <div class="card">
+    <h3>Q1: Explain the N+1 problem in GraphQL</h3>
+    <p><b>A:</b> In GraphQL, each field has its own resolver. When resolving a list of N items with a related field, the related resolver is called N times — once per item. Combined with the initial list query, that's N+1 database calls. For example, fetching 100 posts with their authors triggers 101 queries. The fix is DataLoader, which batches all individual loads from a single event loop tick into one bulk query.</p>
+  </div>
+  <div class="card">
+    <h3>Q2: How does DataLoader achieve batching?</h3>
+    <p><b>A:</b> DataLoader collects all <code>.load(key)</code> calls made synchronously within one event loop tick. It then uses <code>process.nextTick()</code> (or a microtask) to invoke the batch function with all collected keys at once. Each <code>.load()</code> returns a Promise that resolves when the batch completes. It also caches results per request to avoid duplicate loads for the same key.</p>
+  </div>
+  <div class="card">
+    <h3>Q3: Why create a new DataLoader per request?</h3>
+    <p><b>A:</b> DataLoader's built-in cache is a simple memoization Map. If shared across requests, User A could see User B's data from cache (security leak), or stale data persists after mutations. Creating a fresh DataLoader per request ensures isolation and correctness. The per-request cost is negligible compared to the N+1 savings.</p>
+  </div>
+  <div class="card">
+    <h3>Q4: N+1 problem on the frontend — does it exist?</h3>
+    <p><b>A:</b> Yes. If a React component fetches data for each list item individually (e.g., <code>useEffect</code> per card), you get N+1 on the client. Solutions: (1) Fetch all data in the parent and pass down as props. (2) Use a client-side DataLoader pattern. (3) Design the API to return nested data in one call. (4) Use GraphQL fragments to co-locate data needs and fetch in one query.</p>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const naiveOut = document.getElementById('naive-out');
+const batchOut = document.getElementById('batch-out');
+const waterfall = document.getElementById('waterfall');
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function runNaive() {
+  naiveOut.textContent = ''; waterfall.textContent = '';
+  const start = performance.now();
+  const bars = [];
+
+  naiveOut.textContent += '→ GET /api/posts?limit=10\n';
+  bars.push({ label: 'GET /posts', start: 0, dur: 80 });
+  await delay(80);
+  naiveOut.textContent += '✓ 10 posts received\n\n';
+
+  for (let i = 1; i <= 10; i++) {
+    const t = performance.now() - start;
+    naiveOut.textContent += `→ GET /api/users/${i}\n`;
+    bars.push({ label: `GET /users/${i}`, start: Math.round(t), dur: 50 });
+    await delay(50);
+    naiveOut.textContent += `✓ Author ${i} received\n`;
+  }
+
+  const total = Math.round(performance.now() - start);
+  naiveOut.textContent += `\nDone: 11 requests, ${total}ms`;
+  document.getElementById('naive-stats').textContent = `N+1: 11 requests, ${total}ms`;
+  drawWaterfall(bars, 'N+1');
+}
+
+async function runBatched() {
+  batchOut.textContent = ''; waterfall.textContent = '';
+  const start = performance.now();
+  const bars = [];
+
+  batchOut.textContent += '→ GET /api/posts?limit=10\n';
+  bars.push({ label: 'GET /posts', start: 0, dur: 80 });
+  await delay(80);
+  batchOut.textContent += '✓ 10 posts received\n\n';
+
+  const t = Math.round(performance.now() - start);
+  batchOut.textContent += '→ GET /api/users?ids=1,2,3,...,10  (batched)\n';
+  bars.push({ label: 'GET /users?ids=...', start: t, dur: 60 });
+  await delay(60);
+  batchOut.textContent += '✓ All 10 authors received\n';
+
+  const total = Math.round(performance.now() - start);
+  batchOut.textContent += `\nDone: 2 requests, ${total}ms`;
+  document.getElementById('batch-stats').textContent = `Batched: 2 requests, ${total}ms`;
+  drawWaterfall(bars, 'Batched');
+}
+
+function drawWaterfall(bars, label) {
+  const maxT = Math.max(...bars.map(b => b.start + b.dur));
+  const scale = 50;
+  let out = `${label} Waterfall (${bars.length} requests)\n${'─'.repeat(60)}\n`;
+  bars.forEach(b => {
+    const padLeft = Math.round((b.start / maxT) * scale);
+    const barLen = Math.max(1, Math.round((b.dur / maxT) * scale));
+    out += b.label.padEnd(20) + ' ' + ' '.repeat(padLeft) + '█'.repeat(barLen) + ` ${b.dur}ms\n`;
+  });
+  waterfall.textContent = out;
+}
+</script>
+</body>
+</html>

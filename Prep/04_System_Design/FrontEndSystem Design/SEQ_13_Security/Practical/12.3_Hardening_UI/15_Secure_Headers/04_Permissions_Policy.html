@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 04 — Permissions-Policy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a2a1a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟢 Lab 04 — Permissions-Policy</h1>
+<p class="sub">Module 12.3 · Control browser APIs, camera, mic, geolocation</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Policy Features</div>
+  <div class="tab" onclick="setTab(1)">Feature Detection</div>
+  <div class="tab" onclick="setTab(2)">Configuration</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Permissions-Policy Features</h3>
+    <pre><span class="cm">// Permissions-Policy (formerly Feature-Policy)</span>
+<span class="cm">// Controls which browser APIs your page can use</span>
+
+<span class="cm">// Syntax: feature=(allowlist)</span>
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+<span class="cm">// () = disabled entirely (empty allowlist)</span>
+
+<span class="cm">// Available features:</span>
+<span class="kw">camera</span>=()           <span class="cm">Block camera access</span>
+<span class="kw">microphone</span>=()       <span class="cm">Block microphone access</span>
+<span class="kw">geolocation</span>=()      <span class="cm">Block location access</span>
+<span class="kw">payment</span>=()          <span class="cm">Block Payment Request API</span>
+<span class="kw">usb</span>=()              <span class="cm">Block WebUSB</span>
+<span class="kw">bluetooth</span>=()        <span class="cm">Block Web Bluetooth</span>
+<span class="kw">autoplay</span>=()         <span class="cm">Block media autoplay</span>
+<span class="kw">fullscreen</span>=(self)   <span class="cm">Allow fullscreen only for same origin</span>
+<span class="kw">display-capture</span>=()  <span class="cm">Block screen capture</span>
+<span class="kw">accelerometer</span>=()    <span class="cm">Block accelerometer sensor</span>
+<span class="kw">gyroscope</span>=()        <span class="cm">Block gyroscope sensor</span>
+
+<span class="cm">// Allowlist values:</span>
+<span class="cm">// ()           → disabled for all</span>
+<span class="cm">// (self)       → allowed for same origin only</span>
+<span class="cm">// (*)          → allowed for all origins</span>
+<span class="cm">// ("https://trusted.com") → specific origin</span>
+
+<span class="cm">// Example: Allow camera only for video chat partner</span>
+Permissions-Policy: camera=(self <span class="str">"https://meet.google.com"</span>)</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Detect Available Features</h3>
+    <button onclick="detectFeatures()">🔍 Check Browser Permissions</button>
+    <div class="output" id="perm-result">Click to detect what APIs are available</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Recommended Configuration</h3>
+    <pre><span class="cm">// E-commerce app (needs payment, no camera/mic):</span>
+Permissions-Policy:
+  camera=(),
+  microphone=(),
+  geolocation=(),
+  payment=(self),
+  usb=(),
+  bluetooth=(),
+  autoplay=(),
+  display-capture=(),
+  document-domain=()
+
+<span class="cm">// Video conferencing app:</span>
+Permissions-Policy:
+  camera=(self),
+  microphone=(self),
+  display-capture=(self),
+  geolocation=(),
+  payment=(),
+  usb=()
+
+<span class="cm">// Blog / content site:</span>
+Permissions-Policy:
+  camera=(),
+  microphone=(),
+  geolocation=(),
+  payment=(),
+  usb=(),
+  bluetooth=(),
+  autoplay=(),
+  display-capture=(),
+  interest-cohort=()  <span class="cm">// Block FLoC tracking</span>
+
+<span class="cm">// Express.js middleware:</span>
+app.use((req, res, next) =&gt; {
+  res.setHeader(<span class="str">'Permissions-Policy'</span>,
+    <span class="str">'camera=(), microphone=(), geolocation=(), payment=(self)'</span>);
+  next();
+});</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Permissions-Policy</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Why disable APIs your app doesn't use?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Defense in depth against: (1) XSS exploitation: If attacker gets XSS, they can't access camera/microphone/geolocation even with JavaScript execution. Without Permissions-Policy, XSS could silently request camera access. (2) Third-party script abuse: Advertising or analytics scripts embedded on your page could abuse these APIs. Ad networks have been caught using microphone access for audio fingerprinting. (3) Iframe-based attacks: Embedded iframes cannot use restricted features. Prevents permission-jacking via invisible iframes. (4) Supply chain attacks: A compromised npm package injected into your bundle can't access hardware APIs. (5) Principle of least privilege: Your shopping app doesn't need camera access. Disable it. If you add video reviews later, enable it explicitly. Best practice: Start with everything disabled, enable only what you need, with minimum scope (self vs specific origins).</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function detectFeatures(){
+  const el=document.getElementById('perm-result');
+  el.textContent='Browser Permission Status:\n'+('='.repeat(40))+'\n\n';
+  const perms=['camera','microphone','geolocation','notifications','persistent-storage','push','screen-wake-lock','accelerometer','gyroscope'];
+  for(const name of perms){
+    try{
+      const status=await navigator.permissions.query({name});
+      el.textContent+=`${status.state==='granted'?'✅':status.state==='denied'?'❌':'⚠️'} ${name}: ${status.state}\n`;
+    }catch(e){
+      el.textContent+=`ℹ️ ${name}: not queryable (${e.message})\n`;
+    }
+  }
+  el.textContent+='\nAPI Availability:\n';
+  const apis=[['navigator.mediaDevices','Camera/Mic API'],['navigator.geolocation','Geolocation API'],['PaymentRequest','Payment API'],['navigator.bluetooth','Bluetooth API'],['navigator.usb','WebUSB API']];
+  apis.forEach(([path,label])=>{
+    const available=path.split('.').reduce((o,k)=>o&&o[k],window);
+    el.textContent+=`${available?'✅':'❌'} ${label} (${path})\n`;
+  });
+}
+</script>
+</body></html>

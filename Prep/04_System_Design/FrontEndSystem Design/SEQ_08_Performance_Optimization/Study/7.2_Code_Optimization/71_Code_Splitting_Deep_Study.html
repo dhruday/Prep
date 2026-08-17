@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Code Splitting Strategies Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2e1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Code Splitting Strategies Deep Study</h1>
+<p class="sub">Module 7.2 · Code Optimization · Reducing Initial Bundle Size</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Patterns</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. Why Code Split?</h3>
+    <pre><span class="cm">// Problem: Modern SPAs bundle ALL code into a single file</span>
+<span class="cm">// A typical React app: 500KB-2MB of JavaScript</span>
+<span class="cm">// User visits homepage → downloads ALL JS including admin panel, settings, etc.</span>
+<span class="cm">//</span>
+<span class="cm">// Impact on performance:</span>
+<span class="cm">// 1. Download: 500KB gzipped on 3G (1.6Mbps) = ~2.5 seconds</span>
+<span class="cm">// 2. Parse: V8 parses JS at ~1MB/sec on mobile = 500ms</span>
+<span class="cm">// 3. Compile: Bytecode compilation adds ~200ms</span>
+<span class="cm">// 4. Execute: Module initialization, side effects</span>
+<span class="cm">// Total: 3-4 seconds before page is interactive</span>
+<span class="cm">//</span>
+<span class="cm">// Code splitting = load only what's needed for the current route/view</span>
+<span class="cm">// Split 500KB → 80KB initial + load rest on demand</span>
+<span class="cm">// Result: TTI drops from 4s to ~1.5s</span>
+<span class="cm">//</span>
+<span class="cm">// Webpack/Vite create "chunks" — separate .js files</span>
+<span class="cm">// Each chunk loaded on demand via dynamic import()</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. How Dynamic import() Works Internally</h3>
+    <pre><span class="cm">// import() is an ES2020 spec feature (not webpack-specific)</span>
+<span class="cm">//</span>
+<span class="cm">// Static import (build time):</span>
+<span class="kw">import</span> { Dashboard } <span class="kw">from</span> <span class="str">'./Dashboard'</span>;
+<span class="cm">// → Bundler includes Dashboard in the main bundle</span>
+<span class="cm">// → Loaded immediately on page load</span>
+
+<span class="cm">// Dynamic import (runtime):</span>
+<span class="kw">const</span> { Dashboard } = <span class="kw">await</span> <span class="fn">import</span>(<span class="str">'./Dashboard'</span>);
+<span class="cm">// → Bundler creates a SEPARATE chunk for Dashboard</span>
+<span class="cm">// → Only loaded when this code path executes</span>
+<span class="cm">// → Returns a Promise that resolves to the module</span>
+
+<span class="cm">// Under the hood (webpack):</span>
+<span class="cm">// 1. Webpack replaces import() with __webpack_require__.e(chunkId)</span>
+<span class="cm">// 2. Runtime creates a &lt;script&gt; tag pointing to the chunk URL</span>
+<span class="cm">// 3. Script loads and executes, registering its modules</span>
+<span class="cm">// 4. Promise resolves with the module exports</span>
+<span class="cm">//</span>
+<span class="cm">// Naming chunks:</span>
+<span class="kw">const</span> mod = <span class="kw">await</span> <span class="fn">import</span>(<span class="cm">/* webpackChunkName: "dashboard" */</span> <span class="str">'./Dashboard'</span>);
+<span class="cm">// Produces: dashboard.abc123.js (instead of random number)</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Three Levels of Code Splitting</h3>
+    <table>
+      <tr><th>Level</th><th>Strategy</th><th>When Loaded</th><th>Example</th></tr>
+      <tr><td>Route-level</td><td>Split by page/route</td><td>On navigation</td><td>React.lazy + React Router</td></tr>
+      <tr><td>Component-level</td><td>Split heavy components</td><td>On interaction/visibility</td><td>Modal, chart, rich editor</td></tr>
+      <tr><td>Library-level</td><td>Split large dependencies</td><td>When feature used</td><td>moment.js, d3, lodash</td></tr>
+    </table>
+    <div class="info">Start with route-level splitting (biggest impact, least effort). Then progressively split heavy components. Library-level is for advanced optimization when specific deps dominate bundle.</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Pattern 1: Route-Based Splitting (React)</h3>
+    <pre><span class="kw">import</span> { lazy, Suspense } <span class="kw">from</span> <span class="str">'react'</span>;
+<span class="kw">import</span> { Routes, Route } <span class="kw">from</span> <span class="str">'react-router-dom'</span>;
+
+<span class="cm">// Each route = separate chunk</span>
+<span class="kw">const</span> Home = <span class="fn">lazy</span>(() =&gt; <span class="fn">import</span>(<span class="str">'./pages/Home'</span>));
+<span class="kw">const</span> Products = <span class="fn">lazy</span>(() =&gt; <span class="fn">import</span>(<span class="str">'./pages/Products'</span>));
+<span class="kw">const</span> Admin = <span class="fn">lazy</span>(() =&gt; <span class="fn">import</span>(<span class="str">'./pages/Admin'</span>));
+
+<span class="kw">function</span> <span class="fn">App</span>() {
+  <span class="kw">return</span> (
+    &lt;Suspense fallback={&lt;PageSkeleton /&gt;}&gt;
+      &lt;Routes&gt;
+        &lt;Route path=<span class="str">"/"</span> element={&lt;Home /&gt;} /&gt;
+        &lt;Route path=<span class="str">"/products"</span> element={&lt;Products /&gt;} /&gt;
+        &lt;Route path=<span class="str">"/admin/*"</span> element={&lt;Admin /&gt;} /&gt;
+      &lt;/Routes&gt;
+    &lt;/Suspense&gt;
+  );
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>Pattern 2: Component-Level Splitting</h3>
+    <pre><span class="cm">// Split heavy components that aren't needed on initial render</span>
+
+<span class="cm">// Modal — loaded on button click</span>
+<span class="kw">const</span> HeavyModal = <span class="fn">lazy</span>(() =&gt; <span class="fn">import</span>(<span class="str">'./HeavyModal'</span>));
+
+<span class="kw">function</span> <span class="fn">ProductPage</span>() {
+  <span class="kw">const</span> [showModal, setShowModal] = <span class="fn">useState</span>(<span class="kw">false</span>);
+  <span class="kw">return</span> (
+    &lt;&gt;
+      &lt;button onClick={() =&gt; setShowModal(<span class="kw">true</span>)}&gt;View 3D&lt;/button&gt;
+      {showModal &amp;&amp; (
+        &lt;Suspense fallback={&lt;ModalSkeleton /&gt;}&gt;
+          &lt;HeavyModal onClose={() =&gt; setShowModal(<span class="kw">false</span>)} /&gt;
+        &lt;/Suspense&gt;
+      )}
+    &lt;/&gt;
+  );
+}
+
+<span class="cm">// Chart — loaded when scrolled into view</span>
+<span class="kw">const</span> Chart = <span class="fn">lazy</span>(() =&gt; <span class="fn">import</span>(<span class="str">'./Chart'</span>));
+
+<span class="kw">function</span> <span class="fn">Dashboard</span>() {
+  <span class="kw">const</span> [isVisible, ref] = <span class="fn">useIntersectionObserver</span>();
+  <span class="kw">return</span> (
+    &lt;div ref={ref}&gt;
+      {isVisible &amp;&amp; (
+        &lt;Suspense fallback={&lt;ChartSkeleton /&gt;}&gt;
+          &lt;Chart data={data} /&gt;
+        &lt;/Suspense&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>Pattern 3: Prefetching &amp; Preloading Chunks</h3>
+    <pre><span class="cm">// Prefetch = download in idle time (low priority)</span>
+<span class="cm">// Preload = download immediately (high priority)</span>
+
+<span class="cm">// webpack magic comments:</span>
+<span class="kw">const</span> Admin = <span class="fn">lazy</span>(() =&gt; <span class="fn">import</span>(
+  <span class="cm">/* webpackPrefetch: true */</span>
+  <span class="str">'./pages/Admin'</span>
+));
+<span class="cm">// Adds: &lt;link rel="prefetch" href="admin.chunk.js"&gt;</span>
+<span class="cm">// Browser downloads during idle time — ready when user navigates</span>
+
+<span class="cm">// Hover-based preloading (predictive):</span>
+<span class="kw">function</span> <span class="fn">NavLink</span>({ to, children }) {
+  <span class="kw">const</span> preloadRef = <span class="fn">useRef</span>(<span class="kw">false</span>);
+
+  <span class="kw">const</span> <span class="fn">handleMouseEnter</span> = () =&gt; {
+    <span class="kw">if</span> (!preloadRef.current) {
+      preloadRef.current = <span class="kw">true</span>;
+      <span class="cm">// Trigger dynamic import on hover — chunk starts loading</span>
+      <span class="kw">if</span> (to === <span class="str">'/admin'</span>) <span class="fn">import</span>(<span class="str">'./pages/Admin'</span>);
+      <span class="kw">if</span> (to === <span class="str">'/products'</span>) <span class="fn">import</span>(<span class="str">'./pages/Products'</span>);
+    }
+  };
+
+  <span class="kw">return</span> (
+    &lt;Link to={to} onMouseEnter={handleMouseEnter}&gt;{children}&lt;/Link&gt;
+  );
+}
+
+<span class="cm">// Adaptive loading — only prefetch on fast connections</span>
+<span class="kw">if</span> (navigator.connection?.effectiveType !== <span class="str">'slow-2g'</span>) {
+  <span class="fn">import</span>(<span class="str">'./pages/Products'</span>); <span class="cm">// Prefetch</span>
+}</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: Explain code splitting and why it's important for performance.</div>
+      <div class="a">Code splitting breaks your JavaScript bundle into smaller chunks loaded on demand. Without it, users download all application code upfront — including pages they may never visit. The impact is threefold: download time (500KB over slow 4G takes ~2.5s), parse time (mobile CPUs parse JS at ~1MB/sec), and execution time (module initialization blocks the main thread). By splitting at route boundaries, only the current route's code loads initially — reducing initial JS from 500KB to maybe 80KB, cutting TTI by 60-70%. Implementation: use dynamic import() which bundlers (webpack/Vite) recognize as split points, creating separate chunk files. React provides React.lazy() which wraps dynamic import for component-level splitting with Suspense for loading states.</div>
+      <div class="followup">Follow-up: What's the difference between route-level and component-level splitting? When would you use each?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: How would you implement prefetching for code-split chunks?</div>
+      <div class="a">Three strategies ranked by intelligence: (1) webpack prefetch comments — add /* webpackPrefetch: true */ to import(), which injects &lt;link rel="prefetch"&gt; into the document. Browser downloads during idle time with lowest priority. Simple but not smart — prefetches everything. (2) Hover-based preloading — trigger the dynamic import when user hovers over a navigation link. Average hover-to-click time is 200-400ms, enough to start downloading the chunk. This is what Next.js does with its Link component. (3) Predictive prefetching — use analytics data to predict which page the user will visit next based on the current page. Google's Guess.js does this with Google Analytics data to build a Markov chain of navigation probability. Only prefetch routes with >60% transition probability. Additionally, I'd check navigator.connection.saveData and effectiveType — skip prefetching on data-saver mode or slow connections.</div>
+      <div class="followup">Follow-up: How does Next.js handle code splitting differently from Create React App?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q3: What are the tradeoffs of aggressive code splitting?</div>
+      <div class="a">Over-splitting has real costs. (1) Request waterfall — too many tiny chunks means many sequential HTTP requests, especially on HTTP/1.1 (limited to 6 parallel connections). Each chunk has request overhead (DNS, TCP, TLS if not HTTP/2). (2) Chunk loading latency on navigation — users see loading spinners between routes instead of instant transitions. (3) Duplicate code — shared dependencies between chunks get duplicated unless properly configured with splitChunks. (4) Cache invalidation complexity — more chunks = more cache entries to manage. Balance: split at route boundaries (big wins, few chunks), identify components over 30KB for component-level splitting, and use webpack's splitChunks.cacheGroups to extract shared vendor code into a common chunk. The goal is fewer than 10 chunks per route, with the initial chunk under 170KB gzipped.</div>
+      <div class="followup">Follow-up: How does HTTP/2 multiplexing change the code splitting strategy?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>webpack splitChunks Configuration</h3>
+    <pre><span class="cm">// webpack.config.js — Production-grade splitting</span>
+module.exports = {
+  optimization: {
+    splitChunks: {
+      chunks: <span class="str">'all'</span>,
+      maxInitialRequests: <span class="num">10</span>,    <span class="cm">// Max parallel requests for initial load</span>
+      maxAsyncRequests: <span class="num">15</span>,      <span class="cm">// Max parallel requests for on-demand</span>
+      minSize: <span class="num">20000</span>,             <span class="cm">// 20KB min chunk size</span>
+      cacheGroups: {
+        <span class="cm">// React core — rarely changes, long cache</span>
+        react: {
+          test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+          name: <span class="str">'react-vendor'</span>,
+          priority: <span class="num">30</span>,
+          chunks: <span class="str">'all'</span>,
+        },
+        <span class="cm">// Other vendors — change occasionally</span>
+        vendors: {
+          test: /[\\/]node_modules[\\/]/,
+          name: <span class="str">'vendors'</span>,
+          priority: <span class="num">20</span>,
+          chunks: <span class="str">'all'</span>,
+          minSize: <span class="num">50000</span>,
+        },
+        <span class="cm">// Shared code between routes</span>
+        common: {
+          minChunks: <span class="num">2</span>,  <span class="cm">// Used in 2+ chunks</span>
+          name: <span class="str">'common'</span>,
+          priority: <span class="num">10</span>,
+          reuseExistingChunk: <span class="kw">true</span>,
+        },
+      },
+    },
+    runtimeChunk: <span class="str">'single'</span>,  <span class="cm">// Separate runtime for long-term caching</span>
+  },
+};</pre>
+  </div>
+
+  <div class="card">
+    <h3>Vite Code Splitting (Rollup-based)</h3>
+    <pre><span class="cm">// vite.config.ts</span>
+<span class="kw">export default</span> <span class="fn">defineConfig</span>({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          <span class="str">'react-vendor'</span>: [<span class="str">'react'</span>, <span class="str">'react-dom'</span>],
+          <span class="str">'router'</span>: [<span class="str">'react-router-dom'</span>],
+          <span class="str">'ui'</span>: [<span class="str">'@radix-ui/react-dialog'</span>, <span class="str">'@radix-ui/react-tooltip'</span>],
+        },
+      },
+    },
+    chunkSizeWarningLimit: <span class="num">250</span>, <span class="cm">// Warn if chunk > 250KB</span>
+  },
+});</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Code Splitting Decision Matrix</h3>
+    <table>
+      <tr><th>Factor</th><th>Split</th><th>Don't Split</th></tr>
+      <tr><td>Component size</td><td>&gt; 30KB</td><td>&lt; 10KB</td></tr>
+      <tr><td>Usage frequency</td><td>Rarely used / specific routes</td><td>Used on every page</td></tr>
+      <tr><td>User intent</td><td>Behind interaction (click/scroll)</td><td>Immediately visible</td></tr>
+      <tr><td>Network cost</td><td>Heavy dependency (chart lib)</td><td>Tiny utility function</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Production Checklist</h3>
+    <pre>✅ Route-level splitting with React.lazy + Suspense
+✅ Heavy components split (modals, charts, editors > 30KB)
+✅ Vendor chunk separated (react-vendor, other-vendors)
+✅ Common chunk for shared code between routes
+✅ Prefetch likely-next-route chunks on hover/idle
+✅ Loading skeletons for all Suspense boundaries
+✅ Error boundaries wrapping lazy components
+✅ Bundle analyzer run on each PR (webpack-bundle-analyzer)
+✅ HTTP/2 enabled on CDN for parallel chunk loading
+✅ Service worker precaches critical chunks</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

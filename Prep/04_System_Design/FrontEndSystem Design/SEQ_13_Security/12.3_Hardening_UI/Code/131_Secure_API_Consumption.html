@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 131 – Secure API Consumption</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #60a5fa;background:#1e3a5f;color:#60a5fa;cursor:pointer;font-size:.82rem;margin:4px}
+.bad{color:#ef4444}.good{color:#10b981}
+</style>
+</head>
+<body>
+<h1>🔐 Secure API Consumption</h1>
+<p class="sub">Topic 131 · Part 12 / 12.3 Hardening UI · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Request Simulator</div>
+  <div class="tab" onclick="setTab(2)">Risk Matrix</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Principles of secure API consumption from the frontend</h3>
+    <p style="color:#94a3b8;font-size:.83rem;margin-bottom:14px">Calling APIs from the browser exposes you to token leakage, response injection, broken object-level auth, rate limit abuse, and more. SAP APIs in BTP are consumed via destination services — tokens are managed server-side, never in the browser.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#60a5fa;font-weight:700;margin-bottom:6px">🔑 Auth headers</div><div style="color:#94a3b8">Always use Authorization: Bearer, never pass tokens in URL params (?token=...) — they end up in logs and history</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Response validation</div><div style="color:#94a3b8">Validate response structure before rendering. Don't trust API shape blindly — attackers can swap data in MITM or compromised CDNs</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#f59e0b;font-weight:700;margin-bottom:6px">⚡ Rate limiting (client)</div><div style="color:#94a3b8">Debounce/throttle user-triggered calls. Use exponential back-off for retries. Honor 429 Retry-After headers</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#a78bfa;font-weight:700;margin-bottom:6px">🧱 BFF proxy</div><div style="color:#94a3b8">Backend-for-frontend keeps secrets (API keys) server-side; browser only calls your own /api/* endpoints, not third-party directly</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#ef4444;font-weight:700;margin-bottom:6px">🚫 No API keys in browser</div><div style="color:#94a3b8">Never place API keys in .env (REACT_APP_*) that ship to browser bundle — they are public. Use server-side proxy instead</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:12px"><div style="color:#60a5fa;font-weight:700;margin-bottom:6px">🔏 HTTPS only</div><div style="color:#94a3b8">Enforce HTTPS. Use SRI for embedded scripts. Do not make mixed-content HTTP calls from HTTPS pages</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Request header pattern comparison</h3>
+    <div style="font-size:.8rem;margin-bottom:10px;color:#94a3b8">Click each pattern to see what headers are sent and the security outcome:</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button onclick="showReq(0)">❌ Token in URL</button>
+      <button onclick="showReq(1)">❌ API key in JS bundle</button>
+      <button onclick="showReq(2)">✅ Authorization header</button>
+      <button onclick="showReq(3)">✅ BFF proxy</button>
+    </div>
+    <div id="req-out" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;font-size:.78rem;font-family:monospace;min-height:80px;color:#94a3b8">Select a pattern above to compare...</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Frontend API security risk matrix</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Risk</th>
+        <th style="padding:8px;border:1px solid #2d3551">Attack vector</th>
+        <th style="padding:8px;border:1px solid #2d3551">Frontend mitigation</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Token leakage via URL</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Token in query string → server logs, Referer header, browser history</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Always use Authorization header, POST body for secret material</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Exposed API key in bundle</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">View source → extract key → unlimited free API calls</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">BFF proxy; keys never leave server environment</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">Response injection</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">API returns HTML/script in JSON value, rendered directly in DOM</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Sanitize with DOMPurify before innerHTML render; use textContent by default</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">Broken object-level auth</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Increment /api/order/123 → access other user's order</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Server must enforce ownership; frontend: hide unowned resource IDs</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#a78bfa">SSRF via URL params</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">?redirect=http://internal.corp passed to server-side fetch</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Allowlist URL params; server must validate redirect targets</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Secure Axios instance + BFF proxy + response validation</h3>
+    <pre><span class="cm">// ─── Secure Axios instance (frontend) ───</span>
+<span class="kw">const</span> api = axios.<span class="fn">create</span>({
+  baseURL: <span class="str">'/api'</span>,             <span class="cm">// BFF proxy — never direct third-party</span>
+  withCredentials: <span class="kw">true</span>,       <span class="cm">// send HttpOnly cookie with every request</span>
+  timeout: 10_000
+});
+
+<span class="cm">// Never put auth in URL — use header interceptor</span>
+api.interceptors.request.<span class="fn">use</span>(cfg =&gt; {
+  <span class="kw">const</span> t = tokenStore.<span class="fn">get</span>();
+  <span class="kw">if</span> (t) cfg.headers[<span class="str">'Authorization'</span>] = <span class="str">`Bearer ${t}`</span>;
+  <span class="kw">return</span> cfg;
+});
+
+<span class="cm">// ─── Response validation with Zod ───</span>
+<span class="kw">import</span> { z } <span class="kw">from</span> <span class="str">'zod'</span>;
+
+<span class="kw">const</span> OrderSchema = z.<span class="fn">object</span>({
+  id: z.<span class="fn">string</span>().<span class="fn">uuid</span>(),
+  total: z.<span class="fn">number</span>().<span class="fn">positive</span>(),
+  status: z.<span class="fn">enum</span>([<span class="str">'pending'</span>, <span class="str">'paid'</span>, <span class="str">'shipped'</span>])
+});
+
+<span class="kw">async function</span> <span class="fn">getOrder</span>(id: <span class="kw">string</span>) {
+  <span class="kw">const</span> { data } = <span class="kw">await</span> api.<span class="fn">get</span>(<span class="str">`/orders/${encodeURIComponent(id)}`</span>);
+  <span class="kw">return</span> OrderSchema.<span class="fn">parse</span>(data); <span class="cm">// throws if shape is wrong</span>
+}
+
+<span class="cm">// ─── BFF proxy (Next.js API route) ───</span>
+<span class="cm">// pages/api/orders/[id].ts</span>
+<span class="kw">export default async function</span> <span class="fn">handler</span>(req, res) {
+  <span class="kw">const</span> token = <span class="kw">await</span> <span class="fn">getServerSideToken</span>(req); <span class="cm">// from HttpOnly cookie</span>
+  <span class="kw">const</span> upstream = <span class="kw">await</span> <span class="fn">fetch</span>(
+    <span class="str">`${process.env.INTERNAL_API}/orders/${req.query.id}`</span>,
+    { headers: { Authorization: <span class="str">`Bearer ${token}`</span>,
+                 <span class="str">'X-API-Key'</span>: process.env.API_KEY } } <span class="cm">// key stays on server</span>
+  );
+  <span class="kw">const</span> data = <span class="kw">await</span> upstream.<span class="fn">json</span>();
+  res.<span class="fn">json</span>(data);
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const reqs=[
+  {title:'❌ Token in URL',color:'#ef4444',lines:['GET /api/orders?token=sk_live_abc123 HTTP/1.1','Host: api.example.com','','⚠ Token appears in: server access logs, browser history,','  Referer headers if page navigates away, analytics URLs']},
+  {title:'❌ API key in JS bundle',color:'#ef4444',lines:['// bundle.js (visible in DevTools Sources)','const API_KEY = "sk_live_abc123def456";','','⚠ Anyone can view-source, DevTools → Sources, or strings-dump the bundle.','  This is equivalent to posting the key on a public forum.']},
+  {title:'✅ Authorization header',color:'#10b981',lines:['GET /api/orders HTTP/1.1','Host: api.example.com','Authorization: Bearer sk_live_abc123','','✅ Header is not stored in logs (if configured correctly),','   not visible in browser history, sent only over HTTPS.']},
+  {title:'✅ BFF proxy',color:'#10b981',lines:['Browser → GET /api/orders  (no token, just HttpOnly session cookie)','  ↓','BFF (Node.js server) adds { Authorization: Bearer <server-side-token>, X-API-Key: *** }','  ↓','Internal API — secret never leaves server memory','','✅ Browser never sees API keys or upstream tokens.']}
+];
+function showReq(i){const r=reqs[i];document.getElementById('req-out').innerHTML=`<div style="color:${r.color};font-weight:700;margin-bottom:8px">${r.title}</div>`+r.lines.map(l=>`<div>${l}</div>`).join('');}
+</script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>What FAANG Interviewers Look For</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px}
+    h1{text-align:center;color:#60a5fa;margin-bottom:4px;font-size:1.5rem}
+    .subtitle{text-align:center;color:#94a3b8;margin-bottom:18px;font-size:.88rem}
+    .score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+    .score-card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:14px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+    .score-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+    .score-card:hover,.score-card.active{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+    .score-card h3{font-size:.85rem;color:var(--accent);margin-bottom:6px}
+    .score-bar-wrap{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:.72rem}
+    .score-bar-bg{flex:1;height:6px;background:#2d3551;border-radius:3px;overflow:hidden}
+    .score-bar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .6s ease}
+    .importance{font-size:.68rem;padding:2px 8px;border-radius:3px;background:rgba(255,255,255,.07)}
+    .detail-panel{background:#1e2130;border:1px solid #3b82f6;border-radius:12px;padding:18px;margin-bottom:16px;min-height:120px;transition:all .3s;display:none}
+    .detail-panel.show{display:block}
+    .detail-title{font-size:1rem;font-weight:bold;margin-bottom:8px}
+    .detail-signals{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+    .signal-good{background:#0d2b1a;border:1px solid #166534;border-radius:6px;padding:8px;font-size:.74rem;line-height:1.6}
+    .signal-bad{background:#2b0d0d;border:1px solid #991b1b;border-radius:6px;padding:8px;font-size:.74rem;line-height:1.6}
+    .signal-good::before{content:'✅ Green Flag: ';color:#86efac;font-weight:bold;display:block;margin-bottom:2px}
+    .signal-bad::before{content:'🚩 Red Flag: ';color:#fca5a5;font-weight:bold;display:block;margin-bottom:2px}
+    .matrix{width:100%;border-collapse:separate;border-spacing:0 4px;font-size:.76rem}
+    .matrix th{background:#162032;color:#60a5fa;padding:8px 10px;text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.8px}
+    .matrix td{background:#1e2130;padding:8px 10px;border-bottom:1px solid #2d3551}
+    .matrix tr td:first-child{border-radius:6px 0 0 6px}
+    .matrix tr td:last-child{border-radius:0 6px 6px 0}
+    .pill{display:inline-block;padding:2px 7px;border-radius:3px;font-size:.66rem}
+    .pill-crit{background:#7f1d1d;color:#fca5a5}
+    .pill-high{background:#1e3a5f;color:#93c5fd}
+    .pill-med{background:#1a3a1a;color:#86efac}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:16px}
+    .card h2{font-size:.82rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;color:#60a5fa}
+    .tip{background:#162032;border-left:3px solid #3b82f6;padding:9px 12px;border-radius:0 6px 6px 0;font-size:.76rem;margin:6px 0;line-height:1.6}
+    .tip strong{color:#93c5fd}
+  </style>
+</head>
+<body>
+<h1>🎯 What FAANG Interviewers Look For</h1>
+<p class="subtitle">Click each dimension to see green flags, red flags, and how to prepare</p>
+
+<div class="score-grid">
+  <div class="score-card" style="--accent:#60a5fa" onclick="showDetail('clarity')">
+    <h3>📐 Problem Clarity</h3>
+    <div class="score-bar-wrap"><span style="color:#94a3b8">Weight</span><div class="score-bar-bg"><div class="score-bar-fill" style="width:90%"></div></div><span>9/10</span></div>
+    <span class="importance" style="color:#60a5fa">Critical</span>
+  </div>
+  <div class="score-card" style="--accent:#10b981" onclick="showDetail('architecture')">
+    <h3>🏗️ Architecture Thinking</h3>
+    <div class="score-bar-wrap"><span style="color:#94a3b8">Weight</span><div class="score-bar-bg"><div class="score-bar-fill" style="width:95%"></div></div><span>9.5/10</span></div>
+    <span class="importance" style="color:#10b981">Critical</span>
+  </div>
+  <div class="score-card" style="--accent:#a78bfa" onclick="showDetail('tradeoffs')">
+    <h3>⚖️ Trade-off Articulation</h3>
+    <div class="score-bar-wrap"><span style="color:#94a3b8">Weight</span><div class="score-bar-bg"><div class="score-bar-fill" style="width:85%"></div></div><span>8.5/10</span></div>
+    <span class="importance" style="color:#a78bfa">Critical</span>
+  </div>
+  <div class="score-card" style="--accent:#f59e0b" onclick="showDetail('depth')">
+    <h3>🔬 Technical Depth</h3>
+    <div class="score-bar-wrap"><span style="color:#94a3b8">Weight</span><div class="score-bar-bg"><div class="score-bar-fill" style="width:80%"></div></div><span>8/10</span></div>
+    <span class="importance" style="color:#f59e0b">High</span>
+  </div>
+  <div class="score-card" style="--accent:#ef4444" onclick="showDetail('scale')">
+    <h3>📈 Scale Awareness</h3>
+    <div class="score-bar-wrap"><span style="color:#94a3b8">Weight</span><div class="score-bar-bg"><div class="score-bar-fill" style="width:75%"></div></div><span>7.5/10</span></div>
+    <span class="importance" style="color:#ef4444">High</span>
+  </div>
+  <div class="score-card" style="--accent:#06b6d4" onclick="showDetail('collab')">
+    <h3>🤝 Collaboration Signal</h3>
+    <div class="score-bar-wrap"><span style="color:#94a3b8">Weight</span><div class="score-bar-bg"><div class="score-bar-fill" style="width:70%"></div></div><span>7/10</span></div>
+    <span class="importance" style="color:#06b6d4">High</span>
+  </div>
+</div>
+
+<div id="detail-panel" class="detail-panel">
+  <div class="detail-title" id="detail-title"></div>
+  <div id="detail-body"></div>
+</div>
+
+<div class="grid2" style="margin-bottom:14px">
+  <div class="card">
+    <h2>📋 Evaluation Matrix by Company</h2>
+    <table class="matrix">
+      <tr><th>Dimension</th><th>Microsoft</th><th>Adobe</th><th>Salesforce</th></tr>
+      <tr><td>System Design</td><td><span class="pill pill-crit">Very High</span></td><td><span class="pill pill-high">High</span></td><td><span class="pill pill-crit">Very High</span></td></tr>
+      <tr><td>Coding</td><td><span class="pill pill-crit">Very High</span></td><td><span class="pill pill-high">High</span></td><td><span class="pill pill-high">High</span></td></tr>
+      <tr><td>Performance</td><td><span class="pill pill-high">High</span></td><td><span class="pill pill-crit">Very High</span></td><td><span class="pill pill-med">Medium</span></td></tr>
+      <tr><td>Accessibility</td><td><span class="pill pill-crit">Very High</span></td><td><span class="pill pill-high">High</span></td><td><span class="pill pill-high">High</span></td></tr>
+      <tr><td>Trade-offs</td><td><span class="pill pill-crit">Very High</span></td><td><span class="pill pill-high">High</span></td><td><span class="pill pill-crit">Very High</span></td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h2>💡 Hruday's Preparation Tips</h2>
+    <div class="tip"><strong>Open every answer with scope:</strong> "Before designing X, I need to clarify: is this a consumer product or enterprise? What's the expected DAU? Any specific constraints?"</div>
+    <div class="tip"><strong>Name your trade-offs explicitly:</strong> "CSR is simpler to implement but gives worse FCP. SSR improves perceived performance but adds server costs. Given our requirement for SEO, I'd choose SSR."</div>
+    <div class="tip"><strong>Use your SAP experience as proof:</strong> Your Lighthouse 60→95 story IS the answer to "tell me about a performance optimization you drove." Don't hide your experience.</div>
+    <div class="tip"><strong>Think out loud deliberately:</strong> Interviewers can't evaluate what you don't say. Narrate your reasoning, not just your conclusion.</div>
+  </div>
+</div>
+
+<script>
+const details = {
+  clarity: {
+    title: '📐 Problem Clarity — Ask Before You Architect',
+    body: `<p style="font-size:.78rem;color:#94a3b8;margin-bottom:10px">Interviewers intentionally leave requirements vague to see if you clarify before designing. Jumping straight to solutions is a red flag.</p>
+    <div class="detail-signals">
+      <div class="signal-good">Asks 3–5 targeted clarifying questions before touching the whiteboard. Questions cover: user type, scale, constraints, existing systems, key metrics.</div>
+      <div class="signal-bad">Immediately starts drawing components. Asks no questions. Or asks too many trivial questions without any self-directedness.</div>
+      <div class="signal-good">Restates the problem in their own words after clarification: "So we're building X for Y users, optimising for Z metric, and the biggest constraint is ABC — right?"</div>
+      <div class="signal-bad">Misunderstands the core of the problem halfway through and has to restart. Usually from not clarifying upfront.</div>
+    </div>`
+  },
+  architecture: {
+    title: '🏗️ Architecture Thinking — System Thinking at Scale',
+    body: `<p style="font-size:.78rem;color:#94a3b8;margin-bottom:10px">Can you reason about how components interact, what the failure modes are, and how the system evolves?</p>
+    <div class="detail-signals">
+      <div class="signal-good">Separates HLD (component diagram, data flow) from LLD (specific APIs/data structures). Addresses both layers when asked.</div>
+      <div class="signal-bad">Only talks about UI components without addressing data flow, state management, or API design. Or vice versa — goes to deep implementation detail without a high-level view first.</div>
+      <div class="signal-good">Considers the non-happy path: what happens when the API fails? What's the loading and error state? How do you handle stale data?</div>
+      <div class="signal-bad">Only designs for the happy path. Acts surprised when interviewer asks "what happens if the network drops?"</div>
+    </div>`
+  },
+  tradeoffs: {
+    title: '⚖️ Trade-off Articulation — The Differentiating Signal',
+    body: `<p style="font-size:.78rem;color:#94a3b8;margin-bottom:10px">Senior engineers don't just pick "the right answer" — they explain WHY option A beats option B given the constraints.</p>
+    <div class="detail-signals">
+      <div class="signal-good">"I'm choosing React Query over Redux here because the data is mostly server-state. If we needed complex cross-component derived state, Redux would be better."</div>
+      <div class="signal-bad">"I always use React Query." No context, no alternatives considered.</div>
+      <div class="signal-good">Names and weighs at least 2 alternatives for each major decision point. Shows awareness of when the decision would flip.</div>
+      <div class="signal-bad">Presents one solution as the only possible solution. Becomes defensive when interviewer suggests alternatives.</div>
+    </div>`
+  },
+  depth: {
+    title: '🔬 Technical Depth — Can You Go Deep When Asked?',
+    body: `<p style="font-size:.78rem;color:#94a3b8;margin-bottom:10px">Interviewers will probe any area you mention. If you say "I'd use a service worker," you must be able to explain how the cache lifecycle works.</p>
+    <div class="detail-signals">
+      <div class="signal-good">When asked "how does that work under the hood?" can explain fundamentals: browser rendering pipeline, event loop, V8 optimisations, TCP handshake cost.</div>
+      <div class="signal-bad">Uses buzzwords but can't explain them. "I'd add a CDN" — but doesn't know what a CDN actually caches, or how cache invalidation works.</div>
+      <div class="signal-good">Acknowledges uncertainty cleanly: "I know the concept but would verify the exact API — here's the shape of what I'd use." Shows metacognition.</div>
+      <div class="signal-bad">Makes things up or confidently asserts incorrect information. Worse than admitting uncertainty.</div>
+    </div>`
+  },
+  scale: {
+    title: '📈 Scale Awareness — 10× Thinking',
+    body: `<p style="font-size:.78rem;color:#94a3b8;margin-bottom:10px">Your design for 100 users might not work for 1M users. Senior engineers build systems that scale or know exactly where the bottlenecks are.</p>
+    <div class="detail-signals">
+      <div class="signal-good">Quantifies scale assumptions: "With 10M DAU, each user opening the app generates one API call → 115 req/s average, 500 req/s peak." Proportional reasoning.</div>
+      <div class="signal-bad">Design is identical for 1K users and 100M users. No mention of caching, CDN, lazy loading, or pagination.</div>
+      <div class="signal-good">Identifies the bottleneck in their own design and proposes a mitigation strategy, even if not fully built out.</div>
+      <div class="signal-bad">Claims the design scales infinitely. No system does — this signals lack of experience.</div>
+    </div>`
+  },
+  collab: {
+    title: '🤝 Collaboration Signal — Are You Easy to Work With?',
+    body: `<p style="font-size:.78rem;color:#94a3b8;margin-bottom:10px">Interviewers are teammates. They want to see if you can have a technical debate, receive feedback gracefully, and build on ideas.</p>
+    <div class="detail-signals">
+      <div class="signal-good">Treats interviewer suggestions as hypotheses to evaluate, not attacks to defend against. "That's a good point — if we add a CDN layer here, we could reduce the origin load. Let me adjust the diagram."</div>
+      <div class="signal-bad">Dismisses interviewer hints. Becomes visibly frustrated when pushed back on.</div>
+      <div class="signal-good">Asks the interviewer for their perspective when genuinely uncertain. Shows intellectual humility.</div>
+      <div class="signal-bad">Silent monologue — doesn't engage with the interviewer at all. Treats it as a presentation, not a conversation.</div>
+    </div>`
+  }
+};
+
+function showDetail(key) {
+  const d = details[key];
+  document.getElementById('detail-title').textContent = d.title;
+  document.getElementById('detail-body').innerHTML = d.body;
+  const panel = document.getElementById('detail-panel');
+  panel.classList.add('show');
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  document.querySelectorAll('.score-card').forEach(c => c.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+</script>
+</body>
+</html>

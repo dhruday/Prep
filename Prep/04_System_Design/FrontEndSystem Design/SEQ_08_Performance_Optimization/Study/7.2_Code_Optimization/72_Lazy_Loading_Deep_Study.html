@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lazy Loading Components &amp; Routes Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2e1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:1rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#f59e0b;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.qa{margin:16px 0}.qa .q{color:#f59e0b;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Lazy Loading Components &amp; Routes Deep Study</h1>
+<p class="sub">Module 7.2 · Code Optimization · React.lazy, Suspense &amp; Intersection Observer</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">React Patterns</div>
+  <div class="tab" onclick="setTab(2)">Image/Resource Lazy Loading</div>
+  <div class="tab" onclick="setTab(3)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. Lazy Loading Taxonomy</h3>
+    <pre><span class="cm">// Lazy loading = defer loading of resources until they're actually needed</span>
+<span class="cm">//</span>
+<span class="cm">// Three categories:</span>
+<span class="cm">//</span>
+<span class="cm">// 1. Component Lazy Loading (React.lazy)</span>
+<span class="cm">//    Load JS modules on demand → reduces initial bundle</span>
+<span class="cm">//    Trigger: route navigation, user interaction, visibility</span>
+<span class="cm">//</span>
+<span class="cm">// 2. Image Lazy Loading (loading="lazy")</span>
+<span class="cm">//    Defer offscreen image downloads → reduces initial bandwidth</span>
+<span class="cm">//    Trigger: scroll into viewport (IntersectionObserver internally)</span>
+<span class="cm">//</span>
+<span class="cm">// 3. Data Lazy Loading (pagination, infinite scroll)</span>
+<span class="cm">//    Fetch data incrementally → reduces initial API payload</span>
+<span class="cm">//    Trigger: scroll, button click, page change</span>
+<span class="cm">//</span>
+<span class="cm">// Why it matters at FAANG scale:</span>
+<span class="cm">// - Facebook: 5000+ components, users see ~50 per session</span>
+<span class="cm">// - Loading everything upfront = 10MB+ of JS</span>
+<span class="cm">// - Lazy loading achieves ~200KB initial load</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. React.lazy &amp; Suspense Internals</h3>
+    <pre><span class="cm">// React.lazy() creates a "lazy component" that wraps dynamic import()</span>
+<span class="cm">//</span>
+<span class="cm">// Internal implementation (simplified):</span>
+<span class="kw">function</span> <span class="fn">lazy</span>(loader) {
+  <span class="kw">let</span> status = <span class="str">'pending'</span>;
+  <span class="kw">let</span> result;
+  <span class="kw">const</span> promise = <span class="fn">loader</span>().then(
+    (mod) =&gt; { status = <span class="str">'resolved'</span>; result = mod; },
+    (err) =&gt; { status = <span class="str">'rejected'</span>; result = err; },
+  );
+
+  <span class="kw">return</span> {
+    $$typeof: REACT_LAZY_TYPE,
+    <span class="fn">_init</span>() {
+      <span class="kw">if</span> (status === <span class="str">'pending'</span>) <span class="kw">throw</span> promise;  <span class="cm">// ← Suspense catches this</span>
+      <span class="kw">if</span> (status === <span class="str">'rejected'</span>) <span class="kw">throw</span> result;
+      <span class="kw">return</span> result.default;
+    }
+  };
+}
+
+<span class="cm">// How Suspense works:</span>
+<span class="cm">// 1. React tries to render the lazy component</span>
+<span class="cm">// 2. Lazy component throws a Promise (not an error)</span>
+<span class="cm">// 3. Suspense boundary catches the thrown Promise</span>
+<span class="cm">// 4. Suspense renders fallback UI while Promise is pending</span>
+<span class="cm">// 5. When Promise resolves, React re-renders with the loaded component</span>
+<span class="cm">// 6. If Promise rejects, error propagates to nearest ErrorBoundary</span>
+<span class="cm">//</span>
+<span class="cm">// KEY: React.lazy only supports DEFAULT exports</span>
+<span class="cm">// For named exports, re-export as default in a wrapper module</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Pattern 1: Route-Level Lazy Loading</h3>
+    <pre><span class="kw">import</span> { lazy, Suspense } <span class="kw">from</span> <span class="str">'react'</span>;
+<span class="kw">import</span> { Routes, Route } <span class="kw">from</span> <span class="str">'react-router-dom'</span>;
+<span class="kw">import</span> PageSkeleton <span class="kw">from</span> <span class="str">'./PageSkeleton'</span>;
+
+<span class="cm">// Named chunk for better debugging</span>
+<span class="kw">const</span> Home = <span class="fn">lazy</span>(() =&gt; <span class="fn">import</span>(<span class="cm">/* webpackChunkName: "home" */</span> <span class="str">'./pages/Home'</span>));
+<span class="kw">const</span> Products = <span class="fn">lazy</span>(() =&gt; <span class="fn">import</span>(<span class="cm">/* webpackChunkName: "products" */</span> <span class="str">'./pages/Products'</span>));
+<span class="kw">const</span> Checkout = <span class="fn">lazy</span>(() =&gt; <span class="fn">import</span>(<span class="cm">/* webpackChunkName: "checkout" */</span> <span class="str">'./pages/Checkout'</span>));
+
+<span class="kw">function</span> <span class="fn">App</span>() {
+  <span class="kw">return</span> (
+    &lt;ErrorBoundary fallback={&lt;ErrorPage /&gt;}&gt;
+      &lt;Suspense fallback={&lt;PageSkeleton /&gt;}&gt;
+        &lt;Routes&gt;
+          &lt;Route path=<span class="str">"/"</span> element={&lt;Home /&gt;} /&gt;
+          &lt;Route path=<span class="str">"/products/*"</span> element={&lt;Products /&gt;} /&gt;
+          &lt;Route path=<span class="str">"/checkout"</span> element={&lt;Checkout /&gt;} /&gt;
+        &lt;/Routes&gt;
+      &lt;/Suspense&gt;
+    &lt;/ErrorBoundary&gt;
+  );
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>Pattern 2: Interaction-Based Lazy Loading</h3>
+    <pre><span class="cm">// Load component only when user interacts</span>
+<span class="kw">function</span> <span class="fn">ProductActions</span>() {
+  <span class="kw">const</span> [ShowReview, setShowReview] = <span class="fn">useState</span>(<span class="kw">null</span>);
+
+  <span class="kw">const</span> <span class="fn">handleWriteReview</span> = <span class="kw">async</span> () =&gt; {
+    <span class="kw">const</span> { ReviewEditor } = <span class="kw">await</span> <span class="fn">import</span>(<span class="str">'./ReviewEditor'</span>);
+    setShowReview(() =&gt; ReviewEditor);
+  };
+
+  <span class="kw">return</span> (
+    &lt;&gt;
+      &lt;button onClick={handleWriteReview}&gt;Write Review&lt;/button&gt;
+      {ShowReview &amp;&amp; &lt;ShowReview /&gt;}
+    &lt;/&gt;
+  );
+}
+
+<span class="cm">// Visibility-based with IntersectionObserver</span>
+<span class="kw">function</span> <span class="fn">useInView</span>(options) {
+  <span class="kw">const</span> [inView, setInView] = <span class="fn">useState</span>(<span class="kw">false</span>);
+  <span class="kw">const</span> ref = <span class="fn">useRef</span>();
+
+  <span class="fn">useEffect</span>(() =&gt; {
+    <span class="kw">const</span> observer = <span class="kw">new</span> <span class="fn">IntersectionObserver</span>(
+      ([entry]) =&gt; { <span class="kw">if</span> (entry.isIntersecting) { setInView(<span class="kw">true</span>); observer.<span class="fn">disconnect</span>(); } },
+      { rootMargin: <span class="str">'200px'</span>, ...options }  <span class="cm">// Start loading 200px before visible</span>
+    );
+    <span class="kw">if</span> (ref.current) observer.<span class="fn">observe</span>(ref.current);
+    <span class="kw">return</span> () =&gt; observer.<span class="fn">disconnect</span>();
+  }, []);
+
+  <span class="kw">return</span> [ref, inView];
+}
+
+<span class="kw">const</span> LazyChart = <span class="fn">lazy</span>(() =&gt; <span class="fn">import</span>(<span class="str">'./Chart'</span>));
+
+<span class="kw">function</span> <span class="fn">AnalyticsDashboard</span>() {
+  <span class="kw">const</span> [ref, inView] = <span class="fn">useInView</span>();
+  <span class="kw">return</span> (
+    &lt;div ref={ref} style={{ minHeight: <span class="num">400</span> }}&gt;
+      {inView &amp;&amp; (
+        &lt;Suspense fallback={&lt;ChartSkeleton /&gt;}&gt;
+          &lt;LazyChart /&gt;
+        &lt;/Suspense&gt;
+      )}
+    &lt;/div&gt;
+  );
+}</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Image Lazy Loading</h3>
+    <pre><span class="cm">// Native lazy loading (Chrome, Firefox, Safari 15.4+)</span>
+&lt;img src=<span class="str">"photo.webp"</span> loading=<span class="str">"lazy"</span> width=<span class="str">"800"</span> height=<span class="str">"600"</span> alt=<span class="str">"Photo"</span>&gt;
+
+<span class="cm">// How it works internally:</span>
+<span class="cm">// Chrome uses IntersectionObserver with threshold based on:</span>
+<span class="cm">// - Connection speed (3G: loads ~3000px below viewport)</span>
+<span class="cm">// - Effective connection type (4G: loads ~1250px below viewport)</span>
+<span class="cm">// - Data saver mode</span>
+<span class="cm">//</span>
+<span class="cm">// IMPORTANT: Never lazy load the LCP image!</span>
+<span class="cm">// LCP image should have: loading="eager" (default) + fetchpriority="high"</span>
+<span class="cm">// Only lazy load below-the-fold images</span>
+
+<span class="cm">// &lt;iframe&gt; lazy loading</span>
+&lt;iframe src=<span class="str">"https://youtube.com/embed/123"</span> loading=<span class="str">"lazy"</span>&gt;&lt;/iframe&gt;
+
+<span class="cm">// Custom IntersectionObserver for more control:</span>
+<span class="kw">const</span> observer = <span class="kw">new</span> <span class="fn">IntersectionObserver</span>((entries) =&gt; {
+  entries.forEach(entry =&gt; {
+    <span class="kw">if</span> (entry.isIntersecting) {
+      <span class="kw">const</span> img = entry.target;
+      img.src = img.dataset.src;  <span class="cm">// Swap data-src → src</span>
+      img.removeAttribute(<span class="str">'data-src'</span>);
+      observer.<span class="fn">unobserve</span>(img);
+    }
+  });
+}, { rootMargin: <span class="str">'200px 0px'</span> });
+
+document.<span class="fn">querySelectorAll</span>(<span class="str">'img[data-src]'</span>).forEach(img =&gt; observer.<span class="fn">observe</span>(img));</pre>
+  </div>
+
+  <div class="card">
+    <h3>Next.js Image Optimization</h3>
+    <pre><span class="kw">import</span> Image <span class="kw">from</span> <span class="str">'next/image'</span>;
+
+<span class="cm">// Above the fold — eager load, high priority</span>
+&lt;Image src=<span class="str">"/hero.jpg"</span> priority width={<span class="num">1200</span>} height={<span class="num">600</span>} alt=<span class="str">"Hero"</span> /&gt;
+
+<span class="cm">// Below the fold — lazy loaded automatically</span>
+&lt;Image src=<span class="str">"/product.jpg"</span> width={<span class="num">400</span>} height={<span class="num">400</span>} alt=<span class="str">"Product"</span> /&gt;
+
+<span class="cm">// Next.js Image does:</span>
+<span class="cm">// ✓ Automatic WebP/AVIF conversion</span>
+<span class="cm">// ✓ Responsive srcset generation</span>
+<span class="cm">// ✓ Lazy loading by default (loading="lazy")</span>
+<span class="cm">// ✓ Blur placeholder (prevents CLS)</span>
+<span class="cm">// ✓ priority prop → adds preload + fetchpriority="high"</span>
+<span class="cm">// ✓ On-demand optimization (server resizes on request, caches)</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: How does React.lazy work internally? What happens when the component loads?</div>
+      <div class="a">React.lazy wraps a dynamic import() call and creates a special component type. When React tries to render it for the first time, the lazy component throws a Promise (the import() promise). The nearest Suspense boundary catches this thrown Promise, renders its fallback prop, and subscribes to the Promise. When the import resolves, React re-renders the subtree with the loaded component — the Suspense boundary unmounts the fallback and renders the actual component. If the import rejects (network error, 404), the error propagates to the nearest ErrorBoundary. Important: React.lazy only works with default exports. For named exports, create an intermediate module that re-exports as default. Also, the lazily loaded module is cached after first load — subsequent renders don't trigger another import.</div>
+      <div class="followup">Follow-up: How does Suspense for data fetching differ from Suspense for lazy components?</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q2: When should you NOT lazy load something?</div>
+      <div class="a">Several critical cases: (1) The LCP element — never lazy load the hero image or the component that renders it. Lazy loading delays discovery and download, directly increasing LCP. Use priority/fetchpriority="high" instead. (2) Above-the-fold components — anything visible on initial render should be in the main bundle. Lazy loading it adds a round-trip delay before content appears. (3) Very small components (under 5KB) — the overhead of a separate HTTP request exceeds the savings from splitting. (4) Components needed for interaction (e.g., event handlers) — if a user can interact with something immediately, the handler code must be loaded. (5) Critical path dependencies — auth guards, layout wrappers, error boundaries should be in the main bundle. Rule: lazy load what's below the fold, behind user interaction, or on different routes.</div>
+      <div class="followup">Follow-up: How would you handle a slow network where lazy-loaded chunks take 5+ seconds?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Lazy Loading Decision Tree</h3>
+    <pre>Is it above the fold?
+├── Yes → DON'T lazy load. Include in main bundle.
+│         Is it the LCP element?
+│         └── Yes → Add fetchpriority="high" + preload
+└── No → Is it > 10KB?
+    ├── Yes → LAZY LOAD
+    │   ├── Route-level: React.lazy + Suspense
+    │   ├── Interaction-based: Load on click/hover
+    │   └── Visibility-based: IntersectionObserver
+    └── No → Probably not worth splitting (HTTP overhead)</pre>
+  </div>
+
+  <div class="card">
+    <h3>Production Checklist</h3>
+    <pre>✅ Route-level lazy loading for all non-initial routes
+✅ Heavy components lazy loaded (charts, editors, modals)
+✅ Suspense boundaries with meaningful skeleton fallbacks
+✅ ErrorBoundary wrapping all Suspense boundaries
+✅ LCP image: loading="eager" + fetchpriority="high" + preload
+✅ Below-fold images: loading="lazy" + width/height set
+✅ Prefetch likely-next routes on hover
+✅ IntersectionObserver for viewport-triggered loading
+✅ Skeleton dimensions match final content (prevent CLS)
+✅ Network error handling with retry mechanism</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

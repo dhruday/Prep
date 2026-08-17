@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Delayed Skeleton</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.sk{background:linear-gradient(90deg,#1e2130 25%,#2d3551 50%,#1e2130 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
+.demo-box{background:#161925;border:1px solid #2d3551;border-radius:8px;padding:14px;min-height:120px;margin-top:8px;font-size:.82rem;transition:border-color .3s}
+.timeline{display:flex;align-items:center;gap:0;margin:12px 0;font-size:.72rem}.tl-seg{flex:1;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid #2d3551}
+.tl-seg.empty{background:#0f1117;color:#475569}.tl-seg.skel{background:#2d3551;color:#e2e8f0}.tl-seg.content{background:#064e3b;color:#6ee7b7}
+</style>
+</head>
+<body>
+<h1>Delayed Skeleton</h1>
+<p class="sub">200ms threshold — skip skeleton for fast loads, show only if data is slow</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Code</div>
+  <div class="tab" onclick="setTab(2)">Live Demo</div>
+  <div class="tab" onclick="setTab(3)">Key Points</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card"><h3>The 200ms Threshold</h3>
+    <p>Showing a skeleton for 50ms and then immediately replacing it with content causes an annoying <b>flash</b>. The fix: delay the skeleton by ~200ms.</p>
+    <p style="margin-top:10px;font-size:.82rem"><b>Fast load (&lt;200ms):</b> Show nothing → content appears instantly. No flash.</p>
+    <p style="font-size:.82rem"><b>Slow load (&gt;200ms):</b> After 200ms, show skeleton. Content replaces it when ready.</p>
+  </div>
+  <div class="card"><h3>Timeline Visualization</h3>
+    <p style="font-size:.78rem;margin-bottom:6px"><b>Fast (50ms):</b></p>
+    <div class="timeline"><div class="tl-seg empty">0–50ms: nothing</div><div class="tl-seg content">50ms+: content ✓</div></div>
+    <p style="font-size:.78rem;margin-bottom:6px"><b>Slow (2000ms):</b></p>
+    <div class="timeline"><div class="tl-seg empty" style="flex:.1">0–200ms</div><div class="tl-seg skel" style="flex:.9">200–2000ms: skeleton</div><div class="tl-seg content" style="flex:.1">content ✓</div></div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card"><h3>Delayed Skeleton Implementation</h3>
+<pre><span class="kw">async function</span> <span class="fn">loadWithDelayedSkeleton</span>(container, fetchFn, delay = <span class="str">200</span>) {
+  <span class="kw">let</span> showSkeleton = <span class="kw">false</span>;
+
+  <span class="cm">// Start timer: show skeleton after delay</span>
+  <span class="kw">const</span> timer = <span class="fn">setTimeout</span>(() => {
+    showSkeleton = <span class="kw">true</span>;
+    container.innerHTML = <span class="fn">renderSkeleton</span>();
+  }, delay);
+
+  <span class="kw">try</span> {
+    <span class="kw">const</span> data = <span class="kw">await</span> <span class="fn">fetchFn</span>();
+
+    <span class="cm">// Data arrived — cancel skeleton if not shown yet</span>
+    <span class="fn">clearTimeout</span>(timer);
+
+    <span class="cm">// If skeleton was shown, add min display time</span>
+    <span class="kw">if</span> (showSkeleton) {
+      <span class="kw">await</span> <span class="kw">new</span> Promise(r => <span class="fn">setTimeout</span>(r, <span class="str">300</span>));
+    }
+    <span class="fn">renderContent</span>(container, data);
+  } <span class="kw">catch</span>(e) {
+    <span class="fn">clearTimeout</span>(timer);
+    <span class="fn">renderError</span>(container, e);
+  }
+}</pre></div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card"><h3>Fast vs Slow Load Demo</h3>
+    <p style="font-size:.8rem;margin-bottom:8px">Compare: fast load skips skeleton, slow load shows it after 200ms delay.</p>
+    <button onclick="runDemo(50)">Fast Load (50ms)</button>
+    <button onclick="runDemo(2000)">Slow Load (2s)</button>
+    <button onclick="runDemo(150)">Borderline (150ms)</button>
+    <button onclick="runDemo(300)">Medium (300ms)</button>
+    <div class="grid2" style="margin-top:12px">
+      <div>
+        <b style="font-size:.82rem">Widget Area</b>
+        <div class="demo-box" id="widget">
+          <span style="color:#475569">Click a button to start...</span>
+        </div>
+      </div>
+      <div>
+        <b style="font-size:.82rem">Event Log</b>
+        <div class="output" id="log" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card"><h3>Key Points</h3>
+    <p>• 200ms is the sweet spot — below this, humans perceive the load as "instant"</p>
+    <p>• If skeleton appears, show it for at least 300ms to avoid a different flash</p>
+    <p>• This is a UX optimization: fewer perceived loading states = smoother experience</p>
+    <p>• Works great with skeleton + suspense patterns in React</p>
+    <p>• The timer approach works with any async operation, not just fetch</p>
+  </div>
+  <div class="info">Interview tip: "We delay skeleton display by 200ms so fast API responses never flash a loading state."</div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const SKEL=`<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><div class="sk" style="width:40px;height:40px;border-radius:50%"></div><div style="flex:1"><div class="sk" style="height:12px;width:50%;margin-bottom:6px"></div><div class="sk" style="height:12px;width:30%"></div></div></div><div class="sk" style="height:50px;margin-bottom:8px"></div><div class="sk" style="height:12px;width:70%"></div>`;
+const CONTENT=`<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><div style="width:40px;height:40px;border-radius:50%;background:#3a1e1e;display:flex;align-items:center;justify-content:center">👤</div><div><b>Widget Data</b><br><span style="color:#94a3b8;font-size:.75rem">Updated just now</span></div></div><div style="height:50px;border-radius:6px;background:#064e3b;display:flex;align-items:center;justify-content:center;color:#6ee7b7;font-size:.8rem">✓ Revenue: $42,381</div><p style="margin-top:8px;font-size:.8rem">12 active users online right now.</p>`;
+const DELAY=200;
+
+async function runDemo(ms){
+  const w=document.getElementById('widget'),l=document.getElementById('log');
+  w.innerHTML='<span style="color:#475569">Fetching...</span>';w.style.borderColor='#2d3551';
+  l.textContent=`[0ms] Fetch started (will take ${ms}ms)\n[0ms] Skeleton timer set: ${DELAY}ms\n`;
+  let skelShown=false;const t0=performance.now();
+  const timer=setTimeout(()=>{skelShown=true;w.innerHTML=SKEL;w.style.borderColor='#f59e0b';l.textContent+=`[${DELAY}ms] Skeleton shown (fetch still pending)\n`;},DELAY);
+  await new Promise(r=>setTimeout(r,ms));
+  clearTimeout(timer);
+  const elapsed=Math.round(performance.now()-t0);
+  if(skelShown){
+    l.textContent+=`[${elapsed}ms] Data arrived — skeleton was visible\n`;
+    l.textContent+=`[${elapsed}ms] Keeping skeleton 300ms min...\n`;
+    await new Promise(r=>setTimeout(r,300));
+    l.textContent+=`[${elapsed+300}ms] Replacing skeleton with content\n`;
+  }else{
+    l.textContent+=`[${elapsed}ms] Data arrived — skeleton was NEVER shown ✓\n`;
+    l.textContent+=`[${elapsed}ms] Direct: nothing → content (no flash)\n`;
+  }
+  w.innerHTML=CONTENT;w.style.borderColor='#10b981';
+  l.textContent+=`\nResult: ${skelShown?'Skeleton was displayed':'No skeleton flash'}\nPerceived as: ${ms<200?'instant':'loading then loaded'}`;
+}
+</script>
+</body>
+</html>

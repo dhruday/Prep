@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 124 – XSS (Cross-Site Scripting)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#ef4444;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#ef4444;margin-bottom:12px;font-size:1rem}
+.card h3.safe{color:#10b981}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}
+button.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}
+</style>
+</head>
+<body>
+<h1>🚨 XSS — Cross-Site Scripting</h1>
+<p class="sub">Topic 124 · Part 12 / 12.1 Web Threats · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Attack Demo</div>
+  <div class="tab" onclick="setTab(2)">Defense Matrix</div>
+  <div class="tab" onclick="setTab(3)">Safe Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>XSS: attacker injects malicious JavaScript into pages viewed by other users</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">XSS is the #3 OWASP vulnerability. It has three forms: (1) <strong style="color:#ef4444">Stored XSS</strong> — payload saved in DB (e.g., comment field), served to all future visitors; (2) <strong style="color:#f59e0b">Reflected XSS</strong> — payload in URL/query param, reflected back in response; (3) <strong style="color:#a78bfa">DOM-based XSS</strong> — payload read from URL hash/fragment and written to DOM via innerHTML in client JS. Impact: session hijacking, credential theft, keylogging, redirects.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #3a1e1e;border-radius:8px;padding:10px"><div style="color:#ef4444;font-weight:700;margin-bottom:6px">Stored XSS</div><div style="color:#94a3b8">Attacker stores payload in DB. All visitors load script. Most dangerous — persists.</div></div>
+      <div style="background:#0f1117;border:1px solid #3a1e1e;border-radius:8px;padding:10px"><div style="color:#f59e0b;font-weight:700;margin-bottom:6px">Reflected XSS</div><div style="color:#94a3b8">Payload in URL. Victim must click malicious link. Phishing-enabled.</div></div>
+      <div style="background:#0f1117;border:1px solid #3a1e1e;border-radius:8px;padding:10px"><div style="color:#a78bfa;font-weight:700;margin-bottom:6px">DOM-based XSS</div><div style="color:#94a3b8">Client JS reads location.hash → writes to innerHTML. Pure client-side, no server.</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3 style="color:#ef4444">⚠️ XSS attack vectors — educational only</h3>
+    <div id="attack-btns" style="margin-bottom:12px">
+      <button class="active" onclick="showAttack('stored')">Stored</button>
+      <button onclick="showAttack('reflected')">Reflected</button>
+      <button onclick="showAttack('dom')">DOM-based</button>
+    </div>
+    <div id="attack-content" style="font-size:.8rem"></div>
+  </div>
+  <div class="card">
+    <h3 class="safe">✅ Safe rendering — textContent vs innerHTML</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.8rem">
+      <div>
+        <div style="color:#ef4444;margin-bottom:6px">❌ Vulnerable (innerHTML)</div>
+        <div style="background:#0f1117;border:1px solid #3a1e1e;border-radius:6px;padding:10px;font-family:monospace;font-size:.77rem">div.innerHTML = userInput<br><span style="color:#ef4444">// If userInput = '&lt;img src=x onerror=steal()&gt;'<br>// → script executes!</span></div>
+      </div>
+      <div>
+        <div style="color:#10b981;margin-bottom:6px">✅ Safe (textContent)</div>
+        <div style="background:#0f1117;border:1px solid #1e3a2e;border-radius:6px;padding:10px;font-family:monospace;font-size:.77rem">div.textContent = userInput<br><span style="color:#10b981">// Renders as text, never executes<br>// "&lt;img&gt;" shows literally</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3 class="safe">XSS defense layers</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#ef4444">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Defense</th>
+        <th style="padding:8px;border:1px solid #2d3551">Blocks</th>
+        <th style="padding:8px;border:1px solid #2d3551">Implementation</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Contextual output encoding</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Stored, Reflected</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">React auto-escapes JSX; DOMPurify for HTML</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Content Security Policy</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Inline scripts, eval</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">CSP header: script-src 'nonce-{n}'</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Avoid innerHTML/eval/document.write</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">DOM XSS</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Use textContent, use dangerouslySetInnerHTML cautiously</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#10b981">HttpOnly cookies</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Session theft</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">JS cannot read auth cookie</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#10b981">Trusted Types API</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">DOM XSS sinks</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Browser requires Trusted Types for innerHTML</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3 class="safe">DOMPurify + React safe patterns</h3>
+    <pre><span class="cm">// ─── Safe HTML rendering with DOMPurify ───</span>
+<span class="kw">import</span> DOMPurify <span class="kw">from</span> <span class="str">'dompurify'</span>;
+
+<span class="kw">function</span> <span class="fn">SafeHtml</span>({ html }: { html: <span class="kw">string</span> }) {
+  <span class="kw">const</span> clean = DOMPurify.<span class="fn">sanitize</span>(html, {
+    ALLOWED_TAGS: [<span class="str">'b'</span>, <span class="str">'i'</span>, <span class="str">'a'</span>, <span class="str">'p'</span>],
+    ALLOWED_ATTR: [<span class="str">'href'</span>]
+  });
+  <span class="kw">return</span> &lt;div dangerouslySetInnerHTML={{ __html: clean }} /&gt;;
+}
+
+<span class="cm">// ─── CSP header (Next.js) ───</span>
+<span class="cm">// In _document.tsx or headers config:</span>
+Content-Security-Policy:
+  default-src <span class="str">'self'</span>;
+  script-src <span class="str">'self'</span> <span class="str">'nonce-{NONCE}'</span>;  <span class="cm">// per-request nonce</span>
+  style-src <span class="str">'self'</span> <span class="str">'unsafe-inline'</span>;
+  img-src <span class="str">'self'</span> data: https:;
+  connect-src <span class="str">'self'</span> https://api.app.com;
+  frame-ancestors <span class="str">'none'</span>;
+
+<span class="cm">// ─── Trusted Types (Chrome 83+) ───</span>
+<span class="kw">if</span> (window.trustedTypes?.createPolicy) {
+  <span class="kw">const</span> policy = trustedTypes.<span class="fn">createPolicy</span>(<span class="str">'default'</span>, {
+    createHTML: (input) =&gt; DOMPurify.<span class="fn">sanitize</span>(input)
+  });
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const attacks={
+  stored:{label:'Stored XSS',payload:'&lt;script&gt;document.cookie&lt;/script&gt; in comment form',path:'User submits comment → stored in DB → all future visitors load the page → browser executes script → cookies/tokens stolen and sent to attacker\'s server',fix:'Sanitize server-side on write AND encode on output (defense in depth)'},
+  reflected:{label:'Reflected XSS',payload:'https://bank.com/search?q=&lt;script&gt;steal()&lt;/script&gt;',path:'Attacker crafts URL → victim clicks (phishing email) → server reflects query param into HTML response without encoding → script executes in victim\'s browser context',fix:'Never reflect user input into HTML without encoding. Validate/sanitize all URL params.'},
+  dom:{label:'DOM-based XSS',payload:'https://app.com/#&lt;img src=x onerror=steal()&gt;',path:'Client JS does: element.innerHTML = location.hash → browser parses attacker HTML → onerror fires steal() → no server involved, evades server-side sanitization',fix:'Never assign location.hash, location.search to innerHTML. Use textContent or DOMPurify.'}
+};
+function showAttack(k){document.getElementById('attack-btns').querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active',['stored','reflected','dom'][i]===k));const a=attacks[k];document.getElementById('attack-content').innerHTML=`<div style="background:#1a0a0a;border:1px solid #3a1e1e;border-radius:8px;padding:12px;margin-bottom:10px"><div style="color:#ef4444;font-weight:700;margin-bottom:6px">⚠️ ${a.label}</div><div style="color:#f59e0b;font-family:monospace;font-size:.77rem;margin-bottom:8px">Payload: ${a.payload}</div><div style="color:#94a3b8;font-size:.78rem;margin-bottom:8px"><span style="color:#94a3b8;font-weight:700">Attack path: </span>${a.path}</div><div style="color:#10b981;font-size:.78rem"><span style="color:#10b981;font-weight:700">Fix: </span>${a.fix}</div></div>`;}
+showAttack('stored');
+</script>
+</body>
+</html>

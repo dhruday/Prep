@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 55 – Performance Impact of State Changes</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>⚡ Performance Impact of State Changes</h1>
+<p class="sub">Topic 55 · Module 5.3 — State Architecture & Scalability · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Re-render Counter Demo</div>
+  <div class="tab" onclick="setTab(2)">Optimization Techniques</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>How state changes trigger re-renders</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.8rem;margin-bottom:12px">
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:12px;border-radius:8px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">React / useState</div>
+        <ul style="color:#94a3b8;padding-left:16px;line-height:1.9;font-size:.75rem">
+          <li>setState → component + all children re-render</li>
+          <li>Object/array reference changes trigger re-render even if values are the same</li>
+          <li>useCallback / useMemo prevent child re-renders</li>
+          <li>React.memo skips re-render if props unchanged</li>
+        </ul>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:12px;border-radius:8px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">Zustand / Redux</div>
+        <ul style="color:#94a3b8;padding-left:16px;line-height:1.9;font-size:.75rem">
+          <li>Selector must return different value to trigger re-render</li>
+          <li>Bad selector: useStore(s => s) — any change re-renders</li>
+          <li>Good selector: useStore(s => s.count) — only count changes</li>
+          <li>TanStack Query: only triggers re-render if selected field changes</li>
+        </ul>
+      </div>
+    </div>
+    <div style="background:#0f1117;border:1px solid #f59e0b;padding:10px;border-radius:8px;font-size:.78rem;color:#94a3b8">
+      <strong style="color:#f59e0b">SAP context:</strong> SAP Fiori dashboard had 400ms input lag. Root cause: entire store subscribed without selectors. Adding granular selectors + React.memo cut re-renders from ~120/keystroke to ~3/keystroke.
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Track re-renders — bad selector vs good selector</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button onclick="updateCount()" style="padding:7px 14px;background:#1e3a5f;border:1px solid #60a5fa;color:#60a5fa;border-radius:8px;cursor:pointer;font-size:.82rem">Update count (in store)</button>
+      <button onclick="updateUnrelated()" style="padding:7px 14px;background:#1c1300;border:1px solid #f59e0b;color:#f59e0b;border-radius:8px;cursor:pointer;font-size:.82rem">Update unrelated field</button>
+      <button onclick="resetCounters()" style="padding:7px 14px;background:#1e2130;border:1px solid #2d3551;color:#94a3b8;border-radius:8px;cursor:pointer;font-size:.82rem">Reset</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #ef4444;border-radius:8px;padding:12px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:8px">❌ useStore(s => s) — whole store</div>
+        <div>Re-renders: <span id="bad-count" style="color:#ef4444;font-size:1.5rem;font-weight:700">0</span></div>
+        <div style="color:#94a3b8;font-size:.73rem;margin-top:4px">Triggered by ANY store mutation</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:8px">✅ useStore(s => s.count) — selector</div>
+        <div>Re-renders: <span id="good-count" style="color:#10b981;font-size:1.5rem;font-weight:700">0</span></div>
+        <div style="color:#94a3b8;font-size:.73rem;margin-top:4px">Only triggered when count changes</div>
+      </div>
+    </div>
+    <div id="count-value" style="margin-top:10px;background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;font-size:.78rem;color:#94a3b8">count: 0 | lastUpdated: —</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Optimization techniques checklist</h3>
+    <div style="font-size:.8rem;display:grid;gap:8px">
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:10px;border-radius:8px"><strong style="color:#60a5fa">Granular selectors</strong><br><span style="color:#94a3b8">Select only the field you need: useStore(s => s.cart.count) not useStore(s => s.cart)</span></div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:10px;border-radius:8px"><strong style="color:#10b981">React.memo</strong><br><span style="color:#94a3b8">Wrap pure child components. Prevents re-render when parent state changes but props haven't.</span></div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;padding:10px;border-radius:8px"><strong style="color:#a78bfa">useMemo / useCallback</strong><br><span style="color:#94a3b8">Stabilise object/array/function references passed as props. Prevents React.memo from being bypassed.</span></div>
+      <div style="background:#0f1117;border:1px solid #f59e0b;padding:10px;border-radius:8px"><strong style="color:#f59e0b">Context splitting</strong><br><span style="color:#94a3b8">Split one large Context into AuthContext, ThemeContext, UIContext. Only affected consumers re-render.</span></div>
+      <div style="background:#0f1117;border:1px solid #ef4444;padding:10px;border-radius:8px"><strong style="color:#ef4444">startTransition</strong><br><span style="color:#94a3b8">Mark low-priority state updates as transitions. React can interrupt them for urgent updates (typing).</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Performance patterns in code</h3>
+    <pre><span class="cm">// ❌ Whole-store subscription — re-renders on ANY field change</span>
+<span class="kw">const</span> store = <span class="fn">useStore</span>(s =&gt; s);
+
+<span class="cm">// ✅ Granular selector</span>
+<span class="kw">const</span> count = <span class="fn">useStore</span>(s =&gt; s.count);
+<span class="kw">const</span> cartTotal = <span class="fn">useStore</span>(s =&gt; s.cart.<span class="fn">reduce</span>((sum, i) =&gt; sum + i.price, 0));
+
+<span class="cm">// ✅ React.memo — skip re-render if props same</span>
+<span class="kw">const</span> CartItem = React.<span class="fn">memo</span>(({ item }: { item: Item }) =&gt; (
+  &lt;<span class="attr">div</span>&gt;{item.name} — ${item.price}&lt;/<span class="attr">div</span>&gt;
+)); <span class="cm">// shallow prop comparison</span>
+
+<span class="cm">// ✅ Stable callbacks — prevent memo bypass</span>
+<span class="kw">const</span> handleDelete = <span class="fn">useCallback</span>((id: <span class="kw">string</span>) =&gt; {
+  removeItem(id);
+}, []); <span class="cm">// stable reference — CartItem won't re-render due to this prop</span>
+
+<span class="cm">// ✅ startTransition for low-priority updates</span>
+<span class="kw">const</span> handleSearch = (e: ChangeEvent&lt;HTMLInputElement&gt;) =&gt; {
+  setSearchInput(e.target.value);          <span class="cm">// urgent: shows in input</span>
+  <span class="fn">startTransition</span>(() =&gt; {
+    setFilteredResults(<span class="fn">filterData</span>(e.target.value)); <span class="cm">// deferrable</span>
+  });
+};</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+let badCount=0,goodCount=0,count=0,updates=0;
+function updateCount(){count++;updates++;badCount++;goodCount++;document.getElementById('bad-count').textContent=badCount;document.getElementById('good-count').textContent=goodCount;document.getElementById('count-value').textContent=`count: ${count} | lastUpdated: ${new Date().toLocaleTimeString()}`;}
+function updateUnrelated(){updates++;badCount++;document.getElementById('bad-count').textContent=badCount;document.getElementById('count-value').textContent=`count: ${count} | lastUpdated: ${new Date().toLocaleTimeString()} (unrelated field changed)`;}
+function resetCounters(){badCount=0;goodCount=0;count=0;document.getElementById('bad-count').textContent=0;document.getElementById('good-count').textContent=0;document.getElementById('count-value').textContent='count: 0 | lastUpdated: —';}
+</script>
+</body>
+</html>

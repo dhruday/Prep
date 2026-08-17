@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>165 – RTL Layout Support</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🌍 RTL Layout Support</h1>
+<p class="sub">Topic 165 · Part 11 / Module 11.3 — Globalization · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">LTR vs RTL Preview</div>
+  <div class="tab" onclick="setTab(2)">CSS Properties</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>RTL languages and what they demand from your layout</h3>
+    <p style="color:#94a3b8;font-size:.84rem;margin-bottom:14px">Arabic, Hebrew, Persian (Farsi), and Urdu are right-to-left scripts. Combined they represent 750M+ users. A proper RTL layout isn't just reversing text direction — the entire UI must mirror: start/end flips, icons pointing the other way, scrollbars on the left, form inputs right-aligned, progress bars filling right-to-left.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.82rem">
+      <div style="background:#0f1117;border:1px solid #ef4444;border-radius:8px;padding:12px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">What breaks without RTL support</div>
+        <ul style="color:#94a3b8;margin-left:16px;line-height:1.9">
+          <li>Padding-left applied → becomes wrong side (should be right)</li>
+          <li>margin-left → opposite meaning in RTL</li>
+          <li>text-align: left → should be right for RTL</li>
+          <li>Float/absolute positioned elements at wrong side</li>
+          <li>Icons (arrows, chevrons) pointing wrong direction</li>
+          <li>Flexbox row keeps LTR order</li>
+        </ul>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">Modern approach: logical CSS properties</div>
+        <ul style="color:#94a3b8;margin-left:16px;line-height:1.9">
+          <li>padding-left → padding-inline-start (auto-flips)</li>
+          <li>margin-right → margin-inline-end (auto-flips)</li>
+          <li>border-left → border-inline-start</li>
+          <li>text-align: left → text-align: start</li>
+          <li>Flexbox + dir="rtl" → row-reverse automatically</li>
+          <li>width/height → inline-size / block-size</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Toggle between LTR and RTL layouts</h3>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button onclick="setDir('ltr')" id="btnLTR">LTR (English)</button>
+      <button onclick="setDir('rtl')" id="btnRTL">RTL (Arabic)</button>
+    </div>
+    <div id="demoContainer" dir="ltr" style="background:#0f1117;border:1px solid #2d3551;border-radius:10px;padding:16px;transition:all .3s">
+      <div style="font-size:.75rem;color:#64748b;margin-bottom:10px">E-commerce product card</div>
+      <div id="demoCard" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:60px;height:60px;background:#1e2130;border-radius:8px;border:1px solid #2d3551;flex-shrink:0"></div>
+          <div>
+            <div id="demoTitle" style="font-weight:600;font-size:.9rem">Premium Laptop Stand</div>
+            <div id="demoPrice" style="color:#10b981;font-size:.8rem">₹2,499</div>
+          </div>
+        </div>
+        <div id="demoDesc" style="font-size:.78rem;color:#94a3b8">Ergonomic adjustable stand. Free delivery on orders above ₹500.</div>
+        <div style="display:flex;gap:8px">
+          <button style="flex:1;padding:8px;font-size:.78rem;background:#1e3a5f;border:1px solid #3b82f6;color:#60a5fa;border-radius:6px;cursor:default" id="demoBtn">Add to Cart →</button>
+          <button style="padding:8px 12px;background:#0f1117;border:1px solid #2d3551;color:#94a3b8;border-radius:6px;cursor:default">♡</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:#94a3b8">
+          <span>⭐⭐⭐⭐</span>
+          <span id="demoRating">4.2 (128 reviews)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Physical vs Logical CSS properties</h3>
+    <table>
+      <tr><th>Physical (Avoid)</th><th>Logical (Prefer)</th><th>Flips in RTL?</th></tr>
+      <tr><td>padding-left</td><td style="color:#10b981">padding-inline-start</td><td style="color:#10b981">✅ Yes</td></tr>
+      <tr><td>padding-right</td><td style="color:#10b981">padding-inline-end</td><td style="color:#10b981">✅ Yes</td></tr>
+      <tr><td>margin-left</td><td style="color:#10b981">margin-inline-start</td><td style="color:#10b981">✅ Yes</td></tr>
+      <tr><td>border-left</td><td style="color:#10b981">border-inline-start</td><td style="color:#10b981">✅ Yes</td></tr>
+      <tr><td>left: 0</td><td style="color:#10b981">inset-inline-start: 0</td><td style="color:#10b981">✅ Yes</td></tr>
+      <tr><td>text-align: left</td><td style="color:#10b981">text-align: start</td><td style="color:#10b981">✅ Yes</td></tr>
+      <tr><td>float: left</td><td style="color:#f59e0b">Avoid floats; use flex</td><td style="color:#f59e0b">Use flex row</td></tr>
+      <tr><td>width</td><td style="color:#f59e0b">inline-size (optional)</td><td style="color:#f59e0b">No change needed</td></tr>
+      <tr><td>transform: scaleX(-1)</td><td style="color:#60a5fa">For directional icons</td><td style="color:#60a5fa">Manual for icons</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>RTL implementation in React + Tailwind</h3>
+    <pre><span class="cm">// 1. Set dir attribute on html or root element</span>
+<span class="cm">// _document.tsx / index.html</span>
+<span class="str">&lt;html lang="ar" dir="rtl"&gt;</span>  <span class="cm">// or dir="ltr" for LTR languages</span>
+
+<span class="cm">// 2. React context for direction</span>
+<span class="kw">export const</span> DirectionContext = <span class="fn">createContext</span>&lt;<span class="str">'ltr'</span>|<span class="str">'rtl'</span>&gt;(<span class="str">'ltr'</span>);
+<span class="kw">export function</span> App({ locale }: { locale: string }) {
+  <span class="kw">const</span> dir: <span class="str">'ltr'</span>|<span class="str">'rtl'</span> = [<span class="str">'ar'</span>,<span class="str">'he'</span>,<span class="str">'fa'</span>,<span class="str">'ur'</span>].<span class="fn">includes</span>(locale) ? <span class="str">'rtl'</span> : <span class="str">'ltr'</span>;
+  <span class="kw">return</span> &lt;DirectionContext.Provider value={dir}&gt;&lt;div dir={dir}&gt;...&lt;/div&gt;&lt;/DirectionContext.Provider&gt;;
+}
+
+<span class="cm">// 3. CSS: logical properties for auto-flip</span>
+.<span class="fn">card</span> {
+  padding-inline-start: <span class="num">16px</span>;  <span class="cm">/* left in LTR, right in RTL */</span>
+  border-inline-start: <span class="num">2px</span> solid #<span class="num">60a5fa</span>;
+  text-align: start;
+}
+
+<span class="cm">// 4. Tailwind v3: RTL variant (ps = padding-start, pe = padding-end)</span>
+<span class="cm">// &lt;div className="ps-4 pe-2 text-start"&gt; works in both LTR and RTL</span>
+<span class="cm">// &lt;div className="rtl:rotate-180"&gt; for directional icons</span>
+
+<span class="cm">// 5. MUI (Material UI): RTL requires rtl cache + CacheProvider</span>
+<span class="kw">import</span> rtlPlugin <span class="kw">from</span> <span class="str">'stylis-plugin-rtl'</span>;
+<span class="kw">import</span> createCache <span class="kw">from</span> <span class="str">'@emotion/cache'</span>;
+<span class="kw">const</span> cacheRtl = <span class="fn">createCache</span>({ key: <span class="str">'muirtl'</span>, stylisPlugins: [rtlPlugin] });
+<span class="cm">// &lt;CacheProvider value={cacheRtl}&gt;&lt;ThemeProvider theme={{...theme,direction:'rtl'}}&gt;</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+function setDir(dir) {
+  const isRTL = dir === 'rtl';
+  document.getElementById('demoContainer').dir = dir;
+  document.getElementById('demoTitle').textContent = isRTL ? 'حامل الكمبيوتر المحمول الفاخر' : 'Premium Laptop Stand';
+  document.getElementById('demoPrice').textContent = isRTL ? '٢٬٤٩٩ ₹' : '₹2,499';
+  document.getElementById('demoDesc').textContent = isRTL ? 'حامل قابل للتعديل. توصيل مجاني للطلبات فوق ٥٠٠ روبية.' : 'Ergonomic adjustable stand. Free delivery on orders above ₹500.';
+  document.getElementById('demoBtn').textContent = isRTL ? '← أضف إلى السلة' : 'Add to Cart →';
+  document.getElementById('demoRating').textContent = isRTL ? '١٢٨ تقييم (٤.٢)' : '4.2 (128 reviews)';
+  
+  document.getElementById('btnLTR').classList.toggle('active', !isRTL);
+  document.getElementById('btnRTL').classList.toggle('active', isRTL);
+  
+  // Note: logical CSS properties automatically flip with dir attribute!
+}
+</script>
+</body>
+</html>

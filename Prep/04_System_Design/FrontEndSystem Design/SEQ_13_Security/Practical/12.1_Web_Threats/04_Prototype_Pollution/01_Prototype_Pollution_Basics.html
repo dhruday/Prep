@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — Prototype Pollution Basics</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ec4899;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e3a;border-color:#ec4899;color:#ec4899}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ec4899;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ec4899;color:#ec4899}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style>
+</head>
+<body>
+<h1>🩷 Lab 01 — Prototype Pollution Basics</h1>
+<p class="sub">Module 12.1 · Web Threats · JavaScript prototype chain manipulation</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">V8 Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>What is Prototype Pollution?</h3>
+    <p style="font-size:.83rem;color:#94a3b8">Prototype Pollution is a JavaScript vulnerability where an attacker can inject properties into <code>Object.prototype</code>, affecting <strong>ALL objects</strong> in the application. Since every object inherits from Object.prototype, a single pollution can corrupt the entire runtime.</p>
+    <pre><span class="cm">// The attack vector — polluting Object.prototype:</span>
+<span class="kw">const</span> obj = {};
+obj.__proto__.isAdmin = <span class="str">true</span>;
+
+<span class="cm">// Now EVERY object in the app has isAdmin === true:</span>
+<span class="kw">const</span> user = {};
+console.log(user.isAdmin); <span class="cm">// true! ← pollution</span>
+
+<span class="cm">// More dangerous with JSON.parse + recursive merge:</span>
+<span class="kw">const</span> payload = JSON.parse(<span class="str">'{"__proto__": {"isAdmin": true}}'</span>);
+<span class="fn">merge</span>({}, payload); <span class="cm">// pollutes Object.prototype</span></pre>
+  </div>
+  <div class="card">
+    <h3>Attack Surface</h3>
+    <pre><span class="cm">// Three common paths to prototype pollution:</span>
+
+<span class="cm">// 1. Unsafe recursive merge/extend:</span>
+<span class="kw">function</span> <span class="fn">merge</span>(target, source) {
+  <span class="kw">for</span> (<span class="kw">let</span> key <span class="kw">in</span> source) {
+    <span class="kw">if</span> (<span class="kw">typeof</span> source[key] === <span class="str">'object'</span>) {
+      target[key] = <span class="fn">merge</span>(target[key] || {}, source[key]);
+    } <span class="kw">else</span> {
+      target[key] = source[key]; <span class="danger">// key = "__proto__" → pollutes!</span>
+    }
+  }
+}
+
+<span class="cm">// 2. Property path assignment:</span>
+<span class="fn">setPath</span>(obj, <span class="str">"__proto__.isAdmin"</span>, <span class="str">true</span>);
+
+<span class="cm">// 3. Direct __proto__ access:</span>
+obj[<span class="str">"__proto__"</span>][<span class="str">"polluted"</span>] = <span class="str">true</span>;</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Interactive Prototype Pollution Demo</h3>
+    <p style="font-size:.82rem;color:#94a3b8;margin-bottom:8px">Click buttons to pollute Object.prototype and see the effect on new objects:</p>
+    <button onclick="pollute('isAdmin','true')" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Pollute: isAdmin = true</button>
+    <button onclick="pollute('role','admin')" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Pollute: role = "admin"</button>
+    <button onclick="pollute('toString','polluted')" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Pollute: toString (crash!)</button>
+    <button onclick="cleanUp()" style="background:#1a3a2a;border-color:#10b981;color:#10b981">🧹 Clean Up Pollution</button>
+    <div class="output" id="pollution-result"></div>
+  </div>
+  <div class="card">
+    <h3>🧪 Unsafe Merge Demo</h3>
+    <textarea id="merge-payload" rows="3" style="width:100%;padding:8px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem">{"__proto__": {"polluted": true, "isAdmin": true}}</textarea>
+    <div class="grid2">
+      <div>
+        <button onclick="testUnsafeMerge()" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Unsafe Merge</button>
+        <div class="output" id="unsafe-merge">Uses recursive merge without protection</div>
+      </div>
+      <div>
+        <button onclick="testSafeMerge()" style="background:#1a3a2a;border-color:#10b981;color:#10b981">✅ Safe Merge</button>
+        <div class="output" id="safe-merge">Blocks __proto__, constructor, prototype keys</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🔬 V8 Prototype Chain Internals</h3>
+    <div style="font-size:.82rem;color:#94a3b8">
+      <p><strong style="color:#60a5fa">Hidden Classes (Maps):</strong> V8 assigns a hidden class to each object, tracking its shape (property names, offsets). When you access obj.isAdmin and it's not on obj itself, V8 walks the prototype chain: obj → Object.prototype. If Object.prototype has been polluted, V8 finds "isAdmin" there.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">Inline Caches (ICs):</strong> V8 caches property lookup results. After pollution, ICs for "isAdmin" may still point to the old (non-polluted) hidden class. V8 eventually invalidates these, but there's a brief window of inconsistency.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">__proto__ vs Object.getPrototypeOf:</strong> <code>__proto__</code> is a getter/setter on Object.prototype. It's a legacy mechanism. <code>Object.getPrototypeOf()</code> and <code>Object.setPrototypeOf()</code> are the modern APIs. Using <code>__proto__</code> as a key in JSON enables the attack because JSON.parse treats it as a regular property.</p>
+      <p style="margin-top:8px"><strong style="color:#60a5fa">Object.create(null):</strong> Creates an object with NO prototype. <code>obj.__proto__</code> is undefined. This is the strongest defense — no prototype to pollute.</p>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Prototype Pollution</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How can prototype pollution lead to XSS?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">If a template engine or DOM library checks <code>obj.innerHTML</code> or <code>obj.srcdoc</code> without own-property check, an attacker can pollute Object.prototype with those properties. Example: jQuery's $.extend was vulnerable — polluting <code>__proto__.srcdoc</code> could inject HTML into iframes. Lodash merge had CVEs for the same reason. The chain: prototype pollution → gadget in framework code → XSS execution.</p>
+      <p><strong style="color:#60a5fa">Q: How do you prevent prototype pollution at scale?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">1. Object.freeze(Object.prototype) — prevents ALL modifications. But may break some libraries. 2. Use Map instead of plain objects for key-value stores. 3. ESLint rule no-proto to ban __proto__ usage. 4. Use structuredClone() instead of JSON.parse(JSON.stringify()) — it doesn't have __proto__ issues. 5. For merge functions: check with hasOwnProperty and reject __proto__, constructor, prototype keys. At Google: Closure Library's goog.object.extend is prototype-pollution-safe.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+const pollutedKeys=[];
+
+function pollute(key,val){
+  const el=document.getElementById('pollution-result');
+  try{
+    Object.prototype[key]=val==='true'?true:val;
+    pollutedKeys.push(key);
+    const test={};
+    el.textContent=`✅ Polluted Object.prototype.${key} = ${val}\n\nTest — create empty object and check:\n  const obj = {};\n  obj.${key} = ${JSON.stringify(test[key])}\n\nALL objects now have this property!`;
+    if(key==='toString'){
+      el.textContent+='\n\n⚠️ toString was replaced! Try running:\n  String({}) → this will crash or return "polluted"';
+    }
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+
+function cleanUp(){
+  const el=document.getElementById('pollution-result');
+  pollutedKeys.forEach(k=>delete Object.prototype[k]);
+  el.textContent=`🧹 Cleaned up: ${pollutedKeys.join(', ')}\n\nconst obj = {};\nobj.isAdmin = ${JSON.stringify(({}).isAdmin)}\nobj.role = ${JSON.stringify(({}).role)}`;
+  pollutedKeys.length=0;
+}
+
+function unsafeMerge(target,source){
+  for(let key in source){
+    if(typeof source[key]==='object'&&source[key]!==null){
+      if(!target[key])target[key]={};
+      unsafeMerge(target[key],source[key]);
+    }else{target[key]=source[key]}
+  }
+  return target;
+}
+
+function safeMerge(target,source){
+  const BANNED=['__proto__','constructor','prototype'];
+  for(let key of Object.keys(source)){
+    if(BANNED.includes(key))continue;
+    if(typeof source[key]==='object'&&source[key]!==null&&!Array.isArray(source[key])){
+      if(!target[key])target[key]={};
+      safeMerge(target[key],source[key]);
+    }else{target[key]=source[key]}
+  }
+  return target;
+}
+
+function testUnsafeMerge(){
+  const el=document.getElementById('unsafe-merge');
+  try{
+    cleanUp(); // clean first
+    const payload=JSON.parse(document.getElementById('merge-payload').value);
+    unsafeMerge({},payload);
+    const test={};
+    el.textContent=`After unsafe merge:\n\nconst test = {};\ntest.polluted = ${test.polluted}\ntest.isAdmin = ${test.isAdmin}\n\n⚠️ Object.prototype was polluted!`;
+    cleanUp();
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+
+function testSafeMerge(){
+  const el=document.getElementById('safe-merge');
+  try{
+    cleanUp();
+    const payload=JSON.parse(document.getElementById('merge-payload').value);
+    safeMerge({},payload);
+    const test={};
+    el.textContent=`After safe merge:\n\nconst test = {};\ntest.polluted = ${test.polluted}\ntest.isAdmin = ${test.isAdmin}\n\n✅ Object.prototype is clean! __proto__ key was rejected.`;
+  }catch(e){el.textContent=`Error: ${e.message}`}
+}
+</script>
+</body></html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 70 – Redux Toolkit: createSlice, RTK Query, createAsyncThunk</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>🛠️ Redux Toolkit: createSlice · RTK Query · createAsyncThunk</h1>
+<p class="sub">Topic 70 · Module 5.2 — State Tools & Patterns · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Live Store Simulator</div>
+  <div class="tab" onclick="setTab(2)">RTK Query vs createAsyncThunk</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Redux Toolkit — the official modern way to write Redux</h3>
+    <div style="font-size:.8rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:12px;border-radius:8px">
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">createSlice</div>
+        <div style="color:#94a3b8;font-size:.75rem;line-height:1.8">Combines reducer + actions in one. Uses Immer under the hood — allows "mutating" syntax that is actually immutable. Eliminates switch boilerplate.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:12px;border-radius:8px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">createAsyncThunk</div>
+        <div style="color:#94a3b8;font-size:.75rem;line-height:1.8">Handles pending / fulfilled / rejected lifecycle. Dispatches action types for each stage automatically. Used for one-off mutations.</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;padding:12px;border-radius:8px">
+        <div style="color:#a78bfa;font-weight:700;margin-bottom:6px">RTK Query</div>
+        <div style="color:#94a3b8;font-size:.75rem;line-height:1.8">Full data-fetching + caching solution built into RTK. Generates hooks automatically from endpoint definitions. Replaces createAsyncThunk for CRUD.</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;background:#0f1117;border:1px solid #f59e0b;padding:10px;border-radius:8px;font-size:.78rem;color:#94a3b8">
+      <strong style="color:#f59e0b">SAP context:</strong> SAP Fiori legacy apps use Redux heavily. At SAP Labs Hruday migrated one such app from raw Redux to RTK — reducing ~3000 lines of boilerplate to ~700 lines.
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Simulated RTK store — cart slice with async thunk</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <button onclick="addItem()" style="padding:7px 14px;background:#1e3a5f;border:1px solid #60a5fa;color:#60a5fa;border-radius:8px;cursor:pointer;font-size:.82rem">dispatch addItem</button>
+      <button onclick="removeItem()" style="padding:7px 14px;background:#300010;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.82rem">dispatch removeItem</button>
+      <button onclick="loadAsync()" style="padding:7px 14px;background:#1a1040;border:1px solid #a78bfa;color:#a78bfa;border-radius:8px;cursor:pointer;font-size:.82rem">dispatch fetchOrders (async thunk)</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="color:#60a5fa;margin-bottom:6px">Cart Slice state</div>
+        <div>Items: <span id="cart-count" style="color:#10b981">0</span></div>
+        <div>Total: $<span id="cart-total" style="color:#10b981">0</span></div>
+        <div id="cart-list" style="margin-top:6px;color:#94a3b8"></div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px">
+        <div style="color:#a78bfa;margin-bottom:6px">Orders Slice state (async thunk)</div>
+        <div>Status: <span id="thunk-status" style="color:#94a3b8">idle</span></div>
+        <div id="thunk-data" style="margin-top:4px;color:#94a3b8;font-size:.75rem"></div>
+      </div>
+    </div>
+    <div id="action-log" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px;margin-top:10px;font-size:.72rem;color:#475569;max-height:80px;overflow-y:auto">Action log will appear here...</div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>RTK Query vs createAsyncThunk — when to use which</h3>
+    <div style="font-size:.8rem;display:grid;gap:8px">
+      <div style="background:#0f1117;border:1px solid #a78bfa;padding:12px;border-radius:8px">
+        <strong style="color:#a78bfa">RTK Query — use for CRUD operations</strong><br>
+        <span style="color:#94a3b8">Auto-generates hooks, manages cache, handles loading/error states, automatic deduplication of concurrent requests, built-in tag-based invalidation.</span>
+        <div style="color:#10b981;margin-top:6px;font-size:.75rem">✅ GET /orders, POST /orders, PUT /order/:id, DELETE /order/:id</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;padding:12px;border-radius:8px">
+        <strong style="color:#10b981">createAsyncThunk — use for custom logic</strong><br>
+        <span style="color:#94a3b8">When you need custom side effects (local storage, auth token refresh, orchestrating multiple calls). More control, more boilerplate.</span>
+        <div style="color:#f59e0b;margin-top:6px;font-size:.75rem">✅ Login (store token + redirect), complex multi-step workflows</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+    <div class="card">
+      <h3>createSlice + createAsyncThunk + RTK Query</h3>
+      <pre><span class="cm">// ─── createSlice ───</span>
+<span class="kw">const</span> cartSlice = <span class="fn">createSlice</span>({
+  name: <span class="str">'cart'</span>,
+  initialState: { items: [] <span class="kw">as</span> Item[], total: 0 },
+  reducers: {
+    addItem(state, action: PayloadAction&lt;Item&gt;) {
+      state.items.<span class="fn">push</span>(action.payload);  <span class="cm">// Immer: looks mutable, is immutable</span>
+      state.total += action.payload.price;
+    },
+    removeItem(state, action: PayloadAction&lt;<span class="kw">string</span>&gt;) {
+      <span class="kw">const</span> item = state.items.<span class="fn">find</span>(i =&gt; i.id === action.payload);
+      <span class="kw">if</span> (item) { state.total -= item.price; state.items = state.items.<span class="fn">filter</span>(i =&gt; i.id !== action.payload); }
+    },
+  },
+});
+
+<span class="cm">// ─── createAsyncThunk ───</span>
+<span class="kw">const</span> fetchOrders = <span class="fn">createAsyncThunk</span>(<span class="str">'orders/fetch'</span>, async (userId: <span class="kw">string</span>) =&gt; {
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`/api/orders/${userId}`</span>);
+  <span class="kw">return</span> res.<span class="fn">json</span>();   <span class="cm">// payload: fulfilled action</span>
+});
+ordersSlice.extraReducers = builder =&gt; {
+  builder
+    .<span class="fn">addCase</span>(fetchOrders.pending,   s =&gt; { s.status = <span class="str">'loading'</span> })
+    .<span class="fn">addCase</span>(fetchOrders.fulfilled, (s, a) =&gt; { s.orders = a.payload; s.status = <span class="str">'idle'</span> })
+    .<span class="fn">addCase</span>(fetchOrders.rejected,  s =&gt; { s.status = <span class="str">'error'</span> });
+};
+
+<span class="cm">// ─── RTK Query ───</span>
+<span class="kw">const</span> ordersApi = <span class="fn">createApi</span>({
+  reducerPath: <span class="str">'ordersApi'</span>,
+  baseQuery: <span class="fn">fetchBaseQuery</span>({ baseUrl: <span class="str">'/api'</span> }),
+  tagTypes: [<span class="str">'Order'</span>],
+  endpoints: builder =&gt; ({
+    getOrders:    builder.<span class="fn">query</span>&lt;Order[], <span class="kw">void</span>&gt;({ query: () =&gt; <span class="str">'/orders'</span>, providesTags: [<span class="str">'Order'</span>] }),
+    approveOrder: builder.<span class="fn">mutation</span>&lt;<span class="kw">void</span>, <span class="kw">string</span>&gt;({
+      query: id =&gt; ({ url: <span class="str">`/orders/${id}/approve`</span>, method: <span class="str">'POST'</span> }),
+      invalidatesTags: [<span class="str">'Order'</span>],   <span class="cm">// auto-refetch getOrders!</span>
+    }),
+  }),
+});
+<span class="kw">export const</span> { useGetOrdersQuery, useApproveOrderMutation } = ordersApi;</pre>
+    </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+const products=[{name:'SAP License',price:299},{name:'Cloud Storage',price:149},{name:'Support',price:89}];
+let cartItems=[];
+let pi=0;
+const logEl=document.getElementById('action-log');
+function log(msg){logEl.innerHTML=`<span style="color:#94a3b8">${msg}</span><br>`+logEl.innerHTML}
+
+function addItem(){if(pi>=products.length)pi=0;const p=products[pi++];cartItems.push({...p,id:Date.now()});log(`DISPATCH: cart/addItem "${p.name}" $${p.price}`);renderCart();}
+function removeItem(){if(!cartItems.length){log('Cart empty');return;}const removed=cartItems.pop();log(`DISPATCH: cart/removeItem "${removed.name}"`);renderCart();}
+function renderCart(){document.getElementById('cart-count').textContent=cartItems.length;document.getElementById('cart-total').textContent=cartItems.reduce((s,c)=>s+c.price,0);document.getElementById('cart-list').innerHTML=cartItems.map(c=>`<div style="border-bottom:1px solid #2d3551;padding:2px 0">${c.name} — $${c.price}</div>`).join('');}
+
+const mockOrders=['ORD-001','ORD-002','ORD-003'];
+function loadAsync(){
+  document.getElementById('thunk-status').textContent='loading';document.getElementById('thunk-status').style.color='#f59e0b';
+  log('DISPATCH: orders/fetch/pending');
+  setTimeout(()=>{
+    document.getElementById('thunk-status').textContent='idle (fulfilled)';document.getElementById('thunk-status').style.color='#10b981';
+    document.getElementById('thunk-data').innerHTML=mockOrders.map(o=>`<div>${o}</div>`).join('');
+    log('DISPATCH: orders/fetch/fulfilled — 3 orders loaded');
+  },1200);
+}
+</script>
+</body>
+</html>

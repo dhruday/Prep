@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Company Expectations Comparison — MASC</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px}
+    h1{text-align:center;color:#60a5fa;margin-bottom:4px;font-size:1.5rem}
+    .subtitle{text-align:center;color:#94a3b8;margin-bottom:20px;font-size:.88rem}
+    .company-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+    .company-card{border-radius:12px;padding:16px;border:2px solid;cursor:pointer;transition:all .3s}
+    .company-card:hover{transform:translateY(-3px)}
+    .ms{background:#1e2a3a;border-color:#0078d4}.ms.active{background:#0d2137;border-color:#60a5fa;box-shadow:0 0 20px rgba(0,120,212,.4)}
+    .adobe{background:#2a1a1a;border-color:#ff0000}.adobe.active{background:#1f0a0a;border-color:#f87171;box-shadow:0 0 20px rgba(255,0,0,.3)}
+    .sf{background:#1a2a1a;border-color:#00a1e0}.sf.active{background:#0a1f0a;border-color:#00d1ff;box-shadow:0 0 20px rgba(0,161,224,.3)}
+    .cisco{background:#1a1a2a;border-color:#1ba0d7}.cisco.active{background:#0a0a1f;border-color:#818cf8;box-shadow:0 0 20px rgba(100,116,239,.3)}
+    .company-card h2{font-size:1rem;margin-bottom:8px}
+    .tag{display:inline-block;padding:3px 8px;border-radius:4px;font-size:.68rem;font-weight:600;margin:2px}
+    .detail-panel{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:18px;margin-bottom:18px;min-height:160px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:16px}
+    .card h3{font-size:.85rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;color:#60a5fa}
+    .radar-wrap{display:flex;justify-content:center;padding:10px}
+    .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:.78rem}
+    .bar-label{width:140px;color:#94a3b8;text-align:right}
+    .bar-track{flex:1;background:#0f1117;border-radius:4px;height:14px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
+    .bar-val{width:30px;text-align:right;color:#60a5fa;font-size:.7rem}
+    .checklist{list-style:none;font-size:.78rem}
+    .checklist li{padding:5px 0;border-bottom:1px solid #2d3551;color:#94a3b8}
+    .checklist li::before{content:"✓ ";color:#10b981}
+    .checklist li.warn::before{content:"⚠ ";color:#f59e0b}
+    .insight{background:#162032;border:1px solid #1e3a5f;border-radius:7px;padding:10px;font-size:.76rem;color:#93c5fd;margin-top:12px}
+    .insight strong{color:#fff}
+  </style>
+</head>
+<body>
+<h1>🏢 Company Interview Expectations — MASC</h1>
+<p class="subtitle">Microsoft · Adobe · Salesforce · Cisco — Click a company to explore its interview focus</p>
+
+<div class="company-grid">
+  <div class="company-card ms active" onclick="selectCompany('ms')">
+    <h2 style="color:#60a5fa">🪟 Microsoft</h2>
+    <span class="tag" style="background:#1e3a5f;color:#93c5fd">Growth Mindset</span>
+    <span class="tag" style="background:#1e3a5f;color:#93c5fd">TypeScript</span>
+    <span class="tag" style="background:#1e3a5f;color:#93c5fd">a11y</span>
+    <span class="tag" style="background:#1e3a5f;color:#93c5fd">Teams Scale</span>
+  </div>
+  <div class="company-card adobe" onclick="selectCompany('adobe')">
+    <h2 style="color:#f87171">🎨 Adobe</h2>
+    <span class="tag" style="background:#7f1d1d;color:#fca5a5">Performance</span>
+    <span class="tag" style="background:#7f1d1d;color:#fca5a5">Canvas/WebGL</span>
+    <span class="tag" style="background:#7f1d1d;color:#fca5a5">Testing</span>
+    <span class="tag" style="background:#7f1d1d;color:#fca5a5">Craft</span>
+  </div>
+  <div class="company-card sf" onclick="selectCompany('sf')">
+    <h2 style="color:#00d1ff">☁️ Salesforce</h2>
+    <span class="tag" style="background:#003d52;color:#7dd3fc">LWC</span>
+    <span class="tag" style="background:#003d52;color:#7dd3fc">Multi-Tenant</span>
+    <span class="tag" style="background:#003d52;color:#7dd3fc">RBAC</span>
+    <span class="tag" style="background:#003d52;color:#7dd3fc">Trust</span>
+  </div>
+  <div class="company-card cisco" onclick="selectCompany('cisco')">
+    <h2 style="color:#818cf8">🔌 Cisco</h2>
+    <span class="tag" style="background:#1e1b4b;color:#c7d2fe">Angular/RxJS</span>
+    <span class="tag" style="background:#1e1b4b;color:#c7d2fe">WebSocket</span>
+    <span class="tag" style="background:#1e1b4b;color:#c7d2fe">Real-Time</span>
+    <span class="tag" style="background:#1e1b4b;color:#c7d2fe">Security</span>
+  </div>
+</div>
+
+<div class="detail-panel" id="detail-panel"></div>
+
+<div class="grid2">
+  <div class="card">
+    <h3>Technical Focus Heatmap</h3>
+    <div id="heatmap"></div>
+  </div>
+  <div class="card">
+    <h3>Must-Prepare Checklist</h3>
+    <ul class="checklist" id="checklist"></ul>
+  </div>
+</div>
+<div class="insight" id="insight"></div>
+
+<script>
+const data = {
+  ms: {
+    name:'Microsoft', color:'#60a5fa',
+    detail: `<h3 style="color:#60a5fa;margin-bottom:8px">🪟 Microsoft — What They Actually Test</h3>
+      <p style="font-size:.8rem;color:#94a3b8;margin-bottom:10px">Teams (280M DAU) · VS Code · Azure Portal · Edge · Office 365</p>
+      <div style="font-size:.8rem;line-height:1.7;color:#e2e8f0">
+        <strong style="color:#fff">Behavioural ("As Appropriate" round):</strong> Growth Mindset is foundational. Every story must include what you <em>learned</em> and how you <em>helped others</em>. This round is as weighted as the technical round.<br>
+        <strong style="color:#fff">Accessibility:</strong> WCAG 2.1 + ARIA. Keyboard navigation, screen reader compatibility, focus management. Legal and moral commitment — not optional.<br>
+        <strong style="color:#fff">TypeScript depth:</strong> Advanced types, generics, discriminated unions, declaration files. VS Code is TypeScript at its most mature.<br>
+        <strong style="color:#fff">Scale:</strong> Feature flags for 280M users, CDN-first architecture, micro-frontend isolation, performance budgets in CI.<br>
+        <strong style="color:#fff">Hruday's edge:</strong> WCAG AA cert + Lighthouse 60→95 + mentoring 4 engineers → perfect story alignment.
+      </div>`,
+    bars: [{l:'TypeScript',v:95,c:'#60a5fa'},{l:'Accessibility',v:95,c:'#34d399'},{l:'System Design',v:90,c:'#f59e0b'},{l:'React/Angular',v:80,c:'#a78bfa'},{l:'Behavioural',v:95,c:'#f87171'},{l:'Performance',v:80,c:'#fb923c'},{l:'Security',v:75,c:'#38bdf8'},{l:'Real-Time',v:50,c:'#94a3b8'}],
+    checklist: ['WCAG 2.1 AA — know ARIA roles, keyboard traps, focus order','TypeScript advanced types — conditional, mapped, template literal','Feature flags — evaluation, rollout strategy, kill switch','System Design at scale — Teams, Azure Portal patterns','Behavioural STAR stories — growth mindset framing','Performance budgets in CI — Lighthouse CI, bundle analysis',{warn:'Prepare "What I\'d do differently" for every story'}],
+    insight:'<strong>Key differentiator:</strong> Microsoft weights the behavioural round heavily. Candidates who only prepare the technical side get rejected at L62+. Prepare 8 stories minimum with explicit "what I learned" and "how I supported others" components.'
+  },
+  adobe: {
+    name:'Adobe', color:'#f87171',
+    detail: `<h3 style="color:#f87171;margin-bottom:8px">🎨 Adobe — What They Actually Test</h3>
+      <p style="font-size:.8rem;color:#94a3b8;margin-bottom:10px">Photoshop Web · Illustrator · Acrobat Online · Frame.io · Figma</p>
+      <div style="font-size:.8rem;line-height:1.7;color:#e2e8f0">
+        <strong style="color:#fff">Performance engineering:</strong> Sustained 60fps in complex canvas operations. OffscreenCanvas, requestAnimationFrame, layout thrashing avoidance, GPU compositing layers.<br>
+        <strong style="color:#fff">React + TypeScript depth:</strong> Fiber internals, Concurrent Mode, RSC, hooks implementation, rendering optimisation patterns.<br>
+        <strong style="color:#fff">Testing philosophy:</strong> Unit → Integration → E2E pyramid. Jest, RTL, Playwright, visual regression (Chromatic/Percy), Lighthouse CI.<br>
+        <strong style="color:#fff">Canvas/WebGL:</strong> Pixel manipulation, OffscreenCanvas, WASM for compute-heavy creative operations.<br>
+        <strong style="color:#fff">Hruday's edge:</strong> Lighthouse 60→95 performance work is directly relevant. Frame at the same depth as a creative tool performance problem.
+      </div>`,
+    bars: [{l:'Performance',v:98,c:'#f87171'},{l:'React depth',v:95,c:'#60a5fa'},{l:'TypeScript',v:85,c:'#a78bfa'},{l:'Testing',v:90,c:'#34d399'},{l:'Accessibility',v:80,c:'#86efac'},{l:'Canvas/WebGL',v:75,c:'#fb923c'},{l:'Behavioural',v:70,c:'#94a3b8'},{l:'Real-Time',v:40,c:'#64748b'}],
+    checklist: ['Performance metrics — LCP, CLS, INP, TBT with real numbers','React Fiber, Concurrent Mode, useTransition, RSC','Testing pyramid — Jest, RTL, Playwright, visual regression','Canvas performance — OffscreenCanvas, requestAnimationFrame batching','Bundle analysis — webpack-bundle-analyzer, tree shaking audit','Lighthouse CI in GitHub Actions pipeline',{warn:'Prepare performance numbers from your SAP work'}],
+    insight:'<strong>Key differentiator:</strong> Adobe interviewers are creative tool users themselves. They appreciate depth over breadth. Walk through a real performance problem you solved with specific before/after metrics. Lighthouse 60→95 is your best story here.'
+  },
+  sf: {
+    name:'Salesforce', color:'#00d1ff',
+    detail: `<h3 style="color:#00d1ff;margin-bottom:8px">☁️ Salesforce — What They Actually Test</h3>
+      <p style="font-size:.8rem;color:#94a3b8;margin-bottom:10px">Lightning Experience · Slack · MuleSoft · Marketing Cloud · Tableau</p>
+      <div style="font-size:.8rem;line-height:1.7;color:#e2e8f0">
+        <strong style="color:#fff">Lightning Web Components (LWC):</strong> Custom Elements API, Shadow DOM, @api/@track/@wire, Lifecycle hooks, custom events, Lightning Message Service.<br>
+        <strong style="color:#fff">Multi-tenant isolation:</strong> 150K+ orgs on shared infrastructure. Shadow DOM for CSS scoping. Permission-driven UI rendering (RBAC/ABAC).<br>
+        <strong style="color:#fff">Salesforce Trust:</strong> CSP, SRI, field-level security, sharing rules reflected in UI. All data display must respect backend permissions.<br>
+        <strong style="color:#fff">OData / REST patterns:</strong> Wire Service (analogous to Salesforce's Apex @wire). Caching, pagination, error handling.<br>
+        <strong style="color:#fff">Hruday's edge:</strong> SAP UI5 OData binding patterns are architecturally identical to Salesforce Wire Service. Position this explicitly.
+      </div>`,
+    bars: [{l:'Web Components/LWC',v:98,c:'#00d1ff'},{l:'Security/OWASP',v:90,c:'#f87171'},{l:'Multi-Tenant UX',v:90,c:'#34d399'},{l:'RBAC/ABAC',v:85,c:'#f59e0b'},{l:'System Design',v:80,c:'#a78bfa'},{l:'React/Angular',v:60,c:'#94a3b8'},{l:'Performance',v:65,c:'#fb923c'},{l:'Behavioural',v:75,c:'#60a5fa'}],
+    checklist: ['LWC fundamentals — Custom Elements, Shadow DOM, lifecycle','@api, @track, @wire decorators and when to use each','Multi-tenant: CSS scoping, JS sandboxing, session isolation','RBAC vs ABAC — frontend enforcement + backend enforcement','CSP policy design — nonce-based, report-only mode','Wire Service — analogous to RxJS Observable (relate to your Angular skills)',{warn:'SAP UI5 OData ↔ Salesforce Wire Service is your key translation'}],
+    insight:'<strong>Key differentiator:</strong> Salesforce doesn\'t expect React/Angular depth. They want platform thinking: multi-tenancy, security by design, declarative patterns, and component isolation. Your SAP UI5 OData experience is a stronger signal here than your Angular work.'
+  },
+  cisco: {
+    name:'Cisco', color:'#818cf8',
+    detail: `<h3 style="color:#818cf8;margin-bottom:8px">🔌 Cisco — What They Actually Test</h3>
+      <p style="font-size:.8rem;color:#94a3b8;margin-bottom:10px">Webex · DNA Center · SecureX · AppDynamics · ThousandEyes</p>
+      <div style="font-size:.8rem;line-height:1.7;color:#e2e8f0">
+        <strong style="color:#fff">Angular/RxJS depth:</strong> This is your home turf. Change detection (ChangeDetectionStrategy.OnPush + Zone.js vs Zoneless Signals), RxJS operator selection (switchMap vs mergeMap vs exhaustMap), NgRx patterns.<br>
+        <strong style="color:#fff">WebSocket / Real-Time:</strong> Connection management, reconnection with exponential backoff, message ordering, idempotency, delta-sync, backpressure handling.<br>
+        <strong style="color:#fff">Network-aware UI:</strong> Dashboard visualisations for network topology. D3.js, throttled updates, virtualisation for large node counts, Web Workers for calculations.<br>
+        <strong style="color:#fff">Security:</strong> Network tools handle sensitive infrastructure. CSP, token rotation, secure headers, audit logging are expected design components.<br>
+        <strong style="color:#fff">Hruday's edge:</strong> The Bosch WebSocket dashboard is textbook Cisco interview material. Describe it with specifics: reconnection logic, RxJS stream management, Angular performance optimisations.
+      </div>`,
+    bars: [{l:'Angular/RxJS',v:98,c:'#818cf8'},{l:'Real-Time/WS',v:95,c:'#34d399'},{l:'TypeScript',v:85,c:'#60a5fa'},{l:'Security',v:85,c:'#f87171'},{l:'System Design',v:80,c:'#f59e0b'},{l:'Performance',v:75,c:'#fb923c'},{l:'CI/CD',v:75,c:'#a78bfa'},{l:'Accessibility',v:55,c:'#94a3b8'}],
+    checklist: ['Angular OnPush + trackBy — exact rendering cost reduction','RxJS: switchMap vs mergeMap vs concatMap vs exhaustMap with examples','WebSocket reconnection — exponential backoff, heartbeat, delta-sync','NgRx: Store, Effects, Selectors, Entity Adapter patterns','takeUntil(destroy$) pattern — prevent every memory leak','TypeScript strict mode — no any, discriminated unions for state',{warn:'Bosch WebSocket dashboard = your strongest Cisco story'}],
+    insight:'<strong>Key differentiator:</strong> Cisco interviewers are often Angular engineers themselves. They will ask deep RxJS questions. Be ready to code switchMap vs exhaustMap from scratch and explain why each matters in a real-time context. This is your strongest company match.'
+  }
+};
+
+let current = 'ms';
+
+function selectCompany(key) {
+  current = key;
+  document.querySelectorAll('.company-card').forEach(c => c.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const d = data[key];
+  document.getElementById('detail-panel').innerHTML = d.detail;
+  renderBars(d.bars);
+  renderChecklist(d.checklist);
+  document.getElementById('insight').innerHTML = d.insight;
+}
+
+function renderBars(bars) {
+  document.getElementById('heatmap').innerHTML = bars.map(b => `
+    <div class="bar-row">
+      <span class="bar-label">${b.l}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:0%;background:${b.c}" data-w="${b.v}"></div></div>
+      <span class="bar-val">${b.v}%</span>
+    </div>`).join('');
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.bar-fill[data-w]').forEach(el => {
+      el.style.width = el.getAttribute('data-w') + '%';
+    });
+  });
+}
+
+function renderChecklist(items) {
+  document.getElementById('checklist').innerHTML = items.map(i => {
+    if (typeof i === 'string') return `<li>${i}</li>`;
+    return `<li class="warn">${i.warn}</li>`;
+  }).join('');
+}
+
+// Init
+selectCompany('ms');
+document.querySelector('.company-card.ms').click();
+</script>
+</body>
+</html>

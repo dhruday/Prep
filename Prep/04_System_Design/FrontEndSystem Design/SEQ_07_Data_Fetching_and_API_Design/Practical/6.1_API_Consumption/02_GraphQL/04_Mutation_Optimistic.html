@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 04 — Mutation + Optimistic Response</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#60a5fa;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#60a5fa;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.err{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#60a5fa;color:#60a5fa}button.blue{background:#1e2a4a;border-color:#60a5fa;color:#60a5fa}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #60a5fa;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}.ok{border-left-color:#10b981}</style>
+</head>
+<body>
+<h1>Lab 04 — Mutation + Optimistic Response</h1>
+<p class="sub">GraphQL mutations with optimistic UI updates — instant feedback before server confirmation</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Hands-On Lab</div>
+  <div class="tab" onclick="setTab(2)">Browser Internals</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&amp;A</div>
+</div>
+
+<!-- TAB 0: Concept -->
+<div class="panel active">
+  <div class="card">
+    <h3>What Is Optimistic UI?</h3>
+    <p>The UI updates <b>immediately</b> as if the mutation succeeded, then reconciles when the server responds.</p>
+    <div class="info">User clicks Like → count increments instantly → server confirms (keep) or rejects (rollback).</div>
+  </div>
+  <div class="card">
+    <h3 class="bad">❌ Without Optimistic — Feels Sluggish</h3>
+<pre><span class="cm">// User clicks → spinner → wait 200-2000ms → update UI</span>
+<span class="kw">async function</span> <span class="fn">likeMutation</span>(postId) {
+  setLoading(<span class="kw">true</span>);
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`/api/posts/${postId}/like`</span>, { method: <span class="str">'POST'</span> });
+  <span class="kw">const</span> data = <span class="kw">await</span> res.<span class="fn">json</span>();
+  setLikes(data.likes); <span class="cm">// delayed update</span>
+  setLoading(<span class="kw">false</span>);
+}</pre>
+  </div>
+  <div class="card">
+    <h3 class="good">✅ With Optimistic — Instant Feedback</h3>
+<pre><span class="kw">async function</span> <span class="fn">likeMutationOptimistic</span>(postId, currentLikes) {
+  <span class="kw">const</span> previousLikes = currentLikes;
+  setLikes(currentLikes + 1);  <span class="cm">// optimistic update NOW</span>
+
+  <span class="kw">try</span> {
+    <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`/api/posts/${postId}/like`</span>, { method: <span class="str">'POST'</span> });
+    <span class="kw">const</span> data = <span class="kw">await</span> res.<span class="fn">json</span>();
+    setLikes(data.likes);      <span class="cm">// reconcile with server truth</span>
+  } <span class="kw">catch</span> {
+    setLikes(previousLikes);   <span class="cm">// rollback on failure</span>
+    showError(<span class="str">'Like failed'</span>);
+  }
+}</pre>
+  </div>
+  <div class="card">
+    <h3>Optimistic Response Flow</h3>
+<pre>┌─────────┐   instant    ┌───────────┐   network   ┌────────┐
+│  Click   │ ──────────→ │ UI +1     │ ──────────→ │ Server │
+└─────────┘              └───────────┘              └────────┘
+                              │                         │
+                              │  ← confirm (keep +1)    │
+                              │  ← reject  (rollback)   │</pre>
+  </div>
+</div>
+
+<!-- TAB 1: Hands-On Lab -->
+<div class="panel">
+  <div class="card">
+    <h3>🧪 Like Button — Optimistic vs Normal</h3>
+    <p style="margin-bottom:10px;">Click to compare optimistic (instant) vs normal (waits for server).</p>
+    <div class="grid2">
+      <div>
+        <h3 class="good" style="font-size:.85rem">Optimistic Mode</h3>
+        <div style="text-align:center;margin:16px 0">
+          <span id="opt-count" style="font-size:2rem;color:#60a5fa">0</span>
+          <span style="color:#94a3b8;font-size:.85rem"> likes</span>
+        </div>
+        <button class="green" onclick="doOptimisticLike()">👍 Like (Optimistic)</button>
+        <button onclick="doOptimisticLike(true)" style="border-color:#ef4444;color:#ef4444">👍 Like (Simulate Fail)</button>
+      </div>
+      <div>
+        <h3 class="bad" style="font-size:.85rem">Normal Mode</h3>
+        <div style="text-align:center;margin:16px 0">
+          <span id="norm-count" style="font-size:2rem;color:#60a5fa">0</span>
+          <span style="color:#94a3b8;font-size:.85rem"> likes</span>
+        </div>
+        <button class="blue" onclick="doNormalLike()">👍 Like (Wait for Server)</button>
+      </div>
+    </div>
+    <div id="lab-log" class="output">Ready — click a button to start...</div>
+  </div>
+  <div class="card">
+    <h3>Mutation Code</h3>
+<pre><span class="cm">// POST http://localhost:4001/api/posts/1/like</span>
+<span class="kw">const</span> mutation = {
+  query: <span class="str">`mutation { likePost(id: 1) { id likes } }`</span>,
+  optimisticResponse: {
+    likePost: { id: <span class="str">"1"</span>, likes: currentLikes + 1, __typename: <span class="str">"Post"</span> }
+  }
+};</pre>
+  </div>
+</div>
+
+<!-- TAB 2: Browser Internals -->
+<div class="panel">
+  <div class="card">
+    <h3>When to Use Optimistic Responses</h3>
+    <div class="info ok">✅ <b>Good candidates:</b> Likes, bookmarks, toggles, form submissions, cart updates — actions where the expected outcome is predictable.</div>
+    <div class="info warn">⚠️ <b>Bad candidates:</b> Payment processing, inventory checks, complex calculations — actions where server validation is critical.</div>
+  </div>
+  <div class="card">
+    <h3>Risks & Mitigations</h3>
+<pre><b>Risk 1: Race conditions</b>
+User clicks Like 3x fast → 3 optimistic +1 → server sees only 1
+<span class="good">Fix:</span> Debounce or queue mutations, use server count as source of truth
+
+<b>Risk 2: Rollback flicker</b>
+UI shows +1, then snaps back to 0 on failure
+<span class="good">Fix:</span> Show subtle toast on rollback, animate the change
+
+<b>Risk 3: Stale cache</b>
+Optimistic update writes to cache, but cache key is stale
+<span class="good">Fix:</span> Use normalized cache (Apollo) with __typename + id
+
+<b>Risk 4: Offline mutations</b>
+User is offline, optimistic update shows success
+<span class="good">Fix:</span> Queue mutations, replay on reconnect (Apollo link-retry)</pre>
+  </div>
+  <div class="card">
+    <h3>Network Timeline — Optimistic vs Normal</h3>
+<pre>Optimistic:
+  t=0ms   Click → UI updates (paint frame)
+  t=0ms   POST /api/posts/1/like fired
+  t=200ms Server responds → reconcile (no visible change if correct)
+
+Normal:
+  t=0ms   Click → spinner shown
+  t=0ms   POST /api/posts/1/like fired
+  t=200ms Server responds → UI updates (paint frame)
+  <span class="err">↑ 200ms of perceived latency</span></pre>
+  </div>
+</div>
+
+<!-- TAB 3: Interview Q&A -->
+<div class="panel">
+  <div class="card">
+    <h3>Q1: What is an optimistic response in GraphQL?</h3>
+    <p><b>A:</b> An optimistic response predicts the server result and updates the cache immediately. Apollo's <code>optimisticResponse</code> option writes to the normalized cache before the network request completes. If the server returns a different result, the cache is reconciled automatically.</p>
+  </div>
+  <div class="card">
+    <h3>Q2: How do you handle optimistic rollback?</h3>
+    <p><b>A:</b> Store previous state before the optimistic write. On mutation error, restore the previous state. Apollo handles this automatically — if a mutation fails, the optimistic cache entry is removed and the original data is restored. For manual implementations, use a try/catch with explicit state rollback.</p>
+  </div>
+  <div class="card">
+    <h3>Q3: When should you NOT use optimistic UI?</h3>
+    <p><b>A:</b> Avoid optimistic UI for: (1) Payment/financial transactions — must confirm server success. (2) Uniqueness constraints — creating a username that might already exist. (3) Complex server-side validation — results are not predictable from client state. (4) Multi-step workflows — intermediate states may be invalid.</p>
+  </div>
+  <div class="card">
+    <h3>Q4: How do race conditions occur with optimistic updates?</h3>
+    <p><b>A:</b> Rapid clicks can fire multiple mutations. Each optimistic update assumes the previous one succeeded. If mutations resolve out of order, the final count can be wrong. Mitigate with: debouncing, mutation queuing, or using the server response as the final source of truth rather than incrementing locally.</p>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+let optLikes = 0, normLikes = 0;
+const optEl = document.getElementById('opt-count');
+const normEl = document.getElementById('norm-count');
+const log = document.getElementById('lab-log');
+
+function appendLog(msg) { log.textContent += '\n' + new Date().toISOString().substr(11,12) + ' ' + msg; log.scrollTop = log.scrollHeight; }
+
+async function doOptimisticLike(simulateFail = false) {
+  const prev = optLikes;
+  optLikes++; optEl.textContent = optLikes;
+  appendLog('[OPTIMISTIC] UI updated to ' + optLikes + ' immediately');
+
+  try {
+    appendLog('[NETWORK] POST /api/posts/1/like ...');
+    const res = await fetch('http://localhost:4001/api/posts/1/like', { method: 'POST' });
+    if (!res.ok || simulateFail) throw new Error('Server rejected');
+    const data = await res.json();
+    optLikes = data.likes || optLikes;
+    optEl.textContent = optLikes;
+    appendLog('[CONFIRM] Server confirmed: ' + optLikes + ' likes');
+  } catch (e) {
+    optLikes = prev; optEl.textContent = optLikes;
+    appendLog('[ROLLBACK] Failed! Reverted to ' + optLikes);
+  }
+}
+
+async function doNormalLike() {
+  appendLog('[NORMAL] Waiting for server...');
+  try {
+    const res = await fetch('http://localhost:4001/api/posts/1/like', { method: 'POST' });
+    if (!res.ok) throw new Error('Failed');
+    const data = await res.json();
+    normLikes = data.likes || normLikes + 1;
+    normEl.textContent = normLikes;
+    appendLog('[NORMAL] Server responded: ' + normLikes + ' likes');
+  } catch {
+    normLikes++; normEl.textContent = normLikes;
+    appendLog('[NORMAL] Simulated: ' + normLikes + ' likes (server offline)');
+  }
+}
+</script>
+</body>
+</html>

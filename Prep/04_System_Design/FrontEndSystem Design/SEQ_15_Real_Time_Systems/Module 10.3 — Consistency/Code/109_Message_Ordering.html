@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 109 – Message Ordering</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>📋 Message Ordering</h1>
+<p class="sub">Topic 109 · Module 10.3 — Consistency · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Out-of-Order Demo</div>
+  <div class="tab" onclick="setTab(2)">Ordering Strategies</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Messages often arrive out-of-order on real networks</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Even over WebSockets (which guarantee order on a single connection), out-of-order delivery happens when: multiple WS connections are used, events come from different microservices at different latencies, the client reconnects and misses events, or messages are batched and re-ordered. At SAP, order status events from different services could arrive: "Shipped" before "Processing" confirmed. A sequence number in each message solves this.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+      <div style="background:#3d0808;border:1px solid #ef4444;border-radius:8px;padding:10px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">❌ No ordering guarantee</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:1.9">
+          <li>Events processed as received</li>
+          <li>Status: "Shipped" then shows "Processing"</li>
+          <li>UI shows wrong state intermittently</li>
+        </ul>
+      </div>
+      <div style="background:#052e16;border:1px solid #10b981;border-radius:8px;padding:10px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">✅ Sequence number ordering</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:1.9">
+          <li>Each event has seq: N</li>
+          <li>Buffer out-of-order events</li>
+          <li>Process in seq order — consistent UI</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Message ordering simulator</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button onclick="moSimRaw()" style="padding:7px 14px;background:#3d0808;border:1px solid #ef4444;color:#ef4444;border-radius:8px;cursor:pointer;font-size:.82rem">Send out-of-order (no fix)</button>
+      <button onclick="moSimOrdered()" style="padding:7px 14px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:8px;cursor:pointer;font-size:.82rem">Send out-of-order (seq fix)</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <div style="font-size:.76rem;color:#ef4444;margin-bottom:4px">Received order (raw)</div>
+        <div id="mo-raw" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;font-size:.75rem;min-height:60px;color:#94a3b8"></div>
+      </div>
+      <div>
+        <div style="font-size:.76rem;color:#10b981;margin-bottom:4px">After reordering</div>
+        <div id="mo-ordered" style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:8px;font-size:.75rem;min-height:60px;color:#94a3b8"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Message ordering strategies</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Strategy</th>
+        <th style="padding:8px;border:1px solid #2d3551">Complexity</th>
+        <th style="padding:8px;border:1px solid #2d3551">Latency impact</th>
+        <th style="padding:8px;border:1px solid #2d3551">Use when</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Sequence number</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Low</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Buffer gaps</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Single producer</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Timestamp-based</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">Low</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#10b981">None</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Monotonic clocks only</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Vector clocks</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#ef4444">High</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Small</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Multi-producer distributed</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Causal ordering</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Medium</td><td style="padding:8px;text-align:center;border:1px solid #2d3551;color:#f59e0b">Dependency wait</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Collaborative editing</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Sequence number reorder buffer</h3>
+    <pre><span class="cm">// ─── Message ordering buffer ───</span>
+<span class="kw">class</span> OrderedMessageQueue {
+  <span class="kw">private</span> nextSeq = <span class="fn">1</span>;
+  <span class="kw">private</span> buffer = <span class="kw">new</span> Map&lt;<span class="kw">number</span>, Message&gt;();
+  <span class="fn">onMessage</span>(msg: Message &amp; { seq: <span class="kw">number</span> }) {
+    <span class="kw">if</span> (msg.seq === <span class="kw">this</span>.nextSeq) {
+      <span class="kw">this</span>.<span class="fn">process</span>(msg);
+      <span class="kw">this</span>.nextSeq++;
+      <span class="cm">// drain buffer for consecutive messages</span>
+      <span class="kw">while</span> (<span class="kw">this</span>.buffer.<span class="fn">has</span>(<span class="kw">this</span>.nextSeq)) {
+        <span class="kw">this</span>.<span class="fn">process</span>(<span class="kw">this</span>.buffer.<span class="fn">get</span>(<span class="kw">this</span>.nextSeq)!);
+        <span class="kw">this</span>.buffer.<span class="fn">delete</span>(<span class="kw">this</span>.nextSeq);
+        <span class="kw">this</span>.nextSeq++;
+      }
+    } <span class="kw">else if</span> (msg.seq &gt; <span class="kw">this</span>.nextSeq) {
+      <span class="kw">this</span>.buffer.<span class="fn">set</span>(msg.seq, msg); <span class="cm">// out-of-order — buffer it</span>
+    }
+    <span class="cm">// seq < nextSeq = duplicate, discard</span>
+  }
+}
+
+<span class="cm">// ─── Server: include sequence number in every event ───</span>
+<span class="kw">let</span> seq = <span class="fn">0</span>;
+<span class="fn">broadcastEvent</span>({ type: <span class="str">'order-update'</span>, seq: ++seq, payload });</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const events=[{seq:1,data:'Created'},{seq:2,data:'Processing'},{seq:3,data:'Shipped'},{seq:4,data:'Delivered'}];
+function moSimRaw(){const raw=document.getElementById('mo-raw');const ord=document.getElementById('mo-ordered');const shuffled=[...events].sort(()=>Math.random()-.5);raw.innerHTML='';ord.innerHTML='';shuffled.forEach((e,i)=>{setTimeout(()=>{const d=document.createElement('div');d.style.color='#ef4444';d.textContent=`seq:${e.seq} → ${e.data}`;raw.appendChild(d);},i*300);});}
+function moSimOrdered(){const raw=document.getElementById('mo-raw');const ord=document.getElementById('mo-ordered');const shuffled=[...events].sort(()=>Math.random()-.5);raw.innerHTML='';ord.innerHTML='';const buf=new Map();let nextSeq=1;shuffled.forEach((e,i)=>{setTimeout(()=>{const d=document.createElement('div');d.style.color='#f59e0b';d.textContent=`received seq:${e.seq}`;raw.appendChild(d);buf.set(e.seq,e);const flush=()=>{while(buf.has(nextSeq)){const m=buf.get(nextSeq++);const d2=document.createElement('div');d2.style.color='#10b981';d2.textContent=`processed seq:${m.seq} → ${m.data}`;ord.appendChild(d2);}};flush();},i*300);});}
+</script>
+</body>
+</html>

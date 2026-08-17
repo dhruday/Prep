@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CORS (Cross-Origin Resource Sharing) Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:1rem}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#ef4444;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #ef4444;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#ef4444;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>CORS (Cross-Origin Resource Sharing) Deep Study</h1>
+<p class="sub">Module 12.1 · Security Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Attack &amp; Defense</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. Same-Origin Policy (SOP) — The Foundation</h3>
+    <pre><span class="cm">// SOP: a page from origin A can only read resources from origin A</span>
+<span class="cm">// Origin = scheme + host + port</span>
+<span class="cm">//   https://api.example.com:443  vs  http://api.example.com:80</span>
+<span class="cm">//   ↑ different scheme = different origin</span>
+<span class="cm">//</span>
+<span class="cm">// SOP restricts:</span>
+<span class="cm">//   ❌ fetch() / XMLHttpRequest reading cross-origin responses</span>
+<span class="cm">//   ❌ JavaScript reading cross-origin iframe content</span>
+<span class="cm">//   ❌ Reading cross-origin canvas data (tainted canvas)</span>
+<span class="cm">//</span>
+<span class="cm">// SOP does NOT restrict:</span>
+<span class="cm">//   ✅ &lt;img src="cross-origin"&gt;   → embeds, but JS can't read pixels</span>
+<span class="cm">//   ✅ &lt;script src="cross-origin"&gt; → executes (JSONP exploit surface)</span>
+<span class="cm">//   ✅ &lt;link href="cross-origin"&gt;  → loads CSS</span>
+<span class="cm">//   ✅ &lt;form action="cross-origin"&gt; → submits (CSRF exploit surface)</span>
+<span class="cm">//</span>
+<span class="cm">// CORS is the controlled relaxation of SOP</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Simple vs Preflighted Requests</h3>
+    <table>
+      <tr><th>Criteria</th><th>Simple Request</th><th>Preflighted Request</th></tr>
+      <tr><td>Methods</td><td>GET, HEAD, POST</td><td>PUT, DELETE, PATCH, etc.</td></tr>
+      <tr><td>Content-Type</td><td>text/plain, multipart/form-data, application/x-www-form-urlencoded</td><td>application/json, etc.</td></tr>
+      <tr><td>Custom Headers</td><td>None (only CORS-safelisted)</td><td>Any custom header (X-CSRF-Token, Authorization)</td></tr>
+      <tr><td>Browser Behavior</td><td>Sends request directly, checks response headers</td><td>Sends OPTIONS first, then actual request if allowed</td></tr>
+      <tr><td>Preflight cached?</td><td>N/A</td><td>Yes, via Access-Control-Max-Age</td></tr>
+    </table>
+    <div class="info">Key insight: Most real API calls (JSON body, Authorization header) trigger a preflight. The browser sends an OPTIONS request BEFORE the actual request. If your server doesn't handle OPTIONS correctly, the actual request is never sent.</div>
+  </div>
+
+  <div class="card">
+    <h3>3. CORS Headers Explained</h3>
+    <pre><span class="cm">// Response headers the server must set:</span>
+
+<span class="str">Access-Control-Allow-Origin</span>: https://app.example.com
+  <span class="cm">// Which origin(s) can read the response</span>
+  <span class="cm">// Can be specific origin or * (but NOT with credentials)</span>
+
+<span class="str">Access-Control-Allow-Methods</span>: GET, POST, PUT, DELETE
+  <span class="cm">// Which methods are allowed (preflight response)</span>
+
+<span class="str">Access-Control-Allow-Headers</span>: Authorization, X-CSRF-Token, Content-Type
+  <span class="cm">// Which custom headers client can send</span>
+
+<span class="str">Access-Control-Allow-Credentials</span>: true
+  <span class="cm">// Allow cookies/auth headers. If true:</span>
+  <span class="cm">//   - Allow-Origin cannot be * (must be specific origin)</span>
+  <span class="cm">//   - Client must set: fetch(url, { credentials: 'include' })</span>
+
+<span class="str">Access-Control-Expose-Headers</span>: X-Total-Count, X-Request-Id
+  <span class="cm">// Which response headers JS can read (defaults: Cache-Control,</span>
+  <span class="cm">//   Content-Language, Content-Type, Expires, Last-Modified, Pragma)</span>
+
+<span class="str">Access-Control-Max-Age</span>: 86400
+  <span class="cm">// How long (seconds) to cache preflight result</span>
+  <span class="cm">// Chrome caps at 7200 (2hrs); Firefox at 86400 (24hrs)</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>CORS Misconfigurations (Attack Vectors)</h3>
+    <h4>1. Reflecting Origin (Wildcard with Credentials)</h4>
+    <pre><span class="cm">// DANGEROUS: Server reflects whatever Origin header was sent</span>
+app.<span class="fn">use</span>((req, res, next) =&gt; {
+  res.<span class="fn">setHeader</span>(<span class="str">'Access-Control-Allow-Origin'</span>, req.headers.origin);
+  res.<span class="fn">setHeader</span>(<span class="str">'Access-Control-Allow-Credentials'</span>, <span class="str">'true'</span>);
+  <span class="fn">next</span>();
+});
+<span class="cm">// ❌ Any origin can now read authenticated responses</span>
+<span class="cm">// evil.com can steal user data from your API</span></pre>
+
+    <h4>2. Null Origin Allowance</h4>
+    <pre><span class="cm">// DANGEROUS: Some servers allow Origin: null</span>
+<span class="cm">// Null origin comes from: sandboxed iframes, local files, redirects</span>
+<span class="cm">// An attacker can craft: &lt;iframe sandbox="allow-scripts"...</span>
+<span class="cm">// → browser sends Origin: null → server allows it</span>
+<span class="cm">// ❌ Never allow 'null' as a trusted origin</span></pre>
+
+    <h4>3. Regex Bypass</h4>
+    <pre><span class="cm">// DANGEROUS: Loose regex for origin validation</span>
+<span class="kw">const</span> allowed = /example\.com$/;
+<span class="cm">// Attacker registers: attackerexample.com → matches!</span>
+
+<span class="cm">// FIX: Anchor your regex properly</span>
+<span class="kw">const</span> allowed = /^https:\/\/(app|api)\.example\.com$/;</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: Walk through what happens when a browser makes a cross-origin fetch with JSON body and Authorization header.</div>
+      <div class="a">Since the request has a custom Authorization header and Content-Type: application/json, it's not a "simple" request — the browser sends a preflight. Step 1: Browser sends OPTIONS to the URL with headers: Origin (the requesting page's origin), Access-Control-Request-Method (POST), Access-Control-Request-Headers (Authorization, Content-Type). Step 2: Server responds with CORS headers: Allow-Origin, Allow-Methods, Allow-Headers, Max-Age. If Allow-Credentials: true, Allow-Origin must be the specific origin (not *). Step 3: Browser checks if the actual method and headers are in the allowed list. If yes, browser sends the real POST. If credentials are involved, the client must have { credentials: 'include' }. Step 4: Browser checks the actual response's Allow-Origin header again before exposing the response body to JS. If any check fails, JS gets a NetworkError with no details (to prevent information leakage).</div>
+      <div class="followup">Follow-up: Why doesn't the browser tell you which CORS check failed?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q2: Why can't you use Access-Control-Allow-Origin: * with credentials?</div>
+      <div class="a">If the server says "any origin can read my responses with cookies attached," any malicious site could make authenticated requests and read the responses. The browser enforces a spec rule: when Allow-Credentials is true, Allow-Origin must be a specific origin, not wildcard. This forces the server to explicitly declare which origin is trusted to receive credentialed responses. In practice, the server reads the Origin header, validates it against a whitelist, and echoes it back. The key distinction from the "reflecting origin" vulnerability is that a proper implementation has an actual whitelist — it doesn't just echo any origin.</div>
+      <div class="followup">Follow-up: How does this interact with CDN caching? What's the Vary: Origin header for?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q3: How do you optimize CORS preflight performance?</div>
+      <div class="a">Preflights add latency — an extra RTT before every API call. Optimization: (1) Access-Control-Max-Age — cache preflight results. Set to 7200s for Chrome (its internal max is 2hrs). (2) Keep requests "simple" where possible — using form-urlencoded instead of JSON avoids preflight (though rarely practical). (3) Use a proxy or BFF — if app.example.com proxies to api.example.com, the browser sees same-origin and skips CORS entirely. (4) Consolidate API calls to reduce total preflight count. (5) For CDN/static assets, use crossorigin attribute on &lt;link&gt; and &lt;script&gt; tags so the browser caches CORS-enabled responses properly. In production, I typically set Max-Age to the browser max and use a BFF to avoid CORS for most API calls.</div>
+      <div class="followup">Follow-up: What's the Private Network Access spec, and how does it change CORS for localhost?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>1. Express CORS Middleware (Production-Grade)</h3>
+    <pre><span class="kw">const</span> allowedOrigins = <span class="kw">new</span> <span class="fn">Set</span>([
+  <span class="str">'https://app.example.com'</span>,
+  <span class="str">'https://staging.example.com'</span>,
+]);
+
+<span class="kw">function</span> <span class="fn">corsMiddleware</span>(req, res, next) {
+  <span class="kw">const</span> origin = req.headers.origin;
+
+  <span class="kw">if</span> (origin &amp;&amp; allowedOrigins.<span class="fn">has</span>(origin)) {
+    res.<span class="fn">setHeader</span>(<span class="str">'Access-Control-Allow-Origin'</span>, origin);
+    res.<span class="fn">setHeader</span>(<span class="str">'Access-Control-Allow-Credentials'</span>, <span class="str">'true'</span>);
+    res.<span class="fn">setHeader</span>(<span class="str">'Vary'</span>, <span class="str">'Origin'</span>); <span class="cm">// Critical for CDN caching</span>
+  }
+
+  <span class="kw">if</span> (req.method === <span class="str">'OPTIONS'</span>) {
+    res.<span class="fn">setHeader</span>(<span class="str">'Access-Control-Allow-Methods'</span>, <span class="str">'GET,POST,PUT,DELETE'</span>);
+    res.<span class="fn">setHeader</span>(<span class="str">'Access-Control-Allow-Headers'</span>,
+      <span class="str">'Authorization,Content-Type,X-CSRF-Token'</span>);
+    res.<span class="fn">setHeader</span>(<span class="str">'Access-Control-Max-Age'</span>, <span class="str">'7200'</span>);
+    <span class="kw">return</span> res.<span class="fn">sendStatus</span>(<span class="num">204</span>); <span class="cm">// No body needed</span>
+  }
+  <span class="fn">next</span>();
+}</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Vite/Webpack Dev Proxy (Avoid CORS in Development)</h3>
+    <pre><span class="cm">// vite.config.js — proxy API calls to avoid CORS entirely</span>
+<span class="kw">export default</span> {
+  server: {
+    proxy: {
+      <span class="str">'/api'</span>: {
+        target: <span class="str">'http://localhost:3000'</span>,
+        changeOrigin: <span class="kw">true</span>,
+      },
+    },
+  },
+};
+<span class="cm">// Browser sees same-origin → no CORS headers needed in dev</span>
+<span class="cm">// In production, nginx/BFF handles the same proxying</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>CORS Headers Quick Reference</h3>
+    <table>
+      <tr><th>Header</th><th>Request/Response</th><th>Purpose</th></tr>
+      <tr><td>Origin</td><td>Request</td><td>Tells server the requesting origin</td></tr>
+      <tr><td>Access-Control-Request-Method</td><td>Preflight Req</td><td>What method the actual request will use</td></tr>
+      <tr><td>Access-Control-Request-Headers</td><td>Preflight Req</td><td>What custom headers will be sent</td></tr>
+      <tr><td>Access-Control-Allow-Origin</td><td>Response</td><td>Which origin(s) can read response</td></tr>
+      <tr><td>Access-Control-Allow-Methods</td><td>Preflight Res</td><td>Allowed methods</td></tr>
+      <tr><td>Access-Control-Allow-Headers</td><td>Preflight Res</td><td>Allowed request headers</td></tr>
+      <tr><td>Access-Control-Allow-Credentials</td><td>Response</td><td>Allow cookies/auth</td></tr>
+      <tr><td>Access-Control-Expose-Headers</td><td>Response</td><td>Which response headers JS can read</td></tr>
+      <tr><td>Access-Control-Max-Age</td><td>Preflight Res</td><td>Cache duration for preflight</td></tr>
+      <tr><td>Vary: Origin</td><td>Response</td><td>Tell caches to key on Origin header</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Common Mistakes</h3>
+    <pre>❌ Reflecting Origin without whitelist
+❌ Allow-Origin: * with Allow-Credentials: true (browser rejects)
+❌ Forgetting Vary: Origin (CDN serves wrong origin's response)
+❌ Not handling OPTIONS → 404/405 → preflight fails
+❌ Regex without anchors: /example\.com$/ matches evil-example.com
+❌ Allowing Origin: null
+❌ Not setting Expose-Headers → can't read X-Total-Count pagination
+❌ Forgetting CORS on error responses (4xx/5xx) → opaque error in JS</pre>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

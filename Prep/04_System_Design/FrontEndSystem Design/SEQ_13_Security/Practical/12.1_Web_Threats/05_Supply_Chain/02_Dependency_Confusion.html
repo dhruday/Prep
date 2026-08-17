@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — Dependency Confusion Attacks</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟡 Lab 02 — Dependency Confusion Attacks</h1>
+<p class="sub">Module 12.1 · Internal vs public registry hijacking</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Attack Simulation</div>
+  <div class="tab" onclick="setTab(2)">Defenses</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>How Dependency Confusion Works</h3>
+    <pre><span class="cm">// The Setup:</span>
+<span class="cm">// Company "Acme" has an internal npm package: @acme/auth-utils</span>
+<span class="cm">// It's published on their private Artifactory registry</span>
+<span class="cm">// Their .npmrc: registry=https://artifactory.acme.com/npm/</span>
+
+<span class="cm">// The Attack:</span>
+<span class="cm">// 1. Attacker discovers the internal package name (from GitHub, job postings, etc.)</span>
+<span class="cm">// 2. Registers "auth-utils" (unscoped) on public npmjs.com</span>
+<span class="cm">// 3. Publishes version 99.0.0 (higher than internal 1.2.3)</span>
+<span class="cm">// 4. npm resolves to PUBLIC version 99.0.0 (higher version wins!)</span>
+
+<span class="cm">// Why it works:</span>
+<span class="cm">// npm checks BOTH private and public registries</span>
+<span class="cm">// If the public registry has a higher version, it installs that one</span>
+<span class="cm">// The malicious package runs postinstall → exfiltrates secrets</span>
+
+<span class="cm">// Real impact (Alex Birsan, 2021):</span>
+<span class="cm">// Successfully compromised builds at Apple, Microsoft, PayPal,</span>
+<span class="cm">// Shopify, Netflix, Tesla, Uber — earned $130K+ in bug bounties</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 Simulate Dependency Resolution</h3>
+    <p style="font-size:.82rem;color:#94a3b8">This simulates how npm resolves packages across registries:</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <strong style="color:#60a5fa;font-size:.82rem">Private Registry</strong><br>
+        <input id="priv-name" value="@acme/auth-utils" style="width:100%;padding:6px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem;margin:4px 0">
+        <input id="priv-ver" value="1.2.3" style="width:100%;padding:6px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem">
+      </div>
+      <div>
+        <strong style="color:#ef4444;font-size:.82rem">Public npm (Attacker)</strong><br>
+        <input id="pub-name" value="auth-utils" style="width:100%;padding:6px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem;margin:4px 0">
+        <input id="pub-ver" value="99.0.0" style="width:100%;padding:6px;border-radius:6px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.78rem">
+      </div>
+    </div>
+    <button onclick="simulateResolution()">⚡ Simulate npm install</button>
+    <div class="output" id="sim-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3 class="safe">Defense Strategies</h3>
+    <pre><span class="cm">// 1. USE SCOPED PACKAGES (@org/package)</span>
+<span class="cm">// Scoped packages are namespaced — can't be impersonated</span>
+<span class="cm">// @acme/auth-utils is different from auth-utils</span>
+<span class="cm">// Configure scope to always use private registry:</span>
+<span class="cm">// .npmrc: @acme:registry=https://artifactory.acme.com/npm/</span>
+
+<span class="cm">// 2. REGISTRY PINNING in .npmrc</span>
+<span class="cm">// registry=https://artifactory.acme.com/npm/</span>
+<span class="cm">// @acme:registry=https://artifactory.acme.com/npm/</span>
+<span class="cm">// This ensures @acme scope ALWAYS resolves from private registry</span>
+
+<span class="cm">// 3. LOCKFILE with integrity hashes</span>
+{
+  <span class="str">"packages"</span>: {
+    <span class="str">"node_modules/@acme/auth-utils"</span>: {
+      <span class="str">"version"</span>: <span class="str">"1.2.3"</span>,
+      <span class="str">"resolved"</span>: <span class="str">"https://artifactory.acme.com/npm/@acme/auth-utils/-/auth-utils-1.2.3.tgz"</span>,
+      <span class="str">"integrity"</span>: <span class="str">"sha512-abc123..."</span> <span class="cm">// integrity check prevents tampering</span>
+    }
+  }
+}
+
+<span class="cm">// 4. CLAIM YOUR NAMESPACE on public npm</span>
+<span class="cm">// Register placeholder packages for all internal names</span>
+<span class="cm">// npm publish with "private": true to block others</span>
+
+<span class="cm">// 5. USE --ignore-scripts during CI installs</span>
+<span class="cm">// npm install --ignore-scripts</span>
+<span class="cm">// Then run allowed scripts explicitly</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Dependency Confusion</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: Your company has 50+ internal npm packages. How do you prevent dependency confusion?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">1. Scope everything: All packages under @company-name scope. 2. .npmrc enforced via repository template: @company-name:registry=private-url. 3. Lockfile committed with integrity hashes verified in CI. 4. Claim placeholders on public npm for every internal package name. 5. Private registry proxy (Artifactory/Nexus): configure it to NOT cascade to public npm for your scoped packages. 6. CI validation: script that checks resolved URLs in lockfile — fail build if any @company-name package resolved from public npm. Google's approach: Bzl/Bazel manages dependencies with pinned SHA256 hashes — no dynamic resolution at build time.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function simulateResolution(){
+  const el=document.getElementById('sim-result');
+  const privName=document.getElementById('priv-name').value;
+  const privVer=document.getElementById('priv-ver').value;
+  const pubName=document.getElementById('pub-name').value;
+  const pubVer=document.getElementById('pub-ver').value;
+  const isScoped=privName.startsWith('@');
+  const sameBaseName=privName.replace(/@[^/]+\//,'')===pubName;
+  el.textContent=`npm install simulation:\n${'='.repeat(50)}\n\n`;
+  el.textContent+=`📦 Private: ${privName}@${privVer} (internal registry)\n`;
+  el.textContent+=`📦 Public:  ${pubName}@${pubVer} (npmjs.com)\n\n`;
+  if(isScoped){
+    el.textContent+=`✅ "${privName}" is scoped (@org/name)\n`;
+    el.textContent+=`→ npm resolves scoped packages from the configured scope registry\n`;
+    el.textContent+=`→ With proper .npmrc, it ALWAYS uses the private registry\n\n`;
+    el.textContent+=`Result: SAFE — installs ${privName}@${privVer} from private registry\n\n`;
+    el.textContent+=`Defense working! Scoped packages prevent dependency confusion.`;
+  }else{
+    el.textContent+=`⚠️ "${privName}" is NOT scoped!\n`;
+    el.textContent+=`→ npm checks BOTH private and public registries\n`;
+    el.textContent+=`→ Public version ${pubVer} > Private version ${privVer}\n`;
+    el.textContent+=`→ npm installs the HIGHER version from public registry!\n\n`;
+    el.textContent+=`Result: 🔴 COMPROMISED — installs ${pubName}@${pubVer} from npmjs.com\n`;
+    el.textContent+=`The attacker's postinstall script executes!\n\n`;
+    el.textContent+=`Fix: Scope the package as @acme/${pubName} and pin registry`;
+  }
+}
+</script>
+</body></html>

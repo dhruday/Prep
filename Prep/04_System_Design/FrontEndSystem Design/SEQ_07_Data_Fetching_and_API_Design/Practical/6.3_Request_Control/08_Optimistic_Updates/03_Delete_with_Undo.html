@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 03 — Delete with Undo</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}button.red{background:#3a1e1e;border-color:#ef4444;color:#ef4444}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}.ok{border-left-color:#10b981}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+.item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#161922;border:1px solid #2d3551;border-radius:8px;margin-bottom:6px;transition:all .4s}
+.item.fading{opacity:.15;transform:scale(.97)}
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{background:#1e2130;border:1px solid #f59e0b;border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:12px;animation:slideIn .3s ease;font-size:.82rem}
+.toast .countdown{color:#f59e0b;font-weight:bold;min-width:20px}
+.toast button{margin:0}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+</style>
+</head>
+<body>
+<h1>Lab 03 — Delete with Undo</h1>
+<p class="sub">Soft delete → 5s undo window with countdown → then confirm DELETE to server</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Live Demo</div>
+  <div class="tab" onclick="setTab(1)">How It Works</div>
+  <div class="tab" onclick="setTab(2)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(3)">Event Log</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Items (click delete → 5s undo window)</h3>
+    <button class="green" onclick="loadItems()" style="margin-bottom:10px">↻ Reload Items</button>
+    <div id="list"></div>
+  </div>
+  <div class="info">Delete fades the item and shows an undo toast with a 5-second countdown. If not undone, DELETE is sent to the server.</div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Soft Delete + Undo Pattern</h3>
+    <div class="info">1. Click delete → item fades (soft delete), undo toast appears with 5s countdown</div>
+    <div class="info ok">2. If countdown expires → execute real DELETE /api/posts/todos/:id</div>
+    <div class="info warn">3. If user clicks Undo → restore item, cancel the pending delete</div>
+  </div>
+  <div class="card">
+    <h3>Benefits</h3>
+    <p style="font-size:.85rem;color:#94a3b8">Users get instant feedback (the item disappears) but have a safety net. The actual destructive operation is deferred, reducing accidental data loss.</p>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Core Logic</h3>
+    <pre><span class="kw">function</span> <span class="fn">deleteItem</span>(id) {
+  <span class="kw">const</span> item = items.find(i =&gt; i.id === id);
+  item.deleting = <span class="kw">true</span>;
+  render(); <span class="cm">// fades the item</span>
+
+  <span class="kw">let</span> seconds = 5;
+  <span class="kw">const</span> toast = showToast(item, seconds);
+
+  <span class="kw">const</span> interval = setInterval(() =&gt; {
+    seconds--;
+    updateCountdown(toast, seconds);
+    <span class="kw">if</span> (seconds &lt;= 0) {
+      clearInterval(interval);
+      confirmDelete(id); <span class="cm">// real DELETE call</span>
+    }
+  }, 1000);
+
+  <span class="cm">// Store cancel function for undo</span>
+  pendingDeletes.set(id, () =&gt; {
+    clearInterval(interval);
+    item.deleting = <span class="kw">false</span>;
+    removeToast(toast);
+    render();
+  });
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Event Log</h3>
+    <button onclick="logEl.textContent=''">Clear</button>
+    <div class="output" id="log"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const listEl = document.getElementById('list');
+const logEl = document.getElementById('log');
+const toastsEl = document.getElementById('toasts');
+let items = [];
+const pendingDeletes = new Map();
+
+function log(msg) {
+  const ts = new Date().toLocaleTimeString();
+  logEl.textContent += `[${ts}] ${msg}\n`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function render() {
+  listEl.innerHTML = items.map(it => `
+    <div class="item ${it.deleting ? 'fading' : ''}" id="item-${it.id}">
+      <span>${it.title || it.text || 'Item #' + it.id}</span>
+      ${it.deleting
+        ? '<span style="color:#475569;font-size:.8rem">deleting…</span>'
+        : `<button class="red" onclick="deleteItem(${it.id})">Delete</button>`}
+    </div>
+  `).join('') || '<p style="color:#475569">No items. Click reload.</p>';
+}
+
+function deleteItem(id) {
+  const item = items.find(i => i.id === id);
+  if (!item || item.deleting) return;
+  item.deleting = true;
+  render();
+  log(`🗑 Soft delete: "${item.title || item.text}" — 5s undo window`);
+
+  let seconds = 5;
+  const toastId = 'toast-' + id;
+  toastsEl.insertAdjacentHTML('beforeend', `
+    <div class="toast" id="${toastId}">
+      <span class="countdown">${seconds}</span>
+      <span>Deleted "${(item.title || item.text || '').slice(0, 25)}"</span>
+      <button onclick="undoDelete(${id})">Undo</button>
+    </div>
+  `);
+
+  const iv = setInterval(() => {
+    seconds--;
+    const cd = document.querySelector(`#${toastId} .countdown`);
+    if (cd) cd.textContent = seconds;
+    if (seconds <= 0) {
+      clearInterval(iv);
+      removeToast(toastId);
+      confirmDelete(id);
+    }
+  }, 1000);
+
+  pendingDeletes.set(id, { interval: iv, toastId });
+}
+
+function undoDelete(id) {
+  const pending = pendingDeletes.get(id);
+  if (!pending) return;
+  clearInterval(pending.interval);
+  removeToast(pending.toastId);
+  pendingDeletes.delete(id);
+  const item = items.find(i => i.id === id);
+  if (item) item.deleting = false;
+  render();
+  log(`↩ Undo: restored item ${id}`);
+}
+
+function removeToast(toastId) {
+  const el = document.getElementById(toastId);
+  if (el) el.remove();
+}
+
+async function confirmDelete(id) {
+  pendingDeletes.delete(id);
+  try {
+    await fetch(`${API}/api/posts/todos/${id}`, { method: 'DELETE' });
+    items = items.filter(i => i.id !== id);
+    render();
+    log(`✓ Server confirmed delete: item ${id}`);
+  } catch (err) {
+    const item = items.find(i => i.id === id);
+    if (item) item.deleting = false;
+    render();
+    log(`✗ Delete failed: item ${id} restored (${err.message})`);
+  }
+}
+
+async function loadItems() {
+  try {
+    const res = await fetch(`${API}/api/posts?limit=6`);
+    const data = await res.json();
+    items = (data.posts || data).slice(0, 6).map(p => ({
+      id: p.id, title: p.title || `Item #${p.id}`, deleting: false
+    }));
+    render();
+    log(`Loaded ${items.length} items`);
+  } catch (e) {
+    listEl.innerHTML = `<p style="color:#ef4444">Failed: ${e.message}</p>`;
+    log(`✗ Load failed: ${e.message}`);
+  }
+}
+loadItems();
+</script>
+</body>
+</html>

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Protecting Sensitive Data Deep Study</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.7}h1{font-size:1.6rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:1rem}.card h4{color:#c4b5fd;margin:12px 0 6px;font-size:.9rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;margin:8px 0;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}table{width:100%;border-collapse:collapse;margin:10px 0;font-size:.82rem}th{background:#1a1f35;color:#ef4444;padding:8px 12px;text-align:left;border:1px solid #2d3551}td{padding:8px 12px;border:1px solid #2d3551}.info{background:#0f1117;border-left:3px solid #ef4444;padding:12px;border-radius:0 8px 8px 0;font-size:.82rem;color:#94a3b8;margin:10px 0}.qa{margin:16px 0}.qa .q{color:#ef4444;font-weight:600;font-size:.9rem;margin-bottom:6px}.qa .a{color:#e2e8f0;font-size:.85rem;margin-bottom:4px}.qa .followup{color:#a78bfa;font-size:.82rem;font-style:italic;margin:4px 0 12px}
+</style>
+</head>
+<body>
+<h1>Protecting Sensitive Data Deep Study</h1>
+<p class="sub">Module 12.3 · Security Deep Dive</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Deep Theory</div>
+  <div class="tab" onclick="setTab(1)">Attack &amp; Defense</div>
+  <div class="tab" onclick="setTab(2)">FAANG Interview</div>
+  <div class="tab" onclick="setTab(3)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(4)">Cheat Sheet</div>
+</div>
+
+<div class="panel active">
+  <div class="card">
+    <h3>1. Data Classification for Frontend</h3>
+    <table>
+      <tr><th>Level</th><th>Examples</th><th>Frontend Handling</th></tr>
+      <tr><td>Critical / PII</td><td>SSN, credit card, passwords</td><td>Never store client-side. Mask in UI. Clear from memory immediately.</td></tr>
+      <tr><td>Sensitive</td><td>Email, phone, address, DOB</td><td>Display with masking option. Don't cache in localStorage.</td></tr>
+      <tr><td>Internal</td><td>User preferences, settings</td><td>Can cache in sessionStorage. Clear on logout.</td></tr>
+      <tr><td>Public</td><td>Display name, avatar URL</td><td>Safe to cache. CDN-friendly.</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>2. Where Sensitive Data Leaks in the Browser</h3>
+    <pre><span class="cm">// 1. URL / Query Parameters</span>
+<span class="cm">//    https://app.com/reset?token=SECRET</span>
+<span class="cm">//    → Logged in: server logs, proxy logs, browser history, Referer header</span>
+<span class="cm">//    FIX: Use POST body or hash fragment (not sent to server)</span>
+
+<span class="cm">// 2. Console Logging</span>
+<span class="cm">//    console.log('User data:', user); // includes SSN in dev</span>
+<span class="cm">//    → Persists in browser tools, crash reports</span>
+<span class="cm">//    FIX: Strip console.log in production build; redact sensitive fields</span>
+
+<span class="cm">// 3. Error Tracking (Sentry, LogRocket)</span>
+<span class="cm">//    → Stack traces may include variable values with PII</span>
+<span class="cm">//    FIX: Configure beforeSend to scrub sensitive fields</span>
+
+<span class="cm">// 4. Network Tab / DevTools</span>
+<span class="cm">//    → API responses visible in clear text</span>
+<span class="cm">//    → No fix for the user's own browser, but don't over-fetch</span>
+
+<span class="cm">// 5. Autocomplete / Form Data</span>
+<span class="cm">//    → Browser stores form values for autofill</span>
+<span class="cm">//    FIX: autocomplete="off" for sensitive fields, or autocomplete="new-password"</span>
+
+<span class="cm">// 6. Clipboard</span>
+<span class="cm">//    → User copies sensitive data, malicious page reads clipboard</span>
+<span class="cm">//    FIX: Disable copy on sensitive fields; warn users</span>
+
+<span class="cm">// 7. Screenshots / Screen Recording</span>
+<span class="cm">//    → Sensitive data visible on screen</span>
+<span class="cm">//    FIX: Mask by default, reveal on click</span></pre>
+  </div>
+
+  <div class="card">
+    <h3>3. Web Crypto API</h3>
+    <pre><span class="cm">// Browser has built-in cryptography — no libraries needed</span>
+
+<span class="cm">// Generate AES key:</span>
+<span class="kw">const</span> key = <span class="kw">await</span> crypto.subtle.<span class="fn">generateKey</span>(
+  { name: <span class="str">'AES-GCM'</span>, length: <span class="num">256</span> },
+  <span class="kw">true</span>,
+  [<span class="str">'encrypt'</span>, <span class="str">'decrypt'</span>]
+);
+
+<span class="cm">// Encrypt:</span>
+<span class="kw">const</span> iv = crypto.<span class="fn">getRandomValues</span>(<span class="kw">new</span> Uint8Array(<span class="num">12</span>));
+<span class="kw">const</span> encrypted = <span class="kw">await</span> crypto.subtle.<span class="fn">encrypt</span>(
+  { name: <span class="str">'AES-GCM'</span>, iv },
+  key,
+  <span class="kw">new</span> <span class="fn">TextEncoder</span>().<span class="fn">encode</span>(<span class="str">'sensitive data'</span>)
+);
+
+<span class="cm">// Decrypt:</span>
+<span class="kw">const</span> decrypted = <span class="kw">await</span> crypto.subtle.<span class="fn">decrypt</span>(
+  { name: <span class="str">'AES-GCM'</span>, iv },
+  key,
+  encrypted
+);
+<span class="kw">const</span> text = <span class="kw">new</span> <span class="fn">TextDecoder</span>().<span class="fn">decode</span>(decrypted);
+
+<span class="cm">// Note: key is in browser memory — not a complete defense against XSS</span>
+<span class="cm">// But useful for: encrypting data before storing in IndexedDB/localStorage</span></pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Practical Defense Patterns</h3>
+    <h4>1. Data Masking in UI</h4>
+    <pre><span class="kw">function</span> <span class="fn">maskSSN</span>(ssn) {
+  <span class="kw">return</span> <span class="str">'***-**-'</span> + ssn.<span class="fn">slice</span>(-<span class="num">4</span>);
+}
+<span class="kw">function</span> <span class="fn">maskEmail</span>(email) {
+  <span class="kw">const</span> [user, domain] = email.<span class="fn">split</span>(<span class="str">'@'</span>);
+  <span class="kw">return</span> user[<span class="num">0</span>] + <span class="str">'***'</span> + <span class="str">'@'</span> + domain;
+}
+<span class="kw">function</span> <span class="fn">maskCard</span>(number) {
+  <span class="kw">return</span> <span class="str">'**** **** **** '</span> + number.<span class="fn">slice</span>(-<span class="num">4</span>);
+}
+
+<span class="cm">// React component with reveal toggle:</span>
+<span class="kw">function</span> <span class="fn">SensitiveField</span>({ value, maskFn }) {
+  <span class="kw">const</span> [revealed, setRevealed] = <span class="fn">useState</span>(<span class="kw">false</span>);
+  <span class="kw">return</span> (
+    &lt;span&gt;
+      {revealed ? value : <span class="fn">maskFn</span>(value)}
+      &lt;button onClick={() =&gt; <span class="fn">setRevealed</span>(!revealed)}&gt;
+        {revealed ? <span class="str">'Hide'</span> : <span class="str">'Show'</span>}
+      &lt;/button&gt;
+    &lt;/span&gt;
+  );
+}</pre>
+
+    <h4>2. Scrub PII from Error Tracking</h4>
+    <pre>Sentry.<span class="fn">init</span>({
+  beforeSend(event) {
+    <span class="cm">// Scrub sensitive data from breadcrumbs</span>
+    <span class="kw">if</span> (event.breadcrumbs) {
+      event.breadcrumbs = event.breadcrumbs.<span class="fn">map</span>(b =&gt; ({
+        ...b,
+        data: <span class="fn">redactSensitive</span>(b.data),
+      }));
+    }
+    <span class="cm">// Scrub request data</span>
+    <span class="kw">if</span> (event.request?.data) {
+      event.request.data = <span class="fn">redactSensitive</span>(event.request.data);
+    }
+    <span class="kw">return</span> event;
+  },
+});</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>FAANG Interview Questions</h3>
+    <div class="qa">
+      <div class="q">Q1: How do you prevent sensitive data exposure in a frontend application?</div>
+      <div class="a">Multi-layered approach: (1) API design — server should never send more data than needed. Rather than sending full SSN and masking on the client, send only the last 4 digits. This is the most important defense. (2) UI masking — display sensitive fields masked by default with explicit reveal action. Log the reveal event for audit. (3) URL hygiene — never put tokens, PII, or sensitive data in URLs or query params (leaks via Referer, logs, browser history). Use POST body or hash fragments. (4) Memory management — clear sensitive variables after use; avoid storing in global state. (5) Error tracking — configure Sentry/DataDog beforeSend hooks to scrub PII from stack traces and breadcrumbs. (6) Prevent caching — use Cache-Control: no-store on sensitive API responses. Set autocomplete="off" on sensitive form fields. (7) Copy protection — disable text selection on sensitive display fields if business-appropriate. (8) Reference: OWASP recommends "data minimization" — only collect, process, and display what's absolutely necessary.</div>
+      <div class="followup">Follow-up: How do you audit what sensitive data is being sent to the frontend?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q2: How would you handle payment card data securely on the frontend?</div>
+      <div class="a">Never let card data touch your servers — use PCI DSS-compliant third-party elements. Stripe Elements or Braintree Hosted Fields render the card input in an iframe from their domain. Your JavaScript can't access the card number because it's cross-origin (Same-Origin Policy). The card data goes directly from the iframe to Stripe's servers, which return a tokenized reference (tok_xxx). Your frontend sends only the token to your backend. This keeps you in PCI SAQ-A scope (minimal compliance burden). If you must collect card data directly (rare), you need PCI DSS Level 1 compliance — annual audits, network segmentation, encryption at rest and in transit, quarterly vulnerability scans. For display: only show last 4 digits from the API. Never store full card numbers in any browser storage. Use input masking during entry (show dots as user types). Disable autocomplete on card fields.</div>
+      <div class="followup">Follow-up: What happens if a user takes a screenshot of the card details?</div>
+    </div>
+    <div class="qa">
+      <div class="q">Q3: What's the Referrer-Policy header and when do you need it?</div>
+      <div class="a">The Referer header (yes, the misspelling is intentional — historical typo in the HTTP spec) tells the destination page which URL the user came from. This leaks sensitive URL data: tokens in query params, internal paths, user IDs. Referrer-Policy controls what's sent. I use 'strict-origin-when-cross-origin' (the modern default): same-origin requests get the full URL, cross-origin requests get only the origin (scheme+host+port), and downgrades from HTTPS to HTTP send nothing. For pages with sensitive URLs, use 'no-referrer' to send nothing at all. This prevents: password reset tokens leaking to external analytics, internal page structure leaking to third-party scripts, and user IDs in URLs leaking via outbound links. Set it as both an HTTP header and a meta tag for comprehensive coverage.</div>
+      <div class="followup">Follow-up: How does this interact with analytics and attribution tracking?</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>1. Secure Form Handling</h3>
+    <pre><span class="cm">// Prevent sensitive data from browser autofill and history</span>
+
+&lt;form <span class="str">autocomplete</span>=<span class="str">"off"</span>&gt;
+  &lt;input
+    type=<span class="str">"password"</span>
+    <span class="str">autocomplete</span>=<span class="str">"new-password"</span>
+    <span class="str">name</span>=<span class="fn">crypto</span>.<span class="fn">randomUUID</span>()  <span class="cm">// Randomize name to prevent autofill</span>
+  /&gt;
+  &lt;input
+    type=<span class="str">"text"</span>
+    <span class="str">autocomplete</span>=<span class="str">"off"</span>
+    inputmode=<span class="str">"numeric"</span>
+    <span class="str">pattern</span>=<span class="str">"[0-9]*"</span>
+    <span class="str">placeholder</span>=<span class="str">"SSN"</span>
+  /&gt;
+&lt;/form&gt;
+
+<span class="cm">// Clear sensitive fields on component unmount (React):</span>
+<span class="fn">useEffect</span>(() =&gt; {
+  <span class="kw">return</span> () =&gt; {
+    <span class="cm">// Clear the input values from memory</span>
+    <span class="fn">setSsn</span>(<span class="str">''</span>);
+    <span class="fn">setCardNumber</span>(<span class="str">''</span>);
+  };
+}, []);</pre>
+  </div>
+
+  <div class="card">
+    <h3>2. Secure API Response Headers</h3>
+    <pre><span class="cm">// Server headers for sensitive endpoints</span>
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Referrer-Policy: no-referrer
+X-Content-Type-Options: nosniff
+
+<span class="cm">// Express middleware:</span>
+app.<span class="fn">use</span>(<span class="str">'/api/sensitive'</span>, (req, res, next) =&gt; {
+  res.<span class="fn">set</span>({
+    <span class="str">'Cache-Control'</span>: <span class="str">'no-store'</span>,
+    <span class="str">'Referrer-Policy'</span>: <span class="str">'no-referrer'</span>,
+    <span class="str">'X-Content-Type-Options'</span>: <span class="str">'nosniff'</span>,
+  });
+  <span class="fn">next</span>();
+});</pre>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="card">
+    <h3>Data Protection Checklist</h3>
+    <pre>✅ Data minimization: API sends only what UI needs
+✅ Mask sensitive fields by default, reveal on explicit action
+✅ Never put sensitive data in URLs or query parameters
+✅ Set Cache-Control: no-store on sensitive API responses
+✅ Configure Referrer-Policy: strict-origin-when-cross-origin
+✅ Scrub PII from error tracking (Sentry beforeSend)
+✅ autocomplete="off" on sensitive form fields
+✅ Strip console.log in production builds
+✅ Use Stripe Elements / hosted fields for payment data
+✅ Clear sensitive state on component unmount / logout
+✅ Log access to sensitive data for audit trail
+✅ Set X-Content-Type-Options: nosniff</pre>
+  </div>
+
+  <div class="card">
+    <h3>Browser Storage Security</h3>
+    <table>
+      <tr><th>Data Type</th><th>OK in localStorage?</th><th>OK in sessionStorage?</th><th>Recommended</th></tr>
+      <tr><td>Auth tokens</td><td>❌ Never</td><td>⚠️ Avoid</td><td>Memory / HttpOnly cookie</td></tr>
+      <tr><td>PII (SSN, DOB)</td><td>❌ Never</td><td>❌ Never</td><td>Fetch on demand, display, discard</td></tr>
+      <tr><td>User preferences</td><td>✅ OK</td><td>✅ OK</td><td>localStorage fine</td></tr>
+      <tr><td>Shopping cart</td><td>✅ OK</td><td>✅ OK</td><td>localStorage + server sync</td></tr>
+      <tr><td>Encryption keys</td><td>❌ Never</td><td>❌ Never</td><td>CryptoKey (non-extractable) in memory</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+</script>
+</body>
+</html>

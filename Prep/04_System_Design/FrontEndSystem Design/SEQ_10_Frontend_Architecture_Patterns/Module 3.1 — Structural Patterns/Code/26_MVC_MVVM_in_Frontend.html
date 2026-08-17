@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 26 – MVC / MVVM in Frontend</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}
+.block{border-radius:8px;padding:14px;text-align:center;font-weight:700;font-size:.85rem;margin-bottom:8px}
+.arrow{text-align:center;color:#60a5fa;font-size:1.2rem;margin:4px 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:640px){.grid3{grid-template-columns:1fr}}
+.layer{display:flex;flex-direction:column;align-items:center}
+.layer-box{width:100%;padding:10px;border-radius:8px;text-align:center;font-size:.82rem;margin:3px 0}
+.demo-row{display:flex;align-items:center;gap:10px;padding:10px;background:#0f1117;border-radius:8px;margin:6px 0;font-size:.82rem}
+</style>
+</head>
+<body>
+<h1>🏗️ MVC & MVVM in Frontend</h1>
+<p class="sub">Topic 26 · Module 3.1 — Structural Patterns · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Pattern Diagram</div>
+  <div class="tab" onclick="setTab(1)">MVC Live Demo</div>
+  <div class="tab" onclick="setTab(2)">MVVM Live Demo</div>
+  <div class="tab" onclick="setTab(3)">Angular MVVM</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>MVC vs MVVM — Visual Comparison</h3>
+    <div class="grid3">
+      <div>
+        <div style="font-size:.8rem;font-weight:700;margin-bottom:8px;color:#60a5fa;text-align:center">MVC</div>
+        <div class="block" style="background:#60a5fa22;border:1px solid #60a5fa;color:#60a5fa">Model<br><span style="font-size:.72rem;font-weight:400;color:#94a3b8">data + business logic</span></div>
+        <div class="arrow">↕</div>
+        <div class="block" style="background:#f59e0b22;border:1px solid #f59e0b;color:#f59e0b">Controller<br><span style="font-size:.72rem;font-weight:400;color:#94a3b8">handles input/events</span></div>
+        <div class="arrow">↕</div>
+        <div class="block" style="background:#10b98122;border:1px solid #10b981;color:#10b981">View<br><span style="font-size:.72rem;font-weight:400;color:#94a3b8">renders UI from Model</span></div>
+      </div>
+      <div>
+        <div style="font-size:.8rem;font-weight:700;margin-bottom:8px;color:#a78bfa;text-align:center">MVVM</div>
+        <div class="block" style="background:#60a5fa22;border:1px solid #60a5fa;color:#60a5fa">Model<br><span style="font-size:.72rem;font-weight:400;color:#94a3b8">pure data/state</span></div>
+        <div class="arrow">↕</div>
+        <div class="block" style="background:#a78bfa22;border:1px solid #a78bfa;color:#a78bfa">ViewModel<br><span style="font-size:.72rem;font-weight:400;color:#94a3b8">transforms data for View, two-way binding</span></div>
+        <div class="arrow">↔</div>
+        <div class="block" style="background:#10b98122;border:1px solid #10b981;color:#10b981">View<br><span style="font-size:.72rem;font-weight:400;color:#94a3b8">declarative template, bound to VM</span></div>
+      </div>
+      <div style="padding:14px;background:#0f1117;border-radius:8px;border:1px solid #2d3551">
+        <div style="font-size:.8rem;font-weight:700;margin-bottom:10px;color:#e2e8f0">Key difference</div>
+        <div style="font-size:.8rem;color:#94a3b8;line-height:1.8">
+          <strong style="color:#60a5fa">MVC:</strong> Controller mediates. View pulls from Model via Controller.<br><br>
+          <strong style="color:#a78bfa">MVVM:</strong> ViewModel exposes observable state. View binds declaratively. <strong>Two-way data binding</strong> — Angular: <code>[(ngModel)]</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Framework alignment</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+      <thead><tr style="background:#0f1117"><th style="padding:8px;text-align:left;color:#60a5fa;border-bottom:1px solid #2d3551">Framework</th><th style="padding:8px;text-align:left;color:#60a5fa;border-bottom:1px solid #2d3551">Pattern</th><th style="padding:8px;text-align:left;color:#60a5fa;border-bottom:1px solid #2d3551">Notes</th></tr></thead>
+      <tbody>
+        <tr><td style="padding:8px;border-bottom:1px solid #1a1f2e">Angular</td><td style="padding:8px;border-bottom:1px solid #1a1f2e;color:#a78bfa">MVVM</td><td style="padding:8px;border-bottom:1px solid #1a1f2e;color:#94a3b8">Component class = ViewModel, template = View, services = Model</td></tr>
+        <tr><td style="padding:8px;border-bottom:1px solid #1a1f2e">React</td><td style="padding:8px;border-bottom:1px solid #1a1f2e;color:#60a5fa">MVC-ish / Flux</td><td style="padding:8px;border-bottom:1px solid #1a1f2e;color:#94a3b8">No official pattern. Redux resembles MVC. Hooks make it more MVVM-like.</td></tr>
+        <tr><td style="padding:8px;border-bottom:1px solid #1a1f2e">Vue</td><td style="padding:8px;border-bottom:1px solid #1a1f2e;color:#a78bfa">MVVM</td><td style="padding:8px;border-bottom:1px solid #1a1f2e;color:#94a3b8">Designed as MVVM from day 1. Reactivity system IS the ViewModel.</td></tr>
+        <tr><td style="padding:8px">Backbone.js</td><td style="padding:8px;color:#60a5fa">MVC</td><td style="padding:8px;color:#94a3b8">Classic MVC. Historical reference.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>MVC Counter Demo — Click the button to see separation</h3>
+    <div style="display:flex;gap:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:180px">
+        <div style="font-size:.75rem;color:#60a5fa;font-weight:700;margin-bottom:6px">MODEL</div>
+        <div id="mvc-model" style="background:#0f1117;padding:12px;border-radius:6px;border:1px solid #60a5fa22;font-family:monospace;font-size:.82rem;color:#94a3b8">count: 0</div>
+      </div>
+      <div style="flex:1;min-width:180px">
+        <div style="font-size:.75rem;color:#f59e0b;font-weight:700;margin-bottom:6px">CONTROLLER</div>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <button class="tab" onclick="mvcCtrl('inc')">+1 Increment</button>
+          <button class="tab" onclick="mvcCtrl('dec')">-1 Decrement</button>
+          <button class="tab" onclick="mvcCtrl('reset')">Reset</button>
+        </div>
+        <div id="mvc-log" style="background:#0f1117;padding:8px;border-radius:6px;border:1px solid #f59e0b22;font-family:monospace;font-size:.72rem;color:#94a3b8;min-height:40px"></div>
+      </div>
+      <div style="flex:1;min-width:180px">
+        <div style="font-size:.75rem;color:#10b981;font-weight:700;margin-bottom:6px">VIEW</div>
+        <div id="mvc-view" style="background:#0f1117;padding:20px;border-radius:6px;border:1px solid #10b98133;font-size:2.5rem;font-weight:700;color:#10b981;text-align:center">0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>MVVM Binding Demo — Type in the input (two-way binding)</h3>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1">
+        <div style="font-size:.75rem;color:#a78bfa;font-weight:700;margin-bottom:6px">VIEWMODEL (observable state)</div>
+        <div id="vm-state" style="font-family:monospace;font-size:.82rem;background:#0f1117;padding:12px;border-radius:6px;border:1px solid #a78bfa22;color:#94a3b8">name: ""</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:.75rem;color:#10b981;font-weight:700;margin-bottom:6px">VIEW (bound to VM)</div>
+        <input id="vm-input" type="text" placeholder="Type your name..." oninput="vmUpdate(this.value)"
+          style="width:100%;background:#0f1117;border:1px solid #a78bfa;border-radius:6px;padding:10px;color:#e2e8f0;font-size:.9rem;margin-bottom:8px">
+        <div id="vm-display" style="padding:10px;background:#0f1117;border-radius:6px;border:1px solid #10b98133;font-size:.85rem;color:#94a3b8">Hello, <em>(nobody yet)</em></div>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-size:.8rem;color:#94a3b8;border-top:1px solid #2d3551;padding-top:12px">
+      In Angular: <code>[(ngModel)]="name"</code> — framework handles the binding automatically. No event handlers needed.
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Angular MVVM Pattern (TypeScript)</h3>
+    <pre><span class="cm">// MODEL — pure data/service logic</span>
+<span class="kw">@Injectable</span>({ providedIn: <span class="str">'root'</span> })
+<span class="kw">export class</span> <span class="attr">UserService</span> {
+  <span class="kw">private</span> users$ = <span class="kw">new</span> BehaviorSubject&lt;User[]&gt;([]);
+  
+  <span class="attr">loadUsers</span>(): Observable&lt;User[]&gt; {
+    <span class="kw">return</span> <span class="kw">this</span>.http.<span class="attr">get</span>&lt;User[]&gt;(<span class="str">'/api/users'</span>).<span class="attr">pipe</span>(
+      tap(users => <span class="kw">this</span>.users$.<span class="attr">next</span>(users))
+    );
+  }
+}
+
+<span class="cm">// VIEWMODEL — Angular component class transforms data for view</span>
+<span class="kw">@Component</span>({ selector: <span class="str">'app-user-list'</span>, templateUrl: <span class="str">'./user-list.component.html'</span> })
+<span class="kw">export class</span> <span class="attr">UserListComponent</span> {
+  users$ = <span class="kw">this</span>.userService.users$.<span class="attr">pipe</span>(
+    map(users => users.<span class="attr">filter</span>(u => u.active))  <span class="cm">// transform for view</span>
+  );
+  searchTerm = <span class="str">''</span>;
+  
+  <span class="kw">constructor</span>(<span class="kw">private</span> userService: UserService) {}
+}
+
+<span class="cm">// VIEW — HTML template, declaratively bound to ViewModel</span>
+<span class="cm">// user-list.component.html:</span>
+<span class="cm">// &lt;input [(ngModel)]="searchTerm"&gt;</span>
+<span class="cm">// &lt;user-card *ngFor="let u of users$ | async" [user]="u"&gt;&lt;/user-card&gt;</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){
+  document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));
+  document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));
+}
+let count=0;
+function mvcCtrl(action){
+  if(action==='inc') count++;
+  else if(action==='dec') count--;
+  else count=0;
+  document.getElementById('mvc-model').textContent='count: '+count;
+  document.getElementById('mvc-view').textContent=count;
+  document.getElementById('mvc-log').textContent='Controller: action='+action+' → model.count='+count;
+}
+function vmUpdate(v){
+  document.getElementById('vm-state').textContent='name: "'+v+'"';
+  document.getElementById('vm-display').innerHTML=v ? 'Hello, <strong style="color:#60a5fa">'+v+'</strong>!' : 'Hello, <em>(nobody yet)</em>';
+}
+</script>
+</body>
+</html>

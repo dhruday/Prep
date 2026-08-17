@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Event Loop: Microtasks vs Macrotasks</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e2e8f0; padding: 20px; }
+    h1 { text-align: center; color: #60a5fa; margin-bottom: 4px; font-size: 1.5rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.88rem; }
+
+    .bigLayout { display: grid; grid-template-columns: 1fr 360px; gap: 18px; }
+    .card { background: #1e2130; border: 1px solid #2d3551; border-radius: 12px; padding: 16px; }
+    .card h2 { font-size: 0.88rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+    /* Queue styles */
+    .queue-section { display: flex; flex-direction: column; gap: 10px; }
+    .queue-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 1px; }
+    .queue-track {
+      min-height: 52px; background: #0f1117; border-radius: 8px; padding: 8px;
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    }
+    .queue-item {
+      padding: 6px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: bold;
+      font-family: 'Courier New', monospace; animation: popIn 0.2s ease;
+      display: flex; align-items: center; gap: 5px;
+    }
+    @keyframes popIn { from { opacity:0; transform: scale(0.7); } to { opacity:1; transform:scale(1); } }
+    .micro { background: #312e81; border: 1px solid #7c3aed; color: #c4b5fd; }
+    .macro { background: #1e3a5f; border: 1px solid #2563eb; color: #93c5fd; }
+    .render{ background: #14532d; border: 1px solid #16a34a; color: #86efac; }
+    .queue-empty { color: #374151; font-size: 0.75rem; padding: 4px 8px; }
+
+    /* Call stack mini */
+    .mini-stack {
+      min-height: 80px; background: #0f1117; border-radius: 8px; padding: 8px;
+      display: flex; flex-direction: column; justify-content: flex-end; gap: 3px;
+    }
+    .mini-frame {
+      background: #1e3a5f; border: 1px solid #3b82f6; border-radius: 5px;
+      padding: 5px 10px; font-size: 0.75rem; font-family: monospace;
+      color: #93c5fd; animation: popIn 0.2s ease;
+    }
+
+    /* Phase indicator */
+    .phase-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .phase-badge {
+      padding: 5px 14px; border-radius: 20px; font-size: 0.75rem; font-weight: bold;
+      border: 2px solid transparent; transition: all 0.3s;
+    }
+    .phase-badge.active { transform: scale(1.1); }
+    .ph-sync   { border-color: #f59e0b; color: #f59e0b; }
+    .ph-sync.active   { background: #f59e0b; color: #000; }
+    .ph-micro  { border-color: #8b5cf6; color: #8b5cf6; }
+    .ph-micro.active  { background: #8b5cf6; color: #fff; }
+    .ph-render { border-color: #10b981; color: #10b981; }
+    .ph-render.active { background: #10b981; color: #000; }
+    .ph-macro  { border-color: #3b82f6; color: #3b82f6; }
+    .ph-macro.active  { background: #3b82f6; color: #fff; }
+
+    /* Output log */
+    .output-box {
+      background: #060a0e; border-radius: 8px; padding: 10px;
+      min-height: 80px; font-family: 'Courier New', monospace; font-size: 0.8rem;
+    }
+    .out-sync  { color: #fbbf24; }
+    .out-micro { color: #c4b5fd; }
+    .out-macro { color: #93c5fd; }
+    .out-render{ color: #86efac; }
+    .out-info  { color: #475569; }
+
+    /* Controls */
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; justify-content: center; }
+    button { padding: 8px 16px; border: none; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 0.82rem; transition: opacity 0.2s; }
+    button:hover { opacity: 0.8; }
+    .btn-a { background: #3b82f6; color: #fff; }
+    .btn-b { background: #8b5cf6; color: #fff; }
+    .btn-c { background: #10b981; color: #fff; }
+    .btn-d { background: #f59e0b; color: #000; }
+
+    /* Explanation cards */
+    .explain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .explain-box { background: #161b2e; border-radius: 8px; padding: 12px; }
+    .explain-box h4 { font-size: 0.82rem; margin-bottom: 6px; }
+    .explain-box ul { padding-left: 14px; font-size: 0.76rem; color: #94a3b8; }
+    .explain-box li { margin-bottom: 3px; }
+
+    .insight { background: #162032; border: 1px solid #1e3a5f; border-radius: 7px; padding: 10px; font-size: 0.76rem; color: #93c5fd; margin-top: 10px; }
+    .insight strong { color: #fff; }
+
+    progress { width: 100%; height: 6px; border-radius: 3px; appearance: none; }
+    progress::-webkit-progress-bar { background: #2d3551; border-radius: 3px; }
+    progress::-webkit-progress-value { background: #8b5cf6; border-radius: 3px; }
+
+    .arrow-box { text-align: center; padding: 6px; color: #475569; font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+<h1>🔄 Event Loop: Microtasks vs Macrotasks</h1>
+<p class="subtitle">Watch tasks drain in exact browser execution order</p>
+
+<div class="controls">
+  <button class="btn-a" onclick="demoClassic()">1️⃣ Classic Order Test</button>
+  <button class="btn-b" onclick="demoPromises()">2️⃣ Promise Chaining Flood</button>
+  <button class="btn-c" onclick="demoRender()">3️⃣ Render + rAF Timing</button>
+  <button class="btn-d" onclick="demoStarvation()">4️⃣ Microtask Starvation</button>
+</div>
+
+<div class="bigLayout">
+  <!-- Left: Visual queues -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+
+    <!-- Phase indicator -->
+    <div class="card" style="padding:12px">
+      <div class="phase-row" id="phase-row">
+        <div class="phase-badge ph-sync"  id="ph-sync">1. SYNC</div>
+        <div class="phase-badge ph-micro" id="ph-micro">2. MICROTASKS</div>
+        <div class="phase-badge ph-render" id="ph-render">3. RENDER</div>
+        <div class="phase-badge ph-macro" id="ph-macro">4. MACROTASK</div>
+      </div>
+      <div class="queue-label">📌 Currently Executing</div>
+      <div class="mini-stack" id="mini-stack">
+        <div style="color:#374151;font-size:0.75rem;text-align:center">No active execution</div>
+      </div>
+    </div>
+
+    <!-- Microtask Queue -->
+    <div class="card">
+      <h2 style="color:#8b5cf6">⚡ Microtask Queue (ALL drained before next macrotask)</h2>
+      <div class="queue-label">Sources: Promise.then(), queueMicrotask(), MutationObserver, async/await</div>
+      <div class="queue-track" id="micro-queue">
+        <span class="queue-empty">Queue empty</span>
+      </div>
+    </div>
+
+    <!-- Macrotask Queue -->
+    <div class="card">
+      <h2 style="color:#3b82f6">⏰ Macrotask Queue (ONE per event loop tick)</h2>
+      <div class="queue-label">Sources: setTimeout, setInterval, I/O callbacks, UI events</div>
+      <div class="queue-track" id="macro-queue">
+        <span class="queue-empty">Queue empty</span>
+      </div>
+    </div>
+
+    <!-- Render -->
+    <div class="card">
+      <h2 style="color:#10b981">🖼️ Render Opportunity (after microtasks, before next macrotask)</h2>
+      <div class="queue-label">requestAnimationFrame callbacks run here, ~16ms (60fps)</div>
+      <div class="queue-track" id="render-queue">
+        <span class="queue-empty">No pending rAF callbacks</span>
+      </div>
+    </div>
+
+    <!-- Output -->
+    <div class="card">
+      <h2 style="color:#94a3b8">📋 console.log Output (actual order)</h2>
+      <div class="output-box" id="output-box"></div>
+    </div>
+  </div>
+
+  <!-- Right: Reference -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="card">
+      <h2 style="color:#f59e0b">📖 Event Loop Rule</h2>
+      <div style="font-size:0.78rem;line-height:1.9;color:#94a3b8">
+        <div>1. Run all <span style="color:#fbbf24">synchronous</span> code (stack)</div>
+        <div>2. Drain <span style="color:#c4b5fd">ALL microtasks</span> (repeat until empty)</div>
+        <div>3. Check for <span style="color:#86efac">render opportunity</span> (rAF)</div>
+        <div>4. Pick ONE <span style="color:#93c5fd">macrotask</span> from queue</div>
+        <div>5. Go to step 2 ↑</div>
+      </div>
+      <div class="insight" style="margin-top:10px">
+        <strong>Key:</strong> Microtasks always run to completion before ANY macrotask or render opportunity. A microtask spawning more microtasks can starve the render loop!
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="color:#94a3b8">⚖️ Microtask vs Macrotask</h2>
+      <div class="explain-grid">
+        <div class="explain-box" style="border-left:3px solid #8b5cf6">
+          <h4 style="color:#c4b5fd">Microtasks</h4>
+          <ul>
+            <li>Promise.then/catch/finally</li>
+            <li>async/await (await resumes)</li>
+            <li>queueMicrotask()</li>
+            <li>MutationObserver</li>
+            <li>ALL drained per tick</li>
+          </ul>
+        </div>
+        <div class="explain-box" style="border-left:3px solid #3b82f6">
+          <h4 style="color:#93c5fd">Macrotasks</h4>
+          <ul>
+            <li>setTimeout / setInterval</li>
+            <li>setImmediate (Node.js)</li>
+            <li>I/O callbacks</li>
+            <li>UI event handlers</li>
+            <li>ONE per event loop tick</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="color:#94a3b8">🔬 Current Code</h2>
+      <div style="background:#060a0e;border-radius:8px;padding:12px;font-family:monospace;font-size:0.73rem;color:#94a3b8;max-height:280px;overflow-y:auto" id="code-display">
+        // Click a button to see the code
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let outputLines = [];
+  let running = false;
+
+  function setPhase(phase) {
+    ['ph-sync','ph-micro','ph-render','ph-macro'].forEach(id => {
+      document.getElementById(id).classList.remove('active');
+    });
+    if (phase) document.getElementById(phase).classList.add('active');
+  }
+
+  function addOutput(msg, type = 'info') {
+    outputLines.push({ msg, type });
+    const box = document.getElementById('output-box');
+    box.innerHTML = outputLines.map(l => `<div class="out-${l.type}">&gt; ${l.msg}</div>`).join('');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function setStack(text) {
+    const el = document.getElementById('mini-stack');
+    if (text) {
+      el.innerHTML = `<div class="mini-frame">${text}</div>`;
+    } else {
+      el.innerHTML = '<div style="color:#374151;font-size:0.75rem;text-align:center">Idle</div>';
+    }
+  }
+
+  function renderQueue(id, items, cls) {
+    const el = document.getElementById(id);
+    if (!items || !items.length) {
+      el.innerHTML = '<span class="queue-empty">Queue empty</span>';
+    } else {
+      el.innerHTML = items.map(i => `<div class="queue-item ${cls}">${i}</div>`).join('');
+    }
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function resetAll() {
+    outputLines = [];
+    document.getElementById('output-box').innerHTML = '';
+    setPhase(null);
+    setStack(null);
+    renderQueue('micro-queue', [], 'micro');
+    renderQueue('macro-queue', [], 'macro');
+    renderQueue('render-queue', [], 'render');
+  }
+
+  async function demoClassic() {
+    if (running) return; running = true;
+    resetAll();
+    document.getElementById('code-display').innerText =
+`// Classic Event Loop Order Test:
+console.log('1 — sync');
+
+setTimeout(() => console.log('4 — setTimeout'), 0);
+
+Promise.resolve()
+  .then(() => console.log('3 — microtask 1'))
+  .then(() => console.log('3b — microtask 2'));
+
+console.log('2 — sync');
+// Expected: 1, 2, 3, 3b, 4`;
+
+    // Phase 1: Sync
+    setPhase('ph-sync');
+    setStack('script (synchronous execution)');
+    renderQueue('macro-queue', ['setTimeout(fn, 0) — scheduled'], 'macro');
+    await sleep(700);
+    addOutput("'1 — sync'", 'sync');
+    await sleep(500);
+    renderQueue('micro-queue', ['Promise.then(→ log 3)', 'Promise.then(→ log 3b)'], 'micro');
+    await sleep(500);
+    addOutput("'2 — sync'", 'sync');
+    await sleep(600);
+
+    setStack(null);
+    addOutput('--- Sync code done. Checking microtask queue... ---', 'info');
+
+    // Phase 2: Microtasks
+    setPhase('ph-micro');
+    renderQueue('micro-queue', ['Promise.then(→ log 3)', 'Promise.then(→ log 3b)'], 'micro');
+    await sleep(500);
+    setStack('Promise.then callback #1');
+    renderQueue('micro-queue', ['Promise.then(→ log 3b)'], 'micro');
+    await sleep(500);
+    addOutput("'3 — microtask 1'", 'micro');
+    await sleep(400);
+    setStack('Promise.then callback #2');
+    renderQueue('micro-queue', [], 'micro');
+    await sleep(500);
+    addOutput("'3b — microtask 2'", 'micro');
+    await sleep(400);
+    setStack(null);
+    addOutput('--- Microtask queue empty. Checking render... ---', 'info');
+
+    // Phase 3: Render
+    setPhase('ph-render');
+    await sleep(400);
+    addOutput('--- No rAF callbacks. Picking macrotask... ---', 'info');
+
+    // Phase 4: Macrotask
+    setPhase('ph-macro');
+    renderQueue('macro-queue', ['setTimeout(fn, 0)'], 'macro');
+    await sleep(500);
+    setStack('setTimeout callback');
+    renderQueue('macro-queue', [], 'macro');
+    await sleep(500);
+    addOutput("'4 — setTimeout'", 'macro');
+    await sleep(400);
+    setStack(null);
+    setPhase(null);
+    addOutput('--- Done. Order: 1→2→3→3b→4 ✔ ---', 'info');
+    running = false;
+  }
+
+  async function demoPromises() {
+    if (running) return; running = true;
+    resetAll();
+    document.getElementById('code-display').innerText =
+`// Promise chaining — all thens = microtasks
+Promise.resolve(1)
+  .then(v => { console.log('micro A:', v); return v+1; })
+  .then(v => { console.log('micro B:', v); return v+1; })
+  .then(v => { console.log('micro C:', v); return v+1; })
+  .then(v =>   console.log('micro D:', v));
+
+setTimeout(() => console.log('MACRO: timeout'), 0);
+console.log('SYNC: start');
+// All micros run BEFORE the setTimeout`;
+
+    setPhase('ph-sync');
+    setStack('script');
+    const micros = ['then(→A)', 'then(→B)', 'then(→C)', 'then(→D)'];
+    renderQueue('micro-queue', micros, 'micro');
+    renderQueue('macro-queue', ['setTimeout(fn)'], 'macro');
+    await sleep(500);
+    addOutput('SYNC: start', 'sync');
+    await sleep(600);
+    setStack(null);
+    setPhase('ph-micro');
+
+    const labels = ['A: 1','B: 2','C: 3','D: 4'];
+    for (let i = 0; i < labels.length; i++) {
+      setStack(`Promise.then → log ${labels[i]}`);
+      renderQueue('micro-queue', micros.slice(i+1), 'micro');
+      await sleep(500);
+      addOutput(`micro ${labels[i]}`, 'micro');
+      await sleep(300);
+    }
+    setStack(null);
+    addOutput('--- All 4 microtasks done. Now macrotask ---', 'info');
+    setPhase('ph-macro');
+    setStack('setTimeout callback');
+    renderQueue('macro-queue', [], 'macro');
+    await sleep(500);
+    addOutput('MACRO: timeout', 'macro');
+    setStack(null);
+    setPhase(null);
+    running = false;
+  }
+
+  async function demoRender() {
+    if (running) return; running = true;
+    resetAll();
+    document.getElementById('code-display').innerText =
+`// rAF runs AFTER microtasks, BEFORE next macrotask
+requestAnimationFrame(() => console.log('3 — rAF'));
+Promise.resolve().then(() => console.log('2 — microtask'));
+console.log('1 — sync');
+setTimeout(() => console.log('4 — setTimeout'), 0);
+// Order: 1 → 2 → 3 → 4`;
+
+    setPhase('ph-sync');
+    setStack('script');
+    renderQueue('micro-queue', ['Promise.then'], 'micro');
+    renderQueue('render-queue', ['requestAnimationFrame(fn)'], 'render');
+    renderQueue('macro-queue', ['setTimeout(fn)'], 'macro');
+    await sleep(500);
+    addOutput('1 — sync', 'sync');
+    await sleep(600);
+    setStack(null);
+    setPhase('ph-micro');
+    setStack('Promise.then');
+    renderQueue('micro-queue', [], 'micro');
+    await sleep(500);
+    addOutput('2 — microtask', 'micro');
+    await sleep(400);
+    setStack(null);
+    setPhase('ph-render');
+    setStack('requestAnimationFrame callback');
+    renderQueue('render-queue', [], 'render');
+    await sleep(600);
+    addOutput('3 — rAF ✔', 'render');
+    await sleep(400);
+    setStack(null);
+    setPhase('ph-macro');
+    setStack('setTimeout callback');
+    renderQueue('macro-queue', [], 'macro');
+    await sleep(500);
+    addOutput('4 — setTimeout', 'macro');
+    setStack(null);
+    setPhase(null);
+    addOutput('--- Order: 1→2→3(rAF)→4 ✔ ---', 'info');
+    running = false;
+  }
+
+  async function demoStarvation() {
+    if (running) return; running = true;
+    resetAll();
+    document.getElementById('code-display').innerText =
+`// ⚠️ Microtask starvation — infinite loop blocks render!
+function microFlood() {
+  Promise.resolve().then(() => {
+    console.log('micro...');
+    microFlood(); // schedules another microtask!
+  });
+}
+microFlood();
+// The render/macrotask NEVER gets a chance
+// Browser becomes unresponsive!`;
+
+    setPhase('ph-micro');
+    addOutput('⚠️ Simulating microtask flood (10 shown, real = ∞)', 'micro');
+    for (let i = 1; i <= 10; i++) {
+      setStack(`microFlood() → schedules next microtask`);
+      const remaining = [];
+      for (let j = i; j <= Math.min(i+3, 10); j++) remaining.push(`micro #${j+1}`);
+      renderQueue('micro-queue', [...remaining, '...∞'], 'micro');
+      addOutput(`micro #${i} (∞ more queued)`, 'micro');
+      await sleep(250);
+    }
+    setStack(null);
+    addOutput('⛔ Render blocked! rAF never fires. setTimeout never fires.', 'macro');
+    addOutput('🔧 Fix: Use setTimeout(fn, 0) inside recursive async ops.', 'info');
+    renderQueue('render-queue', ['rAF — STARVED ⛔'], 'render');
+    renderQueue('macro-queue', ['setTimeout — STARVED ⛔'], 'macro');
+    setPhase(null);
+    running = false;
+  }
+</script>
+</body>
+</html>

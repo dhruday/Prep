@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 120 – Edge Rendering</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}
+button.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>⚡ Edge Rendering</h1>
+<p class="sub">Topic 120 · Module 11.4 — Edge & Resilience · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Latency Comparison</div>
+  <div class="tab" onclick="setTab(2)">Use Cases</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Edge rendering: generate personalized HTML at the CDN edge — no origin round-trip, no JS hydration needed</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:12px">Traditional SSR hits your origin server on every request — adds 100–400ms latency. Static (SSG/ISR) can't personalize. Edge rendering combines the best of both: Workers (Cloudflare, Vercel Edge, Deno Deploy) run V8 isolates at 200+ PoPs worldwide. They personalize HTML based on cookies/headers/geolocation before the response ever touches a browser — no cold start, no DB lock-in, typically &lt;10ms compute. The result is the TTFB of a CDN edge with the personalization of SSR.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:.78rem;text-align:center">
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px"><div style="font-size:1.2rem;margin-bottom:4px">🌍</div><div style="color:#60a5fa;font-weight:700">Near-user compute</div><div style="color:#94a3b8;margin-top:4px">200+ edge locations → &lt;30ms TTFB globally</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px"><div style="font-size:1.2rem;margin-bottom:4px">🎯</div><div style="color:#10b981;font-weight:700">Personalization</div><div style="color:#94a3b8;margin-top:4px">Inject AB variant / locale / user tier into HTML</div></div>
+      <div style="background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:10px"><div style="font-size:1.2rem;margin-bottom:4px">🚫</div><div style="color:#f59e0b;font-weight:700">No cold start</div><div style="color:#94a3b8;margin-top:4px">V8 isolates startup in &lt;1ms vs Lambda ~200ms</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Rendering strategy latency comparison</h3>
+    <div id="strat-btns" style="margin-bottom:14px">
+      <button class="active" onclick="showStrat('ssg')">SSG</button>
+      <button onclick="showStrat('ssr')">SSR (Origin)</button>
+      <button onclick="showStrat('edge')">Edge Rendering</button>
+      <button onclick="showStrat('csr')">CSR (SPA)</button>
+    </div>
+    <div id="strat-viz" style="font-size:.8rem"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>When to use edge rendering</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#60a5fa">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Use case</th>
+        <th style="padding:8px;border:1px solid #2d3551">Why edge</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">A/B testing homepage</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">No flicker — variant injected before HTML reaches browser</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Locale detection + redirect</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Accept-Language → rewrite URL without origin hit</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Auth token validation</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Verify JWT at edge, redirect to login if expired</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">Price/feature personalization</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Fetch user tier from KV store, inject into HTML</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551">Geo-based content</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Show region-specific pricing/legal without origin</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551">NOT a good fit: DB queries</td><td style="padding:8px;border:1px solid #2d3551;color:#ef4444">Edge → DB latency kills benefit. Use KV + Durable Objects.</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Cloudflare Worker edge rendering + Next.js middleware</h3>
+    <pre><span class="cm">// ─── Cloudflare Worker — A/B at edge ───</span>
+<span class="kw">export default</span> {
+  <span class="kw">async</span> <span class="fn">fetch</span>(req: Request, env: Env) {
+    <span class="kw">const</span> url = <span class="kw">new</span> <span class="fn">URL</span>(req.url);
+    <span class="kw">const</span> cookie = req.headers.<span class="fn">get</span>(<span class="str">'Cookie'</span>) ?? <span class="str">''</span>;
+    <span class="kw">let</span> variant = <span class="fn">parseCookie</span>(cookie, <span class="str">'ab_variant'</span>);
+
+    <span class="kw">if</span> (!variant) {
+      variant = Math.<span class="fn">random</span>() &lt; <span class="fn">0.5</span> ? <span class="str">'A'</span> : <span class="str">'B'</span>;
+    }
+    url.pathname = variant === <span class="str">'B'</span>
+      ? <span class="str">'/lp-variant-b'</span> : url.pathname; <span class="cm">// fetch different static page</span>
+
+    <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(url.<span class="fn">toString</span>());
+    <span class="kw">const</span> newRes = <span class="kw">new</span> <span class="fn">Response</span>(res.body, res);
+    newRes.headers.<span class="fn">append</span>(<span class="str">'Set-Cookie'</span>, <span class="str">`ab_variant=${variant}; Path=/; Max-Age=86400`</span>);
+    <span class="kw">return</span> newRes;
+  }
+};
+
+<span class="cm">// ─── Next.js middleware (runs at Vercel Edge) ───</span>
+<span class="kw">export function</span> <span class="fn">middleware</span>(req: NextRequest) {
+  <span class="kw">const</span> locale = req.headers.<span class="fn">get</span>(<span class="str">'Accept-Language'</span>)?.slice(<span class="fn">0</span>, <span class="fn">2</span>) ?? <span class="str">'en'</span>;
+  <span class="kw">if</span> (!req.nextUrl.pathname.<span class="fn">startsWith</span>(<span class="str">`/${locale}`</span>)) {
+    <span class="kw">return</span> NextResponse.<span class="fn">redirect</span>(<span class="kw">new</span> <span class="fn">URL</span>(<span class="str">`/${locale}${req.nextUrl.pathname}`</span>, req.url));
+  }
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+const strats={
+  ssg:{steps:[{l:'Browser',t:0},{l:'CDN Edge (HIT)',t:5},{l:'HTML delivered',t:10}],ttfb:'~10ms',fcp:'~400ms',personalized:'❌ No',note:'HTML pre-built at deploy time. Fastest possible for static content. Cannot personalize without JS.'},
+  ssr:{steps:[{l:'Browser',t:0},{l:'CDN Edge (MISS)',t:20},{l:'Origin Server',t:120},{l:'DB Query',t:250},{l:'HTML built & sent',t:300}],ttfb:'~300ms',fcp:'~700ms',personalized:'✅ Yes',note:'Every request hits origin. Adds full network RTT. Personalized but expensive at scale.'},
+  edge:{steps:[{l:'Browser',t:0},{l:'Edge Worker',t:15},{l:'KV/cache fetch',t:25},{l:'HTML personalized & sent',t:35}],ttfb:'~35ms',fcp:'~430ms',personalized:'✅ Yes',note:'Personalization at CDN edge. No origin round-trip. Best of SSG speed + SSR personalization.'},
+  csr:{steps:[{l:'Browser',t:0},{l:'CDN (HTML shell)',t:8},{l:'JS bundle downloaded',t:200},{l:'React hydrated',t:400},{l:'Data fetched & rendered',t:600}],ttfb:'~8ms',fcp:'~600ms',personalized:'✅ Yes (client)',note:'HTML shell is instant but content is delayed by JS download + data fetch. Bad SEO, visible loading states.'}
+};
+function showStrat(k){document.getElementById('strat-btns').querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active',['ssg','ssr','edge','csr'][i]===k));const s=strats[k];const max=s.steps[s.steps.length-1].t||10;document.getElementById('strat-viz').innerHTML=`<div style="margin-bottom:12px">${s.steps.map(st=>{const w=Math.max(4,(st.t/Math.max(max,10))*100);return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><div style="width:130px;color:#94a3b8;font-size:.77rem;text-align:right">${st.l}</div><div style="background:#60a5fa;height:14px;border-radius:4px;width:${w}%;min-width:4px;transition:width .4s"></div><div style="color:#60a5fa;font-size:.75rem;white-space:nowrap">${st.t}ms</div></div>`}).join('')}</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:.77rem"><div style="background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:8px"><div style="color:#60a5fa">TTFB</div><div style="color:#e2e8f0;font-weight:700">${s.ttfb}</div></div><div style="background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:8px"><div style="color:#60a5fa">FCP</div><div style="color:#e2e8f0;font-weight:700">${s.fcp}</div></div><div style="background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:8px"><div style="color:#60a5fa">Personalized</div><div style="font-weight:700">${s.personalized}</div></div></div><div style="margin-top:8px;color:#94a3b8;font-size:.79rem">${s.note}</div>`;}
+showStrat('edge');
+</script>
+</body>
+</html>

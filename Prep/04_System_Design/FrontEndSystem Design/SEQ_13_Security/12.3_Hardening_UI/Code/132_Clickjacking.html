@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 132 – Clickjacking</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#f59e0b;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#2a1f07;border-color:#f59e0b;color:#f59e0b}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#f59e0b;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}
+button{padding:7px 14px;border-radius:6px;border:1px solid #f59e0b;background:#2a1f07;color:#f59e0b;cursor:pointer;font-size:.82rem;margin:4px}
+</style>
+</head>
+<body>
+<h1>🖱️ Clickjacking</h1>
+<p class="sub">Topic 132 · Part 12 / 12.3 Hardening UI · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Attack Demo</div>
+  <div class="tab" onclick="setTab(2)">Defenses</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>What is clickjacking?</h3>
+    <p style="color:#94a3b8;font-size:.83rem;margin-bottom:14px">Clickjacking (UI redressing) embeds a target site in a transparent <code>&lt;iframe&gt;</code> overlaid on a decoy page. The user thinks they're clicking the decoy; they're actually clicking buttons on the hidden target (confirm payment, delete account, follow, etc.).</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:.8rem">
+      <div style="background:#0f1117;border:1px solid #ef4444;border-radius:8px;padding:14px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:8px">Attack scenario</div>
+        <div style="color:#94a3b8">1. Attacker creates <b style="color:#e2e8f0">evil.com</b><br>2. Embeds <b style="color:#e2e8f0">bank.com/transfer</b> in an invisible iframe at z-index 9999<br>3. Positions "Win a Prize!" button exactly over the transfer <button<br>4. Victim clicks → transfer executes<br>5. Victim sees only the prize page</div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #10b981;border-radius:8px;padding:14px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:8px">Requirements for attack to work</div>
+        <div style="color:#94a3b8">• Target page <b style="color:#e2e8f0">allows framing</b> (no X-Frame-Options or CSP frame-ancestors)<br>• Action is triggered by a single click (no confirmation)<br>• User is already logged in (cookies sent automatically)<br>• Page is predictably laid out (button always in same position)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Clickjacking visual demo (simulated — no real iframe)</h3>
+    <div style="font-size:.8rem;color:#94a3b8;margin-bottom:12px">This simulates the overlap. In real attacks the victim page is transparent (opacity:0.001) and sits exactly over decoy buttons.</div>
+    <div id="cj-demo" style="position:relative;width:360px;height:220px;border:1px solid #2d3551;border-radius:8px;overflow:hidden;cursor:pointer">
+      <!-- Decoy layer -->
+      <div style="position:absolute;inset:0;background:#1e2130;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+        <div style="color:#f59e0b;font-size:1.1rem;font-weight:700">🎉 You've Won a Prize!</div>
+        <div style="color:#94a3b8;font-size:.8rem">Click the button to claim</div>
+        <div id="decoy-btn" style="background:#f59e0b;color:#1e2130;padding:10px 24px;border-radius:6px;font-weight:700;font-size:.85rem;cursor:pointer">Claim Prize</div>
+      </div>
+      <!-- Hidden victim layer (shown on hover to demonstrate) -->
+      <div id="victim-layer" style="position:absolute;inset:0;background:rgba(239,68,68,0.0);display:flex;align-items:center;justify-content:center;pointer-events:none;transition:background .3s">
+        <div style="background:rgba(239,68,68,0.9);border-radius:8px;padding:10px 20px;font-size:.8rem;font-weight:700;display:none" id="victim-btn">BANK TRANSFER $500</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button onclick="revealAttack()">👁 Reveal hidden iframe</button>
+      <button onclick="hideAttack()">Hide</button>
+    </div>
+    <div id="cj-result" style="margin-top:10px;font-size:.8rem;min-height:20px;color:#ef4444"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Defence comparison</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:.77rem">
+      <tr style="background:#0f1117;color:#f59e0b">
+        <th style="padding:8px;border:1px solid #2d3551;text-align:left">Defence</th>
+        <th style="padding:8px;border:1px solid #2d3551">Mechanism</th>
+        <th style="padding:8px;border:1px solid #2d3551">Bypass risk</th>
+      </tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#10b981">X-Frame-Options: DENY</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">HTTP header; browser refuses to render page in any iframe</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">No bypass; but deprecated — use CSP instead</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#10b981">CSP: frame-ancestors 'none'</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">CSP header; can whitelist specific origins. More flexible than XFO</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">No bypass in modern browsers; IE unsupported</td></tr>
+      <tr style="background:#1a2332"><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">JS frame-busting</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">if (top !== self) top.location = self.location</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Bypassed with sandbox="allow-forms" attribute on iframe</td></tr>
+      <tr><td style="padding:8px;border:1px solid #2d3551;color:#f59e0b">Confirmation dialogs</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Re-auth or CAPTCHA before sensitive actions</td><td style="padding:8px;border:1px solid #2d3551;color:#94a3b8">Reduces risk but doesn't prevent framing</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>X-Frame-Options + CSP frame-ancestors + Next.js config</h3>
+    <pre><span class="cm">// ─── 1. HTTP response headers (most important) ───</span>
+<span class="cm">// Option A: X-Frame-Options (legacy, still widely supported)</span>
+X-Frame-Options: DENY
+<span class="cm">// or whitelist your own domain:</span>
+X-Frame-Options: SAMEORIGIN
+
+<span class="cm">// Option B: Content-Security-Policy (modern, preferred)</span>
+Content-Security-Policy: frame-ancestors <span class="str">'none'</span>;
+<span class="cm">// or whitelist specific trusted embedder:</span>
+Content-Security-Policy: frame-ancestors <span class="str">'self'</span> https://parent-allowed.com;
+
+<span class="cm">// ─── 2. Next.js next.config.js ───</span>
+<span class="kw">const</span> nextConfig = {
+  <span class="fn">async</span> <span class="fn">headers</span>() {
+    <span class="kw">return</span> [{
+      source: <span class="str">'/(.*)'</span>,
+      headers: [
+        { key: <span class="str">'X-Frame-Options'</span>, value: <span class="str">'DENY'</span> },
+        { key: <span class="str">'Content-Security-Policy'</span>,
+          value: <span class="str">"frame-ancestors 'none'"</span> }
+      ]
+    }];
+  }
+};
+
+<span class="cm">// ─── 3. JS frame-busting (fallback, NOT primary defence) ───</span>
+<span class="cm">// Runs before render — shows page blank if framed</span>
+<span class="kw">if</span> (window.top !== window.self) {
+  document.body.style.display = <span class="str">'none'</span>;
+  window.top.location = window.self.location.href;
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+function revealAttack(){document.getElementById('victim-layer').style.background='rgba(239,68,68,0.7)';document.getElementById('victim-btn').style.display='block';}
+function hideAttack(){document.getElementById('victim-layer').style.background='rgba(239,68,68,0.0)';document.getElementById('victim-btn').style.display='none';}
+document.getElementById('decoy-btn').addEventListener('click',()=>{document.getElementById('cj-result').textContent='⚠ You just "claimed a prize" but actually clicked: BANK TRANSFER $500!'});
+</script>
+</body>
+</html>

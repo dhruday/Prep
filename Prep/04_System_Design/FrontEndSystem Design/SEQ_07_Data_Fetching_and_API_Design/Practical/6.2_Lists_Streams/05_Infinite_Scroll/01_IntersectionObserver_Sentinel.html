@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — IntersectionObserver Sentinel</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#10b981;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#1a3a2a;border-color:#10b981;color:#10b981}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#10b981;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#10b981;color:#10b981}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #10b981;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}
+.product-card{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:14px;margin-bottom:10px;display:flex;gap:14px;align-items:center}.product-card .idx{color:#10b981;font-weight:700;font-size:1.1rem;min-width:36px;text-align:center}.product-card .name{font-size:.88rem}.product-card .price{color:#10b981;font-size:.82rem;margin-top:2px}#sentinel{height:40px;display:flex;align-items:center;justify-content:center;color:#475569;font-size:.78rem}#stats{color:#94a3b8;font-size:.8rem;margin-bottom:10px}#scroll-area{max-height:420px;overflow-y:auto;border:1px solid #2d3551;border-radius:10px;padding:12px;background:#161922}
+</style>
+</head>
+<body>
+<h1>Lab 01 — IntersectionObserver Sentinel</h1>
+<div class="sub">Module 6.2 Infinite Scroll · Sentinel-based loading with IntersectionObserver</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Live Demo</div>
+  <div class="tab" onclick="setTab(2)">Deep Dive</div>
+  <div class="tab" onclick="setTab(3)">Interview</div>
+</div>
+
+<!-- Tab 0 — Concept -->
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Sentinel Pattern</h3>
+    <p style="font-size:.84rem;color:#94a3b8;margin-bottom:12px">Place an invisible "sentinel" <code>&lt;div&gt;</code> at the bottom of the list. When it enters the viewport, fire a fetch for the next page.</p>
+    <pre><span class="cm">// 1. Create sentinel element at bottom of list</span>
+<span class="kw">const</span> sentinel = document.<span class="fn">getElementById</span>(<span class="str">'sentinel'</span>);
+
+<span class="cm">// 2. Create observer with rootMargin for pre-loading</span>
+<span class="kw">const</span> observer = <span class="kw">new</span> <span class="fn">IntersectionObserver</span>(entries =&gt; {
+  <span class="kw">if</span> (entries[<span class="str">0</span>].isIntersecting &amp;&amp; !loading) {
+    <span class="fn">loadNextPage</span>();
+  }
+}, {
+  <span class="cm">// Start loading 300px BEFORE sentinel is visible</span>
+  rootMargin: <span class="str">'0px 0px 300px 0px'</span>
+});
+
+observer.<span class="fn">observe</span>(sentinel);</pre>
+  </div>
+  <div class="info">
+    <strong>rootMargin: '0px 0px 300px 0px'</strong> — expands the intersection root by 300px at the bottom. The sentinel "intersects" 300px before it's actually visible, giving time to fetch data before the user reaches the end.
+  </div>
+  <div class="card">
+    <h3>Flow Diagram</h3>
+    <pre>User scrolls → Sentinel enters rootMargin zone
+  → Observer callback fires → Set loading=true
+  → Fetch /api/pagination/cursor?cursor=X
+  → Append items above sentinel
+  → Set loading=false → Observer watches again</pre>
+  </div>
+</div>
+
+<!-- Tab 1 — Live Demo -->
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Infinite Product List</h3>
+    <div id="stats">Items loaded: 0 · Fetches: 0</div>
+    <button class="green" onclick="resetDemo()">Reset</button>
+    <div id="scroll-area">
+      <div id="list"></div>
+      <div id="sentinel">⏳ Loading more…</div>
+    </div>
+    <div class="output" id="log"></div>
+  </div>
+</div>
+
+<!-- Tab 2 — Deep Dive -->
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>IntersectionObserver Internals</h3>
+    <p style="font-size:.84rem;color:#94a3b8;margin-bottom:10px">Unlike scroll event listeners, IntersectionObserver runs <strong>off the main thread</strong> in a compositor-side process. The browser batches geometry calculations and only invokes your callback when thresholds are crossed.</p>
+    <pre><span class="cm">// The browser performs these steps internally:</span>
+<span class="cm">// 1. Compositor thread tracks element bounding rects</span>
+<span class="cm">// 2. On each frame, checks intersection ratio vs thresholds</span>
+<span class="cm">// 3. When threshold crossed → queues microtask on main thread</span>
+<span class="cm">// 4. Callback receives IntersectionObserverEntry[]</span>
+
+entry.isIntersecting     <span class="cm">// boolean — is element in root?</span>
+entry.intersectionRatio  <span class="cm">// 0..1 — how much is visible</span>
+entry.boundingClientRect <span class="cm">// element's rect</span>
+entry.rootBounds         <span class="cm">// root's rect (including rootMargin)</span>
+entry.time               <span class="cm">// high-res timestamp</span></pre>
+  </div>
+  <div class="info">
+    <strong>Performance advantage:</strong> scroll events fire 60+ times/sec on main thread. IntersectionObserver fires only on threshold crossings, off-thread. No layout thrashing.
+  </div>
+  <div class="card">
+    <h3>Options Deep Dive</h3>
+    <pre><span class="kw">new</span> <span class="fn">IntersectionObserver</span>(callback, {
+  root: <span class="kw">null</span>,        <span class="cm">// null = viewport, or a scrollable parent</span>
+  rootMargin: <span class="str">'300px'</span>, <span class="cm">// CSS-like margin around root</span>
+  threshold: [<span class="str">0, 0.5, 1</span>] <span class="cm">// fire at 0%, 50%, 100% visible</span>
+});</pre>
+  </div>
+</div>
+
+<!-- Tab 3 — Interview -->
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Q: Why IntersectionObserver over scroll event?</h3>
+    <p style="font-size:.84rem;color:#94a3b8">
+      <strong>1. Performance:</strong> Scroll events fire on every pixel of scrolling (60+ times/sec). Each handler call forces getBoundingClientRect → layout recalculation → potential layout thrashing. IntersectionObserver runs off-thread and only fires on threshold crossings.<br><br>
+      <strong>2. No manual math:</strong> No need to calculate element.offsetTop - scrollTop - containerHeight. Observer does geometry checks natively.<br><br>
+      <strong>3. rootMargin:</strong> Native pre-loading zone without manual scroll distance calculations.<br><br>
+      <strong>4. Cleanup:</strong> observer.disconnect() vs removing scroll listener + debounce function.
+    </p>
+  </div>
+  <div class="card">
+    <h3>Q: How to prevent duplicate fetches?</h3>
+    <pre><span class="kw">let</span> loading = <span class="kw">false</span>;
+<span class="kw">let</span> hasMore = <span class="kw">true</span>;
+
+<span class="kw">const</span> observer = <span class="kw">new</span> <span class="fn">IntersectionObserver</span>(([entry]) =&gt; {
+  <span class="kw">if</span> (!entry.isIntersecting || loading || !hasMore) <span class="kw">return</span>;
+  loading = <span class="kw">true</span>;
+  <span class="fn">fetchNextPage</span>().<span class="fn">finally</span>(() =&gt; loading = <span class="kw">false</span>);
+});
+
+<span class="cm">// Also: unobserve sentinel when no more pages</span>
+<span class="kw">if</span> (!response.hasNextPage) {
+  observer.<span class="fn">unobserve</span>(sentinel);
+  hasMore = <span class="kw">false</span>;
+}</pre>
+    <div class="info">Three-guard pattern: <code>isIntersecting</code> + <code>loading</code> flag + <code>hasMore</code> flag. This is the FAANG-expected answer.</div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+// Demo state
+let cursor = null;
+let loading = false;
+let hasMore = true;
+let itemCount = 0;
+let fetchCount = 0;
+let observer = null;
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function updateStats() {
+  document.getElementById('stats').textContent = `Items loaded: ${itemCount} · Fetches: ${fetchCount}`;
+}
+
+function renderProduct(item, index) {
+  const div = document.createElement('div');
+  div.className = 'product-card';
+  div.innerHTML = `<div class="idx">#${index}</div><div><div class="name">${item.name || item.title || 'Product ' + index}</div><div class="price">$${(item.price || (Math.random()*100).toFixed(2))}</div></div>`;
+  return div;
+}
+
+async function loadPage() {
+  if (loading || !hasMore) return;
+  loading = true;
+  const url = cursor ? `${API}/api/pagination/cursor?cursor=${cursor}&limit=15` : `${API}/api/pagination/cursor?limit=15`;
+  log(`Fetching: ${url}`);
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    const items = data.data || data.items || [];
+    const list = document.getElementById('list');
+    items.forEach(item => {
+      itemCount++;
+      list.appendChild(renderProduct(item, itemCount));
+    });
+    cursor = data.nextCursor || data.cursor || null;
+    hasMore = !!cursor && items.length > 0;
+    fetchCount++;
+    updateStats();
+    log(`Got ${items.length} items. hasMore=${hasMore}`);
+    if (!hasMore) {
+      document.getElementById('sentinel').textContent = '✅ All items loaded';
+      observer?.disconnect();
+    }
+  } catch (e) {
+    log(`Error: ${e.message}`);
+  } finally {
+    loading = false;
+  }
+}
+
+function initObserver() {
+  const sentinel = document.getElementById('sentinel');
+  observer = new IntersectionObserver(([entry]) => {
+    if (entry.isIntersecting && !loading && hasMore) loadPage();
+  }, { root: document.getElementById('scroll-area'), rootMargin: '0px 0px 300px 0px' });
+  observer.observe(sentinel);
+}
+
+function resetDemo() {
+  cursor = null; loading = false; hasMore = true; itemCount = 0; fetchCount = 0;
+  document.getElementById('list').innerHTML = '';
+  document.getElementById('log').textContent = '';
+  document.getElementById('sentinel').textContent = '⏳ Loading more…';
+  updateStats();
+  observer?.disconnect();
+  initObserver();
+  log('Demo reset. Scroll down to load more.');
+}
+
+initObserver();
+loadPage();
+</script>
+</body>
+</html>

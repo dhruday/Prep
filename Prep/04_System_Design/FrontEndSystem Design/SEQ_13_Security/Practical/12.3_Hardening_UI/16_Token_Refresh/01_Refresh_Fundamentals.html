@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 01 — Token Refresh Fundamentals</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟠 Lab 01 — Token Refresh Fundamentals</h1>
+<p class="sub">Module 12.3 · Access + refresh token architecture</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Dual Token Model</div>
+  <div class="tab" onclick="setTab(1)">Refresh Flow</div>
+  <div class="tab" onclick="setTab(2)">Live Demo</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Why Dual Tokens?</h3>
+    <pre><span class="cm">// Problem: Long-lived tokens = big security risk</span>
+<span class="cm">// If stolen, attacker has access for days/weeks</span>
+
+<span class="cm">// Solution: Short access token + long refresh token</span>
+
+<span class="cm">// ACCESS TOKEN:</span>
+<span class="cm">// - Short-lived: 5-15 minutes</span>
+<span class="cm">// - Sent with every API request (Authorization header)</span>
+<span class="cm">// - Stateless (JWT) — server doesn't track it</span>
+<span class="cm">// - If stolen: limited damage window (minutes)</span>
+
+<span class="cm">// REFRESH TOKEN:</span>
+<span class="cm">// - Long-lived: days to weeks</span>
+<span class="cm">// - Only sent to /token/refresh endpoint</span>
+<span class="cm">// - Stored securely (HttpOnly cookie or secure storage)</span>
+<span class="cm">// - Stateful — server tracks & can revoke</span>
+<span class="cm">// - Used ONLY to get new access tokens</span>
+
+<span class="cm">// If access token is stolen:</span>
+<span class="cm">// Attacker has 5-15 minutes of access</span>
+<span class="cm">// No way to get new tokens (no refresh token)</span>
+
+<span class="cm">// If refresh token is stolen:</span>
+<span class="cm">// Token rotation detects this (covered in Lab 02)</span>
+<span class="cm">// Server can revoke the refresh token family</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Refresh Flow Sequence</h3>
+    <pre><span class="cm">// 1. Login → Get both tokens</span>
+POST /auth/login { email, password }
+→ { accessToken: "eyJ...", refreshToken: "eyJ..." }
+
+<span class="cm">// 2. API calls with access token</span>
+GET /api/data
+Authorization: Bearer eyJ... (access token)
+→ { data: [...] }
+
+<span class="cm">// 3. Access token expires (401 response)</span>
+GET /api/data
+Authorization: Bearer eyJ... (expired)
+→ 401 { error: "Token expired" }
+
+<span class="cm">// 4. Client detects 401, calls refresh</span>
+POST /auth/refresh
+{ refreshToken: "eyJ..." }  <span class="cm">// or from HttpOnly cookie</span>
+→ { accessToken: "NEW_eyJ...", refreshToken: "NEW_eyJ..." }
+
+<span class="cm">// 5. Retry original request with new access token</span>
+GET /api/data
+Authorization: Bearer NEW_eyJ...
+→ { data: [...] }
+
+<span class="cm">// This all happens transparently — user sees no interruption</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🧪 Token Refresh Demo</h3>
+    <button onclick="loginAndRefresh()">🔐 Login → Wait → Refresh</button>
+    <div class="output" id="refresh-result">Click to demo the full token lifecycle</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — Token Refresh</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: What's the optimal access token lifetime?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Trade-off: Security vs UX. Short tokens (5 min): More secure but more refresh requests. Adds latency if refresh is needed mid-request. Good for: banking, healthcare. Medium tokens (15 min): Google's sweet spot for most apps. Balances security with reasonable refresh frequency. Long tokens (1 hour): Fewer refreshes but longer attack window. Only for low-risk APIs. Factors: (1) Sensitivity of data (financial → short, blog → medium). (2) Network conditions (mobile users with poor connectivity → longer to avoid refresh failures). (3) User session length (if users work for hours, short tokens with reliable refresh). (4) Infrastructure: Stateless JWT means no server-side revocation during the token lifetime. The ONLY way to "revoke" a JWT is to wait for expiry or maintain a blacklist (which defeats statelessness). This is why access tokens MUST be short.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function loginAndRefresh(){
+  const el=document.getElementById('refresh-result');
+  el.textContent='Token Lifecycle Demo\n'+('='.repeat(40))+'\n\n';
+  try{
+    el.textContent+='Step 1: Login...\n';
+    const loginResp=await fetch('http://localhost:3001/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'alice',password:'Password123!'})});
+    const loginData=await loginResp.json();
+    el.textContent+=`  Status: ${loginResp.status}\n`;
+    el.textContent+=`  Access Token: ${loginData.accessToken?.substring(0,30)}...\n`;
+    el.textContent+=`  Refresh Token: ${loginData.refreshToken?.substring(0,30)}...\n\n`;
+    
+    el.textContent+='Step 2: Use access token for API call...\n';
+    const apiResp=await fetch('http://localhost:3001/api/sensitive/data',{headers:{'Authorization':`Bearer ${loginData.accessToken}`}});
+    el.textContent+=`  Status: ${apiResp.status} ${apiResp.status===200?'✅':'❌'}\n\n`;
+    
+    el.textContent+='Step 3: Refresh the token...\n';
+    const refreshResp=await fetch('http://localhost:3001/api/auth/refresh',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refreshToken:loginData.refreshToken})});
+    const refreshData=await refreshResp.json();
+    el.textContent+=`  Status: ${refreshResp.status}\n`;
+    el.textContent+=`  New Access Token: ${refreshData.accessToken?.substring(0,30)}...\n`;
+    el.textContent+=`  New Refresh Token: ${refreshData.refreshToken?.substring(0,30)}...\n\n`;
+    
+    el.textContent+='Step 4: Use new access token...\n';
+    const api2=await fetch('http://localhost:3001/api/sensitive/data',{headers:{'Authorization':`Bearer ${refreshData.accessToken}`}});
+    el.textContent+=`  Status: ${api2.status} ${api2.status===200?'✅':'❌'}\n\n`;
+    
+    el.textContent+='✅ Token refresh cycle complete!\n';
+    el.textContent+='Old tokens invalidated, new tokens active.';
+  }catch(e){el.textContent+=`Error: ${e.message}\n(Start server: cd server && node server.js)`}
+}
+</script>
+</body></html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Request Queue with Rate Limiting</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#ef4444;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a1e1e;border-color:#ef4444;color:#ef4444}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#ef4444;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#ef4444;color:#ef4444}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:60px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #ef4444;padding:10px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}
+.queue-vis{display:flex;gap:6px;flex-wrap:wrap;min-height:36px;margin:10px 0}.q-item{padding:5px 10px;border-radius:6px;font-size:.72rem;font-family:monospace;animation:fadeIn .3s}.q-waiting{background:#3a1e1e;border:1px solid #ef4444;color:#ef4444}.q-processing{background:#1e3a1e;border:1px solid #10b981;color:#10b981}@keyframes fadeIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}.meter{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:.8rem}.meter-bar{flex:1;height:10px;background:#2d3551;border-radius:5px;overflow:hidden}.meter-fill{height:100%;background:#ef4444;transition:width .3s;border-radius:5px}
+</style>
+</head>
+<body>
+<h1>📋 Request Queue + Rate Limiter</h1>
+<p class="sub">Over-limit requests queued FIFO — processed when tokens become available</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Live Demo</div>
+  <div class="tab" onclick="setTab(1)">How It Works</div>
+  <div class="tab" onclick="setTab(2)">Source Code</div>
+  <div class="tab" onclick="setTab(3)">Key Takeaways</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Bucket & Queue State</h3>
+    <div class="meter"><span>Tokens:</span><div class="meter-bar"><div class="meter-fill" id="meterFill" style="width:100%"></div></div><span id="tkLabel">5/5</span></div>
+    <div style="font-size:.8rem;color:#94a3b8;margin:6px 0">Queue (<span id="qLen">0</span> waiting):</div>
+    <div class="queue-vis" id="queueVis"></div>
+    <button onclick="enqueue()">Send Request</button>
+    <button onclick="enqueueBurst()">⚡ Burst (8 fast)</button>
+    <button onclick="resetAll()">Reset</button>
+    <div class="output" id="log"></div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card"><h3>Queue + Token Bucket</h3>
+    <div class="info">Instead of rejecting excess requests, they enter a FIFO queue. A drain loop checks for available tokens and processes queued requests in order.</div>
+    <ol style="font-size:.82rem;padding-left:18px;line-height:2.2">
+      <li>Request arrives → if token available, execute immediately.</li>
+      <li>If no token → push to queue (FIFO).</li>
+      <li>Every 200ms, drain loop: refill tokens, process queued items.</li>
+      <li>Queue has max size to prevent unbounded growth.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card"><h3>Implementation</h3>
+<pre><span class="kw">class</span> <span class="fn">QueuedBucket</span> {
+  <span class="fn">constructor</span>(cap, refillRate, maxQueue) {
+    <span class="kw">this</span>.tokens = cap; <span class="kw">this</span>.cap = cap;
+    <span class="kw">this</span>.rate = refillRate;
+    <span class="kw">this</span>.queue = []; <span class="kw">this</span>.maxQ = maxQueue;
+    setInterval(() => <span class="kw">this</span>.<span class="fn">tick</span>(), <span class="str">200</span>);
+  }
+  <span class="fn">tick</span>() {
+    <span class="kw">this</span>.tokens = Math.min(<span class="kw">this</span>.cap,
+      <span class="kw">this</span>.tokens + <span class="kw">this</span>.rate * <span class="str">0.2</span>);
+    <span class="kw">while</span> (<span class="kw">this</span>.queue.length && <span class="kw">this</span>.tokens >= <span class="str">1</span>) {
+      <span class="kw">this</span>.tokens--;
+      <span class="kw">const</span> fn = <span class="kw">this</span>.queue.shift();
+      fn(); <span class="cm">// execute queued request</span>
+    }
+  }
+  <span class="fn">submit</span>(fn) {
+    <span class="kw">if</span> (<span class="kw">this</span>.tokens >= <span class="str">1</span>) {
+      <span class="kw">this</span>.tokens--; fn(); <span class="kw">return</span> <span class="str">'immediate'</span>;
+    }
+    <span class="kw">if</span> (<span class="kw">this</span>.queue.length < <span class="kw">this</span>.maxQ) {
+      <span class="kw">this</span>.queue.push(fn); <span class="kw">return</span> <span class="str">'queued'</span>;
+    }
+    <span class="kw">return</span> <span class="str">'dropped'</span>;
+  }
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card"><h3>Key Takeaways</h3>
+    <div class="info">Queuing converts hard rejections into delayed execution, improving UX for bursty workloads.</div>
+    <ul style="font-size:.82rem;padding-left:18px;line-height:2">
+      <li>Queue smooths bursts — no data lost unless queue overflows</li>
+      <li>Max queue size prevents memory leaks</li>
+      <li>FIFO ensures fairness among requests</li>
+      <li>Trade-off: latency increases under sustained load</li>
+      <li>Used in job processors, API gateways, message brokers</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const CAP=5,RATE=1,MAXQ=20;
+let tokens=CAP,queue=[],reqId=0;
+const logEl=document.getElementById('log'),queueVis=document.getElementById('queueVis'),
+  meterFill=document.getElementById('meterFill'),tkLabel=document.getElementById('tkLabel'),
+  qLen=document.getElementById('qLen');
+
+function log(m){const ts=new Date().toLocaleTimeString();logEl.textContent=`[${ts}] ${m}\n`+logEl.textContent;}
+function updateUI(){
+  meterFill.style.width=(tokens/CAP*100)+'%';
+  tkLabel.textContent=Math.floor(tokens)+'/'+CAP;
+  qLen.textContent=queue.length;
+  queueVis.innerHTML=queue.map(q=>`<div class="q-item q-waiting">R#${q.id}</div>`).join('');
+}
+function processReq(id){log(`✅ R#${id} processed`);}
+function enqueue(){
+  const id=++reqId;
+  if(tokens>=1){tokens--;processReq(id);log(`⚡ R#${id} — immediate (token consumed)`);}
+  else if(queue.length<MAXQ){queue.push({id,fn:()=>processReq(id)});log(`📋 R#${id} — queued (${queue.length} in queue)`);}
+  else{log(`❌ R#${id} — DROPPED (queue full)`);}
+  updateUI();
+}
+function enqueueBurst(){let i=0;const iv=setInterval(()=>{if(i++>=8){clearInterval(iv);return;}enqueue();},60);}
+function resetAll(){tokens=CAP;queue=[];reqId=0;logEl.textContent='';updateUI();}
+
+setInterval(()=>{
+  tokens=Math.min(CAP,tokens+RATE*0.2);
+  while(queue.length&&tokens>=1){tokens--;const q=queue.shift();q.fn();}
+  updateUI();
+},200);
+updateUI();
+</script>
+</body>
+</html>

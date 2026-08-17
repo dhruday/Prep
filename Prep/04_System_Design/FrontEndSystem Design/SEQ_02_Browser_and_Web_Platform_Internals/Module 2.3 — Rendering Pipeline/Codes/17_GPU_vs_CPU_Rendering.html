@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GPU vs CPU Rendering Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e2e8f0; padding: 20px; }
+    h1 { text-align: center; color: #60a5fa; margin-bottom: 4px; font-size: 1.5rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.88rem; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .card { background: #1e2130; border: 1px solid #2d3551; border-radius: 12px; padding: 16px; }
+    .card h2 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+    /* Animation boxes */
+    .anim-arena {
+      background: #060a0e; border-radius: 8px; height: 110px;
+      position: relative; overflow: hidden; margin-bottom: 8px;
+    }
+    .anim-box {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 70px; height: 50px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: bold; color: rgba(255,255,255,0.9);
+    }
+    .box-cpu-left { background: #ef4444; left: 10px; }
+    .box-gpu-right { background: #8b5cf6; left: 10px; }
+
+    /* FPS meter */
+    .fps-row { display: flex; gap: 10px; margin-bottom: 10px; }
+    .fps-card {
+      flex: 1; background: #0f1117; border-radius: 8px; padding: 10px; text-align: center;
+    }
+    .fps-val { font-size: 2rem; font-weight: bold; }
+    .fps-lbl { font-size: 0.68rem; color: #475569; margin-top: 2px; }
+    .fps-bad  { color: #ef4444; }
+    .fps-ok   { color: #f59e0b; }
+    .fps-good { color: #10b981; }
+
+    /* Thread diagram */
+    .thread-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .thread-label { width: 110px; font-size: 0.72rem; color: #64748b; text-align: right; flex-shrink: 0; }
+    .thread-track { flex: 1; height: 24px; background: #0f1117; border-radius: 4px; overflow: hidden; position: relative; }
+    .thread-fill {
+      height: 100%; border-radius: 4px;
+      display: flex; align-items: center; padding-left: 6px;
+      font-size: 0.68rem; white-space: nowrap; overflow: hidden;
+      transition: width 0.6s ease;
+    }
+    .tf-main    { background: linear-gradient(90deg, #1e3a5f, #3b82f6); color: #93c5fd; }
+    .tf-busy    { background: linear-gradient(90deg, #450a0a, #ef4444); color: #fca5a5; }
+    .tf-composit{ background: linear-gradient(90deg, #14532d, #10b981); color: #86efac; }
+    .tf-gpu     { background: linear-gradient(90deg, #312e81, #8b5cf6); color: #c4b5fd; }
+    .tf-idle    { background: #1a1a1a; }
+
+    /* Controls */
+    .controls { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
+    button { padding: 8px 16px; border: none; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 0.82rem; transition: opacity 0.2s; }
+    button:hover { opacity: 0.8; }
+    .btn-bad  { background: #ef4444; color: #fff; }
+    .btn-good { background: #8b5cf6; color: #fff; }
+    .btn-both { background: #f59e0b; color: #000; }
+    .btn-stop { background: #374151; color: #fff; }
+
+    .insight { background: #162032; border: 1px solid #1e3a5f; border-radius: 7px; padding: 10px; font-size: 0.76rem; color: #93c5fd; margin-top: 10px; }
+    .insight strong { color: #fff; }
+
+    /* Layer visualizer */
+    .layer-stack { position: relative; height: 140px; margin-top: 8px; }
+    .layer {
+      position: absolute; width: 100%; border-radius: 6px;
+      display: flex; align-items: center; padding-left: 12px;
+      font-size: 0.73rem; font-weight: bold; transition: all 0.4s;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Code snippets */
+    .code { background: #060a0e; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.74rem; color: #94a3b8; }
+    .code .key { color: #93c5fd; } .code .val { color: #86efac; } .code .comment { color: #374151; }
+
+    /* Side comparison table */
+    .compare { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+    .compare th { background: #1a2035; color: #60a5fa; padding: 7px 8px; text-align: left; }
+    .compare td { padding: 6px 8px; border-top: 1px solid #2d3551; }
+    .compare tr:nth-child(even) td { background: #161b2e; }
+    .tag-bad  { display: inline-block; padding: 1px 6px; border-radius: 5px; background: #7f1d1d; color: #fca5a5; font-size: 0.68rem; font-weight: bold; }
+    .tag-good { display: inline-block; padding: 1px 6px; border-radius: 5px; background: #14532d; color: #86efac; font-size: 0.68rem; font-weight: bold; }
+  </style>
+</head>
+<body>
+<h1>⚡ GPU vs CPU Rendering Demo</h1>
+<p class="subtitle">Compare CPU path (left/top) vs GPU compositor path (transform/opacity)</p>
+
+<div class="controls">
+  <button class="btn-bad"  onclick="animateCPU()">😱 CPU Path: animate left</button>
+  <button class="btn-good" onclick="animateGPU()">✅ GPU Path: animate transform</button>
+  <button class="btn-both" onclick="animateBoth()">⚖️ Run Both Side-by-Side</button>
+  <button class="btn-stop" onclick="stopAll()">⏹ Stop</button>
+</div>
+
+<div class="grid">
+  <!-- CPU side -->
+  <div class="card">
+    <h2 style="color:#ef4444">😱 CPU Path — Main Thread Animation</h2>
+
+    <div class="fps-row">
+      <div class="fps-card"><div class="fps-val fps-bad" id="fps-cpu">—</div><div class="fps-lbl">FPS</div></div>
+      <div class="fps-card"><div class="fps-val fps-bad" id="jank-cpu">—</div><div class="fps-lbl">Jank Frames</div></div>
+      <div class="fps-card"><div class="fps-val fps-bad" id="reflow-cpu">0</div><div class="fps-lbl">Reflows</div></div>
+    </div>
+
+    <div class="anim-arena" id="arena-cpu">
+      <div class="anim-box box-cpu-left" id="box-cpu">CPU</div>
+    </div>
+
+    <div class="code">
+      <span class="comment">// ❌ CPU path — triggers REFLOW every frame</span><br>
+      <span class="key">function</span> animate() {<br>
+      &nbsp; box.style.<span class="val">left</span> = pos + 'px'; <span class="comment">// REFLOW!</span><br>
+      &nbsp; pos += 2;<br>
+      &nbsp; requestAnimationFrame(animate);<br>
+      }
+    </div>
+
+    <div style="margin-top:10px">
+      <div class="thread-row">
+        <div class="thread-label">Main Thread</div>
+        <div class="thread-track"><div class="thread-fill tf-busy" id="ct-main-cpu" style="width:0%">⛔ Layout recalc every frame</div></div>
+      </div>
+      <div class="thread-row">
+        <div class="thread-label">Compositor</div>
+        <div class="thread-track"><div class="thread-fill tf-idle" id="ct-comp-cpu" style="width:30%">Idle (waiting for main thread)</div></div>
+      </div>
+      <div class="thread-row">
+        <div class="thread-label">GPU</div>
+        <div class="thread-track"><div class="thread-fill tf-idle" id="ct-gpu-cpu" style="width:30%">Idle</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GPU side -->
+  <div class="card">
+    <h2 style="color:#8b5cf6">✅ GPU Path — Compositor Animation</h2>
+
+    <div class="fps-row">
+      <div class="fps-card"><div class="fps-val fps-good" id="fps-gpu">—</div><div class="fps-lbl">FPS</div></div>
+      <div class="fps-card"><div class="fps-val fps-good" id="jank-gpu">—</div><div class="fps-lbl">Jank Frames</div></div>
+      <div class="fps-card"><div class="fps-val fps-good" id="reflow-gpu">0</div><div class="fps-lbl">Reflows</div></div>
+    </div>
+
+    <div class="anim-arena" id="arena-gpu">
+      <div class="anim-box box-gpu-right" id="box-gpu">GPU ✅</div>
+    </div>
+
+    <div class="code">
+      <span class="comment">// ✅ GPU path — compositor only, zero reflows</span><br>
+      <span class="key">function</span> animate() {<br>
+      &nbsp; box.style.<span class="val">transform</span> = `translateX(${pos}px)` <span class="comment">// ✔ GPU</span><br>
+      &nbsp; pos += 2;<br>
+      &nbsp; requestAnimationFrame(animate);<br>
+      }
+    </div>
+
+    <div style="margin-top:10px">
+      <div class="thread-row">
+        <div class="thread-label">Main Thread</div>
+        <div class="thread-track"><div class="thread-fill tf-main" id="ct-main-gpu" style="width:0%">App logic (free)</div></div>
+      </div>
+      <div class="thread-row">
+        <div class="thread-label">Compositor</div>
+        <div class="thread-track"><div class="thread-fill tf-composit" id="ct-comp-gpu" style="width:0%">⚡ Animate transform layer</div></div>
+      </div>
+      <div class="thread-row">
+        <div class="thread-label">GPU</div>
+        <div class="thread-track"><div class="thread-fill tf-gpu" id="ct-gpu-gpu" style="width:0%">⚡ Move composited layer</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GPU Layer Promotion -->
+  <div class="card">
+    <h2 style="color:#94a3b8">🗂 Compositor Layer Promotion</h2>
+    <div style="font-size:0.77rem;color:#94a3b8;margin-bottom:10px">
+      When you apply <code>will-change: transform</code> or <code>transform: translateZ(0)</code>, the browser "promotes" the element onto its own GPU layer — it can then be moved without re-painting anything.
+    </div>
+    <div class="layer-stack" id="layer-stack">
+      <div class="layer" style="height:34px;bottom:0;background:linear-gradient(90deg,#1e3a5f,#162032);border-color:#3b82f6">Base Layer (document)</div>
+      <div class="layer" id="gpu-layer-1" style="height:28px;bottom:44px;background:linear-gradient(90deg,#312e81,#1e1b4b);border-color:#7c3aed;opacity:0.3">
+        Promoted GPU Layer (will-change: transform)
+      </div>
+      <div class="layer" id="gpu-layer-2" style="height:28px;bottom:82px;background:linear-gradient(90deg,#14532d,#052e16);border-color:#16a34a;opacity:0.3">
+        Animation overlay layer
+      </div>
+    </div>
+    <div class="controls" style="margin-top:8px">
+      <button class="btn-good" onclick="promoteLayers()">🚀 Promote GPU Layers</button>
+      <button class="btn-stop" onclick="demoteLayers()">↩ Demote Layers</button>
+    </div>
+  </div>
+
+  <!-- Comparison table -->
+  <div class="card">
+    <h2 style="color:#94a3b8">📊 CPU vs GPU Animation Comparison</h2>
+    <table class="compare">
+      <thead><tr><th>Aspect</th><th>CPU (left/top)</th><th>GPU (transform)</th></tr></thead>
+      <tbody>
+        <tr><td>Triggers Layout?</td><td><span class="tag-bad">YES — every frame</span></td><td><span class="tag-good">NO</span></td></tr>
+        <tr><td>Triggers Repaint?</td><td><span class="tag-bad">YES — every frame</span></td><td><span class="tag-good">NO (layer moved)</span></td></tr>
+        <tr><td>Thread</td><td>Main thread (blocks JS)</td><td>Compositor + GPU thread</td></tr>
+        <tr><td>Frame budget</td><td>~16ms + layout time</td><td>~0ms (main thread free)</td></tr>
+        <tr><td>Jank risk</td><td>High — JS or layout spike = drop</td><td>Very low</td></tr>
+        <tr><td>Correct CSS</td><td><code>left, top, width, margin</code></td><td><code>transform, opacity</code></td></tr>
+        <tr><td>will-change needed?</td><td>No effect</td><td>Hints browser to pre-promote</td></tr>
+      </tbody>
+    </table>
+    <div class="insight">
+      <strong>Pro tip:</strong> Adding too many <code>will-change</code> or <code>translateZ(0)</code> promotions wastes GPU memory.
+      Only promote elements you're actively animating, and remove <code>will-change</code> after animation ends.
+    </div>
+  </div>
+</div>
+
+<script>
+  let cpuRaf = null, gpuRaf = null;
+  let cpuPos = 10, gpuPos = 10;
+  let cpuDx = 2, gpuDx = 2;
+  let cpuFps = 0, gpuFps = 0;
+  let cpuReflows = 0, gpuReflows = 0;
+  let cpuFrames = 0, gpuFrames = 0, cpuJank = 0, gpuJank = 0;
+  let cpuLastTime = 0, gpuLastTime = 0;
+
+  function stopAll() {
+    if (cpuRaf) cancelAnimationFrame(cpuRaf);
+    if (gpuRaf) cancelAnimationFrame(gpuRaf);
+    cpuRaf = gpuRaf = null;
+    document.getElementById('ct-main-cpu').style.width = '0%';
+    document.getElementById('ct-comp-cpu').style.width = '30%';
+    document.getElementById('ct-main-gpu').style.width = '0%';
+    document.getElementById('ct-comp-gpu').style.width = '0%';
+    document.getElementById('ct-gpu-gpu').style.width = '0%';
+  }
+
+  function animateCPU() {
+    if (cpuRaf) cancelAnimationFrame(cpuRaf);
+    cpuPos = 10; cpuDx = 2; cpuFrames = 0; cpuJank = 0; cpuReflows = 0;
+    cpuLastTime = performance.now();
+    document.getElementById('ct-main-cpu').style.width = '85%';
+    document.getElementById('ct-comp-cpu').style.width = '20%';
+
+    function step(ts) {
+      const arena = document.getElementById('arena-cpu');
+      const box = document.getElementById('box-cpu');
+      const maxX = arena.offsetWidth - box.offsetWidth - 10; // READ = forced reflow!
+      cpuReflows++;
+      document.getElementById('reflow-cpu').textContent = cpuReflows;
+
+      cpuPos += cpuDx;
+      if (cpuPos >= maxX || cpuPos <= 10) cpuDx *= -1;
+      box.style.left = cpuPos + 'px'; // WRITE = layout invalidated
+
+      cpuFrames++;
+      const elapsed = ts - cpuLastTime;
+      if (elapsed >= 1000) {
+        cpuFps = cpuFrames;
+        document.getElementById('fps-cpu').textContent = cpuFps;
+        document.getElementById('fps-cpu').className = 'fps-val ' + (cpuFps >= 55 ? 'fps-good' : cpuFps >= 40 ? 'fps-ok' : 'fps-bad');
+        document.getElementById('jank-cpu').textContent = cpuJank;
+        cpuFrames = 0;
+        cpuLastTime = ts;
+      }
+      if (elapsed > 20) cpuJank++;
+      cpuRaf = requestAnimationFrame(step);
+    }
+    cpuRaf = requestAnimationFrame(step);
+  }
+
+  function animateGPU() {
+    if (gpuRaf) cancelAnimationFrame(gpuRaf);
+    gpuPos = 10; gpuDx = 2; gpuFrames = 0; gpuJank = 0; gpuReflows = 0;
+    gpuLastTime = performance.now();
+    document.getElementById('ct-main-gpu').style.width = '30%';
+    document.getElementById('ct-comp-gpu').style.width = '90%';
+    document.getElementById('ct-gpu-gpu').style.width = '90%';
+
+    const box = document.getElementById('box-gpu');
+    const maxX = document.getElementById('arena-gpu').offsetWidth - 80; // one-time read
+
+    function step(ts) {
+      gpuPos += gpuDx;
+      if (gpuPos >= maxX - 10 || gpuPos <= 10) gpuDx *= -1;
+      box.style.transform = `translateX(${gpuPos - 10}px)`; // NO reflow, compositor only
+      document.getElementById('reflow-gpu').textContent = 0; // no reflows!
+
+      gpuFrames++;
+      const elapsed = ts - gpuLastTime;
+      if (elapsed >= 1000) {
+        gpuFps = gpuFrames;
+        document.getElementById('fps-gpu').textContent = gpuFps;
+        document.getElementById('fps-gpu').className = 'fps-val fps-good';
+        document.getElementById('jank-gpu').textContent = 0;
+        gpuFrames = 0;
+        gpuLastTime = ts;
+      }
+      gpuRaf = requestAnimationFrame(step);
+    }
+    gpuRaf = requestAnimationFrame(step);
+  }
+
+  function animateBoth() {
+    animateCPU();
+    animateGPU();
+  }
+
+  function promoteLayers() {
+    const l1 = document.getElementById('gpu-layer-1');
+    const l2 = document.getElementById('gpu-layer-2');
+    l1.style.opacity = '1';
+    l1.style.transform = 'translateX(12px)';
+    l2.style.opacity = '1';
+    l2.style.transform = 'translateX(24px)';
+    l1.textContent = '✅ Promoted GPU Layer (will-change: transform) — own frame buffer!';
+    l2.textContent = '✅ Animation overlay — moved on GPU without repaint';
+  }
+
+  function demoteLayers() {
+    const l1 = document.getElementById('gpu-layer-1');
+    const l2 = document.getElementById('gpu-layer-2');
+    l1.style.opacity = '0.3';
+    l1.style.transform = 'none';
+    l2.style.opacity = '0.3';
+    l2.style.transform = 'none';
+    l1.textContent = 'Promoted GPU Layer (will-change: transform)';
+    l2.textContent = 'Animation overlay layer';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Browser Storage Options Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e2e8f0; padding: 20px; }
+    h1 { text-align: center; color: #60a5fa; margin-bottom: 4px; font-size: 1.5rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 0.88rem; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab {
+      padding: 9px 18px; border: 2px solid #2d3551; border-radius: 8px;
+      cursor: pointer; font-size: 0.83rem; font-weight: 600; transition: all 0.2s;
+      background: #1e2130; color: #94a3b8;
+    }
+    .tab:hover { border-color: #3b82f6; }
+    .tab.t1.active { background: #1e3a5f; border-color: #3b82f6; color: #fff; }
+    .tab.t2.active { background: #162032; border-color: #0891b2; color: #fff; }
+    .tab.t3.active { background: #312e81; border-color: #7c3aed; color: #fff; }
+    .tab.t4.active { background: #251a00; border-color: #d97706; color: #fff; }
+    .tab.t5.active { background: #1a2035; border-color: #94a3b8; color: #fff; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .card { background: #1e2130; border: 1px solid #2d3551; border-radius: 12px; padding: 16px; }
+    .card h2 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+    /* Form controls */
+    .form-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .form-row input, .form-row select {
+      flex: 1; min-width: 80px;
+      background: #0f1117; border: 1px solid #2d3551; border-radius: 6px;
+      color: #e2e8f0; padding: 7px 10px; font-size: 0.8rem;
+    }
+    .form-row input:focus, .form-row select:focus { outline: 2px solid #3b82f6; }
+    input[type="number"] { width: 60px; flex: 0 0 80px; }
+
+    button { padding: 7px 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.79rem; transition: opacity 0.2s; }
+    button:hover { opacity: 0.8; }
+    .btn-a { background: #3b82f6; color: #fff; }
+    .btn-b { background: #ef4444; color: #fff; }
+    .btn-c { background: #10b981; color: #fff; }
+    .btn-d { background: #8b5cf6; color: #fff; }
+    .btn-e { background: #374151; color: #fff; }
+
+    /* Storage table */
+    .store-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .store-table th { background: #1a2035; color: #60a5fa; padding: 7px 8px; text-align: left; font-size: 0.74rem; }
+    .store-table td { padding: 7px 8px; border-top: 1px solid #2d3551; vertical-align: middle; max-width: 200px; word-break: break-all; }
+    .store-table tr:nth-child(even) td { background: #161b2e; }
+    .store-table .del-btn { background: #7f1d1d; color: #fca5a5; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 0.7rem; }
+
+    /* Log */
+    .log-box {
+      background: #060a0e; border-radius: 8px; padding: 8px; height: 120px; overflow-y: auto;
+      font-family: 'Courier New', monospace; font-size: 0.74rem;
+    }
+    .l-ok  { color: #86efac; } .l-err { color: #f87171; } .l-info{ color: #475569; } .l-warn{ color: #fbbf24; }
+
+    /* Size bar */
+    .size-bar { height: 10px; background: #2d3551; border-radius: 5px; overflow: hidden; margin: 4px 0; }
+    .size-fill { height: 100%; border-radius: 5px; transition: width 0.5s; }
+
+    .insight { background: #162032; border: 1px solid #1e3a5f; border-radius: 7px; padding: 10px; font-size: 0.76rem; color: #93c5fd; margin-top: 10px; }
+    .insight strong { color: #fff; }
+
+    /* Comparison table */
+    .compare { width: 100%; border-collapse: collapse; font-size: 0.76rem; }
+    .compare th { background: #1a2035; color: #60a5fa; padding: 7px; text-align: left; }
+    .compare td { padding: 6px 7px; border-top: 1px solid #2d3551; vertical-align: top; }
+    .compare tr:nth-child(even) td { background: #161b2e; }
+    .tag-y { background: #14532d; color: #86efac; display: inline-block; padding: 1px 6px; border-radius: 5px; font-size:0.67rem; font-weight:bold; }
+    .tag-n { background: #7f1d1d; color: #fca5a5; display: inline-block; padding: 1px 6px; border-radius: 5px; font-size:0.67rem; font-weight:bold; }
+    .tag-p { background: #1e3a5f; color: #93c5fd; display: inline-block; padding: 1px 6px; border-radius: 5px; font-size:0.67rem; font-weight:bold; }
+  </style>
+</head>
+<body>
+<h1>🗄 Browser Storage Options Demo</h1>
+<p class="subtitle">CRUD demos for LocalStorage, SessionStorage, IndexedDB, Cookies, and CacheAPI</p>
+
+<div class="tabs">
+  <div class="tab t1 active"   onclick="switchTab('local')">💾 LocalStorage</div>
+  <div class="tab t2"          onclick="switchTab('session')">⏱ SessionStorage</div>
+  <div class="tab t3"          onclick="switchTab('idb')">🗃 IndexedDB</div>
+  <div class="tab t4"          onclick="switchTab('cookies')">🍪 Cookies</div>
+  <div class="tab t5"          onclick="switchTab('compare')">📊 Comparison</div>
+</div>
+
+<!-- LocalStorage -->
+<div id="panel-local" class="panel active">
+  <div class="grid2">
+    <div class="card">
+      <h2 style="color:#3b82f6">💾 LocalStorage — Persistent, Synchronous</h2>
+      <div class="form-row">
+        <input id="ls-key" placeholder="Key" value="user.name" />
+        <input id="ls-val" placeholder="Value" value="Alice" />
+        <button class="btn-a" onclick="lsSet()">Set</button>
+        <button class="btn-c" onclick="lsGet()">Get</button>
+        <button class="btn-b" onclick="lsDel()">Del</button>
+        <button class="btn-e" onclick="lsClear()">Clear All</button>
+      </div>
+      <div class="form-row">
+        <input id="ls-result" readonly placeholder="Result will appear here..." style="flex:1;color:#86efac" />
+      </div>
+      <div class="size-bar"><div class="size-fill" id="ls-size-bar" style="width:0%;background:#3b82f6"></div></div>
+      <div style="font-size:0.7rem;color:#475569" id="ls-size-label">Used: 0 bytes / ~5MB limit</div>
+
+      <table class="store-table" style="margin-top:10px">
+        <thead><tr><th>Key</th><th>Value</th><th></th></tr></thead>
+        <tbody id="ls-data"><tr><td colspan="3" style="color:#475569;text-align:center">Empty</td></tr></tbody>
+      </table>
+
+      <div class="insight">
+        <strong>localStorage:</strong> Persists until explicitly cleared. Shared across all tabs for same origin.
+        Synchronous API — can block main thread if storing large data. Max ~5MB.
+      </div>
+    </div>
+    <div class="card">
+      <h2 style="color:#94a3b8">📋 Execution Log</h2>
+      <div class="log-box" id="ls-log"><div class="l-info">// Run CRUD operations on the left</div></div>
+      <div style="margin-top:12px;background:#060a0e;border-radius:8px;padding:12px;font-family:monospace;font-size:0.74rem;color:#94a3b8">
+        <span style="color:#93c5fd">localStorage</span>.setItem(<span style="color:#86efac">'key'</span>, <span style="color:#86efac">'value'</span>);
+        <br><span style="color:#93c5fd">localStorage</span>.getItem(<span style="color:#86efac">'key'</span>); <span style="color:#475569">// returns string</span>
+        <br><span style="color:#93c5fd">localStorage</span>.removeItem(<span style="color:#86efac">'key'</span>);
+        <br><span style="color:#93c5fd">localStorage</span>.clear();
+        <br><br><span style="color:#475569">// Watch for storage events from other tabs:</span>
+        <br>window.addEventListener(<span style="color:#86efac">'storage'</span>, (e) => {
+        <br>&nbsp; <span style="color:#fbbf24">console</span>.log(e.key, e.oldValue, e.newValue);
+        <br>});
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SessionStorage -->
+<div id="panel-session" class="panel">
+  <div class="grid2">
+    <div class="card">
+      <h2 style="color:#0891b2">⏱ SessionStorage — Tab-Scoped</h2>
+      <div class="form-row">
+        <input id="ss-key" placeholder="Key" value="step" />
+        <input id="ss-val" placeholder="Value" value="2" />
+        <button class="btn-a" onclick="ssSet()">Set</button>
+        <button class="btn-c" onclick="ssGet()">Get</button>
+        <button class="btn-b" onclick="ssDel()">Del</button>
+        <button class="btn-e" onclick="ssClear()">Clear All</button>
+      </div>
+      <div class="form-row">
+        <input id="ss-result" readonly placeholder="Result..." style="flex:1;color:#86efac" />
+      </div>
+      <table class="store-table" style="margin-top:10px">
+        <thead><tr><th>Key</th><th>Value</th><th></th></tr></thead>
+        <tbody id="ss-data"><tr><td colspan="3" style="color:#475569;text-align:center">Empty</td></tr></tbody>
+      </table>
+      <div class="insight">
+        <strong>sessionStorage:</strong> Same API as localStorage but data is cleared when the <em>tab</em> is closed.
+        Not shared between tabs (even same origin). Perfect for sensitive multi-step form wizards.
+      </div>
+    </div>
+    <div class="card">
+      <h2 style="color:#94a3b8">📋 Log</h2>
+      <div class="log-box" id="ss-log"><div class="l-info">// sessionStorage: cleared on tab close</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- IndexedDB -->
+<div id="panel-idb" class="panel">
+  <div class="grid2">
+    <div class="card">
+      <h2 style="color:#8b5cf6">🗃 IndexedDB — Async, Structured, Large</h2>
+      <div class="form-row">
+        <input id="idb-id"   placeholder="ID (number)" value="1" type="number" />
+        <input id="idb-name" placeholder="Name" value="Alice" />
+        <input id="idb-age"  placeholder="Age" value="30" type="number" />
+      </div>
+      <div class="form-row">
+        <button class="btn-d" onclick="idbAdd()">+ Add Record</button>
+        <button class="btn-c" onclick="idbGet()">Get by ID</button>
+        <button class="btn-b" onclick="idbDel()">Delete by ID</button>
+        <button class="btn-e" onclick="idbGetAll()">Get All</button>
+      </div>
+      <table class="store-table" style="margin-top:10px">
+        <thead><tr><th>ID</th><th>Name</th><th>Age</th><th></th></tr></thead>
+        <tbody id="idb-data"><tr><td colspan="4" style="color:#475569;text-align:center">Click "Get All" to load</td></tr></tbody>
+      </table>
+      <div class="insight">
+        <strong>IndexedDB:</strong> Fully async, transactional key-value database. Supports structured data (objects, blobs).
+        Size: up to ~50% of disk space. Great for offline apps, caching API responses, file storage.
+      </div>
+    </div>
+    <div class="card">
+      <h2 style="color:#94a3b8">📋 Log</h2>
+      <div class="log-box" id="idb-log"><div class="l-info">// IndexedDB operations are async (Promises)</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Cookies -->
+<div id="panel-cookies" class="panel">
+  <div class="grid2">
+    <div class="card">
+      <h2 style="color:#d97706">🍪 Cookies — Server-Sent, HttpOnly option</h2>
+      <div class="form-row">
+        <input id="ck-name" placeholder="Name" value="sessionId" />
+        <input id="ck-val"  placeholder="Value" value="abc123" />
+        <input id="ck-days" placeholder="Days" value="7" type="number" style="flex:0 0 70px" />
+      </div>
+      <div class="form-row">
+        <input id="ck-path" placeholder="Path" value="/" style="flex:0 0 80px" />
+        <select id="ck-secure"><option value="">Not Secure</option><option value="Secure">Secure</option></select>
+        <select id="ck-samesite"><option>SameSite=Lax</option><option>SameSite=Strict</option><option>SameSite=None</option></select>
+      </div>
+      <div class="form-row">
+        <button class="btn-a" onclick="cookieSet()">Set Cookie</button>
+        <button class="btn-c" onclick="cookieGet()">Get All</button>
+        <button class="btn-b" onclick="cookieDel()">Delete Cookie</button>
+      </div>
+      <table class="store-table" style="margin-top:10px">
+        <thead><tr><th>Name</th><th>Value</th><th>Flags</th></tr></thead>
+        <tbody id="ck-data"><tr><td colspan="3" style="color:#475569;text-align:center">No cookies yet</td></tr></tbody>
+      </table>
+      <div class="insight">
+        <strong>Cookies:</strong> Sent with EVERY HTTP request to matching origin (can increase bandwidth).
+        HttpOnly flag prevents JS access — protects from XSS. SameSite prevents CSRF.
+        Max size: ~4KB. Use for auth tokens that server needs to read.
+      </div>
+    </div>
+    <div class="card">
+      <h2 style="color:#94a3b8">📋 Cookie Flags Reference</h2>
+      <div class="log-box" id="ck-log"><div class="l-info">// Cookies are sent to server on every request</div></div>
+      <table class="store-table" style="margin-top:10px">
+        <thead><tr><th>Flag</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>HttpOnly</code></td><td>JS cannot read — protects from XSS</td></tr>
+          <tr><td><code>Secure</code></td><td>Only sent over HTTPS</td></tr>
+          <tr><td><code>SameSite=Strict</code></td><td>Never sent cross-site — prevents CSRF</td></tr>
+          <tr><td><code>SameSite=Lax</code></td><td>Sent on top-level navigation (default)</td></tr>
+          <tr><td><code>SameSite=None;Secure</code></td><td>Cross-site cookies (3rd party)</td></tr>
+          <tr><td><code>Expires / Max-Age</code></td><td>Expiry. No Expires = session cookie</td></tr>
+          <tr><td><code>Path</code></td><td>Scope to URL path</td></tr>
+          <tr><td><code>Domain</code></td><td>Scope to domain + subdomains</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Comparison -->
+<div id="panel-compare" class="panel">
+  <div class="card" style="max-width:960px;margin:0 auto">
+    <h2 style="color:#94a3b8">📊 Storage API Comparison</h2>
+    <table class="compare">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>💾 LocalStorage</th>
+          <th>⏱ SessionStorage</th>
+          <th>🗃 IndexedDB</th>
+          <th>🍪 Cookies</th>
+          <th>📦 Cache API</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Persistence</td><td>Until cleared</td><td>Tab closed</td><td>Until cleared</td><td>Expires/Session</td><td>Until cleared</td></tr>
+        <tr><td>Capacity</td><td>~5 MB</td><td>~5 MB</td><td>~50% disk</td><td>~4 KB</td><td>~50% disk</td></tr>
+        <tr><td>API Style</td><td>Sync</td><td>Sync</td><td>Async (Promises)</td><td>Sync (string)</td><td>Async (Promises)</td></tr>
+        <tr><td>Data Types</td><td>Strings only</td><td>Strings only</td><td>Any JS object</td><td>Strings only</td><td>HTTP Response</td></tr>
+        <tr><td>Sent to Server?</td><td><span class="tag-n">NO</span></td><td><span class="tag-n">NO</span></td><td><span class="tag-n">NO</span></td><td><span class="tag-y">YES (every req)</span></td><td><span class="tag-n">NO</span></td></tr>
+        <tr><td>Accessible in Worker?</td><td><span class="tag-n">NO</span></td><td><span class="tag-n">NO</span></td><td><span class="tag-y">YES</span></td><td><span class="tag-n">NO</span></td><td><span class="tag-y">YES (SW)</span></td></tr>
+        <tr><td>HttpOnly option?</td><td><span class="tag-n">NO</span></td><td><span class="tag-n">NO</span></td><td><span class="tag-n">NO</span></td><td><span class="tag-y">YES</span></td><td><span class="tag-n">NO</span></td></tr>
+        <tr><td>XSS Risk</td><td><span class="tag-p">Medium</span></td><td><span class="tag-p">Medium</span></td><td><span class="tag-p">Medium</span></td><td>Low (HttpOnly)</td><td><span class="tag-p">Medium</span></td></tr>
+        <tr><td>Best For</td><td>User prefs, theme</td><td>Wizard forms</td><td>Offline, large data</td><td>Auth tokens (server)</td><td>Offline assets (SW)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    const map = { local: 0, session: 1, idb: 2, cookies: 3, compare: 4 };
+    document.querySelectorAll('.tab')[map[name]].classList.add('active');
+  }
+
+  function addLog(id, msg, type='info') {
+    const box = document.getElementById(id);
+    box.innerHTML += `<div class="l-${type}">${msg}</div>`;
+    box.scrollTop = 9999;
+  }
+
+  // === LocalStorage ===
+  function lsRender() {
+    const keys = Object.keys(localStorage);
+    const tbody = document.getElementById('ls-data');
+    if (!keys.length) { tbody.innerHTML = '<tr><td colspan="3" style="color:#475569;text-align:center">Empty</td></tr>'; return; }
+    tbody.innerHTML = keys.map(k => {
+      const v = localStorage.getItem(k);
+      return `<tr><td><code>${k}</code></td><td>${v}</td><td><button class="del-btn" onclick="lsDelKey('${k}')">✕</button></td></tr>`;
+    }).join('');
+    const total = keys.reduce((s,k) => s + k.length + (localStorage.getItem(k)||'').length, 0);
+    document.getElementById('ls-size-bar').style.width = Math.min(100, total / (5*1024*1024) * 100) + '%';
+    document.getElementById('ls-size-label').textContent = `Used: ${total} bytes / ~5MB limit`;
+  }
+  function lsSet() {
+    const k = document.getElementById('ls-key').value.trim();
+    const v = document.getElementById('ls-val').value;
+    if (!k) return;
+    localStorage.setItem(k, v);
+    document.getElementById('ls-result').value = `Set "${k}" = "${v}"`;
+    addLog('ls-log', `setItem('${k}', '${v}') ✔`, 'ok');
+    lsRender();
+  }
+  function lsGet() {
+    const k = document.getElementById('ls-key').value.trim();
+    const v = localStorage.getItem(k);
+    document.getElementById('ls-result').value = v !== null ? v : `(null — key not found)`;
+    addLog('ls-log', `getItem('${k}') → "${v}"`, v ? 'ok' : 'warn');
+  }
+  function lsDel() {
+    const k = document.getElementById('ls-key').value.trim();
+    localStorage.removeItem(k);
+    document.getElementById('ls-result').value = `Deleted "${k}"`;
+    addLog('ls-log', `removeItem('${k}') ✔`, 'ok');
+    lsRender();
+  }
+  function lsDelKey(k) { localStorage.removeItem(k); addLog('ls-log', `removeItem('${k}') ✔`, 'ok'); lsRender(); }
+  function lsClear() { localStorage.clear(); document.getElementById('ls-result').value = 'Cleared all'; addLog('ls-log', 'clear() ✔', 'warn'); lsRender(); }
+  lsRender();
+
+  // === SessionStorage ===
+  function ssRender() {
+    const keys = Object.keys(sessionStorage);
+    const tbody = document.getElementById('ss-data');
+    if (!keys.length) { tbody.innerHTML = '<tr><td colspan="3" style="color:#475569;text-align:center">Empty</td></tr>'; return; }
+    tbody.innerHTML = keys.map(k => `<tr><td><code>${k}</code></td><td>${sessionStorage.getItem(k)}</td><td><button class="del-btn" onclick="ssDelKey('${k}')">✕</button></td></tr>`).join('');
+  }
+  function ssSet() { const k=document.getElementById('ss-key').value.trim(),v=document.getElementById('ss-val').value; if(!k)return; sessionStorage.setItem(k,v); document.getElementById('ss-result').value=`Set`; addLog('ss-log',`setItem('${k}','${v}') ✔`,'ok'); ssRender(); }
+  function ssGet() { const k=document.getElementById('ss-key').value.trim(),v=sessionStorage.getItem(k); document.getElementById('ss-result').value=v||'(null)'; addLog('ss-log',`getItem → "${v}"`, v?'ok':'warn'); }
+  function ssDel() { const k=document.getElementById('ss-key').value.trim(); sessionStorage.removeItem(k); document.getElementById('ss-result').value=`Deleted`; addLog('ss-log',`removeItem('${k}') ✔`,'ok'); ssRender(); }
+  function ssDelKey(k) { sessionStorage.removeItem(k); ssRender(); }
+  function ssClear() { sessionStorage.clear(); document.getElementById('ss-result').value='Cleared'; addLog('ss-log','clear() ✔','warn'); ssRender(); }
+  ssRender();
+
+  // === IndexedDB ===
+  let idb = null;
+  function openIDB() {
+    return new Promise((resolve, reject) => {
+      if (idb) { resolve(idb); return; }
+      const req = indexedDB.open('StorageDemo', 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('users')) {
+          db.createObjectStore('users', { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = (e) => { idb = e.target.result; resolve(idb); };
+      req.onerror = (e) => reject(e);
+    });
+  }
+  async function idbAdd() {
+    const db = await openIDB();
+    const id = parseInt(document.getElementById('idb-id').value), name = document.getElementById('idb-name').value, age = parseInt(document.getElementById('idb-age').value);
+    const tx = db.transaction('users', 'readwrite');
+    tx.objectStore('users').put({ id, name, age });
+    tx.oncomplete = () => { addLog('idb-log', `put({id:${id},name:'${name}',age:${age}}) ✔`, 'ok'); idbGetAll(); };
+    tx.onerror = (e) => addLog('idb-log', `Error: ${e.target.error}`, 'err');
+  }
+  async function idbGet() {
+    const db = await openIDB();
+    const id = parseInt(document.getElementById('idb-id').value);
+    const tx = db.transaction('users', 'readonly');
+    const req = tx.objectStore('users').get(id);
+    req.onsuccess = () => {
+      addLog('idb-log', req.result ? `get(${id}) → ${JSON.stringify(req.result)}` : `get(${id}) → not found`, req.result ? 'ok' : 'warn');
+    };
+  }
+  async function idbDel() {
+    const db = await openIDB();
+    const id = parseInt(document.getElementById('idb-id').value);
+    const tx = db.transaction('users', 'readwrite');
+    tx.objectStore('users').delete(id);
+    tx.oncomplete = () => { addLog('idb-log', `delete(${id}) ✔`, 'ok'); idbGetAll(); };
+  }
+  async function idbGetAll() {
+    const db = await openIDB();
+    const tx = db.transaction('users', 'readonly');
+    const req = tx.objectStore('users').getAll();
+    req.onsuccess = () => {
+      const rows = req.result;
+      const tbody = document.getElementById('idb-data');
+      if (!rows.length) { tbody.innerHTML = '<tr><td colspan="4" style="color:#475569;text-align:center">No records</td></tr>'; return; }
+      tbody.innerHTML = rows.map(r => `<tr><td>${r.id}</td><td>${r.name}</td><td>${r.age}</td><td><button class="del-btn" onclick="document.getElementById('idb-id').value=${r.id};idbDel()">✕</button></td></tr>`).join('');
+      addLog('idb-log', `getAll() → ${rows.length} records`, 'ok');
+    };
+  }
+
+  // === Cookies ===
+  function cookieSet() {
+    const name = document.getElementById('ck-name').value.trim();
+    const val  = document.getElementById('ck-val').value;
+    const days = parseInt(document.getElementById('ck-days').value) || 7;
+    const path = document.getElementById('ck-path').value || '/';
+    const secure = document.getElementById('ck-secure').value;
+    const samesite = document.getElementById('ck-samesite').value;
+    const expires = new Date(Date.now() + days * 86400000).toUTCString();
+    const cookie = `${name}=${val}; expires=${expires}; path=${path}; ${secure}; ${samesite}`;
+    document.cookie = cookie;
+    addLog('ck-log', `document.cookie = "${name}=${val}; ..." ✔`, 'ok');
+    cookieGet();
+  }
+  function cookieGet() {
+    const all = document.cookie.split(';').map(c => c.trim()).filter(Boolean);
+    const tbody = document.getElementById('ck-data');
+    if (!all.length) { tbody.innerHTML = '<tr><td colspan="3" style="color:#475569;text-align:center">No accessible cookies</td></tr>'; return; }
+    tbody.innerHTML = all.map(c => {
+      const [name, ...vs] = c.split('=');
+      return `<tr><td><code>${name}</code></td><td>${vs.join('=')}</td><td><span style="color:#475569;font-size:0.7rem">JS-accessible</span></td></tr>`;
+    }).join('');
+    addLog('ck-log', `Read ${all.length} cookie(s)`, 'ok');
+  }
+  function cookieDel() {
+    const name = document.getElementById('ck-name').value.trim();
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    addLog('ck-log', `Deleted cookie "${name}" (set expired date) ✔`, 'ok');
+    cookieGet();
+  }
+  cookieGet();
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 02 — Add Item</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1a;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.bad{color:#ef4444}.card h3.good{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}button.red{background:#3a1e1e;border-color:#ef4444;color:#ef4444}button.green{background:#1a3a2a;border-color:#10b981;color:#10b981}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}.info{background:#0f1117;border-left:3px solid #f59e0b;padding:12px;border-radius:0 8px 8px 0;font-size:.8rem;color:#94a3b8;margin:8px 0}.warn{border-left-color:#ef4444}.ok{border-left-color:#10b981}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2d3551;background:#0f1117;color:#e2e8f0;font-family:monospace;font-size:.82rem;margin:6px 0}
+.todo-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#161922;border:1px solid #2d3551;border-radius:8px;margin-bottom:6px;transition:all .3s}
+.todo-item.pending{opacity:.6;border-style:dashed;border-color:#f59e0b}
+.todo-item.removing{opacity:0;transform:translateX(40px)}
+.todo-id{font-size:.7rem;color:#475569;margin-left:8px}
+.add-row{display:flex;gap:8px;margin-bottom:14px}
+.add-row input{flex:1;margin:0}
+</style>
+</head>
+<body>
+<h1>Lab 02 — Add Item</h1>
+<p class="sub">Optimistic add with temp ID → server confirms with real ID (10% failure removes item)</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Live Demo</div>
+  <div class="tab" onclick="setTab(1)">How It Works</div>
+  <div class="tab" onclick="setTab(2)">Code Walkthrough</div>
+  <div class="tab" onclick="setTab(3)">Event Log</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Todo List</h3>
+    <div class="add-row">
+      <input id="inp" placeholder="New todo item…" onkeydown="if(event.key==='Enter')addItem()">
+      <button class="green" onclick="addItem()">+ Add</button>
+    </div>
+    <div id="list"></div>
+  </div>
+  <div class="info">Items appear instantly with a temp ID (dashed border). On server confirmation the real ID replaces it.</div>
+  <div class="info warn">~10% of requests fail — the item is removed with a slide-out animation.</div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Optimistic Add Flow</h3>
+    <div class="info">1. Generate <code>temp-&lt;random&gt;</code> ID → insert into list immediately</div>
+    <div class="info ok">2. POST to server → on success, swap temp ID with real server ID</div>
+    <div class="info warn">3. On failure → remove item from list with animation</div>
+  </div>
+  <div class="card">
+    <h3>Why Temp IDs?</h3>
+    <p style="font-size:.85rem;color:#94a3b8">We need a key to track the item in the UI before the server assigns a real ID. Using <code>temp-</code> prefix makes it easy to identify optimistic items that haven't been confirmed yet.</p>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Core Logic</h3>
+    <pre><span class="kw">async function</span> <span class="fn">addItem</span>() {
+  <span class="kw">const</span> text = inp.value.trim();
+  <span class="kw">const</span> tempId = <span class="str">'temp-'</span> + Math.random().toString(36).slice(2,8);
+
+  <span class="cm">// 1. Optimistic insert</span>
+  todos.push({ id: tempId, text, pending: <span class="kw">true</span> });
+  render();
+
+  <span class="kw">try</span> {
+    <span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="str">`${API}/api/posts/todos`</span>, {
+      method: <span class="str">'POST'</span>,
+      headers: { <span class="str">'Content-Type'</span>: <span class="str">'application/json'</span> },
+      body: JSON.stringify({ text })
+    });
+    <span class="kw">const</span> data = <span class="kw">await</span> res.json();
+    <span class="cm">// 2. Replace temp ID with real ID</span>
+    <span class="kw">const</span> item = todos.find(t =&gt; t.id === tempId);
+    item.id = data.id;
+    item.pending = <span class="kw">false</span>;
+  } <span class="kw">catch</span> {
+    <span class="cm">// 3. Remove on failure</span>
+    todos = todos.filter(t =&gt; t.id !== tempId);
+  }
+  render();
+}</pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Event Log</h3>
+    <button onclick="logEl.textContent=''">Clear</button>
+    <div class="output" id="log"></div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:4001';const tabs=document.querySelectorAll('.tab');const panels=document.querySelectorAll('.panel');function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)});}
+
+const inp = document.getElementById('inp');
+const listEl = document.getElementById('list');
+const logEl = document.getElementById('log');
+let todos = [];
+
+function log(msg) {
+  const ts = new Date().toLocaleTimeString();
+  logEl.textContent += `[${ts}] ${msg}\n`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function render() {
+  listEl.innerHTML = todos.map(t => `
+    <div class="todo-item ${t.pending ? 'pending' : ''}" id="todo-${t.id}">
+      <span>${t.text} <span class="todo-id">${t.id}</span></span>
+      <button class="red" onclick="removeItem('${t.id}')">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeItem(id) {
+  const el = document.getElementById('todo-' + id);
+  if (el) el.classList.add('removing');
+  setTimeout(() => {
+    todos = todos.filter(t => t.id !== id);
+    render();
+    log(`Removed item ${id}`);
+  }, 300);
+}
+
+async function addItem() {
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+
+  const tempId = 'temp-' + Math.random().toString(36).slice(2, 8);
+  todos.push({ id: tempId, text, pending: true });
+  render();
+  log(`⚡ Optimistic add: "${text}" (${tempId})`);
+
+  try {
+    const res = await fetch(`${API}/api/posts/todos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: text, text })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const realId = data.id || data.todo?.id || Date.now();
+    const item = todos.find(t => t.id === tempId);
+    if (item) {
+      const oldId = item.id;
+      item.id = realId;
+      item.pending = false;
+      render();
+      log(`✓ Confirmed: ${oldId} → real ID ${realId}`);
+    }
+  } catch (err) {
+    const el = document.getElementById('todo-' + tempId);
+    if (el) el.classList.add('removing');
+    setTimeout(() => {
+      todos = todos.filter(t => t.id !== tempId);
+      render();
+    }, 300);
+    log(`✗ FAILED: "${text}" removed (${err.message})`);
+  }
+}
+</script>
+</body>
+</html>

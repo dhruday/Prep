@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 05 — CSRF & CORS Interplay</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#f59e0b;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#3a2a1e;border-color:#f59e0b;color:#f59e0b}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#f59e0b;margin-bottom:10px;font-size:.95rem}.card h3.safe{color:#10b981}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#f59e0b;color:#f59e0b}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:8px}th,td{padding:8px;border:1px solid #2d3551;text-align:left}th{background:#0f1117;color:#60a5fa}
+</style>
+</head>
+<body>
+<h1>🟡 Lab 05 — CSRF & CORS Interplay</h1>
+<p class="sub">Module 12.1 · Web Threats · How CORS preflight prevents (and doesn't prevent) CSRF</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Matrix</div>
+  <div class="tab" onclick="setTab(1)">Lab Demo</div>
+  <div class="tab" onclick="setTab(2)">Deep Dive</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>CSRF vs CORS — Complete Matrix</h3>
+    <table>
+      <tr><th>Attack Vector</th><th>CORS involved?</th><th>Cookies sent?</th><th>CSRF possible?</th></tr>
+      <tr><td>&lt;form method=POST&gt;</td><td>❌ No</td><td>✅ Yes (all)</td><td style="color:#ef4444">✅ Yes</td></tr>
+      <tr><td>&lt;img src=...&gt;</td><td>❌ No</td><td>✅ Yes (all)</td><td style="color:#ef4444">✅ Yes (GET only)</td></tr>
+      <tr><td>fetch() simple request</td><td>❌ No preflight</td><td>⚡ If credentials:include</td><td style="color:#f59e0b">⚡ Depends</td></tr>
+      <tr><td>fetch() with custom header</td><td>✅ Preflight</td><td>⚡ If CORS allows</td><td style="color:#10b981">❌ Blocked</td></tr>
+      <tr><td>fetch() with JSON content-type</td><td>✅ Preflight</td><td>⚡ If CORS allows</td><td style="color:#10b981">❌ Blocked</td></tr>
+    </table>
+    <div style="font-size:.78rem;color:#94a3b8;margin-top:10px">
+      <strong>Key insight:</strong> Forms and images bypass CORS entirely. Only fetch/XHR with non-simple headers/content-types trigger CORS preflight, which can block the request if the server doesn't allow the origin.
+    </div>
+  </div>
+  <div class="card">
+    <h3>What is a "Simple Request" (no preflight)?</h3>
+    <pre><span class="cm">// A request is "simple" (no preflight) if ALL of these are true:</span>
+<span class="cm">// 1. Method is GET, HEAD, or POST</span>
+<span class="cm">// 2. Content-Type is one of:</span>
+<span class="cm">//    - application/x-www-form-urlencoded</span>
+<span class="cm">//    - multipart/form-data</span>
+<span class="cm">//    - text/plain</span>
+<span class="cm">// 3. No custom headers (only Accept, Accept-Language, Content-Language,</span>
+<span class="cm">//    Content-Type, Range)</span>
+<span class="cm">//</span>
+<span class="cm">// Simple requests are sent IMMEDIATELY — the server processes them</span>
+<span class="cm">// before the CORS check. CORS only affects whether the RESPONSE is</span>
+<span class="cm">// readable by the attacker's JS.</span>
+<span class="cm">//</span>
+<span class="danger">// This means: CORS does NOT prevent the side effect!</span>
+<span class="danger">// The money is already transferred — attacker just can't read the response.</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>🧪 CORS Preflight vs Simple Request Demo</h3>
+    <button onclick="login()">🔑 Login first</button>
+    <span id="login-status" style="font-size:.78rem;color:#94a3b8;margin-left:8px"></span>
+  </div>
+  <div class="card">
+    <h3>Test 1: Simple Request (no preflight)</h3>
+    <p style="font-size:.78rem;color:#94a3b8">POST with text/plain content type — no preflight triggered:</p>
+    <button onclick="testSimple()" style="background:#3a1e1e;border-color:#ef4444;color:#ef4444">⚠️ Simple POST (text/plain)</button>
+    <div class="output" id="simple-result"></div>
+  </div>
+  <div class="card">
+    <h3>Test 2: Preflighted Request (custom header)</h3>
+    <p style="font-size:.78rem;color:#94a3b8">POST with custom X-Custom-Header — triggers OPTIONS preflight:</p>
+    <button onclick="testPreflight()" style="background:#1a3a2a;border-color:#10b981;color:#10b981">✅ Preflighted POST</button>
+    <div class="output" id="preflight-result"></div>
+  </div>
+  <div class="card">
+    <h3>Test 3: Cross-Origin from Attacker Server (port 3002)</h3>
+    <p style="font-size:.78rem;color:#94a3b8">Simulates a request from evil.com (different origin):</p>
+    <button onclick="testCrossOrigin()">🔴 Load Attacker Page (port 3002)</button>
+    <iframe id="attacker-frame" style="width:100%;height:200px;border:1px solid #2d3551;border-radius:8px;margin-top:8px;display:none"></iframe>
+    <div class="output" id="cross-result"></div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>CORS Preflight — Step by Step</h3>
+    <pre><span class="cm">// Step 1: Browser detects non-simple request (custom header or JSON content-type)</span>
+<span class="cm">// Step 2: Browser sends OPTIONS preflight:</span>
+OPTIONS /api/transfer HTTP/1.1
+Origin: <span class="danger">https://evil.com</span>
+Access-Control-Request-Method: <span class="str">POST</span>
+Access-Control-Request-Headers: <span class="str">Content-Type, X-Custom-Header</span>
+
+<span class="cm">// Step 3: Server responds with allowed origins:</span>
+HTTP/1.1 204 No Content
+Access-Control-Allow-Origin: <span class="str">https://myapp.com</span>
+Access-Control-Allow-Methods: <span class="str">POST</span>
+Access-Control-Allow-Headers: <span class="str">Content-Type, X-Custom-Header</span>
+Access-Control-Max-Age: <span class="str">86400</span>
+
+<span class="cm">// Step 4: Browser checks: evil.com ≠ myapp.com → BLOCK!</span>
+<span class="cm">// The actual POST is NEVER sent. No side effect occurs.</span>
+
+<span class="cm">// Contrast with simple request:</span>
+<span class="cm">// POST is sent immediately → server processes it → side effect occurs</span>
+<span class="cm">// Browser checks CORS on the response → blocks JS from reading it</span>
+<span class="cm">// But the damage is already done!</span></pre>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CSRF + CORS</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: A colleague says "our API only accepts JSON, so CORS protects us from CSRF." Is this correct?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Partially. If the server strictly rejects non-JSON content-types AND the CORS policy doesn't allow untrusted origins, then yes — the preflight will block cross-origin JSON requests. But this relies on TWO things being correct: Content-Type check + CORS config. If either is misconfigured (e.g., Access-Control-Allow-Origin: *), CSRF is possible. Defense-in-depth with explicit CSRF tokens or SameSite cookies is more robust.</p>
+      <p><strong style="color:#60a5fa">Q: What's the security implication of Access-Control-Allow-Origin: *?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">It allows ANY origin to read the response. But: the wildcard doesn't work with credentials (the browser blocks it). If you also set Access-Control-Allow-Credentials: true, you MUST specify exact origins. The real danger is when server dynamically echoes the Origin header back as Access-Control-Allow-Origin without validation — this is "CORS misconfiguration" and enables cross-origin data theft.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://localhost:3001';
+let token=null;
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+async function login(){
+  const res=await fetch(`${API}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'alice',password:'Password123!'})});
+  const d=await res.json();
+  if(d.token){token=d.token;document.getElementById('login-status').textContent='✅ Logged in'}
+}
+
+async function testSimple(){
+  const el=document.getElementById('simple-result');
+  el.textContent='Sending POST with Content-Type: text/plain (simple request — no preflight)...\n';
+  try{
+    const res=await fetch(`${API}/api/csrf/vulnerable/transfer`,{method:'POST',headers:{'Content-Type':'text/plain','Authorization':`Bearer ${token}`},body:'{"to":"attacker","amount":10000}'});
+    const d=await res.json();
+    el.textContent+=`\nStatus: ${res.status}\n${JSON.stringify(d,null,2)}\n\n⚠️ No preflight was sent! The server processed this immediately.\nCheck Network tab → there's NO OPTIONS request before this POST.`;
+  }catch(e){el.textContent+=`Error: ${e.message}`}
+}
+
+async function testPreflight(){
+  const el=document.getElementById('preflight-result');
+  el.textContent='Sending POST with custom header (triggers OPTIONS preflight)...\n';
+  try{
+    const csrfRes=await fetch(`${API}/api/csrf/token`,{headers:{'Authorization':`Bearer ${token}`}});
+    const csrf=await csrfRes.json();
+    const res=await fetch(`${API}/api/csrf/protected/transfer`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'X-CSRF-Token':csrf.csrfToken,'X-Custom-Header':'preflight-test'},body:JSON.stringify({to:'friend',amount:50})});
+    const d=await res.json();
+    el.textContent+=`\nStatus: ${res.status}\n${JSON.stringify(d,null,2)}\n\n✅ Check Network tab → you'll see an OPTIONS request BEFORE the POST.\nThe preflight verifies the server allows this origin + headers.`;
+  }catch(e){el.textContent+=`Error: ${e.message}`}
+}
+
+async function testCrossOrigin(){
+  const el=document.getElementById('cross-result');
+  const frame=document.getElementById('attacker-frame');
+  frame.style.display='block';
+  frame.src=`http://localhost:3002/attacker-csrf`;
+  el.textContent='Loading attacker page from port 3002...\nThis simulates a cross-origin attack.\nOpen DevTools Network tab to see CORS headers in action.';
+}
+</script>
+</body></html>

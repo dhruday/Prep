@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Compositing Layers & will-change</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#0f1117;color:#e2e8f0;padding:20px}
+    h1{text-align:center;color:#60a5fa;margin-bottom:4px;font-size:1.5rem}
+    .subtitle{text-align:center;color:#94a3b8;margin-bottom:18px;font-size:.88rem}
+    .tabs{display:flex;gap:6px;margin-bottom:14px}
+    .tab{padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.75rem;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;transition:all .2s}
+    .tab.active{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd}
+    .panel{display:none}.panel.show{display:block}
+    /* Panel 1: Pipeline visualiser */
+    .pipeline{display:flex;gap:0;margin-bottom:12px;align-items:stretch;flex-wrap:wrap}
+    .stage{flex:1;background:#1e2130;padding:10px 6px;text-align:center;position:relative;min-width:80px;cursor:pointer;transition:all .2s;border:1px solid transparent}
+    .stage:hover,.stage.lit{background:#162032;border-color:var(--c)}
+    .stage+.stage{border-left:none}
+    .stage:first-child{border-radius:8px 0 0 8px}
+    .stage:last-child{border-radius:0 8px 8px 0}
+    .stage-num{font-size:.65rem;color:#475569;margin-bottom:3px}
+    .stage-name{font-size:.73rem;font-weight:bold;color:var(--c)}
+    .stage-cost{display:inline-block;padding:1px 6px;border-radius:3px;font-size:.62rem;margin-top:4px}
+    .trigger-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .trigger-chip{padding:6px 10px;border-radius:5px;font-size:.73rem;cursor:pointer;border:1px solid #2d3551;background:#0f1117;transition:all .2s}
+    .trigger-chip:hover{border-color:#60a5fa}
+    .trigger-chip.selected{border-color:#60a5fa;background:#1e3a5f}
+    .trigger-result{background:#1e2130;border-radius:8px;padding:12px;font-size:.76rem;min-height:50px;border:1px solid #2d3551}
+    /* Panel 2: Layer demo */
+    .layer-arena{background:#1e2130;border-radius:10px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;min-height:200px}
+    .demo-card{width:150px;height:90px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:bold;cursor:pointer;position:absolute;border:2px solid transparent;transition:border-color .2s}
+    .layer-badge{position:absolute;top:-8px;right:-8px;width:18px;height:18px;border-radius:50%;font-size:.55rem;display:flex;align-items:center;justify-content:center;font-weight:bold}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+    .btn{padding:6px 12px;border-radius:5px;font-size:.74rem;cursor:pointer;border:1px solid;transition:all .2s}
+    .btn-blue{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd}
+    .btn-green{background:#14532d;border-color:#16a34a;color:#86efac}
+    .btn-red{background:#7f1d1d;border-color:#991b1b;color:#fca5a5}
+    .btn-amber{background:#451a03;border-color:#d97706;color:#fcd34d}
+    .fps-display{background:#0f1117;border:1px solid #2d3551;border-radius:6px;padding:8px 12px;font-size:.73rem;display:flex;align-items:center;gap:8px}
+    .fps-val{font-size:1.1rem;font-weight:bold}
+    /* Panel 3: will-change live demo */
+    .wc-demo{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px}
+    .wc-box{background:#1e2130;border-radius:10px;padding:14px;text-align:center}
+    .wc-box h3{font-size:.78rem;margin-bottom:10px}
+    .wc-card{width:100px;height:65px;border-radius:7px;display:flex;align-items:center;justify-content:center;margin:10px auto;font-size:.72rem;cursor:pointer;transition:.3s;border:1px solid #2d3551}
+    .green-card{background:#0a1a0a;border-color:#10b981;color:#86efac}
+    .red-card{background:#1a0a0a;border-color:#ef4444;color:#fca5a5}
+    .wc-time{font-size:.7rem;color:#94a3b8;margin-top:6px;min-height:20px}
+    .wc-with{will-change:transform}
+    /* Panel 4: anti-patterns */
+    .ap-list{display:flex;flex-direction:column;gap:8px}
+    .ap-item{background:#1e2130;border:1px solid;border-radius:8px;padding:12px;display:flex;gap:10px}
+    .ap-icon{font-size:1.2rem;flex-shrink:0}
+    .ap-bad{border-color:#ef4444}
+    .ap-good{border-color:#10b981}
+    pre,.code{background:#0d1117;border:1px solid #2d3551;border-radius:6px;padding:10px;font-size:.71rem;font-family:monospace;line-height:1.6;white-space:pre;overflow-x:auto;margin:6px 0}
+    .card{background:#1e2130;border:1px solid #2d3551;border-radius:10px;padding:14px}
+    .card h2{font-size:.8rem;text-transform:uppercase;color:#60a5fa;margin-bottom:10px}
+  </style>
+</head>
+<body>
+<h1>🎨 Compositing Layers & <code>will-change</code></h1>
+<p class="subtitle">Understand how the GPU renders layers — and how to hint for smooth animations</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('pipeline', this)">Rendering Pipeline</div>
+  <div class="tab" onclick="switchTab('layers', this)">Layer Visualiser</div>
+  <div class="tab" onclick="switchTab('willchange', this)">will-change Demo</div>
+  <div class="tab" onclick="switchTab('antipatterns', this)">Anti-Patterns</div>
+</div>
+
+<!-- PANEL 1: Pipeline Visualiser -->
+<div id="panel-pipeline" class="panel show">
+  <div style="background:#1e2130;border-radius:10px;padding:14px;margin-bottom:12px">
+    <div style="font-size:.78rem;color:#94a3b8;margin-bottom:10px">Click a CSS change below — highlighted stages are the ones triggered</div>
+    <div class="pipeline">
+      <div class="stage" data-stages="layout,paint,composite" style="--c:#ef4444">
+        <div class="stage-num">1</div><div class="stage-name">Layout</div>
+        <span class="stage-cost" style="background:#7f1d1d;color:#fca5a5">Most expensive</span>
+      </div>
+      <div class="stage" data-stages="paint,composite" style="--c:#f59e0b">
+        <div class="stage-num">2</div><div class="stage-name">Paint</div>
+        <span class="stage-cost" style="background:#451a03;color:#fcd34d">Medium</span>
+      </div>
+      <div class="stage" data-stages="composite" style="--c:#10b981">
+        <div class="stage-num">3</div><div class="stage-name">Composite</div>
+        <span class="stage-cost" style="background:#14532d;color:#86efac">GPU only ✅</span>
+      </div>
+    </div>
+    <div class="trigger-row" id="triggers">
+      <div class="trigger-chip" data-stages="layout,paint,composite" data-desc="❌ Triggers FULL reflow → layout → paint → composite. Touches layout geometry." onclick="triggerPipeline(this)">width/height change</div>
+      <div class="trigger-chip" data-stages="layout,paint,composite" data-desc="❌ Triggers layout recalculation for ALL subsequent siblings/parent." onclick="triggerPipeline(this)">top/left change</div>
+      <div class="trigger-chip" data-stages="layout,paint,composite" data-desc="❌ font-size affects layout because text metrics change — triggers full reflow." onclick="triggerPipeline(this)">font-size change</div>
+      <div class="trigger-chip" data-stages="paint,composite" data-desc="⚠️ Skip layout, but browser must repaint the new pixel colours on CPU." onclick="triggerPipeline(this)">background-color change</div>
+      <div class="trigger-chip" data-stages="paint,composite" data-desc="⚠️ Box-shadow is a paint operation. No layout change, but CPU repaint required." onclick="triggerPipeline(this)">box-shadow change</div>
+      <div class="trigger-chip" data-stages="composite" data-desc="✅ Transform is handled entirely by the GPU compositor. No CPU layout or paint. Runs on compositor thread independently of main thread. 60fps even if JS is busy." onclick="triggerPipeline(this)">transform change</div>
+      <div class="trigger-chip" data-stages="composite" data-desc="✅ Opacity is GPU-composited. Only the alpha channel of the layer changes. No CPU involvement. The cheapest visual change possible." onclick="triggerPipeline(this)">opacity change</div>
+    </div>
+    <div class="trigger-result" id="trigger-result">← Select a CSS change to see which pipeline stages it triggers</div>
+  </div>
+  <div class="card">
+    <h2>💡 Why GPU Composite-Only Wins</h2>
+    <div style="font-size:.76rem;line-height:1.8">The <strong>compositor thread</strong> runs completely independently from the main JavaScript thread. If your JavaScript is executing a 50ms task (blocking the main thread), a GPU-composited animation continues at 60fps. A layout-triggering animation would jank during that 50ms block. This is why <code>transform</code> + <code>opacity</code> are the gold standard for animations.</div>
+  </div>
+</div>
+
+<!-- PANEL 2: Layer Visualiser -->
+<div id="panel-layers" class="panel">
+  <div style="font-size:.76rem;color:#94a3b8;margin-bottom:10px">Each compositor layer consumes GPU VRAM. Green badge = own GPU layer. Click buttons to promote/demote layers.</div>
+  <div class="controls">
+    <button class="btn btn-blue" onclick="addLayer()">+ Add Element</button>
+    <button class="btn btn-green" onclick="promoteAll()">Promote All (will-change)</button>
+    <button class="btn btn-red" onclick="demoteAll()">Demote All (auto)</button>
+    <button class="btn btn-amber" onclick="showVRAM()">Show VRAM Usage</button>
+  </div>
+  <div class="layer-arena" id="layer-arena">
+    <div class="demo-card" id="lc1" style="background:#1e3a5f;color:#93c5fd;top:20px;left:20px" onclick="toggleLayer('lc1')">
+      Box 1<div class="layer-badge" id="badge-lc1" style="background:#475569;color:#e2e8f0">?</div>
+    </div>
+    <div class="demo-card" id="lc2" style="background:#14532d;color:#86efac;top:20px;left:190px" onclick="toggleLayer('lc2')">
+      Box 2<div class="layer-badge" id="badge-lc2" style="background:#475569;color:#e2e8f0">?</div>
+    </div>
+    <div class="demo-card" id="lc3" style="background:#451a03;color:#fcd34d;top:20px;left:360px" onclick="toggleLayer('lc3')">
+      Box 3<div class="layer-badge" id="badge-lc3" style="background:#475569;color:#e2e8f0">?</div>
+    </div>
+    <div class="demo-card" id="lc4" style="background:#312e81;color:#c4b5fd;top:120px;left:100px" onclick="toggleLayer('lc4')">
+      Box 4<div class="layer-badge" id="badge-lc4" style="background:#475569;color:#e2e8f0">?</div>
+    </div>
+  </div>
+  <div id="vram-display" style="display:none;background:#0f1117;border:1px solid #2d3551;border-radius:7px;padding:10px;font-size:.75rem;margin-top:8px"></div>
+  <div class="card" style="margin-top:12px">
+    <h2>🔬 When Does Chrome Auto-Promote?</h2>
+    <div style="font-size:.75rem;line-height:1.8;color:#94a3b8">
+      Without explicit <code>will-change</code>, Chrome auto-promotes elements with: <strong style="color:#e2e8f0">active CSS transform/opacity animation</strong>, <strong style="color:#e2e8f0">position: fixed</strong>, <strong style="color:#e2e8f0">video/canvas/iframe elements</strong>, <strong style="color:#e2e8f0">CSS filter</strong>. Auto-promotion happens ON the first animation frame — causing a single-frame composition stutter. <code>will-change</code> prevents this by promoting beforehand.
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 3: will-change Demo -->
+<div id="panel-willchange" class="panel">
+  <div class="wc-demo">
+    <div class="wc-box">
+      <h3 style="color:#ef4444">❌ Without will-change</h3>
+      <div class="wc-card red-card" id="no-wc" onclick="animateCard('no-wc', false)">Click to animate</div>
+      <div class="wc-time" id="no-wc-time">First frame jank on hover</div>
+    </div>
+    <div class="wc-box">
+      <h3 style="color:#10b981">✅ With will-change: transform</h3>
+      <div class="wc-card green-card wc-with" id="with-wc" onclick="animateCard('with-wc', true)">Click to animate</div>
+      <div class="wc-time" id="with-wc-time">Layer pre-promoted — instant</div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>📋 Correct Pattern — Apply & Remove</h2>
+    <pre style="color:#86efac">// ✅ CORRECT: Apply will-change before animation, remove after
+function animateElement(el) {
+  el.style.willChange = 'transform, opacity';
+  
+  // Start animation
+  el.classList.add('animating');
+  
+  el.addEventListener('transitionend', () => {
+    el.style.willChange = 'auto'; // Free VRAM!
+  }, { once: true });
+}
+
+// ❌ WRONG: Always-on will-change wastes VRAM
+.every-card {
+  will-change: transform; /* Applied to all 100 cards = 100 GPU layers */
+}
+
+// ❌ WRONG: will-change: all — meaningless, hurts performance
+.comp { will-change: all; }</pre>
+  </div>
+</div>
+
+<!-- PANEL 4: Anti-Patterns -->
+<div id="panel-antipatterns" class="panel">
+  <div class="ap-list">
+    <div class="ap-item ap-bad">
+      <div class="ap-icon">❌</div>
+      <div>
+        <div style="font-weight:bold;color:#fca5a5;margin-bottom:4px">Anti-pattern: Static will-change on all cards</div>
+        <div style="font-size:.74rem;color:#94a3b8;margin-bottom:5px">Applying to every list item creates hundreds of GPU layers, exhausting VRAM on mobile. Common in CSS frameworks that add it blindly.</div>
+        <pre style="color:#fca5a5">/* WRONG — 50 card components × 1 GPU layer each = VRAM exhausted */
+.card { will-change: transform; }</pre>
+        <pre style="color:#86efac">/* CORRECT — only when needed, via JS */
+card.addEventListener('mouseenter', () => {
+  card.style.willChange = 'transform';
+});
+card.addEventListener('mouseleave', () => {
+  card.style.willChange = 'auto';
+});</pre>
+      </div>
+    </div>
+    <div class="ap-item ap-bad">
+      <div class="ap-icon">❌</div>
+      <div>
+        <div style="font-weight:bold;color:#fca5a5;margin-bottom:4px">Anti-pattern: Animating layout-triggering properties</div>
+        <div style="font-size:.74rem;color:#94a3b8;margin-bottom:5px">Still common in codebases. Every frame triggers a full browser reflow.</div>
+        <pre style="color:#fca5a5">/* WRONG — animates a layout property */
+@keyframes slide { from { top: -100px; } to { top: 0; } }
+
+/* WRONG — width animation triggers reflow on every frame */
+.expand { animation: expand .3s; }
+@keyframes expand { from { width: 0; } to { width: 200px; } }</pre>
+        <pre style="color:#86efac">/* CORRECT — use transform instead */
+@keyframes slide { from { transform: translateY(-100px); } to { transform: translateY(0); } }
+@keyframes expand { from { transform: scaleX(0); } to { transform: scaleX(1); } }</pre>
+      </div>
+    </div>
+    <div class="ap-item ap-bad">
+      <div class="ap-icon">❌</div>
+      <div>
+        <div style="font-weight:bold;color:#fca5a5;margin-bottom:4px">Anti-pattern: Reading and writing layout properties in a loop</div>
+        <div style="font-size:.74rem;color:#94a3b8;margin-bottom:5px">Forces browser to recalculate layout after every write. Known as "layout thrashing".</div>
+        <pre style="color:#fca5a5">// WRONG — read → write → read forces layout every iteration
+elements.forEach(el => {
+  const width = el.offsetWidth; // forces layout recalc
+  el.style.width = (width + 10) + 'px'; // invalidates layout
+});</pre>
+        <pre style="color:#86efac">// CORRECT — batch reads, then batch writes
+const widths = elements.map(el => el.offsetWidth); // reads
+elements.forEach((el, i) => {
+  el.style.width = (widths[i] + 10) + 'px'; // writes
+});</pre>
+      </div>
+    </div>
+    <div class="ap-item ap-good">
+      <div class="ap-icon">✅</div>
+      <div>
+        <div style="font-weight:bold;color:#86efac;margin-bottom:4px">Best practice: IntersectionObserver + will-change for entry animations</div>
+        <pre style="color:#86efac">const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const el = entry.target;
+      el.style.willChange = 'transform, opacity';
+      el.classList.add('animate-in');
+      el.addEventListener('animationend', () => {
+        el.style.willChange = 'auto'; // cleanup
+        observer.unobserve(el);
+      }, { once: true });
+    }
+  });
+}, { rootMargin: '50px' });</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('show'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('show');
+  btn.classList.add('active');
+}
+
+function triggerPipeline(chip) {
+  document.querySelectorAll('.trigger-chip').forEach(c => c.classList.remove('selected'));
+  chip.classList.add('selected');
+  const stages = chip.dataset.stages.split(',');
+  document.querySelectorAll('.stage').forEach(s => {
+    s.classList.remove('lit');
+    const stageId = s.querySelector('.stage-name').textContent.trim().toLowerCase();
+    if (stages.includes(stageId)) s.classList.add('lit');
+  });
+  document.getElementById('trigger-result').innerHTML = `<strong style="color:#e2e8f0">${chip.textContent}:</strong> <span style="color:#94a3b8">${chip.dataset.desc}</span>`;
+}
+
+const layerState = {};
+function toggleLayer(id) {
+  const el = document.getElementById(id);
+  const badge = document.getElementById('badge-' + id);
+  if (layerState[id]) {
+    el.style.willChange = 'auto';
+    el.style.outline = '';
+    badge.style.background = '#475569';
+    badge.textContent = '✗';
+    layerState[id] = false;
+  } else {
+    el.style.willChange = 'transform';
+    el.style.outline = '2px solid #10b981';
+    badge.style.background = '#14532d';
+    badge.style.color = '#86efac';
+    badge.textContent = 'GPU';
+    layerState[id] = true;
+  }
+  updateVRAMDisplay();
+}
+
+function promoteAll() {
+  ['lc1','lc2','lc3','lc4'].forEach(id => {
+    if (!layerState[id]) toggleLayer(id);
+  });
+}
+function demoteAll() {
+  ['lc1','lc2','lc3','lc4'].forEach(id => {
+    if (layerState[id]) toggleLayer(id);
+  });
+}
+
+let nextId = 5;
+function addLayer() {
+  const arena = document.getElementById('layer-arena');
+  const id = 'lc' + nextId++;
+  const colors = [['#1e3a5f','#93c5fd'],['#14532d','#86efac'],['#451a03','#fcd34d'],['#312e81','#c4b5fd']];
+  const c = colors[(nextId-2)%4];
+  const el = document.createElement('div');
+  el.className = 'demo-card';
+  el.id = id;
+  el.style.cssText = `background:${c[0]};color:${c[1]};top:${20+Math.random()*80}px;left:${20+Math.random()*350}px`;
+  el.innerHTML = `Box ${nextId-1}<div class="layer-badge" id="badge-${id}" style="background:#475569;color:#e2e8f0">✗</div>`;
+  el.onclick = () => toggleLayer(id);
+  arena.appendChild(el);
+}
+
+function showVRAM() {
+  const count = Object.values(layerState).filter(v=>v).length;
+  const display = document.getElementById('vram-display');
+  display.style.display = 'block';
+  display.innerHTML = `GPU Layers: <strong style="color:${count > 10 ? '#ef4444' : '#10b981'}">${count}</strong> &nbsp;|&nbsp; 
+    Est. VRAM: <strong style="color:#f59e0b">~${count * 2}MB</strong> per 1920×1080 element &nbsp;|&nbsp;
+    <span style="color:#94a3b8">${count > 8 ? '⚠️ High — consider reducing layer count on mobile' : '✅ Acceptable'}</span>`;
+}
+function updateVRAMDisplay() {
+  if (document.getElementById('vram-display').style.display !== 'none') showVRAM();
+}
+
+function animateCard(id, withWc) {
+  const card = document.getElementById(id);
+  const time = document.getElementById(id + '-time');
+  const start = performance.now();
+  if (!withWc) card.style.willChange = 'auto';
+  card.style.transition = 'transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1)';
+  card.style.transform = 'translateY(-20px) scale(1.05)';
+  setTimeout(() => {
+    card.style.transform = 'none';
+    const elapsed = performance.now() - start;
+    time.textContent = `Time to first frame: ~${elapsed.toFixed(1)}ms`;
+  }, 400);
+}
+</script>
+</body>
+</html>

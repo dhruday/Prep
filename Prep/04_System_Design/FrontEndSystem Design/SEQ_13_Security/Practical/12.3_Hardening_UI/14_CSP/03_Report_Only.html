@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Lab 03 — CSP Report-Only & Violations</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}h1{font-size:1.5rem;color:#8b5cf6;margin-bottom:4px}.sub{color:#94a3b8;font-size:.85rem;margin-bottom:20px}.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem}.tab.active{background:#2a1a3a;border-color:#8b5cf6;color:#8b5cf6}.panel{display:none}.panel.active{display:block}.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:14px}.card h3{color:#8b5cf6;margin-bottom:10px;font-size:.95rem}pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:14px;overflow-x:auto;font-size:.78rem;line-height:1.7;white-space:pre-wrap}.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.danger{color:#ef4444}button{padding:8px 16px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:3px}button:hover{border-color:#8b5cf6;color:#8b5cf6}.output{background:#0d1117;border:1px solid #2d3551;border-radius:8px;padding:12px;font-family:monospace;font-size:.78rem;min-height:80px;max-height:400px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🟣 Lab 03 — CSP Report-Only & Violations</h1>
+<p class="sub">Module 12.3 · Safe CSP rollout, violation monitoring, and debugging</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Report-Only</div>
+  <div class="tab" onclick="setTab(1)">Violation Reports</div>
+  <div class="tab" onclick="setTab(2)">Live Monitor</div>
+  <div class="tab" onclick="setTab(3)">Interview Q&A</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>CSP Report-Only Mode</h3>
+    <pre><span class="cm">// Report-Only: logs violations WITHOUT blocking resources</span>
+<span class="cm">// Perfect for testing CSP before enforcement</span>
+
+<span class="cm">// Enforcing (blocks violations):</span>
+Content-Security-Policy: script-src <span class="str">'self'</span>; report-uri /csp-report
+
+<span class="cm">// Report-only (logs but doesn't block):</span>
+Content-Security-Policy-Report-Only: script-src <span class="str">'self'</span>; report-uri /csp-report
+
+<span class="cm">// Deployment strategy:</span>
+<span class="cm">// Week 1: Deploy Report-Only, collect violations</span>
+<span class="cm">// Week 2: Fix legitimate sources (add to policy)</span>
+<span class="cm">// Week 3: Reduce violations to near-zero</span>
+<span class="cm">// Week 4: Switch to enforcing mode</span>
+<span class="cm">// Ongoing: Keep report-uri for monitoring</span>
+
+<span class="cm">// You can run BOTH simultaneously:</span>
+Content-Security-Policy: default-src <span class="str">'self'</span>
+Content-Security-Policy-Report-Only: default-src <span class="str">'self'</span>; script-src <span class="str">'self'</span> <span class="str">'nonce-abc'</span>
+
+<span class="cm">// Modern: Use report-to instead of report-uri</span>
+Report-To: {"group":"csp","max_age":86400,
+  "endpoints":[{"url":"https://example.com/csp-report"}]}
+Content-Security-Policy: default-src <span class="str">'self'</span>; report-to csp</pre>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Violation Report Format</h3>
+    <pre><span class="cm">// Browser sends POST to report-uri with this JSON:</span>
+{
+  <span class="str">"csp-report"</span>: {
+    <span class="str">"document-uri"</span>: <span class="str">"https://example.com/page"</span>,
+    <span class="str">"referrer"</span>: <span class="str">""</span>,
+    <span class="str">"violated-directive"</span>: <span class="str">"script-src"</span>,
+    <span class="str">"effective-directive"</span>: <span class="str">"script-src"</span>,
+    <span class="str">"original-policy"</span>: <span class="str">"script-src 'self'; report-uri /csp"</span>,
+    <span class="str">"blocked-uri"</span>: <span class="str">"https://evil.com/malware.js"</span>,
+    <span class="str">"status-code"</span>: 200,
+    <span class="str">"source-file"</span>: <span class="str">"https://example.com/page"</span>,
+    <span class="str">"line-number"</span>: 42,
+    <span class="str">"column-number"</span>: 8
+  }
+}
+
+<span class="cm">// Server-side handler (Express):</span>
+app.post(<span class="str">'/csp-report'</span>, express.json({ type: <span class="str">'application/csp-report'</span> }),
+  (req, res) =&gt; {
+    <span class="kw">const</span> report = req.body[<span class="str">'csp-report'</span>];
+    logger.warn(<span class="str">'CSP Violation'</span>, {
+      blockedUri: report[<span class="str">'blocked-uri'</span>],
+      directive: report[<span class="str">'violated-directive'</span>],
+      page: report[<span class="str">'document-uri'</span>]
+    });
+    res.sendStatus(204);
+  }
+);</pre>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>🧪 Monitor CSP Violations</h3>
+    <button onclick="captureViolations()">📡 Start Monitoring</button>
+    <button onclick="triggerViolation()">⚡ Trigger Inline Script</button>
+    <div class="output" id="csp-result">Click "Start Monitoring" then trigger violations</div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Google Senior Frontend — CSP Deployment</h3>
+    <div style="font-size:.82rem">
+      <p><strong style="color:#60a5fa">Q: How would you deploy CSP for a large existing application?</strong></p>
+      <p style="color:#94a3b8;margin-bottom:12px">Phase 1 — Audit: (1) Use browser DevTools Network tab to catalog all resource origins. (2) Audit inline scripts, eval() usage, style attributes. (3) Check third-party analytics, ads, widgets. Phase 2 — Report-Only: Deploy Content-Security-Policy-Report-Only with a permissive policy. Route reports to a pipeline (e.g., report-uri.com or custom endpoint → ElasticSearch). Categorize violations: legitimate (add to policy), malicious (XSS attempt), browser extensions (ignore). Phase 3 — Tighten: Remove 'unsafe-inline' by converting to nonces/hashes. Remove 'unsafe-eval' by eliminating eval(). Migrate from URL allowlists to nonce + strict-dynamic. Phase 4 — Enforce: Switch to Content-Security-Policy. Keep report-uri active. Set up alerts for spike in violations (potential attack or regression). Google's scale: millions of reports/day. Sample 1%, deduplicate by page+directive+blocked-uri, aggregate into dashboards.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const tabs=document.querySelectorAll('.tab'),panels=document.querySelectorAll('.panel');
+function setTab(i){tabs.forEach((t,j)=>{t.classList.toggle('active',j===i);panels[j].classList.toggle('active',j===i)})}
+
+function captureViolations(){
+  const el=document.getElementById('csp-result');
+  el.textContent='📡 Listening for CSP violations...\n\n';
+  document.addEventListener('securitypolicyviolation',(e)=>{
+    el.textContent+=`🔴 CSP VIOLATION:\n`;
+    el.textContent+=`  Directive: ${e.violatedDirective}\n`;
+    el.textContent+=`  Blocked URI: ${e.blockedURI}\n`;
+    el.textContent+=`  Source: ${e.sourceFile}:${e.lineNumber}\n`;
+    el.textContent+=`  Original Policy: ${e.originalPolicy}\n\n`;
+  });
+  el.textContent+='Listener installed. Now trigger violations.\n';
+  el.textContent+='Note: This page has no CSP header, so violations may not fire.\n';
+  el.textContent+='In production, the server sets the CSP header.\n\n';
+  el.textContent+='Check DevTools Console for CSP errors when present.\n';
+}
+
+function triggerViolation(){
+  const el=document.getElementById('csp-result');
+  el.textContent+='Attempting to create inline script...\n';
+  const s=document.createElement('script');
+  s.textContent='console.log("inline script executed")';
+  document.head.appendChild(s);
+  el.textContent+='Script injected. If CSP is active, this would be blocked.\n';
+  el.textContent+='Current page has no CSP → script runs freely.\n';
+  el.textContent+='Try with server: http://localhost:3001/api/csp/strict\n';
+}
+</script>
+</body></html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>108 – Angular OnPush + trackBy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7;white-space:pre-wrap}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.fn{color:#a78bfa}.num{color:#f59e0b}.dec{color:#e879f9}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{background:#0f1117;color:#60a5fa;padding:8px;border:1px solid #2d3551;text-align:left}
+td{padding:8px;border:1px solid #2d3551;color:#94a3b8}
+tr:nth-child(even){background:#1a2332}
+button{padding:7px 14px;border-radius:6px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.82rem;margin:4px;transition:all .2s}
+button:hover,button.btn-primary{background:#1e3a5f;border-color:#3b82f6;color:#60a5fa}
+.comp-block{border-radius:8px;padding:10px;margin-bottom:6px;font-size:.8rem;display:flex;align-items:center;justify-content:space-between;transition:background .3s}
+.comp-checked{background:#0f1117;border:1px solid #374151}
+.comp-dirty{background:#450a0a;border:1px solid #dc262644;animation:flash .4s ease}
+.comp-clean{background:#14532d22;border:1px solid #16a34a44}
+@keyframes flash{0%{background:#450a0a}50%{background:#7f1d1d}100%{background:#450a0a}}
+</style>
+</head>
+<body>
+<h1>⚡ Angular OnPush + trackBy Performance</h1>
+<p class="sub">Topic 108 · Part 7 / Module 7.3 — Rendering Performance · Hruday's Interview Prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">CD Simulator</div>
+  <div class="tab" onclick="setTab(2)">Comparison</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Angular Change Detection: Default vs OnPush</h3>
+    <p style="color:#94a3b8;font-size:.85rem;margin-bottom:16px">By default, Angular's zone.js-based change detection checks EVERY component on EVERY async event (click, setTimeout, HTTP response, any microtask). In a tree of 200 components getting 10 events/second = 2000 checks/second regardless of whether data changed. OnPush limits checks to only when: an @Input reference changes, an Observable from async pipe emits, or markForCheck() is called explicitly.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.82rem">
+      <div style="background:#0f1117;border:1px solid #dc2626;border-radius:8px;padding:12px">
+        <div style="color:#ef4444;font-weight:700;margin-bottom:6px">Default CD — Every async event checks everything</div>
+        <div style="color:#94a3b8;line-height:1.8">
+          Any async event → zone.js patches it → NgZone.run() → CD triggered from root<br>
+          → All 200 components checked even if nothing changed<br>
+          → Expensive with large trees, frequent events (WebSocket, scroll)
+        </div>
+      </div>
+      <div style="background:#0f1117;border:1px solid #16a34a;border-radius:8px;padding:12px">
+        <div style="color:#10b981;font-weight:700;margin-bottom:6px">OnPush — Only 3 triggers</div>
+        <div style="color:#94a3b8;line-height:1.8">
+          ① @Input reference changes (immutable updates)<br>
+          ② Observable via async pipe emits<br>
+          ③ Manual markForCheck() / detectChanges()<br>
+          → 80–95% fewer checks in real applications
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>trackBy — why *ngFor re-creates DOM elements without it</h3>
+    <p style="color:#94a3b8;font-size:.82rem;margin-bottom:10px">Without trackBy, Angular identifies list items by <strong>object identity</strong>. Fetch the same data again from the API → new array → new object references → Angular destroys and recreates all DOM nodes. With trackBy returning a stable ID, Angular keeps existing DOM nodes and only updates changed ones.</p>
+    <div style="display:flex;gap:12px;font-size:.8rem">
+      <div style="background:#450a0a;border-radius:6px;padding:10px;flex:1">
+        <div style="color:#ef4444;font-weight:700">Without trackBy</div>
+        <div style="color:#94a3b8">API refresh → 50 DOM nodes destroyed → 50 recreated → layout thrashing, animations reset, focus lost</div>
+      </div>
+      <div style="background:#14532d22;border-radius:6px;padding:10px;flex:1">
+        <div style="color:#10b981;font-weight:700">With trackBy</div>
+        <div style="color:#94a3b8">API refresh → Angular traces by ID → unchanged items reused → only modified items updated</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Change detection simulator — click "Trigger Event" to see the difference</h3>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn-primary" onclick="setMode('default')" id="btnDef">Default CD</button>
+      <button onclick="setMode('onpush')" id="btnOP">OnPush</button>
+      <button onclick="triggerEvent()" style="background:#1a2332;border-color:#f59e0b;color:#f59e0b">⚡ Trigger WebSocket Event</button>
+      <button onclick="resetSim()" style="border-color:#374151;color:#64748b">Reset</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <div style="font-size:.75rem;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Component Tree</div>
+        <div id="compTree"></div>
+      </div>
+      <div>
+        <div style="font-size:.75rem;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Check count (this session)</div>
+        <div id="checkCount" style="font-size:2.5rem;font-weight:700;color:#ef4444;margin-bottom:8px">0</div>
+        <div id="checkDetail" style="font-size:.78rem;color:#94a3b8"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>OnPush trigger rules — know all 3</h3>
+    <table>
+      <tr><th>Trigger</th><th>Works with OnPush?</th><th>Example</th></tr>
+      <tr><td>@Input reference changes</td><td style="color:#10b981">✅ Yes</td><td>Parent passes new object (immutable update)</td></tr>
+      <tr><td>@Input same reference, mutated</td><td style="color:#ef4444">❌ No — missed!</td><td>Parent pushes to array in-place; Angular doesn't see it</td></tr>
+      <tr><td>async pipe (Observable emits)</td><td style="color:#10b981">✅ Yes — auto markForCheck</td><td>{{ data$ | async }} — best pattern</td></tr>
+      <tr><td>EventEmitter / DOM event in component</td><td style="color:#10b981">✅ Yes</td><td>Button click inside OnPush component</td></tr>
+      <tr><td>setTimeout / setInterval</td><td style="color:#ef4444">❌ No — outside zone by default</td><td>Need ngZone.run() or markForCheck()</td></tr>
+      <tr><td>markForCheck()</td><td style="color:#10b981">✅ Yes — manual trigger</td><td>Needed for imperative updates (WebSocket outside zone)</td></tr>
+      <tr><td>detectChanges()</td><td style="color:#10b981">✅ Yes — synchronous</td><td>Force immediate check of this component subtree</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>OnPush component with WebSocket (Bosch dashboard pattern)</h3>
+    <pre><span class="dec">@Component</span>({
+  selector: <span class="str">'app-machine-status'</span>,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: <span class="str">`
+    &lt;div *ngFor="let machine of machines; trackBy: trackById"&gt;
+      {{ machine.name }}: {{ machine.status }}
+    &lt;/div&gt;
+  `</span>
+})
+<span class="kw">export class</span> MachineStatusComponent <span class="kw">implements</span> OnInit {
+  machines: Machine[] = [];
+  
+  <span class="kw">constructor</span>(
+    <span class="kw">private</span> ws: WebSocketService,
+    <span class="kw">private</span> cdr: ChangeDetectorRef,
+    <span class="kw">private</span> ngZone: NgZone
+  ) {}
+  
+  ngOnInit(): <span class="kw">void</span> {
+    <span class="cm">// WebSocket runs outside zone — must manually trigger CD</span>
+    this.ws.machines$.<span class="fn">pipe</span>(<span class="fn">takeUntilDestroyed</span>()).<span class="fn">subscribe</span>(machines =&gt; {
+      this.machines = machines;           <span class="cm">// Immutable replace (not push!)</span>
+      this.cdr.<span class="fn">markForCheck</span>();            <span class="cm">// Schedules CD for this subtree</span>
+    });
+  }
+  
+  <span class="cm">// trackBy: stable ID → DOM nodes reused on list refresh</span>
+  <span class="fn">trackById</span>(index: number, machine: Machine): string {
+    <span class="kw">return</span> machine.id;
+  }
+}
+
+<span class="cm">// Preferred: use async pipe — automatically handles markForCheck</span>
+<span class="cm">// template: &lt;div *ngFor="let m of machines$ | async; trackBy: trackById"&gt;</span></pre>
+  </div>
+</div>
+
+<script>
+function setTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.querySelectorAll('.panel').forEach((p,i)=>p.classList.toggle('active',i===n));
+}
+
+let mode = 'default', checks = 0;
+const components = [
+  {name:'AppComponent', hasInput:false, hasWs:false},
+  {name:'NavbarComponent', hasInput:false, hasWs:false},
+  {name:'DashboardComponent', hasInput:false, hasWs:true},
+  {name:'MachineList (changed)', hasInput:true, hasWs:true},
+  {name:'MachineItem[0]', hasInput:false, hasWs:false},
+  {name:'MachineItem[1]', hasInput:false, hasWs:false},
+  {name:'MachineItem[2] (data changed)', hasInput:true, hasWs:true},
+  {name:'SidebarComponent', hasInput:false, hasWs:false},
+  {name:'FooterComponent', hasInput:false, hasWs:false},
+];
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btnDef').classList.toggle('active', m==='default');
+  document.getElementById('btnOP').classList.toggle('active', m==='onpush');
+  resetSim();
+}
+
+function resetSim() {checks=0; renderTree(components.map(c=>({...c,state:'checked'}))); updateCount(0,'');}
+
+function triggerEvent() {
+  checks = 0;
+  let checked = 0;
+  if (mode === 'default') {
+    checked = components.length;
+    renderTree(components.map(c=>({...c,state:'dirty'})));
+    setTimeout(()=>{renderTree(components.map(c=>({...c,state:'checked'})));},600);
+  } else {
+    const toCheck = components.filter(c=>c.hasInput||c.hasWs);
+    checked = toCheck.length;
+    renderTree(components.map(c=>({...c, state: (c.hasInput||c.hasWs)?'dirty':'clean'})));
+    setTimeout(()=>{
+      renderTree(components.map(c=>({...c, state:(c.hasInput||c.hasWs)?'checked':'clean'})));
+    },600);
+  }
+  checks += checked;
+  updateCount(checked, mode==='default' ? 'All components checked (Default CD)' : `Only ${checked}/${components.length} components checked (OnPush) — ${components.length-checked} skipped ✅`);
+}
+
+function renderTree(comps) {
+  const tree = document.getElementById('compTree');
+  tree.innerHTML = comps.map((c,i) => {
+    const indent = i>1&&i<7?16:i>4&&i<7?32:0;
+    const stateMap = {dirty:'comp-dirty',clean:'comp-clean',checked:'comp-checked'};
+    const icon = {dirty:'🔴',clean:'⬜',checked:'✅'}[c.state]||'⬜';
+    return `<div class="comp-block ${stateMap[c.state]}" style="margin-left:${(i>1&&i<7)?16:0}px">${icon} ${c.name}</div>`;
+  }).join('');
+}
+
+function updateCount(n, detail) {
+  document.getElementById('checkCount').style.color = mode==='default'?'#ef4444':'#10b981';
+  document.getElementById('checkCount').textContent = n;
+  document.getElementById('checkDetail').textContent = detail;
+}
+
+setMode('default');
+</script>
+</body>
+</html>

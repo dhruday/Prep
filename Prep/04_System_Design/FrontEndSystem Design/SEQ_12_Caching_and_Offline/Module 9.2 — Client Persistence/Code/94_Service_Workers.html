@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic 94 – Service Workers</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f1117;color:#e2e8f0;font-family:'Segoe UI',system-ui,sans-serif;padding:24px;line-height:1.6}
+h1{font-size:1.6rem;color:#60a5fa;margin-bottom:4px}
+.sub{color:#94a3b8;font-size:.9rem;margin-bottom:24px}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid #2d3551;background:#1e2130;color:#94a3b8;cursor:pointer;font-size:.85rem;transition:all .2s}
+.tab.active{background:#1e3a5f;border-color:#60a5fa;color:#60a5fa}
+.panel{display:none}.panel.active{display:block}
+.card{background:#1e2130;border:1px solid #2d3551;border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{color:#60a5fa;margin-bottom:12px;font-size:1rem}
+pre{background:#0f1117;border:1px solid #2d3551;border-radius:8px;padding:16px;overflow-x:auto;font-size:.8rem;line-height:1.7}
+.kw{color:#60a5fa}.str{color:#10b981}.cm{color:#475569}.attr{color:#f59e0b}.fn{color:#a78bfa}
+</style>
+</head>
+<body>
+<h1>⚙️ Service Workers</h1>
+<p class="sub">Topic 94 · Module 9.2 — Client Persistence · Hruday's interview prep</p>
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Concept</div>
+  <div class="tab" onclick="setTab(1)">Lifecycle Simulator</div>
+  <div class="tab" onclick="setTab(2)">Caching Strategies</div>
+  <div class="tab" onclick="setTab(3)">Code Patterns</div>
+</div>
+
+<div class="panel active" id="p0">
+  <div class="card">
+    <h3>Service Worker — the programmable network proxy</h3>
+    <p style="font-size:.83rem;color:#94a3b8;margin-bottom:10px">A Service Worker is a JS script running in a separate background thread, acting as a programmable proxy between the page and the network. It intercepts all fetch requests, enables offline support, background sync, and push notifications. SAP Fiori Launchpad uses a Service Worker to pre-cache the app shell → 0 ms loads on repeat visits.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.78rem">
+      <div>
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">What service workers can do</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:2">
+          <li>🔌 Intercept all fetch requests (fetch event)</li>
+          <li>💾 Cache responses (CacheStorage API)</li>
+          <li>📴 Serve content when offline</li>
+          <li>🔄 Background sync (sync event)</li>
+          <li>🔔 Push notifications (push event)</li>
+        </ul>
+      </div>
+      <div>
+        <div style="color:#60a5fa;font-weight:700;margin-bottom:6px">Constraints</div>
+        <ul style="color:#94a3b8;list-style:none;line-height:2">
+          <li>❌ No DOM access (separate thread)</li>
+          <li>🔒 HTTPS only (or localhost)</li>
+          <li>🌐 Same-origin as the page</li>
+          <li>💤 Terminated when idle — no persistent state</li>
+          <li>📦 Scope limited to containing directory</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p1">
+  <div class="card">
+    <h3>Service Worker lifecycle — step through registration → activation</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button onclick="swStep()" style="padding:8px 16px;background:#052e16;border:1px solid #10b981;color:#10b981;border-radius:8px;cursor:pointer;font-size:.82rem">Next step →</button>
+      <button onclick="swReset()" style="padding:8px 16px;background:#1e2130;border:1px solid #2d3551;color:#94a3b8;border-radius:8px;cursor:pointer;font-size:.82rem">Reset</button>
+    </div>
+    <div id="sw-steps" style="display:grid;gap:6px;font-size:.78rem">
+      <div id="sw-s0" style="background:#0f1117;border:1px solid #2d3551;padding:8px;border-radius:6px;opacity:.4">1. navigator.serviceWorker.register('/sw.js')</div>
+      <div id="sw-s1" style="background:#0f1117;border:1px solid #2d3551;padding:8px;border-radius:6px;opacity:.4">2. SW downloaded + parsed → state: 'installing'</div>
+      <div id="sw-s2" style="background:#0f1117;border:1px solid #2d3551;padding:8px;border-radius:6px;opacity:.4">3. install event fires → cache shell assets in waitUntil()</div>
+      <div id="sw-s3" style="background:#0f1117;border:1px solid #2d3551;padding:8px;border-radius:6px;opacity:.4">4. State: 'installed' — waiting for old SW to release clients</div>
+      <div id="sw-s4" style="background:#0f1117;border:1px solid #2d3551;padding:8px;border-radius:6px;opacity:.4">5. activate event fires → delete old caches</div>
+      <div id="sw-s5" style="background:#0f1117;border:1px solid #2d3551;padding:8px;border-radius:6px;opacity:.4">6. State: 'activated' → intercepts fetch events on all pages</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p2">
+  <div class="card">
+    <h3>Five caching strategies — when to use each</h3>
+    <div style="display:grid;gap:8px;font-size:.78rem">
+      <div style="background:#0f1117;border:1px solid #10b981;padding:10px;border-radius:8px"><strong style="color:#10b981">Cache First</strong> — serve from cache if available; fetch if miss. Best for: static assets (JS, CSS, images). <em>Fastest but stale.</em></div>
+      <div style="background:#0f1117;border:1px solid #60a5fa;padding:10px;border-radius:8px"><strong style="color:#60a5fa">Network First</strong> — try network; fallback to cache. Best for: API data where freshness matters. <em>Fresh but slow offline.</em></div>
+      <div style="background:#0f1117;border:1px solid #a78bfa;padding:10px;border-radius:8px"><strong style="color:#a78bfa">Stale While Revalidate</strong> — serve cache immediately AND fetch in background to update cache for next request. Best for: non-critical data (news feeds, infrequently updated lists). <em>Fast + eventually fresh.</em></div>
+      <div style="background:#0f1117;border:1px solid #f59e0b;padding:10px;border-radius:8px"><strong style="color:#f59e0b">Cache Only</strong> — only serve from cache; never fetch. For fully offline capabilities after pre-caching.</div>
+      <div style="background:#0f1117;border:1px solid #ef4444;padding:10px;border-radius:8px"><strong style="color:#ef4444">Network Only</strong> — bypass cache entirely. For analytics, POST mutations, real-time data.</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="p3">
+  <div class="card">
+    <h3>Service Worker patterns (Workbox + manual)</h3>
+    <pre><span class="cm">// ─── Workbox (recommended for production) ───</span>
+<span class="kw">import</span> { precacheAndRoute, cleanupOutdatedCaches } <span class="kw">from</span> <span class="str">'workbox-precaching'</span>;
+<span class="kw">import</span> { registerRoute } <span class="kw">from</span> <span class="str">'workbox-routing'</span>;
+<span class="kw">import</span> { StaleWhileRevalidate, CacheFirst, NetworkFirst } <span class="kw">from</span> <span class="str">'workbox-strategies'</span>;
+<span class="kw">import</span> { ExpirationPlugin } <span class="kw">from</span> <span class="str">'workbox-expiration'</span>;
+
+<span class="fn">precacheAndRoute</span>(self.__WB_MANIFEST);  <span class="cm">// pre-cache app shell</span>
+<span class="fn">cleanupOutdatedCaches</span>();
+
+<span class="cm">// Images: cache first, expire after 30 days</span>
+<span class="fn">registerRoute</span>(
+  ({ request }) =&gt; request.destination === <span class="str">'image'</span>,
+  <span class="kw">new</span> <span class="fn">CacheFirst</span>({ cacheName: <span class="str">'images'</span>, plugins: [<span class="kw">new</span> <span class="fn">ExpirationPlugin</span>({ maxAgeSeconds: <span class="fn">30</span>*<span class="fn">86400</span> })] })
+);
+
+<span class="cm">// API: stale while revalidate</span>
+<span class="fn">registerRoute</span>(
+  ({ url }) =&gt; url.pathname.<span class="fn">startsWith</span>(<span class="str">'/api/'</span>),
+  <span class="kw">new</span> <span class="fn">StaleWhileRevalidate</span>({ cacheName: <span class="str">'api-cache'</span> })
+);
+
+<span class="cm">// ─── Manual registration in main app ───</span>
+<span class="kw">if</span> (<span class="str">'serviceWorker'</span> <span class="kw">in</span> navigator) {
+  window.<span class="fn">addEventListener</span>(<span class="str">'load'</span>, () =&gt; {
+    navigator.serviceWorker.<span class="fn">register</span>(<span class="str">'/sw.js'</span>, { scope: <span class="str">'/'</span> })
+      .<span class="fn">then</span>(reg =&gt; console.<span class="fn">log</span>(<span class="str">'SW registered'</span>, reg.scope));
+  });
+}</pre>
+  </div>
+</div>
+
+<script>
+function setTab(i){document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));document.querySelectorAll('.panel').forEach((p,idx)=>p.classList.toggle('active',idx===i));}
+
+let swCurrent=0;
+const colors=['#94a3b8','#60a5fa','#f59e0b','#f59e0b','#a78bfa','#10b981'];
+function swStep(){
+  if(swCurrent>=6)return;
+  const el=document.getElementById('sw-s'+swCurrent);
+  el.style.opacity='1';el.style.borderColor=colors[swCurrent];el.style.color=colors[swCurrent];
+  swCurrent++;
+}
+function swReset(){swCurrent=0;for(let i=0;i<6;i++){const el=document.getElementById('sw-s'+i);el.style.opacity='.4';el.style.borderColor='#2d3551';el.style.color='#e2e8f0';}}
+</script>
+</body>
+</html>
