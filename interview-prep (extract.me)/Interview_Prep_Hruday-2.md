@@ -5,6 +5,9 @@
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## Table of Contents
 
 ### Part 1 — Interview Core (Sections 0–23)
@@ -107,6 +110,9 @@
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 0. How to Use This Document
 
 ### Study Plan (4 Weeks)
@@ -131,6 +137,9 @@
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 1. 30-Second Introduction
 
 > Memorise word-for-word. Deliver in exactly 25–30 seconds. This is the first impression.
@@ -138,6 +147,9 @@
 "I'm Hruday — a Senior Full-Stack Engineer with 8 years of experience, specialising in React, TypeScript, and Node.js. I've built enterprise-grade products at SAP Labs, Bosch, and Oracle, serving users across 50+ countries. My biggest impact was leading the React overhaul of SAP BI Launchpad — Lighthouse score went from 60 to 95+, page load dropped 45%, and security vulnerabilities reduced by 80%. Outside of work, I built NiftyLens — an AI-powered stock research platform using Next.js, Claude API, and AWS — which reduced research time by 87%. I'm excited about this role because [FILL IN COMPANY-SPECIFIC REASON]."
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 2. 2-Minute Introduction
 
@@ -160,6 +172,9 @@
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 3. Resume Walkthrough (Story Format)
 
 > When asked "Walk me through your resume," use this story arc. Each company = one paragraph.
@@ -181,6 +196,9 @@
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 4. Every Technology Deep Dive
 
@@ -1678,6 +1696,9 @@ Techniques you use in NiftyLens:
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 5. Project Deep Dive — NiftyLens
 
 ### Overview
@@ -1966,6 +1987,9 @@ A: NiftyLens's queries are simple: get analysis by symbol and date. DynamoDB is 
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 6. Project Deep Dive — PerfScan
 
 ### Overview
@@ -2176,6 +2200,9 @@ A: Lighthouse can launch its own Chrome instance, but Playwright gives more cont
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 7. Resume Keyword Interrogation
 
 > Every important word/claim from your resume → exact question an interviewer might ask → your answer
@@ -2291,6 +2318,9 @@ A: 100% is rarely the right goal. The last 15% at Oracle was: (1) Untestable leg
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 8. System Design Questions
 
@@ -2438,6 +2468,9 @@ Trigger PerfScan Lambda (serverless)
 ```
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 9. Coding Questions Related to Your Stack
 
@@ -2714,6 +2747,9 @@ emitter.emit('priceUpdate', { symbol: 'RELIANCE', price: 2847 });
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 10. Database Questions
 
 **Q: When would you use NoSQL (DynamoDB) vs SQL (PostgreSQL)?**
@@ -2751,6 +2787,9 @@ A: A transaction is a set of operations that either ALL succeed or ALL fail — 
 Example: Bank transfer — debit account A AND credit account B. If credit fails, debit must be rolled back. DynamoDB supports transactions (TransactWrite) for up to 25 items.
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 11. API Design Questions
 
@@ -2804,6 +2843,9 @@ For production: Redis + rate-limit middleware (rate-limit-redis package)
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 12. Cloud / DevOps Questions
 
 **Q: What is the difference between horizontal and vertical scaling?**
@@ -2851,6 +2893,9 @@ Vs Canary:  Blue/green is all-or-nothing; canary gradually shifts % of traffic
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 13. Security Questions
 
 **Q: How do you perform a security code review?**
@@ -2890,6 +2935,9 @@ app.use(cors({
 ```
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 14. Performance & Scalability
 
@@ -2948,6 +2996,9 @@ BEST PRACTICE: Both together
 ```
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 15. Testing
 
@@ -3029,6 +3080,9 @@ Harmful: Large snapshots that developers update blindly without reviewing (`jest
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 16. Production Incidents / Troubleshooting
 
 **Q: Walk me through debugging a performance regression in production**
@@ -3105,6 +3159,9 @@ Step 7: POST-MORTEM
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 17. Behavioral Questions
 
@@ -3214,6 +3271,9 @@ Step 7: POST-MORTEM
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 18. Leadership / Ownership Questions
 
 ---
@@ -3260,6 +3320,9 @@ Step 7: POST-MORTEM
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 19. "I Don't Know" / Interviewer Traps
 
@@ -3368,6 +3431,9 @@ Template answer structure:
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 20. Questions Where the Interviewer Tries to Confuse You
 
 > These are questions with no single "right" answer — interviewers want to see how you think under pressure, not whether you know a magic answer.
@@ -3423,6 +3489,9 @@ Template answer structure:
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 21. Questions to Ask the Interviewer
 
 > Always ask 2–3 questions. Asking nothing = no interest. Asking good questions = you're thinking like a senior engineer, not a job seeker.
@@ -3477,6 +3546,9 @@ Template answer structure:
   *(Shows you think about risk, not just features)*
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 22. Last-Minute Revision
 
@@ -3582,6 +3654,9 @@ Complex question → "The honest answer is 'it depends' — the key variable is.
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 23. One-Page Cheat Sheet
 
 > Screenshot this on your phone for quick access. Read it while waiting for the interviewer to join.
@@ -3664,6 +3739,9 @@ Complex question → "The honest answer is 'it depends' — the key variable is.
 > Nothing from Part 1 was removed. Read Part 1 first, then this when preparing for backend rounds.
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 24. Backend Deep Dive — Full-Stack Interview Preparation
 
@@ -4314,6 +4392,9 @@ A: An operation is idempotent if calling it multiple times gives the same result
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 25. SAP BI Launchpad — Complete Backend Architecture
 
 > This section covers what likely exists behind the scenes at SAP BI Launchpad.
@@ -4593,6 +4674,9 @@ A: The user configures a schedule via the React UI → POST /schedules with cron
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 26. AI, Agents, RAG & MCP — 2026 Interview Questions
 
@@ -5867,6 +5951,9 @@ A: "Three different ways to shape LLM behaviour: (1) Prompt Engineering: change 
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 27. Last-Minute Revision — Part 2 (Backend + AI)
 
 > Read this alongside Section 22 (Part 1). 10 minutes before a Full-Stack + AI interview.
@@ -5983,6 +6070,9 @@ A: "Three different ways to shape LLM behaviour: (1) Prompt Engineering: change 
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 28. Extended Cheat Sheet — Backend + AI
 
 > Add this to the screenshot from Section 23.
@@ -6055,6 +6145,9 @@ A: "Three different ways to shape LLM behaviour: (1) Prompt Engineering: change 
 ```
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 29. Full Interview Simulation — Question Bank
 
@@ -6153,6 +6246,9 @@ A: "Three different ways to shape LLM behaviour: (1) Prompt Engineering: change 
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 30. Glossary — Quick Reference for Every Term
 
 ```
@@ -6219,6 +6315,9 @@ WCAG     — Web Content Accessibility Guidelines (A, AA, AAA levels)
 # ═══════════════════════════════════════════════════════
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 31. DSA — Data Structures & Algorithms
 
@@ -6971,6 +7070,9 @@ WHAT TO SAY AT EACH STAGE:
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 32. JavaScript Internals — Deep Language Knowledge
 
 ---
@@ -7245,6 +7347,9 @@ document.body.removeChild(element); // Removed from DOM but 'element' still hold
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 33. Browser Internals — How the Browser Works
 
 ---
@@ -7464,6 +7569,9 @@ self.addEventListener('fetch', (e) => {
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 34. SOLID Principles — With React & Node.js Examples
 
@@ -7698,6 +7806,9 @@ const LLMContext = createContext<ILLMClient | null>(null);
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 35. Design Patterns — React & GoF
 
 ---
@@ -7902,6 +8013,9 @@ class AddToWatchlistCommand implements Command {
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 36. System Design Framework + Classic Problems
 
@@ -8156,6 +8270,9 @@ SLA / SLO / SLI REFERENCE:
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 37. CSS Deep Dive
 
 ---
@@ -8317,6 +8434,9 @@ const value = getComputedStyle(document.documentElement).getPropertyValue('--col
 ```
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 38. HTTP Protocol Deep Dive
 
@@ -8488,6 +8608,9 @@ CSRF WITH COOKIES:
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 39. Company-Specific Preparation
 
@@ -8748,6 +8871,9 @@ WHAT THEY'RE LOOKING FOR:
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 40. Advanced TypeScript Patterns
 
 ```typescript
@@ -8823,6 +8949,9 @@ declare module 'express' {
 ```
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 41. Testing — Advanced Patterns
 
@@ -8918,6 +9047,9 @@ function getGrade(score: number) {
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 42. DevOps / SRE Concepts
 
 ```
@@ -8986,6 +9118,9 @@ DISTRIBUTED TRACING:
 ```
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 43. Missing Behavioral Scenarios
 
@@ -9083,6 +9218,9 @@ R: After 3 months, two teammates could independently debug Module Federation iss
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 44. React Advanced — Error Boundaries, Portals, Concurrent
 
@@ -9285,6 +9423,9 @@ const playerRef = useRef<{ play: () => void; pause: () => void; seek: (t: number
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 45. Final Master Cheat Sheet — Part 3 (All Gaps Closed)
 
 > Screenshot this alongside Section 23 (Part 1) and Section 28 (Part 2).
@@ -9395,6 +9536,9 @@ const playerRef = useRef<{ play: () => void; pause: () => void; seek: (t: number
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 46. Complete Document Index
 
 | Section | Topic | Priority for Big Tech |
@@ -9436,6 +9580,9 @@ const playerRef = useRef<{ play: () => void; pause: () => void; seek: (t: number
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 47. DSA — 50 Must-Know Problems With Solutions
 
@@ -10120,6 +10267,9 @@ function findKthLargest(nums: number[], k: number): number {
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 48. Node.js Advanced — Streams, Clustering, Worker Threads
 
 ---
@@ -10277,6 +10427,9 @@ Atomics.wait(sharedArray, 0, 0); // Wait until value at index 0 changes from 0
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 49. Web Security — Additional Topics
 
 ---
@@ -10423,6 +10576,9 @@ YOUR RESUME CONNECTION:
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 50. More System Design — Twitter/X Feed & Distributed Cache
 
 ---
@@ -10547,6 +10703,9 @@ ACTUAL REDIS CLUSTER:
 ```
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 51. Salary Negotiation Framework
 
@@ -10687,6 +10846,9 @@ NOTICE PERIOD (important in India):
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 52. Day-Before-Interview Checklist
 
 > Print this. Check each box the night before and morning of every interview.
@@ -10763,6 +10925,9 @@ NOTICE PERIOD (important in India):
 ```
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 53. Final Complete Quick-Reference Card
 
@@ -10866,6 +11031,9 @@ NOTICE PERIOD (important in India):
 > Read this out loud. If it sounds like how you talk, you are ready.
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 54. SAP BI Launchpad — The Complete Story
 
@@ -11186,6 +11354,9 @@ Your React app shows the history of these runs: which ones succeeded, which fail
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 55. Plain English — Key Concepts Rewritten Simply
 
 > These are the hard concepts from the document, rewritten in the way you would explain them on a whiteboard to a smart person who is not a developer.
@@ -11496,6 +11667,9 @@ The trade-off: indexes speed up reads but slow down writes. Every time you inser
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 56. How to Say It Out Loud — Spoken Scripts for Key Topics
 
 > Read these out loud before your interview. The goal is not to memorise them word for word. The goal is to get the rhythm and confidence into your voice.
@@ -11623,6 +11797,9 @@ Do not say "I guess you are right" without explaining why. Do not say "No, you a
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 57. BI Launchpad — Quick Reference Card
 
 > Screenshot this. Read before any interview where SAP comes up.
@@ -11706,6 +11883,9 @@ Do not say "I guess you are right" without explaining why. Do not say "No, you a
 # ═══════════════════════════════════════════════════════
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 58. TanStack Query (React Query) — 2026 Standard for Server State
 
@@ -11900,6 +12080,9 @@ RIGHT APPROACH (2026):
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 59. Zustand — Simple State Management
 
 ---
@@ -11978,6 +12161,9 @@ const useWatchlistStore = create<WatchlistStore>()(
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 60. SQL Window Functions & Advanced Queries
 
@@ -12196,6 +12382,9 @@ GROUP BY symbol;
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 61. Spring Boot Testing & Exception Handling
 
 ---
@@ -12385,6 +12574,9 @@ public Analysis getStock(@PathVariable String symbol) {
 
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 62. TypeScript with React — Practical Patterns
 
@@ -12588,6 +12780,9 @@ function useCounter() {
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 63. Intersection Observer & Key Web APIs
 
 ---
@@ -12787,6 +12982,9 @@ DECISION GUIDE:
 
 ---
 
+
+[↑ Back to Top](#table-of-contents)
+
 ## 64. CSS Architecture — Modules vs Tailwind vs CSS-in-JS
 
 ---
@@ -12913,6 +13111,9 @@ CSS-in-JS (Styled Components / Emotion):
 "At SAP, we used SAP's own design token system with CSS custom properties. The React components used CSS Modules for component-level scoping. The design tokens defined the colour palette, spacing scale, and typography — similar to Tailwind's config but custom-built for SAP's design language."
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 65. Accessibility — Code You Must Know
 
@@ -13107,6 +13308,9 @@ QUICK AUDIT (do this for every feature):
 ```
 
 ---
+
+
+[↑ Back to Top](#table-of-contents)
 
 ## 66. Progressive Web Apps (PWA) — What You Need to Know
 
