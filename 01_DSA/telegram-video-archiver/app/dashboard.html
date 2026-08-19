@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Telegram archive progress</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; background: Canvas; color: CanvasText; }
+    main { max-width: 960px; margin: 0 auto; padding: 28px 20px 48px; }
+    h1 { margin: 0; font-size: 1.45rem; font-weight: 650; }
+    h2 { font-size: 1rem; margin: 28px 0 10px; }
+    .subtle { color: GrayText; margin: 5px 0 0; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 12px; margin: 24px 0; }
+    .metric { padding: 14px; background: color-mix(in srgb, CanvasText 6%, Canvas); border-radius: 8px; }
+    .metric span { display: block; color: GrayText; font-size: .8rem; }
+    .metric strong { display: block; margin-top: 4px; font-size: 1.18rem; font-weight: 600; }
+    .track { height: 14px; overflow: hidden; background: color-mix(in srgb, CanvasText 12%, Canvas); border-radius: 99px; }
+    .bar { height: 100%; width: 0; background: Highlight; transition: width .35s ease; }
+    .progress-text { display: flex; justify-content: space-between; gap: 12px; margin: 8px 0; color: GrayText; font-size: .9rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid color-mix(in srgb, CanvasText 14%, Canvas); text-align: left; vertical-align: middle; }
+    th { color: GrayText; font-size: .8rem; font-weight: 600; }
+    td.number, th.number { text-align: right; font-variant-numeric: tabular-nums; }
+    .row-track { width: 110px; height: 7px; overflow: hidden; border-radius: 99px; background: color-mix(in srgb, CanvasText 12%, Canvas); }
+    .row-bar { height: 100%; background: Highlight; }
+    .empty { color: GrayText; padding: 20px 0; }
+    .error { color: #b42318; }
+    @media (max-width: 620px) { .metrics { grid-template-columns: repeat(2, 1fr); } th:nth-child(2), td:nth-child(2) { display: none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Authorized archive progress</h1>
+    <p id="updated" class="subtle">Connecting…</p>
+    <section class="metrics" aria-label="Archive summary">
+      <div class="metric"><span>Received</span><strong id="received">—</strong></div>
+      <div class="metric"><span>Pending videos</span><strong id="pending">—</strong></div>
+      <div class="metric"><span>Current rate</span><strong id="rate">—</strong></div>
+      <div class="metric"><span>Estimated remaining</span><strong id="eta">—</strong></div>
+    </section>
+    <div class="progress-text"><span id="progress-label">Archive progress</span><span id="percent">—</span></div>
+    <div class="track" role="progressbar" aria-labelledby="progress-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="bar" class="bar"></div></div>
+    <section>
+      <h2>Current downloads</h2>
+      <div id="current" class="empty">No transfer is currently recorded.</div>
+    </section>
+    <section>
+      <h2>Failures</h2>
+      <div id="failures" class="empty">None.</div>
+    </section>
+  </main>
+  <script>
+    const bytes = value => {
+      if (!Number.isFinite(value) || value <= 0) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB']; let index = 0; let size = value;
+      while (size >= 1024 && index < units.length - 1) { size /= 1024; index++; }
+      return `${size >= 10 || index === 0 ? size.toFixed(0) : size.toFixed(1)} ${units[index]}`;
+    };
+    const duration = seconds => {
+      if (!Number.isFinite(seconds) || seconds <= 0) return 'Calculating…';
+      const days = Math.floor(seconds / 86400); const hours = Math.floor(seconds % 86400 / 3600); const minutes = Math.round(seconds % 3600 / 60);
+      return `${days ? `${days}d ` : ''}${hours ? `${hours}h ` : ''}${minutes}m`;
+    };
+    const escape = value => String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
+    function render(data) {
+      document.getElementById('updated').textContent = `Updated ${new Date(data.updatedAt).toLocaleTimeString()} · ${data.completed} of ${data.totalVideos} videos completed · ${data.unknownMedia} non-video items`;
+      document.getElementById('received').textContent = `${bytes(data.receivedBytes)} / ${bytes(data.totalBytes)}`;
+      document.getElementById('pending').textContent = data.pending.toLocaleString();
+      document.getElementById('rate').textContent = data.rateBytesPerSecond ? `${bytes(data.rateBytesPerSecond)}/s` : 'Waiting for sample';
+      document.getElementById('eta').textContent = duration(data.etaSeconds);
+      document.getElementById('percent').textContent = `${data.percent}%`;
+      document.getElementById('bar').style.width = `${data.percent}%`;
+      document.querySelector('.track').setAttribute('aria-valuenow', data.percent);
+      const current = document.getElementById('current');
+      current.className = '';
+      current.innerHTML = data.current.length ? `<table><thead><tr><th>File</th><th>Progress</th><th class="number">Received</th><th class="number">Rate</th></tr></thead><tbody>${data.current.map(item => `<tr><td>${escape(item.filename)}</td><td><div class="row-track"><div class="row-bar" style="width:${item.percent}%"></div></div> ${item.percent}%</td><td class="number">${bytes(item.receivedBytes)} / ${bytes(item.totalBytes)}</td><td class="number">${item.rateBytesPerSecond ? `${bytes(item.rateBytesPerSecond)}/s` : '—'}</td></tr>`).join('')}</tbody></table>` : 'No transfer is currently recorded.';
+      const failures = document.getElementById('failures');
+      failures.className = data.failures.length ? 'error' : 'empty';
+      failures.innerHTML = data.failures.length ? `<table><tbody>${data.failures.map(item => `<tr><td>${escape(item.filename)}</td><td>${escape(item.error || 'Unknown error')}</td></tr>`).join('')}</tbody></table>` : 'None.';
+    }
+    async function refresh() {
+      try { render(await (await fetch('/api/status', { cache: 'no-store' })).json()); }
+      catch { document.getElementById('updated').textContent = 'Dashboard temporarily unavailable; retrying…'; }
+    }
+    refresh(); setInterval(refresh, 2500);
+  </script>
+</body>
+</html>

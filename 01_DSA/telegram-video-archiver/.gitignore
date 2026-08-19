@@ -1,0 +1,25 @@
+# Secrets and Telegram authentication
+.env
+*.session
+*.session-journal
+data/telegram-session*
+
+# Runtime state and downloaded source material
+data/*.db
+data/*.json
+downloads/**
+logs/*.log
+logs/*.json
+
+# Python tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.venv/
+venv/
+
+# Keep empty runtime directories in the project layout.
+!data/.gitkeep
+!downloads/.gitkeep
+!logs/.gitkeep
