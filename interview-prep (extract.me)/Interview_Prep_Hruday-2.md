@@ -5,6 +5,108 @@
 
 ---
 
+## Table of Contents
+
+### Part 1 — Interview Core (Sections 0–23)
+
+- [0. How to Use This Document](#0-how-to-use-this-document)
+- [1. 30-Second Introduction](#1-30-second-introduction)
+- [2. 2-Minute Introduction](#2-2-minute-introduction)
+- [3. Resume Walkthrough](#3-resume-walkthrough-story-format)
+- [4. Every Technology Deep Dive](#4-every-technology-deep-dive)
+  - [4.1 React](#41-react) · [4.2 Redux](#42-redux) · [4.3 TypeScript](#43-typescript) · [4.4 JavaScript ES2022+](#44-javascript-es2022) · [4.5 Next.js](#45-nextjs)
+  - [4.6 Angular](#46-angular) · [4.7 RxJS](#47-rxjs) · [4.8 WebSocket](#48-websocket) · [4.9 Micro-Frontends](#49-micro-frontend-architecture) · [4.10 Performance](#410-performance-optimisation-lighthouse-60--95)
+  - [4.11 Webpack & Vite](#411-tree-shaking-webpack--vite) · [4.12 Node.js](#412-nodejs--expressjs) · [4.13 Java & Spring Boot](#413-java--spring-boot) · [4.14 REST & GraphQL](#414-rest-apis--graphql) · [4.15 Security](#415-security-csp-xss-owasp-jwt-oauth)
+  - [4.16 Docker & K8s](#416-docker--kubernetes) · [4.17 AWS](#417-aws-s3-cloudfront-lambda-dynamodb) · [4.18 CI/CD](#418-cicd-jenkins--github-actions) · [4.19 Accessibility](#419-wcag-aa-accessibility) · [4.20 AI & Automation](#420-ai--automation-llm-apis-n8n-prompt-engineering)
+- [5. NiftyLens Deep Dive](#5-project-deep-dive--niftylens)
+- [6. PerfScan Deep Dive](#6-project-deep-dive--perfscan)
+- [7. Resume Keyword Interrogation](#7-resume-keyword-interrogation)
+- [8. System Design Questions](#8-system-design-questions)
+- [9. Coding Questions](#9-coding-questions-related-to-your-stack)
+- [10. Database Questions](#10-database-questions)
+- [11. API Design Questions](#11-api-design-questions)
+- [12. Cloud / DevOps Questions](#12-cloud--devops-questions)
+- [13. Security Questions](#13-security-questions)
+- [14. Performance & Scalability](#14-performance--scalability)
+- [15. Testing](#15-testing)
+- [16. Production Incidents / Troubleshooting](#16-production-incidents--troubleshooting)
+- [17. Behavioral Questions](#17-behavioral-questions)
+- [18. Leadership / Ownership Questions](#18-leadership--ownership-questions)
+- [19. "I Don't Know" / Interviewer Traps](#19-i-dont-know--interviewer-traps)
+- [20. Confusing Questions](#20-questions-where-the-interviewer-tries-to-confuse-you)
+- [21. Questions to Ask the Interviewer](#21-questions-to-ask-the-interviewer)
+- [22. **Last-Minute Revision** ← Read before every interview](#22-last-minute-revision)
+- [23. One-Page Cheat Sheet](#23-one-page-cheat-sheet)
+
+---
+
+### Part 2 — Backend + BI Launchpad + AI/Agents/RAG (Sections 24–30)
+
+- [24. Backend Deep Dive](#24-backend-deep-dive--full-stack-interview-preparation)
+  - [24.1 Java & Spring Boot](#241-java--spring-boot--deep-dive) · [24.2 Database Design & SQL](#242-database-design--sql) · [24.3 Microservices](#243-microservices-patterns) · [24.4 Caching](#244-caching-strategies) · [24.5 Message Queues](#245-message-queues--event-driven-architecture) · [24.6 REST API Design](#246-rest-api-design--production-patterns)
+- [25. SAP BI Launchpad Backend Architecture](#25-sap-bi-launchpad--complete-backend-architecture)
+- [26. AI, Agents, RAG & MCP](#26-ai-agents-rag--mcp--2026-interview-questions)
+  - [26.1 LLM Fundamentals](#261-llm-fundamentals--what-every-engineer-must-know) · [26.2 RAG Deep Dive](#262-rag--retrieval-augmented-generation-deep-dive) · [26.3 AI Agents](#263-ai-agents--architecture--patterns) · [26.4 MCP](#264-mcp--model-context-protocol-2026-must-know) · [26.5 Prompt Engineering](#265-prompt-engineering--advanced-techniques)
+  - [26.6 AI Integration Patterns](#266-ai-integration-patterns-in-applications) · [26.7 AI Interview Q&A](#267-ai-interview-questions--full-qa) · [26.8 Your AI Experience](#268-your-ai-experience--how-to-talk-about-it) · [26.9 Vector Databases](#269-vector-databases--complete-reference)
+  - [26.10 LangChain vs Custom Code](#2610-langchain--llamaindex-vs-custom-code) · [26.11 AI Observability](#2611-ai-observability--evaluation) · [26.12 AI Architecture Scenarios](#2612-ai-architecture--real-scenarios-youll-be-asked) · [26.13 2026 AI Questions](#2613-the-2026-ai-questions--whats-actually-being-asked-in-interviews)
+- [27. Last-Minute Revision — Part 2](#27-last-minute-revision--part-2-backend--ai)
+- [28. Extended Cheat Sheet — Backend + AI](#28-extended-cheat-sheet--backend--ai)
+- [29. Full Interview Simulation Question Bank](#29-full-interview-simulation--question-bank)
+- [30. Glossary](#30-glossary--quick-reference-for-every-term)
+
+---
+
+### Part 3 — DSA + JS Internals + Browser + Patterns (Sections 31–53)
+
+- [31. DSA — 12 Patterns](#31-dsa--data-structures--algorithms) *(Two Pointers · Sliding Window · Binary Search · HashMap · Stack · Trees · Graphs · Heap · DP · Linked List · Backtracking · Greedy)*
+- [32. JavaScript Internals](#32-javascript-internals--deep-language-knowledge) *(Prototype · `this` · call/apply/bind · Generators · WeakMap · Proxy · GC)*
+- [33. Browser Internals](#33-browser-internals--how-the-browser-works) *(CRP · Reflow/Repaint · Events · rAF · Web Workers)*
+- [34. SOLID Principles](#34-solid-principles--with-react--nodejs-examples)
+- [35. Design Patterns — React & GoF](#35-design-patterns--react--gof)
+- [36. System Design Framework + Classic Problems](#36-system-design-framework--classic-problems) *(URL Shortener · Rate Limiter · Notifications · Consistent Hashing)*
+- [37. CSS Deep Dive](#37-css-deep-dive) *(Specificity · Flexbox · Grid · Animations)*
+- [38. HTTP Protocol Deep Dive](#38-http-protocol-deep-dive) *(HTTP/1.1/2/3 · Caching · CORS · Cookies)*
+- [39. Company-Specific Preparation](#39-company-specific-preparation) *(Adobe · Walmart · Intuit · Salesforce · Google)*
+- [40. Advanced TypeScript Patterns](#40-advanced-typescript-patterns)
+- [41. Testing — Advanced Patterns](#41-testing--advanced-patterns)
+- [42. DevOps / SRE Concepts](#42-devops--sre-concepts)
+- [43. Missing Behavioral Scenarios](#43-missing-behavioral-scenarios)
+- [44. React Advanced](#44-react-advanced--error-boundaries-portals-concurrent) *(Error Boundaries · Portals · useTransition · forwardRef)*
+- [45. Final Cheat Sheet — Part 3](#45-final-master-cheat-sheet--part-3-all-gaps-closed)
+- [46. Complete Document Index](#46-complete-document-index)
+- [47. DSA — 50 Must-Know Problems With Solutions](#47-dsa--50-must-know-problems-with-solutions)
+- [48. Node.js Advanced](#48-nodejs-advanced--streams-clustering-worker-threads) *(Streams · Clustering · Worker Threads)*
+- [49. Web Security — Additional Topics](#49-web-security--additional-topics) *(CSRF · SRI · Clickjacking · SSRF)*
+- [50. More System Design](#50-more-system-design--twitterx-feed--distributed-cache) *(Twitter/X Feed · Distributed Cache)*
+- [51. Salary Negotiation Framework](#51-salary-negotiation-framework)
+- [52. Day-Before-Interview Checklist](#52-day-before-interview-checklist)
+- [53. Final Complete Quick-Reference Card](#53-final-complete-quick-reference-card)
+
+---
+
+### Part 4 — SAP BI Launchpad + Plain English (Sections 54–57)
+
+- [54. SAP BI Launchpad — The Complete Story](#54-sap-bi-launchpad--the-complete-story)
+- [55. Plain English — Key Concepts Rewritten Simply](#55-plain-english--key-concepts-rewritten-simply)
+- [56. How to Say It Out Loud — Spoken Scripts](#56-how-to-say-it-out-loud--spoken-scripts-for-key-topics)
+- [57. BI Launchpad — Quick Reference Card](#57-bi-launchpad--quick-reference-card)
+
+---
+
+### Part 5 — Final Gap Closures (Sections 58–66)
+
+- [58. TanStack Query / React Query](#58-tanstack-query-react-query--2026-standard-for-server-state)
+- [59. Zustand](#59-zustand--simple-state-management)
+- [60. SQL Window Functions & Advanced Queries](#60-sql-window-functions--advanced-queries)
+- [61. Spring Boot Testing & Exception Handling](#61-spring-boot-testing--exception-handling)
+- [62. TypeScript with React — Practical Patterns](#62-typescript-with-react--practical-patterns)
+- [63. Intersection Observer & Key Web APIs](#63-intersection-observer--key-web-apis)
+- [64. CSS Architecture](#64-css-architecture--modules-vs-tailwind-vs-css-in-js) *(Modules vs Tailwind vs CSS-in-JS)*
+- [65. Accessibility — Code You Must Know](#65-accessibility--code-you-must-know)
+- [66. Progressive Web Apps (PWA)](#66-progressive-web-apps-pwa--what-you-need-to-know)
+
+---
+
 ## 0. How to Use This Document
 
 ### Study Plan (4 Weeks)
