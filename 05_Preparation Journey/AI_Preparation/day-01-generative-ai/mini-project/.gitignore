@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Secrets — never commit real keys
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+*.tsbuildinfo
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
