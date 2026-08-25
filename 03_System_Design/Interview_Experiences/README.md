@@ -24,6 +24,8 @@
 
 ## 🚀 How to Use
 
+**[Open the live Frontend interview experiences](https://dhruday.github.io/Prep/)**
+
 1. **By Company** — Navigate to the company folder directly
 2. **By Role Type** — Choose `FullStack/` or `Frontend/`
 3. **By Master Index** — Use [00_MASTER_INDEX.md](00_MASTER_INDEX.md) for the complete **499-file searchable table** with working links to every experience
