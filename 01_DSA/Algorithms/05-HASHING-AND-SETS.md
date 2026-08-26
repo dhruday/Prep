@@ -1,421 +1,653 @@
-# Hashing & Sets — Complete Pattern Guide
+# Hashing & Sets — 1-Hour Learning Module
 
-> *"A HashMap is the Swiss Army knife of DSA. When you need to go from O(n²) to O(n), your first instinct should be: can I trade space for time with a hash?"*
+> "A HashMap is the Swiss Army knife of DSA. When you need to go from O(n²) to O(n), ask yourself: can I trade space for time with a hash?"
 
 ---
 
 ## Table of Contents
 
-1. [Frequency Counting](#frequency-counting)
-2. [Two-Sum Pattern Family](#two-sum-pattern-family)
-3. [Group By Key Pattern](#group-by-key-pattern)
-4. [Subarray Sum + HashMap](#subarray-sum--hashmap)
-5. [Sliding Window + HashMap](#sliding-window--hashmap)
-6. [Hash Set for Existence/Uniqueness](#hash-set-for-existenceuniqueness)
-7. [Rolling Hash](#rolling-hash)
-8. [Consistent Hashing (Design Context)](#consistent-hashing-design-context)
+- [[0–10 min] Big Picture](#010-min-big-picture)
+- [[10–20 min] Mental Model](#1020-min-mental-model)
+- [[20–35 min] Core Patterns](#2035-min-core-patterns)
+- [[35–45 min] Concrete Code + Dry Run](#3545-min-concrete-code--dry-run)
+- [[45–55 min] Pattern Recognition](#4555-min-pattern-recognition)
+- [[55–60 min] Final Mental Checklist](#5560-min-final-mental-checklist)
+- [Active Recall](#active-recall)
+- [Recommended Practice Direction](#recommended-practice-direction)
+- [2-Minute Cheat Sheet](#2-minute-cheat-sheet)
+- [Advanced Awareness](#advanced-awareness)
 
 ---
 
-## Frequency Counting
+## [0–10 min] Big Picture
 
-### What is this approach?
+### What is Hashing? Why does it exist?
 
-**Intuition:** You are counting votes. For each ballot, mark a tally next to that candidate's name. At the end, you know exactly how many votes each candidate has. That tally sheet is a frequency map.
+Imagine a room with 10,000 boxes. You want box #7,842. If the boxes are scattered randomly, you have to check every one — O(n). If each box sits in a slot equal to its label, you walk straight to slot 7,842 in O(1). That direct-address idea is the core of hashing.
 
-**Formal:** Use a HashMap (or array if values are bounded) to count the occurrence of each element. This is the most basic and versatile hashing pattern.
+The real world doesn't give us neatly numbered labels. Keys can be strings, objects, anything. A **hash function** converts any key into an array index. Collision handling ensures correctness when two keys land on the same slot.
 
-### When should I use this?
+### Real-world analogy
 
-- Count occurrences of elements
+A HashMap is a library's card catalog. Every book (value) has a call number (key). Instead of walking every shelf, you look up the call number and go straight to that shelf — O(1) lookup vs. O(n) shelf-by-shelf scan.
+
+A HashSet is the catalog without the books. You only track which call numbers exist — "is this item present or not?"
+
+### One tiny example
+
+Problem: "Do any two numbers in [2, 7, 11, 15] add up to 9?"
+
+Brute force: check every pair — (2,7), (2,11), (2,15), (7,11) ... — O(n²).
+
+With a HashMap: walk once, asking "Is 9 minus the current number already stored?"
+
+```
+See 2:  need 7.  Not stored yet.  Store 2.
+See 7:  need 2.  2 IS stored!     Found the pair.
+```
+
+One pass, O(n). The trade: a small amount of extra memory for dramatically faster lookup. This is the entire thesis of hashing.
+
+---
+
+## [10–20 min] Mental Model
+
+### What is actually happening under the hood?
+
+A HashMap is an array. A hash function converts your key to an integer index. The value lives at that index.
+
+```
+key "apple"  -->  hash("apple") = 42  -->  array[42] = <value>
+key "banana" -->  hash("banana") = 17  -->  array[17] = <value>
+```
+
+When two keys hash to the same slot (a collision), Java's HashMap uses **chaining**: a short linked list lives at that bucket. With a good hash function, average chain length stays near 1, so lookup stays O(1). In the absolute worst case (all keys collide), it degrades to O(n) — but this is negligible in practice.
+
+### ASCII diagram: HashMap internals
+
+```
+  Key         Hash Fn     Bucket Array
+  --------    -------     -----------------------------------------
+  "eat"   --> h = 2  -->  [0]: empty
+  "tea"   --> h = 2  -->  [1]: empty
+  "cat"   --> h = 5  -->  [2]: ("eat", val) --> ("tea", val)   <-- chain
+                          [3]: empty
+                          [4]: empty
+                          [5]: ("cat", val)
+```
+
+"eat" and "tea" collide at bucket 2 and are chained. Lookup traverses the short chain. Average chain length ≈ 1.
+
+### The key insight
+
+The entire power of hashing is one sentence:
+
+> "If I have seen something before, I stored it in O(1). I can check whether it exists in O(1)."
+
+This converts repeated **search** into instant **lookup**. Any algorithm doing repeated O(n) scans through an array can often be rewritten to "store as you go, look up what you need."
+
+### What information do we maintain, and why?
+
+```
+HashMap<K, Integer>     -- frequency counts or index tracking
+HashMap<K, List<V>>     -- grouping elements that share an identity
+HashSet<K>              -- membership only (no value needed)
+prefix sum + HashMap    -- count subarrays whose sum equals a target
+```
+
+Each flavor answers a different question:
+- Frequency map: "How many times have I seen X?"
+- Index map: "Where did I last see X?"
+- Grouping map: "Which other elements belong with X?"
+- HashSet: "Have I seen X at all?"
+- Prefix + map: "How many subarrays ending here have sum exactly K?"
+
+---
+
+## [20–35 min] Core Patterns
+
+### The single mental test before writing any code
+
+> "Do I need to look up something I have already seen, faster than O(n)?"
+
+If yes, a HashMap or HashSet is likely your tool.
+
+---
+
+### Pattern 1: Frequency Counting
+
+**Intuition:** You are counting votes. For each ballot, mark a tally next to that candidate's name. That tally sheet is your frequency map.
+
+**When to use:**
+- Count occurrences of each element
 - Find the most/least frequent element
-- Check if two collections are "equivalent" (e.g., anagrams)
+- Check if two collections are "equivalent" (anagram check, permutation check)
 - Keywords: "frequency," "count," "how many times," "most common," "anagram"
 
-### When should I NOT use this?
-
-- You don't need counts — just existence checks (use a HashSet instead)
-- The values are in a tiny range (0-25 for lowercase letters) — use an array, it's faster
+**When NOT to use:**
+- You only need existence, not count — use a HashSet (simpler)
+- The range is tiny (e.g., only lowercase letters) — use an int[26] array, it is faster and cleaner
 - You need ordered frequency information — combine with sorting or a heap
 
-### Core Idea
+**Core algorithm:**
+```
+freq = {}
+for each element x:
+    freq[x] = freq.getOrDefault(x, 0) + 1
+```
 
-1. Initialize an empty map
-2. Iterate through the collection, incrementing map[element] for each element
-3. Query the map for counts, max, presence, etc.
+**Variants:**
+- **Two frequency maps compared:** Build maps for two collections, check equality. This is the anagram check.
+- **Frequency of frequencies:** "How many elements appear exactly K times?" Build freq map, then count how many values in that map equal K.
+- **Top K frequent elements:** Build freq map, then use a heap or bucket sort on the frequencies.
 
-### Complexity
-
-- **Time:** O(n) to build, O(1) per lookup
-- **Space:** O(K) where K = number of distinct elements
-
-### Variants
-
-- **Single Frequency Count:** Count occurrences of each element
-- **Two Frequency Maps Comparison:** Build maps for two collections, compare (anagram check, permutation check)
-- **Frequency of Frequencies:** "How many elements appear exactly K times?" Build freq map, then count map values.
-- **Top K Frequent Elements:** Build freq map, then use heap or bucket sort on frequencies. See [Heaps](12-HEAPS-AND-PRIORITY-QUEUES.md) and [Bucket Sort](04-SORTING-AND-ORDER.md#bucket-sort).
-
-### Related Patterns
-
-- [Two-Sum Pattern Family](#two-sum-pattern-family) (uses hash for complement lookup)
-- [Sliding Window + HashMap](#sliding-window--hashmap) (frequency counting within a window)
-- [Boyer-Moore Voting](02-ARRAYS-AND-STRINGS.md#boyer-moore-voting-algorithm) (O(1) space alternative for majority)
-
-### Interview Insights
-
-- **Trap:** Using a HashMap when an array suffices. For lowercase letters, a 26-element array is cleaner and faster.
-- **Twist:** "Sort by frequency, then alphabetically" — Build freq map, then custom sort using frequency as primary key.
-- **Follow-up:** "What if the data is streaming?" — Approximate frequency counting (Count-Min Sketch) for large streams.
+**Complexity:**
+- Time: O(n) to build, O(1) per lookup
+- Space: O(D) where D = number of distinct elements
 
 ---
 
-## Two-Sum Pattern Family
+### Pattern 2: Two-Sum (Complement Lookup)
 
-### What is this approach?
+**Brute force:** For each element, scan the rest of the array looking for target - element. O(n²).
 
-**Intuition:** You are looking for a dance partner. Instead of checking everyone against everyone (O(n²)), you announce your "need" (target - your_height) and check if anyone with that height has already registered. Each person registers as they arrive. One pass, every match found.
+**Key observation:** When I am at element x, I do not need to scan. I need to answer one question: "Have I already seen target - x?" If I have stored every element I've passed into a HashMap, that answer costs O(1).
 
-**Formal:** For each element, calculate what complementary element is needed. Look up if that complement exists in a HashMap. Store each element as you go. This reduces pairwise search from O(n²) to O(n).
+**Optimized one-pass:**
+```
+seen = {}                         // value -> index
+for i = 0 to n-1:
+    complement = target - arr[i]
+    if complement in seen:
+        return [seen[complement], i]
+    seen[arr[i]] = i
+```
 
-### When should I use this?
+**Brute to optimal progression:**
+```
+O(n²): for i: for j>i: if arr[i]+arr[j]==target -> return
+  |
+  | Observation: the partner of arr[i] is fully determined (= target - arr[i]).
+  |              No need to scan - just remember past elements.
+  v
+O(n): store past elements in HashMap, query in O(1) per step
+```
 
-- Find a **pair** (or triplet, quadruplet) with a given sum or difference
-- The array is **unsorted** and you want O(n) time
-- You need to return **indices** (not just values — can't sort without losing indices)
-- Keywords: "two sum," "pair with sum," "complement," "target sum"
+**When to use:** Unsorted array, need indices, or array has duplicates. Any "find pair with property X" where you can express "what my partner must be" as a formula.
 
-### When should I NOT use this?
+**When NOT to use:**
+- Array is sorted — Two Pointers gives O(1) space at the same O(n) time
+- Need all pairs — handle duplicate values carefully; map stores one index per value
+- n is small and you need all pairs — nested loops may be simpler
 
-- The array is **sorted** — Two Pointers is simpler and uses O(1) space
-- You need **all pairs** — HashMap finds matches in one pass, but you must handle duplicates carefully
-- The target involves more than two elements and n is small enough for O(n²) — sometimes simpler to nest loops
-
-### Core Idea
-
-**Two Sum:**
-1. Initialize empty HashMap (value → index)
-2. For each element arr[i]:
-   - complement = target - arr[i]
-   - If complement exists in map, return [map[complement], i]
-   - Else, store map[arr[i]] = i
-3. One pass, O(n) time, O(n) space
-
-### Complexity
-
-- **Time:** O(n) for Two Sum
-- **Space:** O(n) for the HashMap
-
-### Variants
-
-- **Two Sum (return indices):** HashMap, as described. The classic.
-- **Two Sum (sorted array):** Two Pointers — O(1) space, no HashMap needed.
-- **Two Sum (multiple pairs):** Store all indices for each value, or count pairs with frequency map.
-- **Three Sum (sum to 0):** Sort, then for each element fix it and run Two Sum on the remainder using Two Pointers. O(n²).
-- **Three Sum Closest:** Similar to Three Sum but track the closest sum instead of exact match.
-- **Four Sum:** Sort, then nest two loops (fix two elements) + Two Pointers inner. O(n³). Or HashMap of pair sums for O(n²) but with more complex duplicate handling.
-- **Two Sum — Data Structure Design:** Implement a class with `add(number)` and `find(target)`. Store elements in a HashMap (value → count). `find` checks for complement.
-- **Two Difference (Two Sum variant):** "Find pair with difference = K." Use HashMap: for each element, check if element + K or element - K exists.
-- **Subarray Sum = K:** Not a direct two-sum variant, but uses the same "complement lookup" idea on prefix sums. See [Subarray Sum + HashMap](#subarray-sum--hashmap).
-
-### Related Patterns
-
-- [Two Pointers — Opposite Direction](02-ARRAYS-AND-STRINGS.md#two-pointers--opposite-direction) (O(1) space alternative for sorted data)
-- [Prefix Sum + HashMap](#subarray-sum--hashmap) (extends the complement idea to subarrays)
-- [Frequency Counting](#frequency-counting) (the underlying data structure)
-
-### Interview Insights
-
-- **Trap:** Two Sum is "easy" but a common warm-up question. The interviewer assesses if you can articulate the HashMap approach clearly, handle edge cases (duplicate values, element used twice), and analyze complexity.
-- **Trap:** For Three Sum, forgetting to skip duplicate elements after sorting leads to duplicate triplets.
-- **Twist:** "What if you need to handle very large arrays?" — Discuss memory constraints. Two Pointers on sorted data uses O(1) space.
-- **Follow-up:** "Design a data structure for Two Sum queries" — Class with HashMap, O(1) add, O(n) find.
+**Variants:**
+- **Two Sum (sorted array):** Two Pointers, O(1) space
+- **Three Sum (sum to 0):** Sort first, then for each element fix it and run Two Pointers on the remainder. O(n²)
+- **Three Sum Closest:** Same as Three Sum but track the closest running sum
+- **Four Sum:** Sort, nest two loops fixing two elements, run Two Pointers inside. O(n³). Alternatively HashMap of pair sums for O(n²) with careful duplicate handling.
+- **Two Difference (Two Sum variant):** "Find pair with difference = K." For each element, check if element + K or element - K exists in the map.
+- **Two Sum Data Structure:** Class with `add(number)` and `find(target)`. HashMap value → count. `find` checks for complement.
 
 ---
 
-## Group By Key Pattern
+### Pattern 3: Group By Key
 
-### What is this approach?
+**Intuition:** Sorting mail into labeled mailboxes. Each piece of mail gets a label (the key). Mail with the same label goes in the same box. The creative work is choosing the right label function.
 
-**Intuition:** Sorting mail into mailboxes. Each letter gets a label (the key), and letters with the same label go in the same box. The key design is the creative part — how do you define "same group?"
+**Core algorithm:**
+```
+groups = {}
+for each element x:
+    k = key_function(x)
+    groups[k].append(x)
+return groups.values()
+```
 
-**Formal:** Use a HashMap where the key represents a group identity and the value is a list of elements belonging to that group. The art is choosing the right key function.
+**Key function examples:**
+- **Group Anagrams:** key = sorted string. "eat", "tea", "ate" all produce "aet".
+- **Isomorphic Strings:** key = normalized first-occurrence pattern. "egg" → "0.1.1".
+- **Group Shifted Strings:** key = tuple of differences between consecutive characters.
 
-### When should I use this?
+**When NOT to use:** Grouping depends on pairwise relationships rather than a function of a single element — use Union-Find instead.
 
-- Group elements by some **equivalence relation** (anagram groups, isomorphic strings, same remainder, etc.)
-- Keywords: "group anagrams," "group by," "categorize," "isomorphic"
+**Complexity:**
+- Time: O(n × K) where K = cost of computing the key. Sorting a string of length L = O(L log L). A frequency count key = O(L).
+- Space: O(n) for the map
 
-### When should I NOT use this?
-
-- Elements don't have a natural grouping
-- Grouping depends on pairwise relationships (not a simple key) — consider Union-Find instead
-
-### Core Idea
-
-1. Define a **key function** that maps each element to its group identity
-2. Iterate elements, for each: compute key, add element to map[key]
-3. Return the groups
-
-**Key design examples:**
-- **Group Anagrams:** Key = sorted string (e.g., "eat" → "aet") or frequency tuple
-- **Isomorphic Strings:** Key = pattern of first-occurrence indices (e.g., "egg" → "0.1.1")
-- **Group Shifted Strings:** Key = tuple of differences between consecutive characters
-
-### Complexity
-
-- **Time:** O(n × K) where K = cost of computing the key per element (e.g., sorting a string of length L = O(L log L))
-- **Space:** O(n) for the HashMap
-
-### Variants
-
-- **Group Anagrams:** Key = sorted string or character frequency tuple
-- **Isomorphic Strings / Word Pattern:** Key = normalized pattern
-- **Group Shifted Strings:** Key = difference sequence
-- **Encode and Group:** When the key derivation is itself the interesting part
-
-### Related Patterns
-
-- [Frequency Counting](#frequency-counting) (often used inside the key function)
-- [Union-Find](11-GRAPHS.md) (for grouping based on pairwise connections instead of shared keys)
-
-### Interview Insights
-
-- **Trap:** For "Group Anagrams," sorting each string is O(L log L). Using a frequency count as key is O(L) but requires a hashable representation (tuple, string).
-- **Twist:** "What if the alphabet is large (Unicode)?" — Sorting-based key is more robust than fixed-size frequency array.
-- **Follow-up:** "What if you need to stream elements and query groups on the fly?" — Use the HashMap as a live data structure.
+**Interview insight:** For "Group Anagrams," sorting each string is O(L log L) per word. Using a character frequency array (or tuple) as key costs O(L) but requires a hashable representation. Sorting is simpler to code correctly; frequency key is faster asymptotically.
 
 ---
 
-## Subarray Sum + HashMap
+### Pattern 4: Subarray Sum = K (Prefix Sum + HashMap)
 
-### What is this approach?
+**This is the most powerful and most missed hashing pattern. Master this one.**
 
-**Intuition:** You are walking along a number line, tracking your cumulative position (prefix sum). Someone asks: "Was there a point in your walk where you were exactly K steps behind where you are now?" If yes, then the segment between that point and your current position sums to exactly K. You check your journal (HashMap) of all past positions.
+**Brute force:** For every pair (i, j), compute sum(arr[i..j]). O(n²) or O(n³).
 
-**Formal:** Combine prefix sums with a HashMap to count subarrays with a given sum. At each index, prefix[i] - prefix[j] = sum of subarray [j+1, i]. So "subarray sum = K" is equivalent to "exists j < i such that prefix[i] - prefix[j] = K", which is "prefix[j] = prefix[i] - K". Store prefix sums in a HashMap.
+**Key observation:** Define prefix[i] = sum of arr[0] through arr[i], and prefix[-1] = 0.
 
-### When should I use this?
+Sum of subarray ending at i starting at j+1 = prefix[i] - prefix[j].
 
-- **"Count subarrays with sum = K"** — especially when the array has **negative numbers** (sliding window fails)
-- **"Subarray sum divisible by K"** — use prefix_sum % K as the key
-- **"Longest subarray with sum = K"** — store the first occurrence of each prefix sum
-- **"Subarray with equal 0s and 1s"** — convert 0 → -1, then find subarray sum = 0
-- Keywords: "subarray sum," "count subarrays," "sum equals K," "divisible by K"
+So "is there a subarray ending at i with sum exactly K?" is equivalent to:
 
-### When should I NOT use this?
+> "Does the value prefix[i] - K appear somewhere in the list of past prefix sums?"
 
-- All elements are non-negative and you want "sum ≤ K" — sliding window works and is simpler
-- You want the actual subarray contents (not just count/length) — prefix sum + HashMap gives positions, then extract
-- The problem is about subsequences (non-contiguous) — prefix sum only works for contiguous
+This is Two-Sum applied to prefix sums.
 
-### Core Idea
+**ASCII diagram:**
+```
+arr:    [ 1,  2,  3,  -2,  4 ]    target K = 3
 
-1. Initialize: HashMap = {0: 1} (prefix sum 0 occurs once at the "virtual" start), current_prefix = 0, count = 0
-2. For each element:
-   - current_prefix += arr[i]
-   - If (current_prefix - K) exists in HashMap, count += HashMap[current_prefix - K]
-   - Add current_prefix to HashMap: HashMap[current_prefix]++
-3. Return count
+prefix: [ 0,  1,  3,   6,   4,   8 ]
+          ^                          (virtual start, always included)
 
-**Why HashMap = {0: 1}?** If current_prefix == K at some point, then subarray [0, i] itself has sum K. The base case prefix sum of 0 ensures this subarray is counted.
+At prefix = 3: need 3 - 3 = 0.  Is 0 in map?  Yes -> subarray [0..1] sums to 3.
+At prefix = 6: need 6 - 3 = 3.  Is 3 in map?  Yes -> subarray [2..2] sums to 3.
+```
 
-### Complexity
+**Core algorithm:**
+```
+prefixCount = {0: 1}          // CRITICAL: base case
+currentPrefix = 0
+count = 0
+for each element x:
+    currentPrefix += x
+    needed = currentPrefix - k
+    count += prefixCount.getOrDefault(needed, 0)
+    prefixCount[currentPrefix]++
+return count
+```
 
-- **Time:** O(n) — single pass, HashMap lookups are O(1)
-- **Space:** O(n) — for the HashMap
+**Why {0: 1} is critical:** If currentPrefix == K at any point, then the entire subarray from index 0 to here sums to K. The entry {0: 1} represents the virtual position before the array starts, so this subarray gets counted.
 
-### Variants
+**When to use:**
+- Count subarrays with sum = K, especially when the array has negative numbers (sliding window fails with negatives)
+- Count subarrays with sum divisible by K — use prefix % K as the key
+- Longest subarray with sum = K — store the *first* occurrence of each prefix sum
+- Subarray with equal 0s and 1s — convert 0 to -1, find subarray with sum = 0
 
-- **Count Subarrays with Sum = K:** Standard version above
-- **Count Subarrays Divisible by K:** Key = prefix_sum % K (handle negative mod correctly!)
-- **Longest Subarray with Sum = K:** Store first occurrence of each prefix sum. Length = i - map[prefix - K].
-- **Binary Subarrays with Sum = K (0/1 array):** Same technique, or sliding window since elements are non-negative.
-- **Contiguous Array (0s and 1s):** Replace 0 with -1, find longest subarray with sum = 0.
-- **Subarray XOR = K:** Use prefix XOR + HashMap (same idea, XOR instead of sum).
-- **Count Subarrays Where sum % K = target:** Use modular arithmetic on prefix sums.
+**When NOT to use:**
+- All elements are non-negative and you want longest/shortest subarray with sum ≤ K — sliding window is simpler and uses O(1) space
+- You need the actual subarray elements, not just count/length — prefix + HashMap gives positions, then extract
 
-### Related Patterns
-
-- [Prefix Sum](02-ARRAYS-AND-STRINGS.md#prefix-sum) (the underlying precomputation)
-- [Sliding Window](02-ARRAYS-AND-STRINGS.md#sliding-window--variable-size) (simpler alternative when all elements ≥ 0)
-- [Two-Sum Pattern](#two-sum-pattern-family) (same "complement lookup" logic applied to prefix sums)
-
-### Interview Insights
-
-- **Trap:** Forgetting the base case {0: 1}. Without it, subarrays starting at index 0 are missed.
-- **Trap:** Negative modulo. In many languages, (-3) % 5 = -3, not 2. You need ((prefix % K) + K) % K to handle negatively correctly.
-- **Twist:** "0s and 1s equal count" → Replace 0 with -1, find longest subarray with sum = 0. This transformation is the hard insight.
-- **Follow-up:** "What if K changes per query?" — Precompute all prefix sums, then different K values require different HashMap passes (or offline processing).
-- **Key insight:** This pattern is the #1 technique for subarray problems with negative numbers. Sliding window fails; prefix sum + HashMap is the rescue.
+**Variants:**
+- **Count subarrays divisible by K:** Key = prefix % K. Handle negative mod: ((prefix % K) + K) % K
+- **Longest subarray with sum = K:** Store first occurrence index for each prefix sum. Length = i - firstSeen[prefix - K]
+- **Contiguous Array (0s and 1s):** Replace 0 with -1, find longest subarray with sum = 0
+- **Subarray XOR = K:** Use prefix XOR + HashMap — same idea, XOR replaces addition
 
 ---
 
-## Sliding Window + HashMap
+### Pattern 5: HashSet for Existence / Uniqueness
 
-### What is this approach?
+**Intuition:** A guest list at a party. You do not care how many times someone's name appears. You only care whether they are on the list. That is a set.
 
-This section is a brief recap — the detailed treatment is in [02-ARRAYS-AND-STRINGS.md — Sliding Window with HashMap](02-ARRAYS-AND-STRINGS.md#sliding-window-with-hashmap).
+**Core algorithm:**
+```
+seen = {}
+for each element x:
+    if x in seen:
+        // duplicate found, or trigger some condition
+    seen.add(x)
+```
 
-**Summary:** Use a HashMap as the window state for sliding window problems where the validity condition depends on character/element frequencies.
-
-**Key applications:**
-- Minimum Window Substring
-- Longest Substring Without Repeating Characters
-- Find All Anagrams
-- Longest Substring with At Most K Distinct Characters
-- Permutation in String
-
-**When to use:** The window's validity is about frequencies, counts, or membership.
-
----
-
-## Hash Set for Existence/Uniqueness
-
-### What is this approach?
-
-**Intuition:** A guest list at a party. You don't care how many times someone's name appears — you only care whether they are on the list or not. That is a set.
-
-**Formal:** A HashSet provides O(1) average-time insert, delete, and contains operations. It stores only unique elements.
-
-### When should I use this?
-
+**When to use:**
 - "Does element X exist in the collection?"
-- "How many distinct elements?"
-- "Find the intersection / union / difference of two collections"
+- "How many distinct elements are there?"
+- "Find intersection / union / difference of two collections"
 - Remove duplicates
 - Keywords: "contains," "exists," "unique," "distinct," "duplicate"
 
-### When should I NOT use this?
+**When NOT to use:**
+- You need counts — use HashMap
+- You need ordered access — use TreeSet
+- Space is severely limited — consider a bit vector or bloom filter
 
-- You need counts (use HashMap)
-- You need ordered access (use TreeSet / sorted structure)
-- Space is severely limited (consider bit vector or bloom filter)
-
-### Core Idea
-
-- Insert, lookup, and delete in O(1) amortized
-- Built on hashing: element → hash → bucket → stored
-
-### Complexity
-
-- **Time:** O(1) average per operation
-- **Space:** O(n) for n elements
-
-### Variants
-
-- **Contains Duplicate:** Add to set; if already present, duplicate found.
-- **Intersection of Two Arrays:** Add one to set, scan other and check membership.
-- **Longest Consecutive Sequence:** Add all to set. For each element, if element-1 NOT in set (start of streak), count consecutive elements forward. O(n).
-- **Happy Number:** Detect cycles using a set of seen sums.
-
-### Related Patterns
-
-- [Frequency Counting](#frequency-counting) (when you also need counts)
-- [Bit Manipulation](14-BIT-MANIPULATION.md) (bit vector as a compact set)
-
-### Interview Insights
-
-- **Trap:** "Longest Consecutive Sequence" — Many try sorting (O(n log n)). The HashSet approach is O(n). The key insight: only start counting from the beginning of each streak.
-- **Twist:** "Contains Duplicate with distance constraint (nums[i] == nums[j] and |i - j| ≤ K)" — Use a HashMap mapping value → most recent index.
-- **Follow-up:** "Contains Duplicate within value range (|nums[i] - nums[j]| ≤ t)" — Bucket of size t+1. Each element goes in bucket = value / (t+1). Check current and adjacent buckets only.
+**Variants:**
+- **Contains Duplicate:** Add to set; if already present, a duplicate exists.
+- **Intersection of Two Arrays:** Add one array to a set, scan the other and check membership.
+- **Longest Consecutive Sequence:** Add all to set. For each element where element-1 is NOT in the set (this is the start of a streak), count forward. O(n) total despite the inner loop — each element is visited as "start of streak" at most once.
+- **Happy Number:** Detect cycles by tracking seen sums in a set.
+- **Contains Duplicate within distance K:** HashMap of value → most recent index. Check if i - map[value] ≤ K.
 
 ---
 
-## Rolling Hash
+## [35–45 min] Concrete Code + Dry Run
 
-### What is this approach?
+### Example 1: Two Sum
 
-**Intuition:** Instead of comparing two strings character by character (which takes O(L) time), compute a numeric "fingerprint" for each string. If fingerprints match, the strings probably match. The trick: when you slide the window one character, you can update the fingerprint in O(1) instead of recomputing from scratch.
+**Input:** nums = [2, 7, 11, 15], target = 9
+**Expected output:** [0, 1]
 
-**Formal:** A hash function for strings that can be incrementally updated when the window shifts by one character. Used in Rabin-Karp algorithm and other substring matching problems.
+**Java:**
+```java
+public int[] twoSum(int[] nums, int target) {
+    Map<Integer, Integer> seen = new HashMap<>();
+    for (int i = 0; i < nums.length; i++) {
+        int complement = target - nums[i];
+        if (seen.containsKey(complement)) {
+            return new int[]{seen.get(complement), i};
+        }
+        seen.put(nums[i], i);
+    }
+    return new int[]{};
+}
+```
 
-### When should I use this?
+**JavaScript:**
+```javascript
+function twoSum(nums, target) {
+    const seen = new Map();
+    for (let i = 0; i < nums.length; i++) {
+        const complement = target - nums[i];
+        if (seen.has(complement)) {
+            return [seen.get(complement), i];
+        }
+        seen.set(nums[i], i);
+    }
+    return [];
+}
+```
 
-- Pattern matching in strings (Rabin-Karp)
-- Detecting duplicate substrings of a given length
-- Comparing substrings quickly
-- Keywords: "pattern matching," "repeated substring," "longest duplicate substring"
+**Dry run table:**
 
-### When should I NOT use this?
+| i | nums[i] | complement | seen (before this step) | action            |
+|---|---------|------------|-------------------------|-------------------|
+| 0 | 2       | 7          | {}                      | 7 not found; store 2→0 |
+| 1 | 7       | 2          | {2:0}                   | 2 found! return [0, 1] |
 
-- Exact matching is needed with 100% correctness — rolling hash has collision risk (verify with actual comparison on match)
-- The pattern length is very small — brute force or KMP may be simpler
-- You need the actual matching positions efficiently — KMP is more direct
+**Why check before storing?** An element cannot be its own partner. If we stored first and then checked, and target = 4 with arr[i] = 2, we would incorrectly find the pair (2, 2) using the same element twice.
 
-### Core Idea
-
-**Hash function:** hash = (c₁ × base^(L-1) + c₂ × base^(L-2) + ... + c_L × base^0) mod prime
-
-**Rolling update:** When the window shifts from position i to i+1:
-- Remove the contribution of the outgoing character: hash -= c_i × base^(L-1)
-- Shift remaining characters: hash *= base
-- Add incoming character: hash += c_{i+L}
-- All operations mod prime
-
-### Complexity
-
-- **Time:** O(n) average for searching (O(nm) worst case with many collisions)
-- **Space:** O(1) for the hash value
-
-### Variants
-
-- **Rabin-Karp Single Pattern:** Rolling hash for one pattern over a text
-- **Rabin-Karp Multiple Patterns:** Hash multiple patterns, check all at once (or use Aho-Corasick)
-- **Longest Duplicate Substring:** Binary search on length + rolling hash check for duplicate hashes
-- **Double Hashing:** Use two different hash functions to minimize collision probability
-
-### Related Patterns
-
-- [Rabin-Karp Algorithm](17-STRING-ALGORITHMS.md) (full treatment)
-- [KMP Algorithm](17-STRING-ALGORITHMS.md) (deterministic alternative)
-- [Sliding Window](02-ARRAYS-AND-STRINGS.md#sliding-window--fixed-size) (rolling hash IS a sliding window on hash values)
-
-### Interview Insights
-
-- **Trap:** Hash collisions. Always verify matches with actual string comparison. Rolling hash gives false positives but never false negatives.
-- **Twist:** "Longest Duplicate Substring" — Binary search on length K, use rolling hash to find any duplicate of that length. O(n log n) average.
-- **Follow-up:** "How to handle hash collisions?" — Double hashing (two different primes/bases) makes collision probability negligible.
+**Complexity:**
+- Time: O(n) — one pass; each HashMap operation is O(1) average
+- Space: O(n) — at most n entries in the map
 
 ---
 
-## Consistent Hashing (Design Context)
+### Example 2: Subarray Sum Equals K
 
-### What is this approach?
+**Input:** nums = [1, 2, 3], k = 3
+**Expected output:** 2 (subarrays are [1,2] and [3])
 
-**Intuition:** You have N servers arranged in a circle. Each key is hashed to a point on the circle. It gets assigned to the first server clockwise from that point. Adding/removing a server only affects keys near that server, NOT all keys.
+**Java:**
+```java
+public int subarraySum(int[] nums, int k) {
+    Map<Integer, Integer> prefixCount = new HashMap<>();
+    prefixCount.put(0, 1);
+    int currentPrefix = 0;
+    int count = 0;
+    for (int num : nums) {
+        currentPrefix += num;
+        int needed = currentPrefix - k;
+        count += prefixCount.getOrDefault(needed, 0);
+        prefixCount.put(currentPrefix, prefixCount.getOrDefault(currentPrefix, 0) + 1);
+    }
+    return count;
+}
+```
 
-**Formal:** A hashing scheme where keys and servers are mapped to a ring (hash space). Keys are assigned to the nearest server clockwise. This minimizes key redistribution when servers are added/removed. Used in distributed system design interviews.
+**JavaScript:**
+```javascript
+function subarraySum(nums, k) {
+    const prefixCount = new Map([[0, 1]]);
+    let currentPrefix = 0;
+    let count = 0;
+    for (const num of nums) {
+        currentPrefix += num;
+        const needed = currentPrefix - k;
+        count += prefixCount.get(needed) || 0;
+        prefixCount.set(currentPrefix, (prefixCount.get(currentPrefix) || 0) + 1);
+    }
+    return count;
+}
+```
 
-### When should I use this?
+**Dry run table:**
 
-- **System design interviews** involving distributed caching, load balancing, or sharding
-- When asked about **scaling** a key-value store across multiple nodes
-- Keywords: "distribute data across servers," "add/remove servers," "load balancing," "CDN," "distributed cache"
+| Step | num | currentPrefix | needed (prefix - k) | prefixCount before check | count after step |
+|------|-----|---------------|---------------------|--------------------------|-----------------|
+| init | --  | 0             | --                  | {0:1}                    | 0               |
+| 1    | 1   | 1             | 1 - 3 = -2          | {0:1}   (-2 absent)      | 0               |
+| 2    | 2   | 3             | 3 - 3 = 0           | {0:1, 1:1} (0 present, adds 1) | 1        |
+| 3    | 3   | 6             | 6 - 3 = 3           | {0:1, 1:1, 3:1} (3 present, adds 1) | 2   |
 
-### When should I NOT use this?
+**Result:** 2. The two subarrays are [1, 2] (indices 0–1) and [3] (index 2).
 
-- Coding interviews (this is a design concept, not a coding pattern)
-- Simple single-machine problems
+**Why {0: 1} works:** At step 2, prefix = 3 and needed = 0. The entry {0: 1} represents the virtual state before index 0 — it says "the empty prefix (sum = 0) has been seen once." Without it, the subarray [1, 2] would not be counted because there would be no record of the prefix sum 0.
 
-### Core Idea
+**Why update the map AFTER the query:** If we updated first, a single element arr[i] equal to k would count itself as a valid subarray, using the same index as both start and end.
 
-1. Hash both servers and keys to a circular hash space (ring)
-2. Each key is assigned to the next server clockwise on the ring
-3. **Virtual nodes:** Each physical server gets multiple positions on the ring to improve load distribution
-4. When a server is added, only keys between this server and the previous server (on the ring) need to move
-5. When a server is removed, its keys move to the next server clockwise
+**Complexity:**
+- Time: O(n) — one pass; all map operations are O(1) average
+- Space: O(n) — at most n distinct prefix sums stored
 
-### Complexity
+---
 
-- **Lookup:** O(log N) with sorted server positions and binary search
-- **Key redistribution on server change:** Only K/N keys move on average (K = total keys, N = servers)
+## [45–55 min] Pattern Recognition
 
-### Interview Insights
+### Structural clues — what to look for
 
-- **Trap:** Without virtual nodes, load is uneven (some servers get many more keys). Always mention virtual nodes.
-- **Twist:** "How do you handle hotspots?" — More virtual nodes for servers with more capacity. Combine with caching layer.
-- **Note:** This is strictly for system design rounds, not coding rounds.
+```
+"two elements that sum to target"           -->  Two-Sum (complement lookup)
+"count subarrays with sum = K"              -->  Prefix sum + HashMap
+"array contains negative numbers"           -->  Sliding window FAILS; use prefix sum
+"group all anagrams together"               -->  Group By Key
+"most frequent / top K elements"            -->  Frequency map + heap or bucket sort
+"check if two strings are anagrams"         -->  Frequency map comparison
+"longest consecutive sequence"              -->  HashSet, start-of-streak check
+"contains duplicate within K positions"     -->  HashMap of value -> last seen index
+"subarray with equal 0s and 1s"             -->  Replace 0 with -1, subarray sum = 0
+"subarray XOR equals K"                     -->  Prefix XOR + HashMap
+```
+
+### Reasoning flow
+
+Ask yourself in this order:
+
+1. Do I only need to check whether something has appeared? → **HashSet**
+2. Do I need to count how often something appears? → **HashMap (frequency)**
+3. Do I need to find a complement or partner element? → **HashMap (Two-Sum style)**
+4. Do I need to count or find subarrays by their sum? → **Prefix sum + HashMap**
+5. Do I need to group elements by shared identity? → **HashMap (group by key)**
+6. Does the array contain negatives and I am asked about subarray sums? → **Prefix sum + HashMap** (sliding window cannot handle negatives)
+
+### Distinguishing from similar patterns
+
+| Situation | Use |
+|---|---|
+| Sorted array, find pair with sum = target | Two Pointers — O(1) space |
+| Unsorted array, find pair with sum = target | Two-Sum HashMap — O(n) space |
+| All non-negative elements, longest subarray with sum ≤ K | Sliding Window |
+| Has negative elements, count subarrays with sum = K | Prefix Sum + HashMap |
+| Grouping by a computable key | Group By Key HashMap |
+| Only need to know if element exists | HashSet |
+| Need counts | HashMap |
+| Grouping by pairwise connections | Union-Find |
+
+### Common traps
+
+**Trap 1 — Missing {0: 1} base case.**
+In all prefix sum + HashMap problems, forgetting to seed the map with {0: 1} causes subarrays that start at index 0 to be missed. Always seed first, before the loop.
+
+**Trap 2 — Negative modulo.**
+In Java and JavaScript, (-3) % 5 = -3, not 2. For "count subarrays with sum divisible by K," you must normalize: ((prefix % K) + K) % K. This ensures all keys are non-negative.
+
+**Trap 3 — HashMap when an array suffices.**
+For lowercase English letters, a 26-element int array is cleaner, faster, and uses less memory than a HashMap. Reserve HashMap for large or unpredictable key ranges.
+
+**Trap 4 — Three Sum duplicates.**
+After sorting for Three Sum, if you do not skip duplicate elements at each of the three pointer positions, you will produce duplicate triplets in the output.
+
+**Trap 5 — Same element used twice in Two-Sum.**
+The reason you check before storing (not after) is to avoid pairing an element with itself. "Two Sum" specifies two distinct indices.
+
+---
+
+## [55–60 min] Final Mental Checklist
+
+```
+WHAT IS IT?
+  HashMap / HashSet: data structures giving O(1) average insert, lookup, delete.
+  Built on hash functions that convert keys to array indices.
+
+WHEN DO I USE IT?
+  - O(1) check of "have I seen X before?" -> HashSet or HashMap
+  - Count element frequencies -> HashMap<K, Integer>
+  - Find complement / partner satisfying a condition -> Two-Sum style HashMap
+  - Count subarrays by their sum (especially with negatives) -> prefix + HashMap
+  - Group elements by a shared identity -> HashMap<K, List>
+
+WHEN DO I NOT USE IT?
+  - Sorted array, need pairs -> Two Pointers (O(1) space, same time)
+  - All non-negative elements, subarray sum problem -> Sliding Window (simpler)
+  - Grouping based on pairwise connections -> Union-Find
+  - Range is tiny (e.g., only lowercase letters) -> use int[] array
+  - Need ordered iteration -> use TreeMap / TreeSet
+
+WHAT IS THE CORE IDEA?
+  Trade O(n) space for O(1) lookup.
+  Store past observations as you go. Query them instantly.
+
+WHAT DO I TRACK?
+  Two-Sum:         value -> index
+  Subarray Sum:    prefix sum -> count of how many times this prefix sum occurred
+  Frequency:       value -> count
+  Group By Key:    key -> list of elements
+  HashSet:         just the elements (membership only)
+
+WHAT IS THE INVARIANT / STATE?
+  Two-Sum:    map contains all elements seen to the LEFT of current index
+  Prefix Sum: prefixCount contains frequency of all prefix sums UP TO current index
+              and always includes the seed {0: 1} before the loop begins
+  Frequency:  map[x] = number of times x has been seen so far
+
+HOW DO I RECOGNIZE IT?
+  "find pair/complement"           -> Two-Sum
+  "count subarrays with sum"       -> Prefix + HashMap
+  "group by equivalence"           -> Group By Key
+  "most frequent / count"          -> Frequency map
+  "contains / exists / duplicate"  -> HashSet
+
+WHAT ARE THE COMMON TRAPS?
+  - Missing {0:1} seed in prefix sum problems
+  - Negative modulo in divisibility problems
+  - Using HashMap when int[26] is sufficient
+  - Forgetting duplicate skipping in Three Sum
+  - Checking AFTER storing in Two-Sum (allows self-pairing)
+
+WHAT PATTERNS CAN I CONFUSE IT WITH?
+  Two Pointers:   use when array is sorted and you need pairs (O(1) space)
+  Sliding Window: use when all elements >= 0 and you need subarray sum bounds
+  Union-Find:     use when grouping is based on pairwise connections, not a key function
+
+WHAT IS THE COMPLEXITY?
+  Single-pass HashMap / HashSet algorithms:  O(n) time, O(n) space
+  Group By Key with sorted-string key:       O(n * L log L) time
+  Prefix Sum + HashMap:                      O(n) time, O(n) space
+  HashMap worst case (all collisions):       O(n) per lookup — negligible in practice
+```
+
+---
+
+## Active Recall
+
+Close your notes and answer these without looking:
+
+1. In the Two-Sum HashMap approach, do you check the map before or after storing the current element? What breaks if you reverse the order?
+
+2. What is the purpose of initializing prefixCount = {0: 1} in the subarray sum pattern? Give a concrete example of what goes wrong without it.
+
+3. You are given an array that contains negative numbers. Someone suggests using a sliding window to count subarrays with sum = K. Why does this fail?
+
+4. For "Group Anagrams," the standard key is "sort the string" — O(L log L) per word. What is an O(L) alternative key that avoids sorting?
+
+5. "Longest Consecutive Sequence" has a nested loop structure but runs in O(n). Explain why the inner loop does not push the overall complexity to O(n²).
+
+6. For "subarray sum divisible by K," the key in the map is prefix % K. Why do you need ((prefix % K) + K) % K instead of just prefix % K?
+
+7. You have a HashMap approach (O(n) time) and a Two Pointers approach (O(n) time, O(1) space) for a pairs problem. The input is sorted. Which do you use and why?
+
+8. Explain why the "complement lookup" insight that makes Two-Sum O(n) also applies to the subarray sum problem. What is the "complement" in each case?
+
+---
+
+## Recommended Practice Direction
+
+Work through these in order — each one introduces a new layer of the hashing patterns:
+
+1. **Two Sum** (LeetCode #1) — Foundational complement lookup; articulate the HashMap approach clearly
+2. **Valid Anagram** (LeetCode #242) — Basic frequency map comparison
+3. **Group Anagrams** (LeetCode #49) — Group By Key with a custom key function
+4. **Subarray Sum Equals K** (LeetCode #560) — Prefix sum + HashMap; the hardest fundamental; practice the {0:1} seed without hesitation
+5. **Longest Consecutive Sequence** (LeetCode #128) — HashSet with the start-of-streak insight for O(n)
+6. **Top K Frequent Elements** (LeetCode #347) — Frequency map combined with bucket sort or a heap
+7. **Contiguous Array** (LeetCode #525) — The "replace 0 with -1" transformation; subarray sum = 0
+8. **Minimum Window Substring** (LeetCode #76) — Sliding window + frequency map; the hardest combination of both tools
+
+For each problem: solve brute force first, then ask "what lookup am I repeating inside the loop?" That repeated lookup is what the HashMap eliminates.
+
+---
+
+## 2-Minute Cheat Sheet
+
+```
+PICK YOUR WEAPON:
+  HashSet              --> existence / uniqueness / deduplication
+  HashMap<K, count>    --> frequency counting
+  HashMap<K, index>    --> two-sum / complement lookup
+  HashMap<K, list>     --> group by key
+  prefix + HashMap     --> subarray sum counting (negatives OK)
+
+TWO-SUM TEMPLATE:
+  seen = {}
+  for i, x in enumerate(arr):
+      complement = target - x
+      if complement in seen:
+          return [seen[complement], i]
+      seen[x] = i
+
+SUBARRAY SUM TEMPLATE:
+  prefixCount = {0: 1}          // seed this BEFORE the loop
+  prefix = 0
+  count = 0
+  for x in arr:
+      prefix += x
+      count += prefixCount.get(prefix - k, 0)
+      prefixCount[prefix] = prefixCount.get(prefix, 0) + 1
+
+GROUP BY KEY TEMPLATE:
+  groups = {}
+  for x in arr:
+      k = key_function(x)
+      groups.setdefault(k, []).append(x)
+
+FREQUENCY TEMPLATE:
+  freq = {}
+  for x in arr:
+      freq[x] = freq.get(x, 0) + 1
+
+KEY TRAPS TO REMEMBER:
+  prefix sum     --> always initialize {0: 1} before the loop
+  negatives      --> sliding window fails; use prefix + HashMap
+  mod K          --> use ((prefix % K) + K) % K, not just prefix % K
+  tiny range     --> use int[] array, not HashMap
+  sorted input   --> Two Pointers saves O(n) space at the same time
+  self-pairing   --> check map BEFORE storing current element
+```
+
+---
+
+## Advanced Awareness
+
+These topics are at the edges of the hashing world. Know they exist; do not deep-dive here.
+
+**Rolling Hash (Rabin-Karp):** A hash function for strings that can be updated in O(1) when you slide the window by one character, instead of recomputing from scratch. Used in substring pattern matching and detecting duplicate substrings of a given length. Collisions are possible — always verify an apparent match with actual string comparison. For "Longest Duplicate Substring," combine rolling hash with binary search on the length: O(n log n) average. Double hashing (two independent hash functions) drives collision probability to negligible levels.
+
+**Consistent Hashing:** A distributed systems concept, not a coding pattern. Keys and servers are both mapped to a ring (circular hash space). Each key is assigned to the nearest server clockwise. Adding or removing a server affects only K/N keys on average (K = total keys, N = servers). Virtual nodes (each physical server gets multiple ring positions) ensure even load distribution. Relevant in system design interviews involving distributed caches, CDNs, and sharding.
+
+**Count-Min Sketch:** Approximate frequency counting for massive data streams where an exact HashMap would be too large. Trades a small, bounded error for dramatically lower memory usage.
+
+**Aho-Corasick:** For matching multiple string patterns simultaneously in a single pass over the text, as opposed to running rolling hash separately per pattern.
 
 ---
 

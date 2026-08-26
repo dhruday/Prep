@@ -1,671 +1,801 @@
-# Recursion & Backtracking — Complete Pattern Guide
+# Recursion & Backtracking — 1-Hour Learning Module
 
 > *"Recursion is faith: trust that the function will solve the smaller problem correctly. Backtracking is discipline: explore everything, but retreat from dead ends immediately."*
+
+**Target:** Google SWE interview prep | Estimated time: 60 minutes
 
 ---
 
 ## Table of Contents
 
-1. [Recursion Mental Model](#recursion-mental-model)
-2. [Subsets (Power Set)](#subsets-power-set)
-3. [Combinations](#combinations)
-4. [Permutations](#permutations)
-5. [N-Queens](#n-queens)
-6. [Sudoku Solver](#sudoku-solver)
-7. [Word Search (Grid Backtracking)](#word-search-grid-backtracking)
-8. [Generate Parentheses](#generate-parentheses)
-9. [Palindrome Partitioning](#palindrome-partitioning)
-10. [Pruning Strategies](#pruning-strategies)
-11. [Decision Tree Visualization](#decision-tree-visualization)
-12. [Constraint Satisfaction Framework](#constraint-satisfaction-framework)
-13. [Letter Combinations of Phone Number](#letter-combinations-of-phone-number)
-14. [Divide and Conquer](#divide-and-conquer)
+1. [[0–10 min] Big Picture](#0-10-min-big-picture)
+2. [[10–20 min] Mental Model](#10-20-min-mental-model)
+3. [[20–35 min] Core Pattern](#20-35-min-core-pattern)
+4. [[35–45 min] Concrete Code + Dry Run](#35-45-min-concrete-code--dry-run)
+5. [[45–55 min] Pattern Recognition](#45-55-min-pattern-recognition)
+6. [[55–60 min] Final Mental Checklist](#55-60-min-final-mental-checklist)
+7. [Active Recall](#active-recall)
+8. [Recommended Practice Direction](#recommended-practice-direction)
+9. [2-Minute Cheat Sheet](#2-minute-cheat-sheet)
 
 ---
 
-## Recursion Mental Model
+## [0–10 min] Big Picture
 
-### What is this approach?
+### What is Recursion?
 
-**Intuition:** Recursion is like Russian nesting dolls. Each doll contains a slightly smaller version of itself. To count all the dolls, open one, count it, and ask the smaller doll to count the rest. The smallest doll (base case) just says "1."
+A function that calls itself on a **smaller version of the same problem** until it hits a trivially solvable case (the base case).
 
-**Formal:** A function calls itself with reduced input. Each call trusts that the recursive call solves the smaller problem correctly. The base case stops the recursion. The recursive case combines the current step with the result of the smaller problem.
+**Why does it exist?** Some problems are naturally self-similar — a tree node has subtrees that are also trees, a list has a head and a smaller list as its tail, a problem of size n depends on a solution of size n-1. Recursion lets you express that self-similarity directly in code.
 
-### The Three Laws of Recursion
+**Real-world analogy — Russian nesting dolls (Matryoshka):**
+To count all dolls, open the outermost one, count it (1), then ask: "how many dolls are inside?" The inner doll answers the same question on a smaller input. The smallest doll that can't open answers: "just me — 1." You combine: 1 + answer from inner = total.
 
-1. **Base Case:** Every recursive function must have a stopping condition
-2. **Progress:** Every recursive call must move toward the base case
-3. **Trust:** Assume the recursive call returns the correct answer for the smaller problem
+```
+countDolls(doll) =
+  1  +  countDolls(inner doll)    ← recursive case
+  1                               ← base case: no inner doll
+```
 
-### The Call Stack
+### What is Backtracking?
 
-- Every recursive call adds a "frame" to the call stack (stores local variables, return address)
-- When a call finishes, its frame is removed
-- Stack overflow = too many frames (too deep recursion, usually > 10⁴ - 10⁵)
+Recursion where you **make a choice, explore it, then undo it** to try the next choice.
 
-### When Does Recursion Become Backtracking?
+**Real-world analogy — solving a maze:**
+At each fork, pick a direction and walk. If you hit a dead end, walk back to the last fork and try the other direction. You undo your steps to try alternatives. Backtracking is systematic maze-solving.
 
-- **Recursion:** Compute a result from smaller results (think: Fibonacci, tree traversal)
-- **Backtracking:** Explore choices, undo if they lead to a dead end. Involves:
-  1. **Choose:** Make a decision
-  2. **Explore:** Recurse with that decision
-  3. **Un-choose (backtrack):** Undo the decision, try the next option
+### One Tiny Example
 
-### Interview Insights
+**Problem:** Print all subsets of `[1, 2]`.
 
-- **Trap:** Not all recursive solutions are backtracking. Fibonacci is recursion, not backtracking. Backtracking requires the "choose, explore, un-choose" pattern.
-- **Key insight:** "How do I convert this to iterative?" — Use an explicit stack. Every recursive solution can be made iterative with a stack.
+At each element, you make a binary decision: include or exclude.
 
----
+```
+Start: []
+  Include 1 → [1]
+    Include 2 → [1, 2]   ✓ record
+    Exclude 2 → [1]      ✓ record
+  Exclude 1 → []
+    Include 2 → [2]      ✓ record
+    Exclude 2 → []       ✓ record
 
-## Subsets (Power Set)
+Result: [1,2], [1], [2], []
+```
 
-### What is this approach?
-
-**Intuition:** You are at a buffet with n dishes. For each dish, you make a binary choice: take it or leave it. After n decisions, you have one possible plate. All possible plates = all subsets.
-
-**Formal:** Generate all 2^n subsets of a set of n elements. Each element is either included or excluded. This is the most fundamental backtracking pattern.
-
-### When should I use this?
-
-- "Generate all subsets" / "Power set"
-- "Find all combinations that satisfy some property" (subsets with filtering)
-- Keywords: "subsets," "power set," "all possible combinations," "all subsets"
-
-### When should I NOT use this?
-
-- You only need subsets of a specific size → use Combinations
-- You need ordered arrangements → use Permutations
-- n is too large (> 20-25) for 2^n solutions — need DP or mathematical approach instead
-
-### Core Idea
-
-**Approach 1 — Include/Exclude (binary decision tree):**
-1. At each position i, make two recursive calls:
-   - Include arr[i] in the current subset, recurse on i+1
-   - Exclude arr[i], recurse on i+1
-2. Base case: when i == n, record the current subset
-
-**Approach 2 — Iterative inclusion:**
-1. Start with result = [[]]
-2. For each element, create new subsets by adding this element to all existing subsets
-3. Add new subsets to result
-
-**Approach 3 — Bitmask:**
-1. For each number from 0 to 2^n - 1
-2. Each bit represents include/exclude for the corresponding element
-3. Construct subset based on set bits
-
-### Complexity
-
-- **Time:** O(n × 2^n) — 2^n subsets, each takes O(n) to copy
-- **Space:** O(n) for recursion depth (excluding output)
-
-### Variants
-
-- **Subsets (distinct elements):** Standard approach
-- **Subsets with duplicates:** Sort first. When an element equals the previous, only include it if the previous was also included (skip duplicate branches). Or: at each level, skip ahead past duplicate values.
-- **Subsets with target sum:** Generate subsets and filter, OR use backtracking with pruning (sort first, prune when current sum > target)
-
-### Related Patterns
-
-- [Combinations](#combinations) (subsets of specific size)
-- [Permutations](#permutations) (order matters)
-- [Bitmask DP](09-DYNAMIC-PROGRAMMING.md) (using bitmask to represent subsets in DP)
-- [Bit Manipulation](14-BIT-MANIPULATION.md) (bitmask enumeration of subsets)
-
-### Interview Insights
-
-- **Trap:** Handling duplicates. Without sorting and duplicate-skipping, [1,2,2] produces duplicate subsets.
-- **Twist:** "Find all subsets with sum = K" — Combine with pruning: if current sum > K (assuming positive numbers), prune that branch.
-- **Follow-up:** "How many subsets are there?" — 2^n (with or without generating them).
+Every backtracking problem is a decision tree like this. Your job is to draw that tree and write code that walks it.
 
 ---
 
-## Combinations
+## [10–20 min] Mental Model
 
-### What is this approach?
+### What Is Actually Happening: The Call Stack
 
-**Intuition:** From a pool of n people, choose K to form a committee. You go through each person and decide: are they on the committee or not? But you stop adding once you have K members.
+Every recursive call creates a **stack frame** that stores:
+- Local variables (current element, current path, counters)
+- A return address (where to go when done)
 
-**Formal:** Generate all C(n, K) ways to choose K elements from n elements. Like subsets, but with a size constraint. Order does not matter.
+When the call returns, its frame is popped. Backtracking exploits this: the calling frame's state is automatically restored when the recursive call returns. Any mutations you made explicitly (pushing to a list) must be manually undone.
 
-### When should I use this?
+```
+solve([], index=0)
+  solve([1], index=1)
+    solve([1,2], index=2)   ← base case, record [1,2], RETURN
+    ← back here, undo: remove 2
+    solve([1], index=2)     ← base case, record [1], RETURN
+  ← back here, undo: remove 1
+  solve([], index=1)
+    solve([2], index=2)     ← base case, record [2], RETURN
+    ← back here, undo: remove 2
+    solve([], index=2)      ← base case, record [], RETURN
+```
 
-- "Choose K elements from n" / "All combinations of size K"
-- "Combination Sum" — find combinations that add up to a target
-- Keywords: "combinations," "choose K," "combination sum"
+### Key Insight: Trust the Recursion
 
-### When should I NOT use this?
+The hardest thing for beginners: **you do not need to mentally simulate the full recursion**. Instead, ask:
 
-- Order matters → use Permutations
-- No size constraint → use Subsets
-- You need count only (not enumeration) → use C(n,K) formula or DP
+1. What does this function represent (its contract)?
+2. What is the base case?
+3. Assuming the recursive call returns the correct answer for a smaller input, how do I use it to answer the current input?
 
-### Core Idea
+This is called the **leap of faith**. Fibonacci: `fib(n) = fib(n-1) + fib(n-2)` — trust that `fib(n-1)` and `fib(n-2)` are correct. Your only job is to combine them.
 
-1. Maintain a current combination and a start index
-2. At each level, choose an element from [start, n]
-3. Add it to the current combination
-4. Recurse with start = chosen + 1 (to avoid duplicates) and reduced remaining count
-5. Backtrack: remove the last element
-6. Base case: current size == K → record combination
+### The Three Laws Every Recursive Function Must Follow
 
-### Complexity
+1. **Base case:** A condition that stops the recursion (no more recursive call)
+2. **Progress:** Every recursive call must move closer to the base case
+3. **Trust:** Assume the recursive call is correct and use its result
 
-- **Time:** O(K × C(n,K)) — C(n,K) combinations, each takes O(K) to copy
-- **Space:** O(K) recursion depth
+### Recursion vs Backtracking: The Core Difference
 
-### Variants
-
-- **Combinations (choose K from [1,n]):** Standard approach
-- **Combination Sum (unlimited use, distinct candidates):** Each candidate can be used multiple times. Recurse with start = current (not current + 1).
-- **Combination Sum II (each number used once, duplicates in input):** Sort first. Skip duplicates at the same recursive level.
-- **Combination Sum III (digits 1-9, K numbers, target sum):** Fixed candidate pool [1-9], choose K numbers.
-- **Letter Combinations of Phone Number:** Each digit maps to 3-4 letters. Generate all combinations.
-
-### Related Patterns
-
-- [Subsets](#subsets-power-set) (combinations without size constraint)
-- [Permutations](#permutations) (when order matters)
-- [Knapsack DP](09-DYNAMIC-PROGRAMMING.md) (when counting is enough, DP is faster)
-
-### Interview Insights
-
-- **Trap:** In "Combination Sum II," handling duplicates at the same level. After using a value, skip all identical values at the same branching point.
-- **Twist:** "Combination Sum with unlimited use" — recurse with start = current, not current + 1. This allows reuse.
-- **Follow-up:** "Count combinations instead of generating" — DP is more efficient than enumeration for counting.
-
----
-
-## Permutations
-
-### What is this approach?
-
-**Intuition:** Arranging books on a shelf. For the first position, you have n choices. For the second, n-1 (one is used). For the third, n-2. Etc. Total: n! arrangements.
-
-**Formal:** Generate all n! orderings of n elements. Unlike subsets/combinations, ORDER MATTERS.
-
-### When should I use this?
-
-- "Generate all permutations"
-- "All possible orderings"
-- Keywords: "permutations," "arrangements," "all orderings"
-
-### When should I NOT use this?
-
-- Order doesn't matter → use Subsets or Combinations
-- n is large (> 10-12) — n! grows extremely fast
-- You only need a specific permutation (e.g., next permutation) — use a formula, not enumeration
-
-### Core Idea
-
-**Approach 1 — Used Array:**
-1. Maintain a boolean array `used[]`
-2. At each recursive level, try each unused element
-3. Mark as used, add to current permutation, recurse
-4. Backtrack: unmark, remove
-
-**Approach 2 — Swap-based:**
-1. For position i, swap arr[i] with each arr[j] for j = i to n-1
-2. Recurse on position i+1
-3. Swap back (backtrack)
-
-### Complexity
-
-- **Time:** O(n × n!) — n! permutations, each takes O(n) to copy
-- **Space:** O(n) for recursion depth + used array
-
-### Variants
-
-- **Permutations (distinct elements):** Standard approach
-- **Permutations with duplicates:** Sort first. At each level, skip elements that equal the previous choice if the previous wasn't used (or: use a set at each level to avoid picking the same value twice).
-- **Next Permutation:** Not backtracking! Find rightmost ascent pair, swap with the smallest larger element to the right, reverse the suffix. O(n) algorithm.
-- **Kth Permutation Sequence:** Factorial number system. For each position, determine which element goes there based on K / (remaining)!
-
-### Related Patterns
-
-- [Subsets](#subsets-power-set) (order doesn't matter)
-- [Combinations](#combinations) (fixed size, order doesn't matter)
-- [N-Queens](#n-queens) (permutation with constraints)
-
-### Interview Insights
-
-- **Trap:** Permutations with duplicates. The swap-based approach is tricky with duplicates — the used-array approach with sorting is safer.
-- **Twist:** "Kth Permutation" — Don't generate all n! permutations. Use factorial math to directly compute the Kth one. O(n²) or O(n) with the right data structure.
-- **Follow-up:** "Next Permutation" is a VERY common interview problem. It's an O(n) algorithm, not backtracking.
-
----
-
-## N-Queens
-
-### What is this approach?
-
-**Intuition:** Place N queens on an N×N chessboard so no two queens threaten each other. You place queens one row at a time. For each row, try each column. If the position is safe (no other queen attacks it), place the queen and move to the next row. If you're stuck, go back and try a different column.
-
-**Formal:** Constraint satisfaction via backtracking. Each row has exactly one queen. Try each column position, check diagonal and column constraints, recurse.
-
-### When should I use this?
-
-- Classic backtracking with constraint checking
-- Any problem reducible to "place items in positions with constraints"
-
-### When should I NOT use this?
-
-- N is very large — backtracking is exponential. (N-Queens is tractable up to ≈ 15-20 with optimizations.)
-
-### Core Idea
-
-1. Place queens row by row (row 0, 1, 2, ...)
-2. For each row, try each column c:
-   - Check column constraint: no other queen in column c
-   - Check diagonal constraints: no other queen on the two diagonals through (row, c)
-3. If safe, place queen and recurse to next row
-4. If not safe, try next column
-5. If all columns fail, backtrack (remove queen from previous row)
-
-**Constraint checking optimization:**
-- Use three sets: `cols`, `diag1` (row - col), `diag2` (row + col)
-- Column conflict: c in cols
-- Main diagonal conflict: (row - c) in diag1
-- Anti-diagonal conflict: (row + c) in diag2
-
-### Complexity
-
-- **Time:** Approximately O(n!) — n choices for first row, ≈ n-2 for second (due to constraints), etc.
-- **Space:** O(n) for the board state + recursion depth
-
-### Variants
-
-- **N-Queens (return all solutions):** Full backtracking
-- **N-Queens II (count solutions):** Same backtracking but just count, don't store
-- **N-Queens with additional constraints:** Extra rules (e.g., some squares blocked)
-
-### Related Patterns
-
-- [Sudoku Solver](#sudoku-solver) (same constraint satisfaction paradigm)
-- [Permutations](#permutations) (N-Queens is a constrained permutation of column positions)
-- [Bitmask Optimization](14-BIT-MANIPULATION.md) (columns and diagonals can be tracked as bitmasks for speed)
-
-### Interview Insights
-
-- **Trap:** Checking constraints in O(n) per queen placement (scanning previous rows). Use sets for O(1) checking.
-- **Twist:** "Just count the solutions" — Same algorithm, simpler implementation (no need to build board strings).
-- **Key insight:** N-Queens is the canonical constraint satisfaction problem. Mastering it means you can handle Sudoku, word search, and other constraint problems.
-
----
-
-## Sudoku Solver
-
-### What is this approach?
-
-**Intuition:** Solving a Sudoku puzzle: for each empty cell, try numbers 1-9. If a number doesn't conflict with the row, column, and box, place it and move on. If you get stuck, erase and try the next number.
-
-**Formal:** Backtracking with three constraint sets (row membership, column membership, 3×3 box membership). Fill cells left-to-right, top-to-bottom. Try each valid number. Backtrack if no number works.
-
-### When should I use this?
-
-- "Solve Sudoku"
-- Grid-based constraint satisfaction problems
-- Keywords: "Sudoku," "fill grid with constraints"
-
-### When should I NOT use this?
-
-- The puzzle has no solution — backtracking will explore all possibilities and conclude "no solution"
-- More efficient techniques exist (constraint propagation, arc consistency) but are rarely needed for interviews
-
-### Core Idea
-
-1. Find the next empty cell
-2. For each candidate number (1-9):
-   - Check row, column, and box constraints
-   - If valid, place the number
-   - Recurse to the next empty cell
-   - If recursion succeeds, return true
-   - Else, backtrack (remove number)
-3. If no number works, return false
-
-**Optimization:** Use three 2D boolean arrays (or sets) for row/col/box membership for O(1) constraint checking.
-
-### Complexity
-
-- **Time:** O(9^(empty cells)) theoretical worst case, but constraints prune heavily
-- **Space:** O(81) = O(1) for the board + recursion depth (max 81)
-
-### Related Patterns
-
-- [N-Queens](#n-queens) (same paradigm)
-- [Constraint Satisfaction](#constraint-satisfaction-framework) (general framework)
-
-### Interview Insights
-
-- **Trap:** Not using efficient constraint tracking. Scanning the row/col/box each time is slow.
-- **Twist:** "Is this puzzle solvable?" — Same algorithm. If backtracking exhausts all options, no solution exists.
-- **Follow-up:** "Generate a valid Sudoku puzzle" — Solve an empty board with randomization, then remove cells ensuring unique solution.
-
----
-
-## Word Search (Grid Backtracking)
-
-### What is this approach?
-
-**Intuition:** Searching for a word in a letter grid by walking through adjacent cells. At each cell, if the letter matches, move to a neighbor. Mark your path to avoid revisiting cells. If you hit a dead end, retrace your steps.
-
-**Formal:** Backtracking on a 2D grid. Starting from each cell that matches the first character, explore all four directions recursively to build the word character by character.
-
-### When should I use this?
-
-- "Word Search" — find if a word exists in a grid
-- "Word Search II" — find all words from a dictionary in a grid
-- Grid exploration with path constraints
-- Keywords: "word search," "find word in grid," "path in grid"
-
-### When should I NOT use this?
-
-- You need shortest path — use BFS instead
-- No backtracking needed (just checking if a cell is reachable) — DFS or BFS without undo
-
-### Core Idea
-
-1. For each cell (r, c) that matches word[0]:
-   - Mark cell as visited (change character to '#' or use visited array)
-   - Recursively check four neighbors for word[1], then word[2], etc.
-   - If all characters matched, return true
-   - Un-mark cell (restore character) — backtrack
-2. If no starting cell leads to a complete match, return false
-
-### Complexity
-
-- **Time:** O(m × n × 4^L) where L = word length. For each starting cell, explore up to 4^L paths.
-- **Space:** O(L) recursion depth
-
-### Variants
-
-- **Word Search (single word):** Standard backtracking on grid
-- **Word Search II (multiple words):** Build a Trie from the word list. Backtrack on the grid but use the Trie to prune: if the current prefix isn't in the Trie, stop. Much faster than searching each word independently.
-
-### Related Patterns
-
-- [Grid BFS/DFS](11-GRAPHS.md) (exploring grids without backtracking)
-- [Trie](16-ADVANCED-DATA-STRUCTURES.md) (for Word Search II optimization)
-
-### Interview Insights
-
-- **Trap:** Not restoring the visited mark during backtracking. This causes missed valid paths.
-- **Twist:** "Word Search II" — Brute-forcing each word is too slow. Trie + backtracking is the expected approach.
-- **Follow-up:** "What if the board is very large?" — Optimize with Trie pruning and early termination.
-
----
-
-## Generate Parentheses
-
-### What is this approach?
-
-**Intuition:** Building valid parentheses strings character by character. At each position, you can either place an open parenthesis (if you haven't used all n opens) or a close parenthesis (if the number of closes is less than the number of opens placed so far). These two constraints guide the backtracking.
-
-**Formal:** Generate all strings with n pairs of balanced parentheses. Use backtracking with two counters: open_count and close_count.
-
-### When should I use this?
-
-- "Generate all valid parentheses"
-- "Catalan number generation" (the count of valid sequences is the nth Catalan number)
-- Keywords: "generate parentheses," "valid brackets"
-
-### When should I NOT use this?
-
-- You just need the count — Catalan number formula is O(n)
-- n is very large — 2^n strings is too many
-
-### Core Idea
-
-1. Maintain current string, open_count, close_count
-2. If open_count < n: add '(', recurse
-3. If close_count < open_count: add ')', recurse
-4. Base case: length == 2n → add to result
-
-### Complexity
-
-- **Time:** O(4^n / √n) — the nth Catalan number, which is the exact count of valid sequences
-- **Space:** O(n) recursion depth
-
-### Variants
-
-- **Generate Parentheses (one type):** As described
-- **Multiple types of brackets:** Extend constraints: close bracket must match the most recent open bracket (use a stack to track)
-
-### Related Patterns
-
-- [Catalan Numbers](15-MATH-AND-NUMBER-THEORY.md) (the mathematical foundation)
-- [Stack / Parentheses](07-STACKS-AND-QUEUES.md) (validation uses a stack; generation uses backtracking)
-
-### Interview Insights
-
-- **Trap:** Generating all strings then filtering valid ones — much slower than constraint-guided backtracking.
-- **Twist:** "Print them in sorted order" — The backtracking approach already generates in sorted order if you always try '(' before ')'.
-
----
-
-## Palindrome Partitioning
-
-### What is this approach?
-
-**Intuition:** Cut a string into pieces where every piece reads the same forwards and backwards. Try every possible first cut, check if the first piece is a palindrome, then recursively partition the rest.
-
-**Formal:** Find all ways to partition a string such that every substring is a palindrome. Backtracking: at each position, try all possible palindrome prefixes, and recurse on the remainder.
-
-### When should I use this?
-
-- "Palindrome Partitioning" (return all valid partitions)
-- "Palindrome Partitioning II" (minimum cuts — this is DP, not backtracking)
-- Keywords: "partition into palindromes"
-
-### When should I NOT use this?
-
-- You want MINIMUM cuts (optimization) — use DP, not backtracking
-- The string is generated and you need properties (not partitions) — use Manacher's or DP
-
-### Core Idea
-
-1. At position `start`, try every `end` from `start` to `n-1`:
-   - If s[start..end] is a palindrome:
-     - Add it to current partition
-     - Recurse on position end+1
-     - Backtrack: remove last piece
-2. Base case: start == n → record current partition
-
-**Optimization:** Precompute a 2D boolean table `isPalin[i][j]` so palindrome checks are O(1).
-
-### Complexity
-
-- **Time:** O(n × 2^n) worst case — 2^(n-1) possible partitions, each takes O(n)
-- **Space:** O(n) recursion depth + O(n²) for palindrome precomputation
-
-### Related Patterns
-
-- [Dynamic Programming](09-DYNAMIC-PROGRAMMING.md) (Palindrome Partitioning II — min cuts)
-- [Manacher's Algorithm](17-STRING-ALGORITHMS.md) (finding all palindromic substrings)
-
-### Interview Insights
-
-- **Trap:** Checking palindrome from scratch at each step — O(n) per check × many checks. Precompute the table.
-- **Twist:** "Minimum cuts" (Palindrome Partitioning II) — Switch from backtracking to DP.
-
----
-
-## Pruning Strategies
-
-### What is this approach?
-
-Pruning = cutting off branches of the decision tree that cannot lead to valid solutions. It turns exponential algorithms from impractical to practical.
-
-### Key Pruning Techniques
-
-| Technique | How It Works | Example |
+| | Recursion | Backtracking |
 |---|---|---|
-| **Constraint Checking** | Don't explore if the current state violates a constraint | N-Queens: skip columns with existing queens |
-| **Bound Checking** | If the current partial answer already exceeds bounds, stop | Combination Sum: if current_sum > target, prune |
-| **Sorted Candidates** | Sort candidates first. If current candidate is too large, all further candidates are too | Combination Sum with sorted input |
-| **Symmetry Breaking** | Eliminate equivalent branches | For subsets of [1,1,2], skip second 1 at the same level |
-| **Forward Checking** | Check if remaining choices can satisfy constraints | If remaining elements can't reach the target sum, prune early |
-| **Value Ordering** | Try more promising values first | Place the most constrained variable first in CSPs |
+| Goal | Compute a result | Explore all possibilities |
+| Undo step? | No | Yes — un-choose after exploring |
+| Example | Fibonacci, factorial, tree traversal | Subsets, permutations, N-Queens |
+| Return type | Usually a single value | Usually void, collects into a result list |
 
-### Interview Insights
+**Recursion:** `f(n) = combine(current, f(n-1))`
 
-- **Key insight:** Every backtracking problem benefits from at least one pruning strategy. Always discuss what pruning you would add.
-- **Trap:** Over-pruning (cutting valid branches) is worse than under-pruning. Ensure your pruning condition is correct.
-
----
-
-## Decision Tree Visualization
-
-### What is this approach?
-
-Before writing any backtracking solution, draw the decision tree. This is the most powerful technique for understanding backtracking problems.
-
-### How to Draw
-
-1. **Root:** The initial state (empty set, empty string, etc.)
-2. **Branches:** Each possible choice at the current level
-3. **Nodes:** The state after making a choice
-4. **Leaves:** Complete solutions (or dead ends)
-
-### Example: Subsets of {1, 2, 3}
-
+**Backtracking:**
 ```
-                    {}
-                 /       \
-              {1}         {}
-             /   \       /  \
-          {1,2} {1}    {2}   {}
-          / \   / \    / \   / \
-      {1,2,3} {1,2} {1,3} {1} {2,3} {2} {3} {}
+explore(state, choices):
+  if done: record(state); return
+  for each choice in choices:
+    make(choice)       ← add to state
+    explore(state, remaining choices)
+    undo(choice)       ← remove from state
 ```
 
-### Why This Matters
+### Call Tree: Fibonacci (Pure Recursion)
 
-- **Branching factor:** How many choices per level → determines time complexity base
-- **Depth:** How many levels → determines recursion depth
-- **Pruning points:** Where can you cut branches? The more, the better.
-- **Time complexity:** Total nodes in the tree ≈ (branching factor)^depth
+```
+fib(4)
+├── fib(3)
+│   ├── fib(2)
+│   │   ├── fib(1) = 1
+│   │   └── fib(0) = 0
+│   └── fib(1) = 1
+└── fib(2)
+    ├── fib(1) = 1
+    └── fib(0) = 0
+```
 
-### Interview Insights
+Notice: fib(2) is computed twice. This is the overlap problem — recursion without memoization recomputes. That is why DP exists (but more on that in [Pattern Recognition](#45-55-min-pattern-recognition)).
 
-- **Key insight:** In an interview, sketching the decision tree can earn you points even if your implementation has bugs. It shows you understand the problem structure.
+### Call Tree: Subsets of [1,2] (Backtracking)
 
----
+```
+solve(path=[], i=0)
+├── include 1 → solve(path=[1], i=1)
+│   ├── include 2 → solve(path=[1,2], i=2) → record [1,2]
+│   └── exclude 2 → solve(path=[1], i=2)  → record [1]
+└── exclude 1 → solve(path=[], i=1)
+    ├── include 2 → solve(path=[2], i=2)   → record [2]
+    └── exclude 2 → solve(path=[], i=2)    → record []
+```
 
-## Constraint Satisfaction Framework
-
-### What is this approach?
-
-A general framework for all backtracking problems:
-
-1. **Variables:** What decisions are you making? (which column for each queen, which number for each cell, which character at each position)
-2. **Domains:** What values can each variable take? (columns 0 to n-1, digits 1-9, letters a-z)
-3. **Constraints:** What combinations are forbidden? (same column, same diagonal, same row/box)
-
-### The Algorithm
-
-1. Choose the next unassigned variable
-2. For each value in its domain:
-   - If the value is consistent with all constraints:
-     - Assign the value
-     - Recurse
-     - Un-assign (backtrack)
-3. If no value works, return failure
-
-### Optimization: Variable Ordering
-
-Choose the variable with the **fewest remaining legal values** (MRV — Minimum Remaining Values). This fails sooner when a solution doesn't exist, pruning more effectively.
-
-### Interview Insights
-
-- **Key insight:** Every backtracking problem is a constraint satisfaction problem (CSP). Framing it this way helps you organize your thinking and identify pruning opportunities.
+Depth = n (number of elements). Leaves = 2^n (all subsets). Every non-leaf node makes exactly two choices.
 
 ---
 
-## Letter Combinations of Phone Number
+## [20–35 min] Core Pattern
 
-### What is this approach?
+### When to Use Recursion
 
-**Intuition:** Each digit maps to 3-4 letters. For each digit in the input, branch into all corresponding letters. This creates a tree of depth = number of digits, each level branching 3-4 ways.
+- The problem decomposes into the **same problem on a smaller input**
+- Tree/graph traversal (a subtree is a smaller tree)
+- Divide and conquer (merge sort, binary search)
+- Computing values that depend on smaller values (Fibonacci, factorial)
 
-### When should I use this?
+### When to Use Backtracking
 
-- Each position has a fixed set of choices from a mapping
-- Keywords: "letter combinations," "phone keypad"
+- You need to **enumerate all possible configurations** (all subsets, all permutations, all valid placements)
+- You are building a solution incrementally and need to **explore choices and abandon dead ends**
+- Problems with the word "all," "every possible," "generate all," "find all valid"
 
-### Core Idea
+### When NOT to Use Either
 
-1. For each digit, look up the corresponding letters
-2. For each letter, add to current combination, recurse on next digit
-3. Base case: all digits processed → record combination
+- **Use DP instead:** if you need the optimal solution (min/max) and subproblems overlap (Fibonacci, knapsack)
+- **Use BFS instead:** if you need the shortest path (BFS explores by layers, backtracking explores depth-first)
+- **Use a formula:** if you only need the count, not the actual configurations (C(n,k), Catalan number)
+- If n is large: 2^n or n! grows fast. Backtracking is only practical for small n (typically n ≤ 20 for 2^n, n ≤ 12 for n!).
 
-### Complexity
+### How to Recognize Backtracking in a Problem Statement
 
-- **Time:** O(4^n × n) where n = number of digits (worst case: each digit maps to 4 letters)
-- **Space:** O(n) recursion depth
+- "Generate all..."
+- "Find all subsets / combinations / permutations / arrangements"
+- "Place N queens... return all solutions"
+- "Partition the string such that..."
+- "Find all paths..."
+- A constraint satisfaction problem where you must try possibilities and check validity
 
-### Interview Insights
+### The Universal Backtracking Template
 
-- **Trap:** Edge case: input is empty → return empty list
-- **Twist:** "What if the phone has a different mapping?" — Parameterize the digit→letter mapping
+Every backtracking problem fits this shape:
+
+```
+backtrack(current_state, available_choices):
+    if current_state is complete:
+        record(current_state)
+        return
+
+    for each choice in available_choices:
+        if isValid(choice, current_state):    ← optional: prune early
+            make(choice)                       ← modify state
+            backtrack(updated_state, remaining_choices)
+            undo(choice)                       ← restore state
+```
+
+**The six variables you always need to identify:**
+
+| Variable | Question to ask |
+|---|---|
+| State | What am I building? (current path, current board, current string) |
+| Choices | What can I add at this step? |
+| Validity | What makes a choice legal right now? |
+| Termination | How do I know I'm done? |
+| Recording | When and how do I save a solution? |
+| Undo | What exactly must I reverse after exploring? |
+
+### The Five Most Important Backtracking Patterns
+
+#### Pattern 1: Include/Exclude (Subsets)
+
+At each index, binary choice: include this element or skip it. Produces all 2^n subsets.
+
+```
+subsets(nums, index, current, result):
+    if index == nums.length:
+        result.add(copy of current)
+        return
+    current.add(nums[index])          ← include
+    subsets(nums, index+1, current, result)
+    current.remove(last)               ← undo include
+    subsets(nums, index+1, current, result)  ← exclude (no undo needed)
+```
+
+**Why it works:** Every element is independently included or excluded. The recursion depth is n. Each leaf represents one unique decision sequence → one unique subset.
+
+**Handles duplicates:** Sort first. Before making the "include" call, skip if this element equals the previous AND the previous was not included at this level. More commonly: at a for-loop level (see Combinations), after processing `nums[i]`, skip all `nums[i+1] == nums[i]`.
+
+#### Pattern 2: For-Loop with Start Index (Combinations)
+
+Choose k elements from n, order doesn't matter. Use a start index to avoid picking the same element twice (in different orders).
+
+```
+combine(nums, start, k, current, result):
+    if current.size == k:
+        result.add(copy of current)
+        return
+    for i from start to nums.length - 1:
+        current.add(nums[i])
+        combine(nums, i+1, k, current, result)   ← i+1 prevents reuse
+        current.remove(last)
+
+    // Pruning: if nums.length - i < k - current.size, not enough elements left → stop
+```
+
+**Combination Sum (unlimited reuse):** Pass `i` instead of `i+1` to allow re-picking the same element.
+
+**Combination Sum II (input has duplicates):** Sort first. Inside the loop, `if (i > start && nums[i] == nums[i-1]) continue;` — skip duplicates at the same recursive level.
+
+#### Pattern 3: Used Array (Permutations)
+
+Order matters. Each element can appear once per permutation. Track which elements are used.
+
+```
+permute(nums, used, current, result):
+    if current.size == nums.length:
+        result.add(copy of current)
+        return
+    for i from 0 to nums.length - 1:
+        if used[i]: continue
+        used[i] = true
+        current.add(nums[i])
+        permute(nums, used, current, result)
+        current.remove(last)
+        used[i] = false
+```
+
+**With duplicates:** Sort first. Add condition: `if (i > 0 && nums[i] == nums[i-1] && !used[i-1]) continue;`
+
+**Swap-based alternative:** Swap `nums[i]` with `nums[start]`, recurse on `start+1`, swap back. Avoids the `used` array but is harder to reason about with duplicates.
+
+#### Pattern 4: Constraint Sets (N-Queens / Sudoku)
+
+Placement problems where constraints reduce the choice domain.
+
+```
+placeQueens(row, cols, diag1, diag2, board, result):
+    if row == n:
+        result.add(buildBoard(board))
+        return
+    for col from 0 to n-1:
+        if col in cols or (row-col) in diag1 or (row+col) in diag2:
+            continue                           ← constraint check
+        board[row] = col
+        add col to cols, (row-col) to diag1, (row+col) to diag2
+        placeQueens(row+1, cols, diag1, diag2, board, result)
+        remove col from cols, (row-col) from diag1, (row+col) from diag2
+```
+
+**Insight:** Use three hash sets for O(1) constraint checking. Column conflict: `c in cols`. Main diagonal: `(row - col)` is constant. Anti-diagonal: `(row + col)` is constant.
+
+#### Pattern 5: Grid DFS with Undo (Word Search)
+
+Walk through a 2D grid, marking visited cells. Undo the mark when backtracking.
+
+```
+search(board, word, r, c, index):
+    if index == word.length: return true
+    if r/c out of bounds or board[r][c] != word[index]: return false
+    temp = board[r][c]
+    board[r][c] = '#'                  ← mark visited
+    found = search(..., r+1,c, index+1) OR search(..., r-1,c, ...) OR ...
+    board[r][c] = temp                 ← restore (undo)
+    return found
+```
+
+### Pruning: The Difference Between Passing and Failing
+
+Pruning = cutting branches of the decision tree that cannot lead to a solution.
+
+| Technique | When to apply | Example |
+|---|---|---|
+| Constraint check | Before making a choice | N-Queens: skip columns with attacking queens |
+| Bound check | Current partial sum exceeds target | Combination Sum: prune if `current_sum > target` |
+| Sort + early exit | Sorted candidates, too large means all remaining are too large | `if (nums[i] > remaining) break;` in Combination Sum |
+| Symmetry breaking | Duplicate elements at the same level | Skip `nums[i] == nums[i-1]` at same depth |
+| Forward checking | Can remaining choices even satisfy the constraint? | If remaining length < characters still needed in Word Search |
+
+**Always discuss pruning in an interview.** Unpruned backtracking may time out; pruning is the difference between exponential and practical.
 
 ---
 
-## Divide and Conquer
+## [35–45 min] Concrete Code + Dry Run
 
-### What is this approach?
+### Example 1: Subsets
 
-**Intuition:** Divide a big problem into smaller independent pieces, solve each piece, and combine the results. Unlike DP, the subproblems DON'T overlap.
+**Input:** `nums = [1, 2, 3]`
+**Output:** `[[], [1], [1,2], [1,2,3], [1,3], [2], [2,3], [3]]`
 
-**Formal:** Split the input into parts (usually halves), solve each recursively, and merge the results. The merge step does the real work.
+**Java:**
+```java
+public List<List<Integer>> subsets(int[] nums) {
+    List<List<Integer>> result = new ArrayList<>();
+    backtrack(nums, 0, new ArrayList<>(), result);
+    return result;
+}
 
-### When should I use this?
+private void backtrack(int[] nums, int index, List<Integer> current, List<List<Integer>> result) {
+    result.add(new ArrayList<>(current));
+    for (int i = index; i < nums.length; i++) {
+        current.add(nums[i]);
+        backtrack(nums, i + 1, current, result);
+        current.remove(current.size() - 1);
+    }
+}
+```
 
-- The problem splits into **independent** subproblems
-- A "merge" step can combine subproblem results
-- Keywords: "merge sort," "count inversions," "closest pair of points," "different ways to add parentheses"
+**JavaScript:**
+```javascript
+function subsets(nums) {
+    const result = [];
+    function backtrack(index, current) {
+        result.push([...current]);
+        for (let i = index; i < nums.length; i++) {
+            current.push(nums[i]);
+            backtrack(i + 1, current);
+            current.pop();
+        }
+    }
+    backtrack(0, []);
+    return result;
+}
+```
 
-### When should I NOT use this?
+**Dry Run for `[1, 2, 3]` — Call Tree:**
+```
+backtrack(i=0, path=[])         → record []
+  add 1 → backtrack(i=1, [1])  → record [1]
+    add 2 → backtrack(i=2, [1,2])  → record [1,2]
+      add 3 → backtrack(i=3, [1,2,3]) → record [1,2,3]
+      remove 3
+    remove 2
+    add 3 → backtrack(i=3, [1,3])  → record [1,3]
+    remove 3
+  remove 1
+  add 2 → backtrack(i=2, [2])  → record [2]
+    add 3 → backtrack(i=3, [2,3])  → record [2,3]
+    remove 3
+  remove 2
+  add 3 → backtrack(i=3, [3])  → record [3]
+  remove 3
+```
 
-- Subproblems **overlap** → use DP instead (otherwise you recompute)
-- The "merge" step costs too much to be efficient
-- The problem has a simpler iterative solution
-
-### Core Idea
-
-1. **Divide:** Split into subproblems (usually by index range)
-2. **Conquer:** Recursively solve each subproblem
-3. **Combine:** Merge/combine subproblem results
-
-### Complexity
-
-- Depends on the problem. Use the Master Theorem:
-  - T(n) = a × T(n/b) + O(n^d)
-  - If d > log_b(a): O(n^d)
-  - If d == log_b(a): O(n^d × log n)
-  - If d < log_b(a): O(n^(log_b(a)))
-
-### Variants
-
-- **Merge Sort:** Divide at midpoint, merge sorted halves. O(n log n).
-- **Count Inversions:** Same as merge sort, count cross-inversions during merge.
-- **Closest Pair of Points:** Divide by x-coordinate. Merge: check pairs near the dividing line. O(n log n).
-- **Different Ways to Add Parentheses:** For expression with operators, try splitting at each operator. Left and right subexpression results combine via that operator.
-- **Maximum Subarray (D&C approach):** Split at mid. Max subarray is in left half, right half, or crosses the midpoint. O(n log n).
-
-### Related Patterns
-
-- [Dynamic Programming](09-DYNAMIC-PROGRAMMING.md) (when subproblems overlap, D&C becomes DP with memoization)
-- [Binary Search](03-SEARCHING-TECHNIQUES.md) (also divides the problem, but only recurses on ONE half)
-- [Merge Sort](04-SORTING-AND-ORDER.md#merge-sort--divide-and-conquer-patterns) (the canonical D&C algorithm)
-
-### Interview Insights
-
-- **Trap:** Using D&C when subproblems overlap. This causes exponential blowup (see Fibonacci). Add memoization to get DP.
-- **Key insight:** D&C and DP are siblings. D&C = independent subproblems. DP = overlapping subproblems.
+**Complexity:** Time O(n × 2^n) — 2^n subsets, each O(n) to copy. Space O(n) recursion depth.
 
 ---
 
-*Next: [09-DYNAMIC-PROGRAMMING.md](09-DYNAMIC-PROGRAMMING.md) — The ultimate pattern recognition challenge.*
+### Example 2: Permutations
+
+**Input:** `nums = [1, 2, 3]`
+**Output:** `[[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]`
+
+**Java:**
+```java
+public List<List<Integer>> permute(int[] nums) {
+    List<List<Integer>> result = new ArrayList<>();
+    boolean[] used = new boolean[nums.length];
+    backtrack(nums, used, new ArrayList<>(), result);
+    return result;
+}
+
+private void backtrack(int[] nums, boolean[] used, List<Integer> current, List<List<Integer>> result) {
+    if (current.size() == nums.length) {
+        result.add(new ArrayList<>(current));
+        return;
+    }
+    for (int i = 0; i < nums.length; i++) {
+        if (used[i]) continue;
+        used[i] = true;
+        current.add(nums[i]);
+        backtrack(nums, used, current, result);
+        current.remove(current.size() - 1);
+        used[i] = false;
+    }
+}
+```
+
+**JavaScript:**
+```javascript
+function permute(nums) {
+    const result = [];
+    const used = new Array(nums.length).fill(false);
+    function backtrack(current) {
+        if (current.length === nums.length) {
+            result.push([...current]);
+            return;
+        }
+        for (let i = 0; i < nums.length; i++) {
+            if (used[i]) continue;
+            used[i] = true;
+            current.push(nums[i]);
+            backtrack(current);
+            current.pop();
+            used[i] = false;
+        }
+    }
+    backtrack([]);
+    return result;
+}
+```
+
+**Dry Run for `[1, 2, 3]` (first branch only):**
+```
+backtrack(path=[], used=[F,F,F])
+  i=0: used[0]=T, path=[1]
+    i=1: used[1]=T, path=[1,2]
+      i=2: used[2]=T, path=[1,2,3] → record [1,2,3]
+      used[2]=F, path=[1,2]
+    used[1]=F, path=[1]
+    i=2: used[2]=T, path=[1,3]
+      i=1: used[1]=T, path=[1,3,2] → record [1,3,2]
+      used[1]=F, path=[1,3]
+    used[2]=F, path=[1]
+  used[0]=F, path=[]
+  ... (continue for i=1, i=2)
+```
+
+**Complexity:** Time O(n × n!) — n! permutations, each O(n) to copy. Space O(n) for `used` array and recursion depth.
+
+---
+
+### Example 3: Generate Parentheses
+
+**Input:** `n = 3`
+**Output:** `["((()))","(()())","(())()","()(())","()()()"]`
+
+**Java:**
+```java
+public List<String> generateParenthesis(int n) {
+    List<String> result = new ArrayList<>();
+    backtrack(n, 0, 0, new StringBuilder(), result);
+    return result;
+}
+
+private void backtrack(int n, int open, int close, StringBuilder current, List<String> result) {
+    if (current.length() == 2 * n) {
+        result.add(current.toString());
+        return;
+    }
+    if (open < n) {
+        current.append('(');
+        backtrack(n, open + 1, close, current, result);
+        current.deleteCharAt(current.length() - 1);
+    }
+    if (close < open) {
+        current.append(')');
+        backtrack(n, open, close + 1, current, result);
+        current.deleteCharAt(current.length() - 1);
+    }
+}
+```
+
+**JavaScript:**
+```javascript
+function generateParenthesis(n) {
+    const result = [];
+    function backtrack(open, close, current) {
+        if (current.length === 2 * n) {
+            result.push(current);
+            return;
+        }
+        if (open < n) backtrack(open + 1, close, current + '(');
+        if (close < open) backtrack(open, close + 1, current + ')');
+    }
+    backtrack(0, 0, '');
+    return result;
+}
+```
+
+**Why the constraints work:** Adding `(` is valid whenever `open < n`. Adding `)` is valid whenever `close < open` (you can only close what you've opened). These two rules eliminate all invalid strings upfront — no need to generate and filter.
+
+**Call Tree for n=2:**
+```
+backtrack(open=0, close=0, "")
+  add ( → backtrack(1, 0, "(")
+    add ( → backtrack(2, 0, "((")
+      add ) → backtrack(2, 1, "(()")
+        add ) → backtrack(2, 2, "(())") → record
+    add ) → backtrack(2, 1, "()")     ← wait: open=1, close can be added
+    (actually add ( → open=2 → then close twice)
+```
+
+**Complexity:** Time O(4^n / √n) — the nth Catalan number. Space O(n) recursion depth.
+
+---
+
+### Example 4: N-Queens
+
+**Input:** `n = 4`
+**Output:** `[[".Q..","...Q","Q...","..Q."],["..Q.","Q...","...Q",".Q.."]]`
+
+**Java:**
+```java
+public List<List<String>> solveNQueens(int n) {
+    List<List<String>> result = new ArrayList<>();
+    int[] board = new int[n];
+    Set<Integer> cols = new HashSet<>(), diag1 = new HashSet<>(), diag2 = new HashSet<>();
+    backtrack(0, n, board, cols, diag1, diag2, result);
+    return result;
+}
+
+private void backtrack(int row, int n, int[] board, Set<Integer> cols,
+                        Set<Integer> diag1, Set<Integer> diag2, List<List<String>> result) {
+    if (row == n) {
+        result.add(buildBoard(board, n));
+        return;
+    }
+    for (int col = 0; col < n; col++) {
+        if (cols.contains(col) || diag1.contains(row - col) || diag2.contains(row + col))
+            continue;
+        board[row] = col;
+        cols.add(col); diag1.add(row - col); diag2.add(row + col);
+        backtrack(row + 1, n, board, cols, diag1, diag2, result);
+        cols.remove(col); diag1.remove(row - col); diag2.remove(row + col);
+    }
+}
+
+private List<String> buildBoard(int[] board, int n) {
+    List<String> rows = new ArrayList<>();
+    for (int row = 0; row < n; row++) {
+        char[] line = new char[n];
+        Arrays.fill(line, '.');
+        line[board[row]] = 'Q';
+        rows.add(new String(line));
+    }
+    return rows;
+}
+```
+
+**Key insight on diagonals:**
+- On a main diagonal (top-left to bottom-right): every cell has `row - col = constant`
+- On an anti-diagonal (top-right to bottom-left): every cell has `row + col = constant`
+
+Two queens share a diagonal if and only if they have the same `row - col` or `row + col` value.
+
+**Complexity:** Time approximately O(n!) in the worst case, but constraints prune heavily. Space O(n) for board + sets.
+
+---
+
+## [45–55 min] Pattern Recognition
+
+### Structural Clues in Problem Statements
+
+| Clue | Likely approach |
+|---|---|
+| "Generate all", "find all", "enumerate" | Backtracking |
+| "Minimum", "maximum", "optimal" | DP (if overlapping subproblems) or Greedy |
+| "Is it possible" | DFS/BFS or backtracking with early return |
+| "Shortest path" | BFS |
+| "Tree traversal", "tree height" | Recursion |
+| "Split array/string into parts" | Recursion or DP |
+| "Sort then choose k" | Combinations with pruning |
+| Choices at each step, choices are independent | Backtracking |
+| Choices at each step, result can be reused | DP |
+
+### What to Ask Yourself
+
+1. Am I computing a **single value** from smaller values? → Recursion (possibly with memoization → DP)
+2. Am I **exploring all configurations** and collecting valid ones? → Backtracking
+3. Do subproblems **overlap** (same subproblem solved multiple times)? → Add memoization (DP)
+4. Do I need the **shortest / fewest** steps? → BFS (not backtracking)
+5. After making a choice, do I need to **undo it** to try others? → Backtracking (not just DFS)
+
+### Recursion vs Backtracking
+
+| | Recursion | Backtracking |
+|---|---|---|
+| State change | Passed as argument (immutable from caller's view) | Modified shared structure |
+| Undo step | Not needed | Always present |
+| Use case | Compute and return a value | Collect all valid configurations |
+| Pattern | `return f(n) = combine(current, f(n-1))` | `choose → explore → undo` |
+
+### Backtracking vs Dynamic Programming
+
+Both use recursion. The key question: **do subproblems overlap?**
+
+- **Backtracking:** Each path in the decision tree is unique. No repeated subproblems. Cannot memoize (state includes full path).
+- **DP:** The same subproblem (e.g., Fibonacci(3)) is reached from multiple paths. Memoize to avoid recomputation.
+
+```
+Fibonacci: fib(3) called from fib(5) AND from fib(4) → overlap → use DP
+Subsets: [1,2,3] path is unique per branch → no overlap → backtracking
+```
+
+**Practical test:** If your recursive state includes a **list/path being built**, it's backtracking — you can't memoize it because two calls with the same `index` but different `path` contents are NOT the same subproblem.
+
+### DFS vs Backtracking
+
+| | DFS | Backtracking |
+|---|---|---|
+| Undo required? | No — just visiting nodes | Yes — undo after exploring each child |
+| Mutates state? | No (or uses a visited set without undoing) | Yes (modifies path/board, then undoes) |
+| Goal | Traverse/reach nodes | Build and collect all valid configurations |
+| Example | Find if path exists | Find all paths |
+
+DFS on a graph is not backtracking unless you're explicitly undoing state to explore alternative paths (e.g., Word Search marks a cell visited and then unmarks it — that is backtracking, not pure DFS).
+
+### Recognizing Which Backtracking Sub-Pattern
+
+| Problem type | Pattern to use | Key variable |
+|---|---|---|
+| All subsets | Include/exclude binary tree | index |
+| All combinations of size k | For-loop with start index | start, remaining count |
+| Combination sum | For-loop with start, allow reuse | start (pass `i` not `i+1` for reuse) |
+| All permutations | For-loop with `used[]` | used boolean array |
+| Grid path / word search | 4-directional DFS with mark/unmark | visited state on board |
+| Constraint satisfaction (N-Queens, Sudoku) | For-loop with constraint sets | sets for O(1) validity check |
+| String partition | For-loop over all split points | start index |
+| Phone letter combinations | For-loop over mapped letters | digit index |
+
+### Divide and Conquer vs Backtracking
+
+Both use recursion. Key difference: **what happens to subproblem results**.
+
+- **Divide and Conquer:** Split into independent subproblems, solve each, **merge** results. Subproblems do not share state. (Merge Sort, Count Inversions)
+- **Backtracking:** Build a configuration step by step, trying all choices. No merge — just collect complete configurations at leaves.
+
+D&C is top-down decomposition. Backtracking is bottom-up construction through exploration.
+
+**Master Theorem for D&C complexity:** T(n) = a × T(n/b) + O(n^d)
+- d > log_b(a): O(n^d)
+- d = log_b(a): O(n^d × log n)
+- d < log_b(a): O(n^(log_b a))
+
+---
+
+## [55–60 min] Final Mental Checklist
+
+Before writing any recursion/backtracking solution, answer these 7 questions:
+
+```
+[ ] 1. What does my function represent? (contract: given this state, it does what?)
+[ ] 2. What is the base case? (termination condition)
+[ ] 3. Does every recursive call make progress toward the base case?
+[ ] 4. What is my state? (what am I building? what have I used?)
+[ ] 5. What are my choices at each step?
+[ ] 6. What do I need to undo after each recursive call?
+[ ] 7. What pruning can I add? (sort + early break, constraint sets, bound checks)
+```
+
+After writing the solution:
+```
+[ ] Does the base case correctly terminate recursion?
+[ ] Do I make a COPY of the current path when recording? (not a reference)
+[ ] Do I undo EXACTLY what I did before the recursive call?
+[ ] Are duplicates handled? (sort first + skip same value at same level)
+[ ] Stack overflow risk? (n > 10^4 → consider iterative with explicit stack)
+[ ] Complexity: is 2^n or n! acceptable for given n?
+```
+
+---
+
+## Active Recall
+
+Test yourself without looking at the notes:
+
+1. What are the three laws every recursive function must follow?
+2. What is the "choose, explore, undo" pattern and why is the undo step necessary?
+3. Draw the complete call tree for `subsets([1, 2])`. How many nodes? How many leaves?
+4. In the Combinations pattern, why do we pass `i+1` instead of `i` to the recursive call? When would you pass `i`?
+5. In Permutations with duplicates, what exact condition do you add to skip duplicates, and why does it require sorting first?
+6. For N-Queens, what mathematical property identifies a main diagonal? An anti-diagonal?
+7. What is the difference between DFS on a graph and backtracking on a grid (Word Search)?
+8. When should you switch from backtracking to DP? Give a concrete example.
+9. How do you handle duplicates in Subsets vs Combination Sum II — what is the difference in approach?
+10. What does the Catalan number count? Which problems from this module have Catalan-number counts?
+
+---
+
+## Recommended Practice Direction
+
+**Start here (core patterns, must-solve):**
+- LeetCode 78 — Subsets (include/exclude pattern)
+- LeetCode 46 — Permutations (used-array pattern)
+- LeetCode 77 — Combinations (for-loop with start index)
+- LeetCode 39 — Combination Sum (allow reuse: pass `i` not `i+1`)
+- LeetCode 22 — Generate Parentheses (constraint-guided backtracking)
+
+**After the above feel solid:**
+- LeetCode 40 — Combination Sum II (duplicates in input, skip at same level)
+- LeetCode 90 — Subsets II (subsets with duplicates)
+- LeetCode 47 — Permutations II (permutations with duplicates)
+- LeetCode 131 — Palindrome Partitioning (backtracking + precompute palindrome table)
+- LeetCode 17 — Letter Combinations of a Phone Number
+
+**Grid and constraint satisfaction:**
+- LeetCode 79 — Word Search (grid backtracking, mark/unmark)
+- LeetCode 51 — N-Queens (constraint sets for O(1) validity)
+- LeetCode 37 — Sudoku Solver (same paradigm as N-Queens)
+
+**Advanced:**
+- LeetCode 212 — Word Search II (backtracking + Trie for pruning)
+- LeetCode 332 — Reconstruct Itinerary (backtracking with graph structure)
+- LeetCode 93 — Restore IP Addresses (constrained string partitioning)
+
+**For Divide and Conquer specifically:**
+- LeetCode 241 — Different Ways to Add Parentheses
+- LeetCode 315 — Count of Smaller Numbers After Self (merge sort variant)
+
+---
+
+## 2-Minute Cheat Sheet
+
+```
+RECURSION
+  f(n) = combine(current step, f(n-1))
+  Base case → Progress → Trust
+
+BACKTRACKING TEMPLATE
+  backtrack(state):
+    if done: record(state); return
+    for each choice:
+      if valid(choice):
+        make(choice)
+        backtrack(state)
+        undo(choice)
+
+PATTERNS AT A GLANCE
+  Subsets      → include/exclude binary tree, 2^n leaves
+  Combinations → for-loop + start index, no reuse
+  Comb Sum     → for-loop + start index, pass i (reuse)
+  Permutations → for-loop + used[] array, n! leaves
+  N-Queens     → constraint sets cols/diag1/diag2, O(1) checks
+  Word Search  → 4-dir DFS, mark '#'/unmark
+  Gen Parens   → open<n → add (, close<open → add )
+
+DUPLICATE HANDLING
+  Sort first, then:
+  • In for-loop: if (i > start && nums[i] == nums[i-1]) continue
+  • In used-array: if (i > 0 && nums[i] == nums[i-1] && !used[i-1]) continue
+
+DECISION KEY
+  "All configurations"    → Backtracking
+  "Optimal value"         → DP (if overlapping) / Greedy
+  "Shortest path"         → BFS
+  "Overlapping subprobs"  → Add memoization → DP
+  "Same problem smaller"  → Recursion / D&C
+
+COMPLEXITY
+  Subsets/Combinations: O(n × 2^n)
+  Permutations: O(n × n!)
+  Gen Parens: O(4^n / √n)   [Catalan number]
+  N-Queens: O(n!)            [heavily pruned in practice]
+  Word Search: O(m×n × 4^L) [L = word length]
+```
+
+---
+
+*Next: [09-DYNAMIC-PROGRAMMING.md](09-DYNAMIC-PROGRAMMING.md) — When subproblems overlap, backtracking becomes DP.*

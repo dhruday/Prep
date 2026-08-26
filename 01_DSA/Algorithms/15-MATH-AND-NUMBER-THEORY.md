@@ -1,328 +1,766 @@
-# Math and Number Theory — Complete Pattern Guide
+# Math and Number Theory — 1-Hour Learning Module
 
 > *"Math problems in interviews aren't about being a mathematician. They're about recognizing patterns and knowing a handful of powerful tricks."*
+
+**Total Time: 60 minutes | Target: Google SWE Interviews**
 
 ---
 
 ## Table of Contents
 
-1. [GCD and LCM](#gcd-and-lcm)
-2. [Sieve of Eratosthenes](#sieve-of-eratosthenes)
-3. [Modular Arithmetic](#modular-arithmetic)
-4. [Combinatorics (nCr, nPr)](#combinatorics-ncr-npr)
-5. [Fast Exponentiation](#fast-exponentiation)
-6. [Reservoir Sampling](#reservoir-sampling)
-7. [Fisher-Yates Shuffle](#fisher-yates-shuffle)
-8. [Catalan Numbers](#catalan-numbers)
-9. [Pigeonhole Principle](#pigeonhole-principle)
-10. [Arithmetic Tricks and Patterns](#arithmetic-tricks-and-patterns)
+- [[0–10 min] Big Picture](#010-min-big-picture)
+- [[10–20 min] Mental Model](#1020-min-mental-model)
+- [[20–35 min] Core Patterns](#2035-min-core-patterns)
+- [[35–45 min] Concrete Code + Dry Runs](#3545-min-concrete-code--dry-runs)
+- [[45–55 min] Pattern Recognition](#4555-min-pattern-recognition)
+- [[55–60 min] Final Mental Checklist](#5560-min-final-mental-checklist)
+- [Active Recall Questions](#active-recall-questions)
+- [Recommended Practice Direction](#recommended-practice-direction)
+- [2-Minute Cheat Sheet](#2-minute-cheat-sheet)
 
 ---
 
-## GCD and LCM
+## [0–10 min] Big Picture
 
-### What is this approach?
+### What math/number theory topics appear in DSA interviews?
 
-**Intuition:** GCD (Greatest Common Divisor) is the largest number that divides both a and b. Euclid's algorithm: repeatedly replace the larger number with the remainder. When one becomes 0, the other is the GCD.
+Google and top-tier interviews use math in two ways:
 
-### Core Idea
+1. **As the core algorithm** — the problem *is* a math problem (compute GCD, count primes, compute nCr mod p)
+2. **As a hidden shortcut** — a seemingly complex problem has a clever O(1) or O(log n) math trick lurking inside
 
-**Euclidean Algorithm:** gcd(a, b) = gcd(b, a % b). Base case: gcd(a, 0) = a.
+The topics that actually appear at Google:
 
-**LCM:** lcm(a, b) = a × b / gcd(a, b). Always compute GCD first to avoid overflow.
+| Topic | Frequency | Why it matters |
+|---|---|---|
+| GCD / LCM (Euclidean) | Very High | Simplifying fractions, water pouring, "coprime" checks |
+| Modular Arithmetic | Very High | Almost every "count ways" problem uses mod 10⁹+7 |
+| Fast Exponentiation | High | Pow(x,n), modular inverse, matrix exponentiation |
+| Sieve of Eratosthenes | High | Count/find primes efficiently |
+| Combinatorics (nCr) | Medium-High | Grid paths, coin combos, "how many ways" |
+| Pigeonhole Principle | Medium | Proving a solution exists, finding duplicates |
+| Catalan Numbers | Medium | BST count, valid parentheses count |
+| Arithmetic Tricks | Medium | Missing number, XOR tricks, digit problems |
+| Reservoir Sampling | Medium | Random pick from stream, unknown-length list |
+| Fisher-Yates Shuffle | Medium | Shuffle array uniformly |
 
-**Extended GCD:** Find x, y such that a×x + b×y = gcd(a, b). Useful for modular inverse.
+### Why they matter
 
-### Complexity
+Without these, you'll hit problems that seem to require brute force O(n²) or O(n³) but actually have O(log n) or O(n log log n) solutions. At Google, the interviewer *expects* you to know Euclidean GCD is O(log n) and the Sieve is O(n log log n). Saying "I'll just iterate" signals missing fundamentals.
 
-- **Time:** O(log(min(a, b)))
+### Simple examples to anchor the mental model
 
-### Interview Applications
-
-- **GCD of array:** Fold/reduce — gcd(a, b, c) = gcd(gcd(a, b), c)
-- **Fraction simplification:** Divide numerator and denominator by their GCD
-- **Check coprime:** gcd(a, b) == 1
-- **Water pouring puzzle:** Can pour exactly gcd(a, b) amount
-
-### Interview Insights
-
-- **Pattern:** "Can we measure exactly X liters?" → X must be a multiple of gcd(jug_a, jug_b) and ≤ max(jug_a, jug_b).
-
----
-
-## Sieve of Eratosthenes
-
-### What is this approach?
-
-**Intuition:** To find all primes up to N, start with all numbers marked as prime. For each prime p, mark all its multiples as composite. Start marking from p² (smaller multiples already handled).
-
-### Core Idea
-
-1. Create boolean array `is_prime[0..n]`, initialize all true
-2. Mark 0 and 1 as false
-3. For p = 2 to √n: if is_prime[p]: mark p², p²+p, p²+2p, ... as false
-4. All remaining true entries are primes
-
-### Complexity
-
-- **Time:** O(n log log n) — nearly linear
-- **Space:** O(n)
-
-### Variants
-
-- **Count primes less than n:** Run sieve, count true entries
-- **Prime factorization of any number ≤ n:** Use the sieve to store smallest prime factor (SPF) for each number. Factorize by repeatedly dividing by SPF.
-- **Segmented Sieve:** For very large ranges [L, R] where R is huge but R-L is small.
-
-### Interview Insights
-
-- **"Count Primes" (LeetCode 204):** Direct sieve application.
-- **Optimization:** Start marking from p², not 2p. Skip even numbers (only check odd after 2).
+- **GCD in action:** Water jug problem — can we measure exactly 4L with 6L and 10L jugs? `gcd(6, 10) = 2`. Since 4 is a multiple of 2 and ≤ 10, yes we can.
+- **Mod in action:** How many ways to climb n stairs with 1 or 2 steps? Answer = Fibonacci(n). At n=100, the number has 20 digits. Mod 10⁹+7 keeps it manageable.
+- **Sieve in action:** Count primes below 10⁶? Brute force = O(n√n) ≈ 10⁹ ops. Sieve = O(n log log n) ≈ 4×10⁶ ops. Orders of magnitude faster.
 
 ---
 
-## Modular Arithmetic
+## [10–20 min] Mental Model
 
-### What is this approach?
+### GCD — Simple meaning first
 
-**Intuition:** When numbers get astronomically large, "take mod 10⁹+7" keeps them manageable. All arithmetic works modularly: (a+b) mod m = ((a mod m) + (b mod m)) mod m.
+"The largest ruler that measures both lengths exactly."
 
-### Core Rules
+If you have two ropes of length 12 and 8, the largest piece you can cut that divides both evenly is 4. So `gcd(12, 8) = 4`.
 
-| Operation | Formula |
-|---|---|
-| Addition | (a + b) % m |
-| Subtraction | (a - b + m) % m (to avoid negative) |
-| Multiplication | (a × b) % m |
-| Division | a × modular_inverse(b) % m |
-| Exponentiation | Fast exponentiation (see below) |
+**Formal:** GCD(a, b) is the largest integer d such that d divides a and d divides b.
 
-**Modular Inverse:** a⁻¹ mod m = a^(m-2) mod m (when m is prime, by Fermat's Little Theorem).
+**Key insight — why does the Euclidean algorithm work?**
 
-### Why 10⁹ + 7?
+`gcd(a, b) = gcd(b, a % b)`
 
-- It's prime (enables modular inverse via Fermat's)
-- Fits in 32-bit signed integer
-- Product of two such numbers fits in 64-bit
+Because if d divides both a and b, it also divides `a - b`, `a - 2b`, ..., and `a mod b` (which is just `a - k*b`). So the set of common divisors of (a, b) is identical to the set of common divisors of (b, a mod b). The GCD is preserved.
 
-### Interview Insights
+**LCM:** The smallest number both a and b divide into. `lcm(a, b) = a × b / gcd(a, b)`. Always compute GCD first to avoid overflow.
 
-- **Trap:** Subtraction can go negative. Always add m before taking mod.
-- **Trap:** Division is NOT (a/b) mod m. It's a × b⁻¹ mod m where b⁻¹ is the modular inverse.
-- **When you see "answer modulo 10⁹+7":** Apply mod at every addition/multiplication step to prevent overflow.
+### Primes — Simple meaning first
+
+A number with exactly 2 divisors: 1 and itself. The "atoms" of multiplication — every integer factors uniquely into primes (Fundamental Theorem of Arithmetic).
+
+**Key insight — why does the Sieve start marking from p²?**
+
+When you reach prime p in the Sieve, all composites smaller than p² (like 2p, 3p, ..., (p-1)p) have already been marked by smaller primes. So you can safely start at p².
+
+### Modular Arithmetic — Simple meaning first
+
+Think of a 12-hour clock. After 12 comes 1, not 13. The clock "wraps around" at 12. That's mod 12.
+
+All arithmetic still works in this wrapped world:
+- `(a + b) mod m = ((a mod m) + (b mod m)) mod m`
+- `(a × b) mod m = ((a mod m) × (b mod m)) mod m`
+- Division is the tricky one — you need the **modular inverse**
+
+**Why 10⁹ + 7 specifically?**
+- It is prime (enables modular inverse via Fermat's Little Theorem)
+- Fits in a 32-bit signed integer (< 2³¹ - 1)
+- Product of two residues fits in a 64-bit long (< 2⁶³)
+
+### Combinatorics — The counting toolkit
+
+| Symbol | Meaning | Formula |
+|---|---|---|
+| n! | n factorial | n × (n-1) × ... × 1 |
+| P(n,r) | Arrangements of r from n (order matters) | n! / (n-r)! |
+| C(n,r) or nCr | Choose r from n (order doesn't matter) | n! / (r! × (n-r)!) |
+
+**Pascal's Triangle identity:** `C(n, r) = C(n-1, r-1) + C(n-1, r)`
+
+Think of it as: either you include the nth item (C(n-1, r-1)) or you don't (C(n-1, r)).
+
+### Visual: How GCD converges fast
+
+```
+gcd(48, 18):
+  48 mod 18 = 12  → gcd(18, 12)
+  18 mod 12 = 6   → gcd(12, 6)
+  12 mod  6 = 0   → gcd(6, 0) = 6
+
+Only 3 steps for gcd(48, 18) = 6
+Each step roughly halves the numbers → O(log n) total
+```
 
 ---
 
-## Combinatorics (nCr, nPr)
+## [20–35 min] Core Patterns
 
-### Core Formulas
+### 1. Euclidean GCD Algorithm
 
-- **Permutations:** P(n, r) = n! / (n-r)!
-- **Combinations:** C(n, r) = n! / (r! × (n-r)!)
-- **Pascal's Triangle:** C(n, r) = C(n-1, r-1) + C(n-1, r)
+**From first principles:**
 
-### Computing nCr
+```
+gcd(a, b):
+  If b == 0: answer is a
+  Otherwise: gcd(a, b) = gcd(b, a % b)
+```
 
-**Small n (≤ ~1000):** Pascal's Triangle DP. Build table bottom-up. O(n²) time and space.
+Why terminate? Each step, a % b < b, and b becomes the new "a". The smaller number strictly decreases every step. It hits 0 in at most O(log(min(a,b))) steps.
 
-**Large n with mod:** Precompute factorials and inverse factorials mod p. nCr = fact[n] × inv_fact[r] × inv_fact[n-r] mod p.
+**LCM from GCD:**
+```
+lcm(a, b) = a / gcd(a, b) * b
+            ↑ divide first, then multiply — avoids overflow
+```
 
-### Interview Applications
+**GCD of an array:** Use reduce. `gcd(a, b, c) = gcd(gcd(a, b), c)`
+
+**Extended GCD (Bezout's Identity):** Finds x, y such that `a*x + b*y = gcd(a, b)`. Used for computing modular inverse when modulus is not prime.
+
+**Complexity:** O(log(min(a, b)))
+
+**When to use:**
+- Fraction simplification (divide numerator and denominator by GCD)
+- Check coprime: `gcd(a, b) == 1`
+- Water pouring puzzle: can you measure exactly X? X must be a multiple of gcd(a, b)
+- Rope cutting: maximum piece length = GCD of all rope lengths
+
+---
+
+### 2. Sieve of Eratosthenes
+
+**Algorithm from first principles:**
+
+```
+Start: mark all numbers 2..n as prime
+For each prime p from 2 to √n:
+    Mark p², p²+p, p²+2p, ... as composite
+Result: remaining marked-prime numbers are the actual primes
+```
+
+Why only up to √n? If a composite c ≤ n has a factor > √n, its co-factor must be < √n, and c was already marked by that smaller factor.
+
+**Complexity:** O(n log log n) — nearly linear
+
+**Variants:**
+
+- **Count primes < n (LeetCode 204):** Run sieve, count remaining true entries
+- **Smallest Prime Factor (SPF) Sieve:** Instead of just marking composites, store the smallest prime factor for each index. Then any number ≤ n can be fully factorized in O(log n) by repeatedly dividing by its SPF.
+- **Segmented Sieve:** When n is huge (10¹²) but range [L, R] is small (R-L ≤ 10⁶). Use standard sieve up to √R, then sieve the segment.
+
+**When to use:**
+- Need all primes up to N (N ≤ 10⁷ comfortably, 10⁸ with care)
+- Need to factorize many numbers up to N
+- "Count primes" problems
+
+---
+
+### 3. Modular Arithmetic
+
+**Core rules — never forget these:**
+
+```
+Addition:       (a + b) % m
+Subtraction:    (a - b + m) % m     ← MUST add m to prevent negative
+Multiplication: (a * b) % m
+Division:       a * modInverse(b, m) % m   ← NOT simply (a/b) % m
+Exponentiation: Use fast exponentiation (see below)
+```
+
+**Modular Inverse (when m is prime):** By Fermat's Little Theorem, `a^(m-1) ≡ 1 (mod m)`, so `a^(-1) ≡ a^(m-2) (mod m)`.
+
+Compute with fast exponentiation in O(log m).
+
+**Precomputing factorials for nCr mod p:**
+```
+fact[0] = 1
+fact[i] = fact[i-1] * i % MOD
+
+inv_fact[n] = modpow(fact[n], MOD-2, MOD)
+inv_fact[i] = inv_fact[i+1] * (i+1) % MOD   ← back-fill
+
+nCr mod p = fact[n] * inv_fact[r] % MOD * inv_fact[n-r] % MOD
+```
+
+**When to use:** Every time the problem says "answer modulo 10⁹+7". Apply mod at every addition/multiplication step.
+
+---
+
+### 4. Fast Exponentiation (Binary Exponentiation)
+
+**From first principles:**
+
+Instead of multiplying a × a × a... n times, use the binary representation of n:
+
+```
+a^13 = a^(1101 in binary)
+     = a^8 × a^4 × a^1
+     = (((a^2)^2)^2) × ((a^2)^2) × a
+
+Each squaring handles one bit of the exponent → O(log n) multiplications
+```
+
+**Iterative algorithm:**
+```
+result = 1
+while n > 0:
+    if n is odd: result = result * a
+    a = a * a        // square the base
+    n = n >> 1       // shift off the processed bit
+```
+
+**When to use:**
+- `Pow(x, n)` — handle negative n as `1/pow(x, -n)`
+- Modular exponentiation: apply `% mod` at each multiplication
+- Matrix exponentiation: replace scalar × with matrix × for Fibonacci in O(log n)
+
+**Complexity:** O(log n)
+
+---
+
+### 5. Combinatorics
+
+**Pascal's Triangle DP (for small n ≤ ~1000):**
+```
+C[0][0] = 1
+C[i][0] = C[i][i] = 1
+C[i][j] = C[i-1][j-1] + C[i-1][j]
+```
+
+**Large n with mod (factorial method):** Precompute factorials and inverse factorials (see Modular Arithmetic section above).
+
+**Key formulas to know:**
 
 | Problem | Formula |
 |---|---|
-| Unique Paths in grid | C(m+n-2, m-1) |
-| Number of binary trees with n nodes | Catalan number |
-| Ways to arrange with repetitions | Multinomial coefficient |
-| Stars and bars | C(n+k-1, k-1) for distributing n into k bins |
-
-### Interview Insights
-
-- **Pascal's Triangle** is both a DP problem and a combinatorics tool. Know both perspectives.
-- **Unique Paths** can be solved with DP OR directly with C(m+n-2, m-1).
+| Unique paths in m×n grid | C(m+n-2, m-1) |
+| Binary trees with n nodes | Catalan(n) |
+| Distribute n identical items into k bins | C(n+k-1, k-1) — Stars and Bars |
+| Arrangements with repeated elements | n! / (c₁! × c₂! × ...) — Multinomial |
 
 ---
 
-## Fast Exponentiation
+### 6. Reservoir Sampling
 
-### What is this approach?
+**Problem:** Pick K items uniformly at random from a stream of unknown length N. You can't store the whole stream.
 
-**Intuition:** Compute a^n in O(log n) instead of O(n). Split the exponent: if n is even, a^n = (a^(n/2))². If odd, a^n = a × a^(n-1).
+**Algorithm for K=1:**
+1. Keep first element as current pick
+2. For the i-th element: replace current pick with probability 1/i
 
-### Core Idea (Iterative)
+After all N elements, each element has exactly 1/N probability. (Proof by induction: element i survives with prob 1/i × (i/(i+1)) × ((i+1)/(i+2)) × ... × (N-1)/N = 1/N.)
 
-1. result = 1
-2. While n > 0:
-   - If n is odd: result = result × a
-   - a = a × a (square the base)
-   - n = n >> 1 (halve the exponent)
-3. Apply mod at each multiplication if needed
-
-### Complexity
-
-- **Time:** O(log n)
-
-### Interview Applications
-
-- **Pow(x, n):** Handle negative exponents (x^(-n) = 1 / x^n)
-- **Modular exponentiation:** Compute a^b mod m efficiently
-- **Matrix exponentiation:** Replace scalar multiplication with matrix multiplication. Used for Fibonacci in O(log n), linear recurrence acceleration.
-
-### Interview Insights
-
-- **Trap:** Pow(x, n) — handle n = -2³¹ carefully. Taking abs of INT_MIN overflows.
-
----
-
-## Reservoir Sampling
-
-### What is this approach?
-
-**Intuition:** Select K items uniformly at random from a stream of unknown length N, using O(K) space. You can't know N in advance.
-
-### Core Idea (K = 1)
-
-1. Keep the first element as the current selection
-2. For the ith element (1-indexed): replace the current selection with probability 1/i
-3. After processing all N elements, each element had exactly 1/N probability
-
-### Core Idea (K items)
-
+**Algorithm for K items:**
 1. Keep first K elements in reservoir
-2. For the ith element (i > K): generate random j in [1, i]. If j ≤ K: replace reservoir[j] with element i.
+2. For i-th element (i > K): pick random j in [1, i]. If j ≤ K, replace reservoir[j-1] with element i.
 
-### Complexity
+Each element ends up with exactly K/N probability.
 
-- **Time:** O(N) — one pass
-- **Space:** O(K)
-
-### Interview Applications
-
-- **Linked List Random Node:** Random node from a linked list of unknown length. Reservoir sampling with K=1.
-- **Random Pick Index:** Given an array with duplicates, pick a random index of a target value.
-
-### Interview Insights
-
-- **Key property:** Each element has exactly K/N probability of being in the final reservoir. Provable by induction.
+**When to use:** Unknown-length stream, linked list random node, random pick with duplicates.
 
 ---
 
-## Fisher-Yates Shuffle
+### 7. Fisher-Yates Shuffle
 
-### What is this approach?
+**Goal:** Generate a uniformly random permutation. Each of the n! permutations has equal probability.
 
-**Intuition:** Generate a uniformly random permutation of an array. Each of the n! permutations has equal probability.
+**Algorithm:**
+```
+for i = n-1 down to 1:
+    j = random integer in [0, i]  // INCLUSIVE range [0, i]
+    swap arr[i] and arr[j]
+```
 
-### Core Idea
+**Why [0, i] and not [0, n)?** If you use [0, n) throughout, the distribution is NOT uniform (n^n outcomes for n! permutations — they don't divide evenly).
 
-1. For i = n-1 down to 1:
-   - Pick random j from [0, i] (inclusive)
-   - Swap arr[i] and arr[j]
-
-### Complexity
-
-- **Time:** O(n)
-- **Space:** O(1) (in-place)
-
-### Interview Insights
-
-- **"Shuffle an Array"** is a direct application.
-- **Trap:** The random range must be [0, i], not [0, n). Wrong range produces non-uniform distribution.
-- **Connection to reservoir sampling:** Fisher-Yates is for known-length arrays. Reservoir sampling is for streams.
+**Complexity:** O(n) time, O(1) space in-place.
 
 ---
 
-## Catalan Numbers
+### 8. Catalan Numbers
 
-### What is this approach?
+**What they count:** "Balanced recursive splitting" structures.
 
-**Intuition:** Catalan numbers count "balanced" structures: valid parentheses, binary trees, triangulations, non-crossing partitions.
+```
+C(0) = 1, C(1) = 1, C(2) = 2, C(3) = 5, C(4) = 14, C(5) = 42
+```
 
-### Formula
+**Formula:** `C(n) = C(2n, n) / (n+1)`
 
-C(n) = C(2n, n) / (n + 1) = (2n)! / ((n+1)! × n!)
+**Recurrence:** `C(n) = Σ C(i) × C(n-1-i)` for i from 0 to n-1
 
-**Recurrence:** C(n) = Σ C(i) × C(n-1-i) for i = 0 to n-1 (choose where to split)
+| What counts Catalan(n) |
+|---|
+| Valid parenthesizations with n pairs |
+| Structurally distinct BSTs with n nodes |
+| Triangulations of a (n+2)-sided polygon |
+| Monotonic paths in n×n grid not crossing diagonal |
 
-**First values:** 1, 1, 2, 5, 14, 42, 132, 429, ...
+**Don't memorize the formula.** Recognize the pattern: if a problem has a "balanced, recursive split at every position" structure, it's Catalan.
 
-### What Catalan Numbers Count
+---
 
-| n | Structure |
+### 9. Pigeonhole Principle
+
+**Simple statement:** If n+1 pigeons go into n holes, at least one hole has ≥ 2 pigeons.
+
+**Key interview applications:**
+
+- Array of n+1 elements with values in [1, n] → a duplicate must exist (pigeonhole guarantees it)
+- Birthday paradox bounds on hash collisions
+- "Find the duplicate number" — the duplicate is guaranteed by pigeonhole; Floyd's cycle detection finds it in O(n) time and O(1) space
+
+**When to invoke:** "n+1 elements in range [1, n]" or "more items than possible categories" → some category must have multiple items. The constraint often proves a solution exists.
+
+---
+
+### 10. Arithmetic Tricks
+
+**Integer formulas:**
+
+| Trick | Formula |
 |---|---|
-| n pairs | Valid parenthesizations |
-| n+1 values | BSTs with n+1 nodes |
-| n+1 sides | Triangulations of a polygon |
-| 2n steps | Paths that don't cross the diagonal (Dyck paths) |
-| n nodes | Full binary trees |
+| Sum 1 to n | n(n+1)/2 |
+| Sum of squares 1 to n | n(n+1)(2n+1)/6 |
+| Ceiling division | (a + b - 1) / b |
+| Last digit | n % 10 |
+| Remove last digit | n / 10 |
+| Digital root | 1 + (n-1) % 9 (for n > 0) |
 
-### Interview Applications
+**Digit-based problems:**
+- **Happy Number:** Sum squares of digits repeatedly. Check cycle with Floyd's or HashSet.
+- **Add Digits (Digital Root):** While n > 9, sum digits. Shortcut: `1 + (n-1) % 9`.
+- **Palindrome Number:** Reverse the second half of digits, compare.
 
-- **Unique BSTs:** How many structurally different BSTs can store values 1..n? → C(n)
-- **Generate Parentheses:** Number of valid strings with n pairs → C(n)
-
-### Interview Insights
-
-- **Don't memorize the formula:** Recognize the pattern. If the problem has a "balanced recursive splitting" structure, it's Catalan.
-
----
-
-## Pigeonhole Principle
-
-### What is this approach?
-
-**Intuition:** If you put n+1 pigeons into n holes, at least one hole has ≥ 2 pigeons. In algorithms: if more items than containers, some container must have a collision.
-
-### Interview Applications
-
-**Find Duplicate Number (array of n+1 elements with values 1..n):**
-- By pigeonhole, a duplicate must exist
-- Floyd's cycle detection on the array treated as a linked list (see [06-LINKED-LISTS.md](06-LINKED-LISTS.md#fastslow-pointer-floyds-algorithm))
-
-**Longest Repeating Substring / Birthday Paradox arguments:**
-- Pigeonhole bounds guarantee collisions
-
-### Interview Insights
-
-- **When to invoke:** "n+1 elements in range [1, n]" → duplicate guaranteed. "More items than categories" → some category has multiple items.
-- **Connection:** The constraint that guarantees a solution exists often comes from pigeonhole.
-
----
-
-## Arithmetic Tricks and Patterns
-
-### Integer Properties
-
-| Trick | Application |
-|---|---|
-| Sum 1 to n = n(n+1)/2 | Missing number by sum |
-| Sum of squares = n(n+1)(2n+1)/6 | Variance calculations |
-| Check if perfect square | Binary search or integer sqrt |
-| Integer division ceiling | (a + b - 1) / b = ceil(a/b) |
-| Digit extraction | n % 10 (last digit), n / 10 (remove last) |
-| Reverse a number | Repeatedly extract and build |
-
-### Digit-Based Problems
-
-- **Happy Number:** Sum of squares of digits, check cycle (Floyd's or HashSet)
-- **Add Digits (Digital Root):** While > 9, sum digits. Shortcut: 1 + (n-1) % 9
-- **Palindrome Number:** Reverse half the digits, compare
-
-### Math-Based Array Problems
+**Math-based array problems:**
 
 | Problem | Technique |
 |---|---|
-| Missing number | Sum formula or XOR |
-| Missing two numbers | Sum + sum of squares, or XOR + bit trick |
+| Missing number in [0, n] | XOR all indices and all values |
+| Missing two numbers | Sum + sum of squares (two equations, two unknowns) |
 | Majority element | Boyer-Moore Voting |
-| Product except self | Left product × right product |
-| GCD of array | Fold with Euclidean algorithm |
-| Next permutation | Find rightmost ascent, swap, reverse |
+| Product except self | Left prefix product × right suffix product |
+| GCD of array | Reduce: gcd(gcd(a, b), c, ...) |
 
-### Interview Insights
+---
 
-- **"Can you solve it in O(1) space?"** → Often means a math trick exists (XOR, sum formula, Floyd's).
-- **Digit manipulation** is straightforward but error-prone. Handle negative numbers and overflow carefully.
+## [35–45 min] Concrete Code + Dry Runs
+
+### GCD / LCM — Java and JavaScript
+
+**Java:**
+```java
+// Recursive GCD
+int gcd(int a, int b) {
+    return b == 0 ? a : gcd(b, a % b);
+}
+
+// Iterative GCD (avoids stack overflow for large inputs)
+int gcdIterative(int a, int b) {
+    while (b != 0) {
+        int temp = b;
+        b = a % b;
+        a = temp;
+    }
+    return a;
+}
+
+// LCM — divide first to avoid overflow
+long lcm(long a, long b) {
+    return a / gcd((int)a, (int)b) * b;
+}
+```
+
+**JavaScript/TypeScript:**
+```typescript
+function gcd(a: number, b: number): number {
+    return b === 0 ? a : gcd(b, a % b);
+}
+
+function lcm(a: number, b: number): number {
+    return (a / gcd(a, b)) * b;
+}
+```
+
+**Dry run — `gcd(48, 18)`:**
+```
+Call: gcd(48, 18)
+  b=18 ≠ 0 → gcd(18, 48%18) = gcd(18, 12)
+  b=12 ≠ 0 → gcd(12, 18%12) = gcd(12, 6)
+  b=6  ≠ 0 → gcd(6,  12%6)  = gcd(6, 0)
+  b=0  → return 6
+
+Result: gcd(48, 18) = 6
+Steps: 3  (roughly log₁.₆(18) ≈ 3.5, confirming O(log n))
+```
+
+---
+
+### Sieve of Eratosthenes — Java and JavaScript
+
+**Java:**
+```java
+boolean[] sieve(int n) {
+    boolean[] isPrime = new boolean[n + 1];
+    Arrays.fill(isPrime, true);
+    isPrime[0] = isPrime[1] = false;
+    for (int p = 2; (long) p * p <= n; p++) {
+        if (isPrime[p]) {
+            for (int multiple = p * p; multiple <= n; multiple += p) {
+                isPrime[multiple] = false;
+            }
+        }
+    }
+    return isPrime;
+}
+```
+
+**JavaScript/TypeScript:**
+```typescript
+function sieve(n: number): boolean[] {
+    const isPrime = new Array(n + 1).fill(true);
+    isPrime[0] = isPrime[1] = false;
+    for (let p = 2; p * p <= n; p++) {
+        if (isPrime[p]) {
+            for (let m = p * p; m <= n; m += p) {
+                isPrime[m] = false;
+            }
+        }
+    }
+    return isPrime;
+}
+```
+
+**Dry run — sieve(20):**
+```
+Initial: [F, F, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T]
+         index: 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
+
+p=2: mark 4, 6, 8, 10, 12, 14, 16, 18, 20
+p=3: mark 9, 15 (9=3², already: 12,18 marked by 2's)
+p=4: isPrime[4]=false, skip
+√20 ≈ 4.47, so stop after p=4
+
+Primes: 2, 3, 5, 7, 11, 13, 17, 19
+```
+
+---
+
+### Fast Exponentiation (Modular) — Java and JavaScript
+
+**Java:**
+```java
+long modPow(long base, long exp, long mod) {
+    long result = 1;
+    base %= mod;
+    while (exp > 0) {
+        if ((exp & 1) == 1) {          // if current bit is set
+            result = result * base % mod;
+        }
+        base = base * base % mod;       // square the base
+        exp >>= 1;                      // process next bit
+    }
+    return result;
+}
+
+// Modular inverse (mod must be prime)
+long modInverse(long a, long mod) {
+    return modPow(a, mod - 2, mod);
+}
+```
+
+**JavaScript/TypeScript:**
+```typescript
+function modPow(base: bigint, exp: bigint, mod: bigint): bigint {
+    let result = 1n;
+    base = base % mod;
+    while (exp > 0n) {
+        if (exp % 2n === 1n) result = result * base % mod;
+        base = base * base % mod;
+        exp >>= 1n;
+    }
+    return result;
+}
+// Note: use BigInt in JS to avoid precision loss for large numbers
+```
+
+**Dry run — `modPow(3, 13, 1000000007)`:**
+```
+exp=13 = 1101₂
+
+Iteration 1: exp=13 (odd)  → result = 1 × 3 = 3;    base=9,   exp=6
+Iteration 2: exp=6  (even) → result = 3;              base=81,  exp=3
+Iteration 3: exp=3  (odd)  → result = 3 × 81 = 243;  base=6561,exp=1
+Iteration 4: exp=1  (odd)  → result = 243 × 6561 = 1594323; base=..., exp=0
+
+3^13 = 1594323 ✓ (no overflow with mod applied each step)
+```
+
+---
+
+### Reservoir Sampling — Java and JavaScript
+
+**Java (K=1):**
+```java
+int reservoirSample(int[] stream) {
+    Random rand = new Random();
+    int result = stream[0];
+    for (int i = 1; i < stream.length; i++) {
+        // Replace with probability 1/(i+1)
+        if (rand.nextInt(i + 1) == 0) {
+            result = stream[i];
+        }
+    }
+    return result;
+}
+```
+
+**JavaScript (K=1):**
+```typescript
+function reservoirSample(stream: number[]): number {
+    let result = stream[0];
+    for (let i = 1; i < stream.length; i++) {
+        const j = Math.floor(Math.random() * (i + 1));
+        if (j === 0) result = stream[i];
+    }
+    return result;
+}
+```
+
+---
+
+### Fisher-Yates Shuffle — Java and JavaScript
+
+**Java:**
+```java
+void shuffle(int[] arr) {
+    Random rand = new Random();
+    for (int i = arr.length - 1; i > 0; i--) {
+        int j = rand.nextInt(i + 1);  // j in [0, i] inclusive
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+}
+```
+
+**JavaScript/TypeScript:**
+```typescript
+function shuffle(arr: number[]): void {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1)); // [0, i]
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+}
+```
+
+**Dry run — shuffle([1, 2, 3, 4]):**
+```
+i=3: j=random in [0,3], say j=1 → swap arr[3] and arr[1]: [1, 4, 3, 2]
+i=2: j=random in [0,2], say j=2 → swap arr[2] and arr[2]: [1, 4, 3, 2]
+i=1: j=random in [0,1], say j=0 → swap arr[1] and arr[0]: [4, 1, 3, 2]
+
+Result: [4, 1, 3, 2] — one of 4! = 24 equally likely permutations
+```
+
+---
+
+### Combinatorics (nCr mod p) — Java
+
+**Java:**
+```java
+static final long MOD = 1_000_000_007;
+
+long[] fact, inv_fact;
+
+void precompute(int n) {
+    fact = new long[n + 1];
+    inv_fact = new long[n + 1];
+    fact[0] = 1;
+    for (int i = 1; i <= n; i++) fact[i] = fact[i-1] * i % MOD;
+    inv_fact[n] = modPow(fact[n], MOD - 2, MOD);
+    for (int i = n - 1; i >= 0; i--) inv_fact[i] = inv_fact[i+1] * (i+1) % MOD;
+}
+
+long nCr(int n, int r) {
+    if (r < 0 || r > n) return 0;
+    return fact[n] * inv_fact[r] % MOD * inv_fact[n-r] % MOD;
+}
+```
+
+---
+
+## [45–55 min] Pattern Recognition
+
+### Clues that scream "math/number theory"
+
+| Clue in problem statement | What it suggests |
+|---|---|
+| "answer modulo 10⁹+7" | Modular arithmetic + fast exponentiation |
+| "count ways" / "how many paths" | Combinatorics (nCr), possibly DP |
+| "n+1 numbers in range [1,n]" | Pigeonhole — duplicate is guaranteed |
+| "find all primes up to N" | Sieve of Eratosthenes |
+| "simplify fraction" / "coprime" | GCD (Euclidean algorithm) |
+| "water jug" / "measure exactly X" | GCD (Bezout's identity) |
+| "random pick" from stream/list | Reservoir sampling |
+| "shuffle" / "random permutation" | Fisher-Yates |
+| "number of BSTs" / "valid parentheses count" | Catalan numbers |
+| "power of a matrix" / "linear recurrence" | Matrix exponentiation |
+
+### Constraints that hint at mathematical patterns
+
+| Constraint | Implication |
+|---|---|
+| n ≤ 10⁶ or 10⁷ | Sieve is feasible; O(n log log n) works |
+| n ≤ 10¹² | Can't iterate; need O(√n) primality or segmented sieve |
+| Values in [0, n] for array of size n+1 | Pigeonhole: a duplicate exists |
+| "O(1) extra space" on array problem | XOR trick, sum formula, or Floyd's cycle |
+| Answer can be huge | Mod 10⁹+7 is involved, use modular arithmetic throughout |
+| Exponent can be 10^18 | Fast (binary) exponentiation required |
+
+### Common mistakes to avoid
+
+1. **Subtraction going negative:** Always do `(a - b + MOD) % MOD`
+2. **Division in modular world:** `(a / b) % MOD ≠ (a % MOD) / (b % MOD)`. Use modular inverse.
+3. **Integer overflow before mod:** In Java, cast to `long` before multiplying. In JS, use BigInt for very large numbers.
+4. **Wrong shuffle range:** Fisher-Yates needs `j in [0, i]` not `[0, n)`.
+5. **Sieve starting too late:** Mark multiples starting from `p*p`, not from `2*p`.
+6. **Pow(x, n) with INT_MIN:** `Math.abs(Integer.MIN_VALUE)` overflows in Java. Cast to long first.
+
+### How problems layer these patterns
+
+- **"Unique Paths" grid problem:** Can be solved with DP OR with `C(m+n-2, m-1)`. The latter is O(1) after precomputation.
+- **"Count ways to build something" with large n:** DP recurrence + modular arithmetic at every step + precomputed factorials.
+- **"Find duplicate in O(1) space":** Pigeonhole proves existence, Floyd's cycle detection finds it.
+
+---
+
+## [55–60 min] Final Mental Checklist
+
+When you see a problem, ask these in order:
+
+```
+1. Does it involve divisibility, fractions, or "measure X with Y"?
+   → GCD / LCM (Euclidean algorithm, O(log n))
+
+2. Does it ask for all primes or prime factorizations up to N?
+   → Sieve of Eratosthenes (O(n log log n))
+
+3. Does the answer need to be taken mod 10^9+7?
+   → Modular arithmetic rules, modular inverse, fast exponentiation
+
+4. Does it compute a^b for large b?
+   → Fast (binary) exponentiation (O(log b))
+
+5. Does it count combinations, paths, or arrangements?
+   → Combinatorics: nCr with Pascal's DP or factorial precomputation
+
+6. Does it involve n+1 elements in range [1,n]?
+   → Pigeonhole: duplicate guaranteed; consider Floyd's cycle detection
+
+7. Does it count "balanced" recursive structures (trees, parens)?
+   → Catalan numbers
+
+8. Does it pick random items from a stream of unknown length?
+   → Reservoir sampling
+
+9. Does it shuffle / permute an array?
+   → Fisher-Yates (remember the [0, i] range)
+
+10. Can a seemingly complex operation be done in O(1) space?
+    → Look for: XOR trick, sum formula, digital root formula
+```
+
+---
+
+## Active Recall Questions
+
+Test yourself — close the notes and answer these:
+
+1. What is the Euclidean algorithm? Write the two-line recursive version from memory.
+2. Why does `gcd(a, b) = gcd(b, a % b)` preserve the GCD?
+3. Why does the Sieve of Eratosthenes start marking from p² instead of 2p?
+4. What is the time complexity of the Sieve? Why is it not O(n log n)?
+5. You need to compute `(a - b) mod m` but the result might go negative. What do you write?
+6. Why can't you just compute `(a / b) % mod`? What do you do instead?
+7. How does binary exponentiation achieve O(log n)?
+8. Explain reservoir sampling for K=1. Why does each element end up with probability 1/N?
+9. What is the critical bug in a naive shuffle that uses `j = random in [0, n)` throughout?
+10. A problem gives n+1 numbers all in range [1, n]. What can you immediately conclude, and what technique finds the duplicate in O(n) time, O(1) space?
+
+---
+
+## Recommended Practice Direction
+
+**Start here (must-do):**
+- LeetCode 1979 — Find Greatest Common Divisor of Array
+- LeetCode 204 — Count Primes (Sieve)
+- LeetCode 50 — Pow(x, n) (Fast exponentiation)
+- LeetCode 62 — Unique Paths (nCr formula or DP)
+- LeetCode 287 — Find the Duplicate Number (Pigeonhole + Floyd's)
+- LeetCode 382 — Linked List Random Node (Reservoir sampling)
+- LeetCode 384 — Shuffle an Array (Fisher-Yates)
+
+**Level up:**
+- LeetCode 96 — Unique Binary Search Trees (Catalan)
+- LeetCode 172 — Factorial Trailing Zeroes (prime factorization insight)
+- LeetCode 1201 — Ugly Number III (GCD + LCM + inclusion-exclusion)
+- LeetCode 1922 — Count Good Numbers (modular exponentiation)
+
+**Advanced:**
+- LeetCode 458 — Poor Pigs (combinatorics / information theory)
+- LeetCode 878 — Nth Magical Number (GCD + binary search)
+- Matrix exponentiation for Fibonacci (a classic Google hard)
+
+---
+
+## 2-Minute Cheat Sheet
+
+```
+GCD:          gcd(a,b) = b==0 ? a : gcd(b, a%b)     O(log n)
+LCM:          a / gcd(a,b) * b                        (divide first!)
+Sieve:        mark from p², loop p to √n              O(n log log n)
+ModPow:       result=1; while n>0: if odd→res*=a; a*=a; n>>=1  O(log n)
+ModInverse:   a^(MOD-2) % MOD                         (MOD must be prime)
+nCr mod p:    precompute fact[], inv_fact[] then multiply 3 terms
+Sub mod:      (a - b + MOD) % MOD                     (never forget +MOD)
+Reservoir:    replace current with prob 1/i
+Fisher-Yates: j ∈ [0, i] (inclusive), swap arr[i] with arr[j]
+Catalan:      1,1,2,5,14,42 — balanced recursive splits
+Pigeonhole:   n+1 items in n buckets → collision guaranteed
+Digital root: 1 + (n-1) % 9
+Ceil divide:  (a + b - 1) / b
+Missing num:  XOR all indices 0..n with all values
+```
 
 ---
 

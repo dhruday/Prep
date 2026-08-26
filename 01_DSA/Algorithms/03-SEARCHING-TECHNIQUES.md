@@ -1,4 +1,4 @@
-# Searching Techniques — Complete Pattern Guide
+# Searching Techniques — 1-Hour Learning Module
 
 > *"Binary search is not just an algorithm — it is a way of thinking. Any time you can discard half the possibilities in one step, binary search is hiding in the problem."*
 
@@ -6,512 +6,923 @@
 
 ## Table of Contents
 
-1. [Binary Search — Classic](#binary-search--classic)
-2. [Binary Search — Lower Bound / Upper Bound](#binary-search--lower-bound--upper-bound)
-3. [Binary Search on Rotated Sorted Array](#binary-search-on-rotated-sorted-array)
-4. [Binary Search on Answer (Parametric Search)](#binary-search-on-answer-parametric-search)
-5. [Search in 2D Matrix](#search-in-2d-matrix)
-6. [Exponential Search](#exponential-search)
-7. [Ternary Search](#ternary-search)
-8. [Median of Two Sorted Arrays Pattern](#median-of-two-sorted-arrays-pattern)
+- [[0–10 min] Big Picture](#010-min-big-picture)
+- [[10–20 min] Mental Model](#1020-min-mental-model)
+- [[20–35 min] Core Patterns](#2035-min-core-patterns)
+- [[35–45 min] Concrete Code + Dry Run](#3545-min-concrete-code--dry-run)
+- [[45–55 min] Pattern Recognition](#4555-min-pattern-recognition)
+- [[55–60 min] Final Mental Checklist](#5560-min-final-mental-checklist)
+- [Active Recall](#active-recall)
+- [Recommended Practice Direction](#recommended-practice-direction)
+- [2-Minute Cheat Sheet](#2-minute-cheat-sheet)
 
 ---
 
-## Binary Search — Classic
+## [0–10 min] Big Picture
 
-### What is this approach?
+### What is Searching? Why Does It Exist?
 
-**Intuition:** You are playing a number guessing game. Someone picks a number between 1 and 100. Each time you guess, they say "higher" or "lower." The smartest strategy? Always guess the middle. Each guess eliminates half the possibilities.
+You have data. You need to find something in it. The naive way: check every element one by one. That is O(n). For a million elements, that is a million checks.
 
-**Formal:** Given a sorted array, repeatedly divide the search space in half by comparing the target with the middle element. If target equals mid, found. If target < mid, search left half. If target > mid, search right half. Continue until the space is empty.
+The smarter way: if your data has **structure** (specifically, a sorted or monotonic order), you can eliminate large chunks of the search space with a single comparison. That is the core idea behind all searching techniques in this module.
 
-### When should I use this?
+### The Real-World Analogy
 
-- The data is **sorted** or has a **monotonic property**
-- You need to find a specific element in O(log n) time
-- Keywords: "sorted array," "find target," "search," "log n"
+Think about a guessing game. Someone picks a number between 1 and 1,000. You guess 500. They say "too high." You now know the answer is in 1–499. You just eliminated half the possibilities in one step. Guess 250. "Too low." Now it's in 251–499. One step, half gone again.
 
-### When should I NOT use this?
+After 10 guesses, you can narrow down 1,024 possibilities to exactly one. That is O(log n) — the power of eliminating half the space each step.
 
-- The data is **unsorted** and cannot be sorted without losing needed information
-- You need to find **all** occurrences (binary search finds one; then expand or use lower/upper bound)
-- The search space doesn't have a monotonic property — no way to decide which half to discard
+This is binary search. Every other technique in this module is a variation of this same insight applied to a different shape of problem.
 
-### Core Idea
+### One Tiny Example
 
-1. Set `low = 0`, `high = n - 1`
-2. While `low <= high`:
-   - `mid = low + (high - low) / 2` (avoid overflow!)
-   - If `arr[mid] == target`, return mid
-   - If `arr[mid] < target`, set `low = mid + 1`
-   - If `arr[mid] > target`, set `high = mid - 1`
-3. If loop ends, target not found
+```
+Array: [2, 5, 8, 12, 16, 23, 38, 45]
+Target: 23
 
-**Mental model:** You have a sorted bookshelf. You open to the middle. The book title tells you whether to look left or right. Each step halves the shelf.
+Naive: check 2... 5... 8... 12... 16... 23 ✓  (6 comparisons)
 
-### Complexity
+Binary: check middle 12 → too small → right half
+        check middle 23 → found!              (2 comparisons)
+```
 
-- **Time:** O(log n) — search space halves each iteration, so you need at most log₂(n) iterations
-- **Space:** O(1) iterative, O(log n) recursive (call stack)
+### What This Module Covers
 
-**Why O(log n)?** Starting with n elements, after k steps you have n/2^k elements left. When n/2^k = 1, k = log₂(n).
-
-### Variants
-
-- **Iterative vs Recursive:** Iterative is preferred (no stack overhead). Recursive is clearer for teaching.
-- **Find first/last occurrence:** See Lower Bound / Upper Bound below.
-- **Search in infinite array:** See Exponential Search below.
-
-### Related Patterns
-
-- [Lower Bound / Upper Bound](#binary-search--lower-bound--upper-bound) (the real interview version)
-- [Binary Search on Answer](#binary-search-on-answer-parametric-search) (search on the answer space)
-- [Binary Search on Rotated Array](#binary-search-on-rotated-sorted-array) (when sorted property is partially broken)
-
-### Interview Insights
-
-- **Trap:** Integer overflow with `mid = (low + high) / 2`. Use `mid = low + (high - low) / 2`.
-- **Trap:** Infinite loops from incorrect boundary updates. Remember: `low = mid + 1` and `high = mid - 1` (not `high = mid` in the standard version).
-- **Twist:** Most binary search interview problems are NOT "find exact target." They are boundary-finding problems (see next section).
-- **Follow-up:** "What if there are duplicates?" → Standard binary search finds any one. You need lower/upper bound for first/last occurrence.
+| Pattern | Core Question |
+|---|---|
+| Classic Binary Search | "Is the target in this sorted array?" |
+| Lower / Upper Bound | "Where is the first/last position of this value?" |
+| Rotated Array Search | "Sorted, but shifted — where is the target?" |
+| Binary Search on Answer | "What is the minimum feasible value?" |
+| Search in 2D Matrix | "Where is the target in a sorted grid?" |
+| Exponential Search | "Array is unbounded — where is the target?" |
+| Ternary Search | "Where is the peak of this unimodal function?" |
+| Median of Two Sorted Arrays | "Median without merging?" |
 
 ---
 
-## Binary Search — Lower Bound / Upper Bound
+## [10–20 min] Mental Model
 
-### What is this approach?
+### The Central Insight: Search Space Reduction
 
-**Intuition:** Instead of asking "where IS the target?" you ask "where WOULD the target go if I inserted it?" Lower bound finds the first position where you could insert the target without breaking sort order. Upper bound finds the last such position.
+Do not think of binary search as "compute mid, compare, repeat." Think of it as:
 
-**Formal:**
-- **Lower Bound (bisect_left):** Find the smallest index i such that arr[i] >= target. This is the insertion point from the left.
-- **Upper Bound (bisect_right):** Find the smallest index i such that arr[i] > target. This is the insertion point from the right.
+> At each step, I define a **search space** — the range of indices (or values) that might contain the answer. I make one observation that lets me **cut the search space in half**. I repeat until the space has one element.
 
-### When should I use this?
+Three things must be true for this to work:
 
-- Find the **first occurrence** of a value (lower bound)
-- Find the **last occurrence** of a value (upper bound - 1)
-- Count occurrences of a value (upper bound - lower bound)
-- Find the **first element ≥ target** or **first element > target**
-- "How many elements are less than X?"
-- Keywords: "first position," "last position," "count," "range," "insertion point"
+1. **The search space has a structure** you can navigate (sorted order, or a monotonic property).
+2. **One comparison tells you which half to discard** — the side that cannot contain the answer.
+3. **The search space shrinks every step** — you never re-check eliminated elements.
 
-### When should I NOT use this?
+### What Is "Monotonic Property"?
 
-- You need the exact position and don't care about boundaries — classic binary search is simpler
-- The array is not sorted
+Before the formal term: imagine a light switch that starts OFF and flips to ON at some point, and stays ON forever. Any sequence with this shape is monotonic — it changes direction at most once.
 
-### Core Idea
+Formal: a function f is monotonic if it is either non-decreasing (always goes up or flat) or non-increasing (always goes down or flat).
 
-**Lower Bound:**
-1. `low = 0`, `high = n` (note: high = n, not n-1, because the insertion point can be past the end)
-2. While `low < high` (note: strict less-than, not ≤):
-   - `mid = low + (high - low) / 2`
-   - If `arr[mid] < target`, `low = mid + 1`
-   - Else, `high = mid` (not mid - 1! We might want mid itself)
-3. Return low (= high)
+Binary search works on any monotonic property. "Sorted array" is the most common example, but it is not the only one.
 
-**Upper Bound:**
-1. Same structure, but change the condition:
-   - If `arr[mid] <= target`, `low = mid + 1`
-   - Else, `high = mid`
+### Key Observation
 
-**Mental model:** Lower bound asks "what is the leftmost position where target could live?" Upper bound asks "what is the rightmost position + 1 where target could live?"
+In a sorted array, for any index `mid`:
+- Everything to the **left** of `mid` is **smaller or equal**
+- Everything to the **right** of `mid` is **larger or equal**
 
-**The key difference from classic binary search:**
-- Classic: `low <= high`, low and high can cross → finds exact match or reports not found
-- Bound-finding: `low < high`, they converge to the same point → always returns a valid insertion point
+So when you compare `arr[mid]` to your target, you learn not just about `mid` — you learn about an entire half of the array.
 
-### Complexity
+```
+arr = [2, 5, 8, 12, 16, 23, 38, 45]
+       0  1  2   3   4   5   6   7
 
-- **Time:** O(log n)
-- **Space:** O(1)
+low=0, high=7, mid=3 → arr[3]=12
 
-### Variants
+Target=23: 23 > 12
+           EVERYTHING at index 0,1,2,3 is ≤ 12 < 23
+           → target cannot be in [0..3]
+           → eliminate the entire left half in one step
+```
 
-- **First occurrence of target:** lower_bound(target). Check if arr[result] == target.
-- **Last occurrence of target:** upper_bound(target) - 1. Check if that position has the target.
-- **Count of target:** upper_bound(target) - lower_bound(target)
-- **First element greater than X:** upper_bound(X)
-- **Last element less than X:** lower_bound(X) - 1
-- **Ceiling (smallest element ≥ X):** lower_bound(X)
-- **Floor (largest element ≤ X):** upper_bound(X) - 1
+### What State Do We Maintain and Why?
 
-### Related Patterns
+We maintain two pointers: `low` and `high`, representing the **current search space**.
 
-- [Binary Search — Classic](#binary-search--classic) (simpler but less versatile)
-- [Binary Search on Answer](#binary-search-on-answer-parametric-search) (uses the same convergence pattern)
+- `low` = smallest index that might contain the answer
+- `high` = largest index that might contain the answer
 
-### Interview Insights
+Invariant: the answer (if it exists) is always within `[low, high]`.
 
-- **Trap:** Off-by-one errors in boundary updates. The #1 cause of binary search bugs. Practice: `high = mid` (not mid-1) and `low = mid + 1` for lower bound. The asymmetry is intentional.
-- **Trap:** Forgetting to check whether the result actually contains the target (lower bound always returns a valid index, even if target doesn't exist).
-- **Twist:** "Find the first bad version" — This IS lower bound. The predicate changes from "arr[mid] < target" to "not isBad(mid)."
-- **Key insight:** Almost every binary search interview problem is secretly a lower/upper bound problem with a custom predicate. Master this, and you've mastered binary search.
+Every update must preserve this invariant:
+- When we move `low` up (`low = mid + 1`): we are saying "the answer is not at `mid` or anything smaller"
+- When we move `high` down (`high = mid - 1`): we are saying "the answer is not at `mid` or anything larger"
+
+### ASCII Diagram: Shrinking Search Space
+
+```
+Step 0:  [2,  5,  8, 12, 16, 23, 38, 45]
+          ^                           ^
+         low=0                     high=7
+         mid = (0+7)/2 = 3 → arr[3]=12, target=23, 12<23
+
+Step 1:  [2,  5,  8, 12, 16, 23, 38, 45]
+                          ^           ^
+                        low=4       high=7
+                        mid = (4+7)/2 = 5 → arr[5]=23 ✓ FOUND
+```
 
 ---
 
-## Binary Search on Rotated Sorted Array
+## [20–35 min] Core Patterns
 
-### What is this approach?
+### Pattern 1: Classic Binary Search
 
-**Intuition:** A sorted array that has been rotated is like a clock whose numbers got shifted. It's still "sorted" but in two segments. At any midpoint, at least one half is guaranteed to be properly sorted — you can exploit that to decide which half the target lives in.
+**When to use:**
+- The array is sorted
+- You need to check if an exact value exists
+- You need O(log n) lookup
 
-**Formal:** A sorted array is rotated at some pivot unknown to you. Despite the rotation, binary search still works because at any index, one of the two halves [low, mid] or [mid, high] is sorted. Check which half is sorted, then determine if the target falls in that sorted half.
+**When NOT to use:**
+- Data is unsorted and cannot be sorted without losing information
+- You need all occurrences (this only finds one)
+- No monotonic property exists to guide which half to discard
 
-### When should I use this?
+**Brute Force → Observation → Optimization:**
 
-- The problem explicitly says "rotated sorted array"
-- You need to search in a "almost sorted" array where one rotation happened
+Brute force: scan left to right. O(n).
+
+Observation: In a sorted array, if `arr[mid] < target`, then `arr[0]` through `arr[mid]` are all less than the target. We can skip all of them in one step.
+
+Optimization: Keep halving the search space.
+
+**Algorithm:**
+
+```
+low = 0, high = n - 1
+
+while low <= high:
+    mid = low + (high - low) / 2    ← avoid integer overflow
+    if arr[mid] == target: return mid
+    if arr[mid] < target:  low = mid + 1
+    if arr[mid] > target:  high = mid - 1
+
+return -1
+```
+
+**Why `mid = low + (high - low) / 2` not `(low + high) / 2`?**
+
+If `low = 1,000,000,000` and `high = 2,000,000,000`, their sum overflows a 32-bit integer. The safe form avoids this entirely.
+
+**Why `low <= high` and not `low < high`?**
+
+With `<=`, when `low == high` we still check that single element. Missing this check would skip the last candidate.
+
+---
+
+### Pattern 2: Lower Bound / Upper Bound (The Real Interview Pattern)
+
+**The real shift in thinking:** Instead of "where IS the target?" ask "where SHOULD the target go?"
+
+- **Lower Bound**: the leftmost position where we could insert `target` without breaking sort order. Equivalently: first index `i` where `arr[i] >= target`.
+- **Upper Bound**: first index `i` where `arr[i] > target`. One past the last occurrence.
+
+**When to use:**
+- Find the **first occurrence** of a value → lower_bound, check if `arr[result] == target`
+- Find the **last occurrence** → upper_bound - 1, check if `arr[result] == target`
+- Count occurrences → `upper_bound(x) - lower_bound(x)`
+- Find first element ≥ X (ceiling)
+- Find last element ≤ X (floor) → `upper_bound(x) - 1`
+- "How many elements are less than X?" → `lower_bound(x)`
+- "First Bad Version" style problems
+
+**When NOT to use:**
+- You just need any occurrence — classic binary search is simpler
+
+**Brute Force → Observation → Optimization:**
+
+Brute force: scan left to right for the first match. O(n).
+
+Observation: We are not looking for a specific index. We are looking for the **boundary** between elements that satisfy a condition and elements that do not. This boundary always exists, and we can binary search for it.
+
+Optimization: Converge `low` and `high` to the same point — that point is the boundary.
+
+**Lower Bound Algorithm:**
+
+```
+low = 0, high = n        ← high = n, not n-1! insertion can be past the end
+
+while low < high:          ← strict < because low==high means converged
+    mid = low + (high - low) / 2
+    if arr[mid] < target:  low = mid + 1
+    else:                  high = mid    ← not mid-1! mid itself might be the answer
+
+return low
+```
+
+**Upper Bound Algorithm (only one line changes):**
+
+```
+low = 0, high = n
+
+while low < high:
+    mid = low + (high - low) / 2
+    if arr[mid] <= target: low = mid + 1   ← <= instead of <
+    else:                  high = mid
+
+return low
+```
+
+**The critical asymmetry:** `high = mid` (not `mid - 1`) is intentional. We cannot exclude `mid` because it might be the first element satisfying our condition. But we always make progress because `low = mid + 1` shrinks the space.
+
+**Why does this converge?** The space `[low, high)` strictly shrinks each iteration. When `low == high`, we have our answer.
+
+---
+
+### Pattern 3: Binary Search on Rotated Sorted Array
+
+**The situation:** A sorted array like `[1,3,5,7,9,11]` is rotated at some unknown pivot to become `[7,9,11,1,3,5]`. It is now in two sorted segments.
+
+**The key insight:** At any midpoint, at least one of the two halves `[low..mid]` or `[mid..high]` is **guaranteed to be sorted**. You can check which one, then decide if the target belongs there.
+
+```
+[7, 9, 11, 1, 3, 5]
+ ^       ^        ^
+low     mid     high
+
+Left half [7,9,11]: arr[low]=7 <= arr[mid]=11 → left half IS sorted
+Target = 3: is 3 in [7,11]? No → go right
+```
+
+**When to use:**
+- "Rotated sorted array" explicitly stated
+- "Circularly sorted" or "shifted sorted"
 - Finding the minimum in a rotated sorted array
-- Keywords: "rotated sorted," "shifted," "circularly sorted"
 
-### When should I NOT use this?
+**When NOT to use:**
+- Duplicates present — with duplicates, you cannot always determine which half is sorted, worst case O(n)
 
-- The array is not rotated (use normal binary search)
-- There are many duplicates — worst case degrades to O(n) because you can't determine which half is sorted
+**Algorithm (search for target):**
 
-### Core Idea
+```
+low = 0, high = n - 1
 
-**Search for target:**
-1. `low = 0`, `high = n - 1`
-2. Calculate `mid`
-3. If `arr[mid] == target`, found
-4. Determine which half is sorted:
-   - If `arr[low] <= arr[mid]` → left half is sorted
-     - If `arr[low] <= target < arr[mid]` → target in left half → `high = mid - 1`
-     - Else → target in right half → `low = mid + 1`
-   - Else → right half is sorted
-     - If `arr[mid] < target <= arr[high]` → target in right half → `low = mid + 1`
-     - Else → target in left half → `high = mid - 1`
+while low <= high:
+    mid = low + (high - low) / 2
+    if arr[mid] == target: return mid
 
-**Find minimum (rotation point):**
-1. If `arr[low] < arr[high]` → array not rotated, minimum is arr[low]
-2. Calculate `mid`
-3. If `arr[mid] > arr[high]` → minimum is in [mid+1, high]
-4. Else → minimum is in [low, mid]
+    if arr[low] <= arr[mid]:           ← left half is sorted
+        if arr[low] <= target < arr[mid]:
+            high = mid - 1
+        else:
+            low = mid + 1
+    else:                              ← right half is sorted
+        if arr[mid] < target <= arr[high]:
+            low = mid + 1
+        else:
+            high = mid - 1
 
-**Mental model:** At every step, one half of the array looks normal (sorted). Check if your target could possibly be in that normal half. If yes, go there. If no, it must be in the weird (rotated) half.
+return -1
+```
 
-### Complexity
+**Algorithm (find minimum — finds the rotation point):**
 
-- **Time:** O(log n) without duplicates; O(n) worst case with duplicates
-- **Space:** O(1)
+```
+low = 0, high = n - 1
 
-**Why O(n) with duplicates?** When arr[low] == arr[mid] == arr[high], you can't determine which half is sorted. You can only shrink by one element: low++ or high--.
+while low < high:
+    mid = low + (high - low) / 2
+    if arr[mid] > arr[high]:
+        low = mid + 1         ← minimum is in the right segment
+    else:
+        high = mid            ← minimum is at mid or to the left
 
-### Variants
-
-- **Search target in rotated array (no duplicates):** Standard approach above
-- **Search target in rotated array (with duplicates):** Same, but when arr[low] == arr[mid] == arr[high], do low++, high--
-- **Find minimum in rotated array (no duplicates):** Compare mid with high
-- **Find minimum in rotated array (with duplicates):** When arr[mid] == arr[high], do high--
-- **Find rotation count:** Index of minimum element = rotation count
-
-### Related Patterns
-
-- [Binary Search — Classic](#binary-search--classic) (base technique)
-- [Binary Search on Answer](#binary-search-on-answer-parametric-search) (another "modified predicate" search)
-
-### Interview Insights
-
-- **Trap:** The duplicate case. If all elements are the same, you can't binary search at all. Always ask: "Can there be duplicates?"
-- **Trap:** Confusing which comparisons to use. Draw a picture of the two sorted segments on paper every time.
-- **Twist:** "Find the peak element in a mountain array" — Similar idea: at any point, you can determine if you're on the ascending or descending side.
-- **Follow-up:** "Search in a rotated array that's also shifted by K" — Same algorithm; K is irrelevant because you don't need to know K.
+return arr[low]
+```
 
 ---
 
-## Binary Search on Answer (Parametric Search)
+### Pattern 4: Binary Search on Answer (Parametric Search)
 
-### What is this approach?
+**This is the most underrated pattern in interviews.**
 
-**Intuition:** Instead of searching for an element in an array, you are searching for THE ANSWER ITSELF in a range of possible answers. You ask: "Is answer = X feasible?" If yes, try smaller (or larger). If no, try the other direction. You are binary searching on the answer space, not the data.
+Instead of searching for an element in an array, you search for **the answer itself** in a range of possible answers.
 
-**Formal:** When the answer lies in a continuous or discrete range [lo, hi], and there exists a monotonic feasibility function (if X works, then X+1 also works, or vice versa), binary search on the answer X. For each candidate X, run a feasibility check (often greedy) in O(n). Total: O(n log(range)).
+**The core transformation:**
+- Original problem: "What is the minimum X such that condition C holds?"
+- Transformed: "Is X = candidate feasible (does condition C hold)?" → Yes/No question
 
-### When should I use this?
+If the feasibility function is **monotonic** (once it becomes YES it stays YES, or once it becomes NO it stays NO), you can binary search on the answer.
 
-- **"Minimize the maximum"** or **"Maximize the minimum"** — CLASSIC signal
-- The answer is a **number in a range**, and you can **check feasibility** of any candidate
-- The feasibility function is **monotonic** — there's a tipping point, and all values above (or below) it are feasible
-- Keywords: "minimum capacity," "maximum distance," "split array," "allocate pages," "koko eating bananas," "minimum speed"
+**When to use:**
+- "Minimize the maximum" — classic signal
+- "Maximize the minimum" — classic signal
+- "What is the minimum capacity/speed/distance such that..."
+- The answer is a number in a known range
+- You can write a YES/NO feasibility check for any candidate
 
-### When should I NOT use this?
+**When NOT to use:**
+- The feasibility function is not monotonic (it can flip back and forth)
+- You can compute the exact answer directly with math
 
-- The feasibility function is NOT monotonic (feasibility can flip back and forth)
-- You can compute the exact answer directly (e.g., math formula) — no need to search
-- The answer space is exponentially large AND the feasibility check is expensive
+**Algorithm structure:**
 
-### Core Idea
+```
+lo = minimum_possible_answer
+hi = maximum_possible_answer
 
-1. Identify the answer range: [lo, hi]. Often lo = minimum possible, hi = maximum possible.
-2. Binary search on this range:
-   - mid = lo + (hi - lo) / 2
-   - Run feasibility check: "Can we achieve the goal with answer = mid?"
-   - If feasible and we want the minimum feasible answer: hi = mid
-   - If not feasible: lo = mid + 1
-3. Return lo (the minimum feasible answer)
+while lo < hi:
+    mid = lo + (hi - lo) / 2
+    if isFeasible(mid):
+        hi = mid          ← mid might be the answer, keep it
+    else:
+        lo = mid + 1      ← mid is not feasible, discard it
 
-**The feasibility check** is usually a greedy O(n) scan. This is where domain-specific logic lives.
+return lo
+```
 
-**Mental model:** Imagine a dial you can turn from 0 to 100. At some point on the dial, things start working. You binary search for that tipping point. The "does it work?" check is a separate function you design.
+**The feasibility check** is usually a greedy O(n) scan. This is where domain-specific logic lives. The binary search wrapper is always the same.
 
-### Complexity
+**Why this works:** Imagine a dial from `lo` to `hi`. At some threshold T: every answer ≥ T is feasible, every answer < T is not (or the other way). You are binary searching for T.
 
-- **Time:** O(n × log(answer_range)) — binary search does log(range) iterations, each iteration runs an O(n) feasibility check
-- **Space:** O(1) typically
+```
+lo ──────────────────────── hi
+[NOT feasible][feasible, feasible, feasible...]
+              ^
+              T  ← binary search finds this
+```
 
-**Why is this powerful?** It converts an optimization problem into a decision problem. "What is the minimum X such that..." becomes "Is X feasible?" which is often much easier to answer.
+**Classic examples and their feasibility checks:**
 
-### Variants
-
-- **Minimum capacity to ship packages in D days:** Binary search on capacity [max_weight, total_weight]. Feasibility: greedily assign packages to days without exceeding capacity. Count days needed.
-- **Koko Eating Bananas:** Binary search on eating speed [1, max_pile]. Feasibility: compute total hours at that speed.
-- **Split Array Largest Sum:** Binary search on the largest subarray sum [max_element, total_sum]. Feasibility: greedily split, counting groups.
-- **Aggressive Cows (Maximize Minimum Distance):** Binary search on minimum distance [1, max_gap]. Feasibility: greedily place cows with at least that gap.
-- **Painter's Partition:** Binary search on maximum time per painter.
-- **Minimum Days to Make M Bouquets:** Binary search on days [1, max_bloom_day]. Feasibility: check if M adjacent bouquets can be formed by that day.
-
-### Related Patterns
-
-- [Binary Search — Lower Bound](#binary-search--lower-bound--upper-bound) (same convergence pattern, different domain)
-- [Greedy Algorithms](13-GREEDY-ALGORITHMS.md) (the feasibility check is often greedy)
-- [Prefix Sum](02-ARRAYS-AND-STRINGS.md#prefix-sum) (sometimes used inside the feasibility check)
-
-### Interview Insights
-
-- **Trap:** Not recognizing that a problem is binary search on answer. The keyword "minimize the maximum" or "maximize the minimum" should immediately trigger this pattern.
-- **Trap:** Getting the binary search boundaries wrong. Think carefully: what is the smallest possible answer? What is the largest?
-- **Twist:** "What if the feasibility check isn't O(n)?" — The approach still works, but the total complexity changes. E.g., if feasibility is O(n log n), total is O(n log n × log(range)).
-- **Key insight:** This is the most underrated binary search pattern. It appears in 15-20% of hard LeetCode problems. Master it.
-- **Follow-up:** "Can you prove your feasibility function is correct?" — You need to argue that your greedy check correctly determines feasibility for any candidate answer.
+| Problem | Search Range | Feasibility Check |
+|---|---|---|
+| Ship packages in D days | [max_weight, total_weight] | Can we ship all packages in D days at capacity=mid? (greedy) |
+| Koko Eating Bananas | [1, max_pile] | Can Koko eat all bananas in H hours at speed=mid? |
+| Split Array Largest Sum | [max_element, total_sum] | Can we split into ≤ k parts where max part ≤ mid? |
+| Aggressive Cows | [1, max_gap] | Can we place k cows with min distance ≥ mid? (greedy) |
+| Painter's Partition | [max_board, total_boards] | Can k painters finish if max time = mid? |
+| Min Days for M Bouquets | [1, max_bloom_day] | By day=mid, can we form M adjacent bouquets? |
 
 ---
 
-## Search in 2D Matrix
+### Pattern 5: Search in 2D Matrix (Two Variants)
 
-### What is this approach?
+**Variant 1 — Fully sorted matrix (LeetCode 74):**
+Rows are sorted, AND the last element of each row < first element of next row. This means if you flatten the matrix, it is one sorted array.
 
-**Intuition:** You have a 2D grid where numbers increase left-to-right and top-to-bottom. You start at a corner where one direction is "smaller" and the other is "larger." Each comparison eliminates a row or column.
+Treat index `k` as: `row = k / cols`, `col = k % cols`. Binary search normally. Time: O(log(m × n)).
 
-**Formal:** For a matrix where each row and each column is sorted independently, start from the top-right (or bottom-left) corner. If the current element is too large, move left. If too small, move down. This eliminates one row or column per step.
+**Variant 2 — Row-sorted AND column-sorted (LeetCode 240):**
+Each row is sorted left to right, each column is sorted top to bottom. Rows are NOT concatenated in order.
 
-### When should I use this?
+Start at **top-right corner**. This is the key insight: at this corner, moving left decreases the value, moving down increases it. You have two knobs, and one comparison tells you which way to turn.
 
-- Matrix where **each row is sorted AND each column is sorted**
-- "Search in a 2D matrix" (two variants — see below)
-- Keywords: "2D matrix," "sorted rows and columns," "search matrix"
+```
+matrix:
+ [1,  4,  7, 11]
+ [2,  5,  8, 12]
+ [3,  6,  9, 16]
+ [10, 13, 14, 17]
 
-### When should I NOT use this?
+Start at top-right: 11. Target = 5.
+11 > 5 → move left
+ 7 > 5 → move left
+ 4 < 5 → move down
+ 5 == 5 → FOUND
+```
 
-- The matrix is not sorted in any useful way
-- The matrix is sorted as one flat array (rows concatenated) — just binary search treating it as a 1D array
+Algorithm: `row=0, col=n-1`. While in bounds: if `matrix[row][col] == target` return true; if `> target` do `col--`; else do `row++`.
 
-### Core Idea
-
-**Variant 1 — Fully sorted (each row's last element < next row's first element):**
-- Treat the entire matrix as a sorted 1D array
-- Binary search with index mapping: row = idx / cols, col = idx % cols
-- Time: O(log(m × n))
-
-**Variant 2 — Row-sorted and column-sorted independently (240. Search a 2D Matrix II):**
-- Start at top-right corner (row = 0, col = n-1)
-- If current == target: found
-- If current > target: move left (col--)
-- If current < target: move down (row++)
-- Each step eliminates a row or column
-- Time: O(m + n)
-
-**Mental model for Variant 2:** You're standing at a corner where going left makes numbers smaller and going down makes numbers larger. You have two "knobs" to turn. At each step, exactly one knob gives you useful information.
-
-### Complexity
-
-- **Variant 1:** O(log(m × n)) = O(log m + log n)
-- **Variant 2:** O(m + n)
-- **Space:** O(1) for both
-
-### Variants
-
-- **Search a 2D Matrix (LeetCode 74):** Variant 1 — fully sorted
-- **Search a 2D Matrix II (LeetCode 240):** Variant 2 — row/column sorted
-- **Kth Smallest Element in Sorted Matrix:** Binary search on value with count feasibility check, or use heap
-
-### Related Patterns
-
-- [Binary Search — Classic](#binary-search--classic) (variant 1 is just 1D binary search on mapped indices)
-- [Heaps](12-HEAPS-AND-PRIORITY-QUEUES.md) (Kth smallest in matrix uses min-heap)
-
-### Interview Insights
-
-- **Trap:** Confusing the two variants. One allows full binary search, the other doesn't (because rows aren't concatenated in sorted order).
-- **Twist:** "Kth smallest element in this matrix" — Binary search on the value (not index). For each candidate value, count how many elements are ≤ it using the staircase method (O(m + n) count). Total: O((m + n) × log(max - min)).
-- **Follow-up:** "Can you do better than O(m + n) for variant 2?" — For square matrices, there are O(m log n) approaches using binary search on each row, but O(m + n) is usually optimal enough.
+Time: O(m + n) — each step eliminates a row or column, and there are m+n total.
 
 ---
 
-## Exponential Search
+### Pattern 6: Exponential Search
 
-### What is this approach?
+**The situation:** The array is sorted but its size is unknown (or effectively infinite).
 
-**Intuition:** You don't know the size of the array (or it's unbounded). So you start with a tiny range and keep doubling it: check 1, 2, 4, 8, 16... until you overshoot. Then binary search within the found range.
+**The idea:** First find the right range by doubling: check index 1, 2, 4, 8, 16... until you overshoot the target. Then binary search within `[bound/2, bound]`.
 
-**Formal:** Find the range where the target could be by exponentially increasing the upper bound. Once the range [bound/2, bound] is found, apply binary search within it.
+```
+Start: bound = 1
+while arr[bound] < target: bound *= 2
+Binary search in [bound/2, min(bound, n-1)]
+```
 
-### When should I use this?
+Time: O(log n). Finding the range takes O(log n) doublings; binary search in the range also takes O(log n).
 
-- The array size is **unknown or unbounded**
-- "Search in an infinite sorted array"
-- The target is likely near the beginning (exponential search is good when the target is early)
-- Keywords: "unbounded array," "infinite sorted list," "search without knowing length"
-
-### When should I NOT use this?
-
-- You know the array size — just use binary search directly
-- The array is not sorted
-
-### Core Idea
-
-1. Start with bound = 1
-2. While arr[bound] < target: bound *= 2
-3. Binary search in range [bound/2, min(bound, n-1)]
-
-**Mental model:** You are casting a fishing net that doubles in size each time. Once you catch something bigger than your target, you know the target is somewhere in the net. Then you search within the net.
-
-### Complexity
-
-- **Time:** O(log n) — finding the range takes O(log n) steps (each doubles), then binary search takes O(log n)
-- **Space:** O(1)
-
-### Variants
-
-- **Search in infinite array:** The classic use case
-- **Find the first element ≥ target in a stream:** Exponential search to find the range, then binary search
-
-### Related Patterns
-
-- [Binary Search — Classic](#binary-search--classic) (the second phase)
-
-### Interview Insights
-
-- **Trap:** Array bounds. When doubling, you might go past the array. Always use min(bound, n-1) for the upper limit.
-- **Twist:** Usually combined with other problems as a sub-technique.
+Useful when: unbounded sorted array, or target is likely near the beginning (exponential growth reaches a small target quickly).
 
 ---
 
-## Ternary Search
+### Pattern 7: Ternary Search
 
-### What is this approach?
+**The situation:** You want the peak (maximum) of a **unimodal function** — one that increases then decreases (or decreases then increases). This is NOT about sorted arrays.
 
-**Intuition:** Binary search finds a target in a sorted array. Ternary search finds the peak (or valley) of a unimodal function — one that goes up then down (or down then up).
+**The idea:** Sample two points `m1` and `m2` inside `[low, high]`. On a hill, if `f(m1) < f(m2)`, the peak cannot be to the left of `m1` — eliminate `[low, m1]`. Otherwise eliminate `[m2, high]`. You eliminate one-third per step.
 
-**Formal:** For a function that first increases then decreases (unimodal), divide the search space into three parts using two mid-points. Compare function values at the two mids to determine which third to eliminate. Converge to the maximum.
+```
+m1 = low + (high - low) / 3
+m2 = high - (high - low) / 3
 
-### When should I use this?
+if f(m1) < f(m2): low = m1 + 1
+else:             high = m2 - 1
+```
 
-- Finding the **maximum or minimum** of a **unimodal function** (not a sorted array!)
-- The function has exactly one peak (or valley)
-- Keywords: "peak element," "maximum of a bitonic array," "minimize a convex function"
+Time: O(log₃ n) = O(log n).
 
-### When should I NOT use this?
-
-- The function is monotonic (just use binary search — it's simpler and faster)
-- The function has multiple peaks — ternary search only works for unimodal functions
-- You can use binary search on the derivative — often simpler than ternary search
-
-### Core Idea
-
-1. `low`, `high` = search bounds
-2. `m1 = low + (high - low) / 3`
-3. `m2 = high - (high - low) / 3`
-4. If f(m1) < f(m2): maximum is NOT in [low, m1] → `low = m1 + 1`
-5. Else: maximum is NOT in [m2, high] → `high = m2 - 1`
-6. Repeat until low >= high
-
-**Mental model:** You sample two points inside the range. On a hill, if the left sample is lower than the right, the peak must be to the right (or at the right sample). You eliminate the definite non-peak third.
-
-### Complexity
-
-- **Time:** O(log₃ n) ≈ O(log n) — eliminates 1/3 of the space each step
-- **Space:** O(1)
-
-**Note:** O(log₃ n) = O(log n / log 3) — it's still logarithmic but with a larger constant than binary search. In practice, binary search on the derivative (when possible) is preferred.
-
-### Variants
-
-- **Find Peak Element:** Can also be solved with binary search (compare mid with mid+1)
-- **Minimize/Maximize a unimodal function:** Classic ternary search application
-- **Bitonic array maximum:** Find the peak in an array that increases then decreases
-
-### Related Patterns
-
-- [Binary Search — Classic](#binary-search--classic) (binary search on derivative is often a simpler alternative)
-
-### Interview Insights
-
-- **Trap:** In practice, most interviewers prefer binary search with derivative comparison over ternary search. For "find peak element," comparing arr[mid] with arr[mid+1] is simpler.
-- **Twist:** "What if the function has noise?" — Ternary search requires a clean unimodal function. Noise breaks it.
-- **Note:** Ternary search is more common in competitive programming than in FAANG interviews. Know it exists, but prioritize binary search mastery.
+**Important:** For "find peak element" in a discrete array, binary search comparing `arr[mid]` vs `arr[mid+1]` is simpler and preferred in interviews. Ternary search is more common in competitive programming.
 
 ---
 
-## Median of Two Sorted Arrays Pattern
+### Pattern 8: Median of Two Sorted Arrays
 
-### What is this approach?
+**The problem:** Given two sorted arrays A (size m) and B (size n), find the median of their merged result in O(log(min(m, n))) without actually merging.
 
-**Intuition:** You have two sorted lines of people. You want to find the person who would be in the middle if both lines merged — WITHOUT actually merging. You binary search on how many people from the first line go to the left half of the merged result. The rest of the left half comes from the second line. Check if this split is valid.
+**The insight:** A median splits all elements into a left half and a right half of equal size. You need to find the right number of elements from A and B to put in the left half — binary search on this count.
 
-**Formal:** Find the median of two sorted arrays of sizes m and n in O(log(min(m, n))) time. Binary search on the partition of the smaller array. For each partition, verify that the left-side maximums are ≤ the right-side minimums.
+Binary search on partition index `i` in A (0 to m). For each `i`, `j = (m + n + 1)/2 - i` elements come from B. The split is valid when `maxLeft_A <= minRight_B AND maxLeft_B <= minRight_A`.
 
-### When should I use this?
+```
+A: [1, 3, 5]   B: [2, 4, 6, 8]    total = 7, left half needs 4 elements
 
-- Specifically: "Find the median of two sorted arrays"
-- More generally: "Find the Kth element in two sorted arrays"
-- Keywords: "two sorted arrays," "median," "merge without merging"
+Try i=1 (1 element from A in left, 3 from B):
+  maxLeft_A=1, minRight_A=3
+  maxLeft_B=4, minRight_B=6
+  Is 1 <= 6? Yes. Is 4 <= 3? NO → i too small, search right
 
-### When should I NOT use this?
+Try i=2 (2 elements from A, 2 from B):
+  maxLeft_A=3, minRight_A=5
+  maxLeft_B=4, minRight_B=6
+  Is 3 <= 6? Yes. Is 4 <= 5? Yes → VALID
+```
 
-- Arrays are not sorted — sort them first (but then the problem changes)
-- You can afford O(m + n) time — just merge and find median directly
-- Only one array — use standard median finding
+Always binary search on the **smaller** array. Handle edge cases (i=0 or i=m) with -∞ and +∞ sentinels.
 
-### Core Idea
+---
 
-1. Ensure you binary search on the **smaller** array (swap if needed). Let it have size m, the other n.
-2. Binary search on partition index i in [0, m] for the smaller array.
-3. j = (m + n + 1) / 2 - i gives the partition for the larger array.
-4. This creates a split: left half = first i elements of array1 + first j elements of array2. Right half = the rest.
-5. **Validity check:** maxLeft1 ≤ minRight2 AND maxLeft2 ≤ minRight1.
-6. If maxLeft1 > minRight2: i is too large, search left.
-7. If maxLeft2 > minRight1: i is too small, search right.
-8. When valid, the median is computed from the boundary elements.
+## [35–45 min] Concrete Code + Dry Run
 
-**Mental model:** You are cutting a deck of m cards and a deck of n cards such that the left pile has exactly (m+n)/2 cards total. You adjust where you cut the first deck; the cut in the second deck is determined. You check if the split creates a valid "lower half" and "upper half."
+### Classic Binary Search
 
-### Complexity
+**Example:** `arr = [2, 5, 8, 12, 16, 23, 38, 45]`, target = `23`
 
-- **Time:** O(log(min(m, n))) — binary search on the smaller array
-- **Space:** O(1)
+**Java:**
+```java
+int binarySearch(int[] arr, int target) {
+    int low = 0, high = arr.length - 1;
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        if (arr[mid] == target) return mid;
+        if (arr[mid] < target)  low = mid + 1;
+        else                    high = mid - 1;
+    }
+    return -1;
+}
+```
 
-**Why log(min(m, n))?** You binary search on the smaller array's partition (at most m+1 possible partitions). The larger array's partition is determined.
+**TypeScript:**
+```typescript
+function binarySearch(arr: number[], target: number): number {
+    let low = 0, high = arr.length - 1;
+    while (low <= high) {
+        const mid = low + Math.floor((high - low) / 2);
+        if (arr[mid] === target) return mid;
+        if (arr[mid] < target)   low = mid + 1;
+        else                     high = mid - 1;
+    }
+    return -1;
+}
+```
 
-### Variants
+**Dry Run Table:**
 
-- **Median of two sorted arrays:** The canonical problem
-- **Kth element of two sorted arrays:** Adjust the partition target to K instead of (m+n)/2
+| Step | low | high | mid | arr[mid] | Action |
+|------|-----|------|-----|----------|--------|
+| 1 | 0 | 7 | 3 | 12 | 12 < 23 → low = 4 |
+| 2 | 4 | 7 | 5 | 23 | 23 == 23 → return 5 |
 
-### Related Patterns
+Result: index 5. Complexity: O(log n) time, O(1) space.
 
-- [Binary Search — Classic](#binary-search--classic) (binary search on partition)
-- [Merge K Sorted Lists](12-HEAPS-AND-PRIORITY-QUEUES.md) (generalized merge)
+---
 
-### Interview Insights
+### Lower Bound
 
-- **Trap:** Edge cases where i = 0 or i = m (all elements of one array go to one side). Handle with -∞ and +∞ sentinel values.
-- **Trap:** Even vs odd total length changes how you compute the median.
-- **Twist:** "What about the Kth smallest?" — Same approach, just change the partition target.
-- **Note:** This is one of the hardest binary search problems. It's a Google/Meta classic. Understanding the partition logic is more important than memorizing the steps.
-- **Follow-up:** "What if there are K sorted arrays?" — Use a min-heap (merge K sorted) or divide and conquer.
+**Example:** `arr = [1, 3, 3, 3, 7, 9]`, find first occurrence of `3`
+
+**Java:**
+```java
+int lowerBound(int[] arr, int target) {
+    int low = 0, high = arr.length;
+    while (low < high) {
+        int mid = low + (high - low) / 2;
+        if (arr[mid] < target) low = mid + 1;
+        else                   high = mid;
+    }
+    return low;
+}
+```
+
+**TypeScript:**
+```typescript
+function lowerBound(arr: number[], target: number): number {
+    let low = 0, high = arr.length;
+    while (low < high) {
+        const mid = low + Math.floor((high - low) / 2);
+        if (arr[mid] < target) low = mid + 1;
+        else                   high = mid;
+    }
+    return low;
+}
+```
+
+**Dry Run Table** (`arr = [1, 3, 3, 3, 7, 9]`, target = `3`):
+
+| Step | low | high | mid | arr[mid] | Condition | Action |
+|------|-----|------|-----|----------|-----------|--------|
+| 1 | 0 | 6 | 3 | 3 | 3 >= 3 | high = 3 |
+| 2 | 0 | 3 | 1 | 3 | 3 >= 3 | high = 1 |
+| 3 | 0 | 1 | 0 | 1 | 1 < 3 | low = 1 |
+| 4 | 1 | 1 | — | — | low==high | return 1 |
+
+Result: index 1. `arr[1] = 3` → first occurrence confirmed.
+
+For **last occurrence**: `upperBound(arr, 3) - 1 = 4 - 1 = 3`. `arr[3] = 3` confirmed.
+
+Complexity: O(log n) time, O(1) space.
+
+---
+
+### Binary Search on Answer — Koko Eating Bananas
+
+**Problem:** Piles = `[3, 6, 7, 11]`, H = 8 hours. Find minimum eating speed so Koko finishes all bananas in ≤ H hours.
+
+**Search range:** speed ∈ [1, max_pile=11].
+
+**Feasibility check:** At speed `s`, pile `p` takes `ceil(p/s)` hours. Sum all hours. Is total ≤ H?
+
+**Java:**
+```java
+int minEatingSpeed(int[] piles, int h) {
+    int low = 1, high = Arrays.stream(piles).max().getAsInt();
+    while (low < high) {
+        int mid = low + (high - low) / 2;
+        if (canFinish(piles, mid, h)) high = mid;
+        else                          low = mid + 1;
+    }
+    return low;
+}
+
+boolean canFinish(int[] piles, int speed, int h) {
+    int hoursNeeded = 0;
+    for (int pile : piles) {
+        hoursNeeded += (pile + speed - 1) / speed;
+    }
+    return hoursNeeded <= h;
+}
+```
+
+**TypeScript:**
+```typescript
+function minEatingSpeed(piles: number[], h: number): number {
+    let low = 1, high = Math.max(...piles);
+    while (low < high) {
+        const mid = low + Math.floor((high - low) / 2);
+        if (canFinish(piles, mid, h)) high = mid;
+        else                          low = mid + 1;
+    }
+    return low;
+}
+
+function canFinish(piles: number[], speed: number, h: number): boolean {
+    return piles.reduce((total, pile) => total + Math.ceil(pile / speed), 0) <= h;
+}
+```
+
+**Dry Run Table** (`piles = [3, 6, 7, 11]`, H = 8):
+
+| Step | low | high | mid=speed | Hours at speed | Feasible? | Action |
+|------|-----|------|-----------|----------------|-----------|--------|
+| 1 | 1 | 11 | 6 | ceil(3/6)+ceil(6/6)+ceil(7/6)+ceil(11/6) = 1+1+2+2 = 6 | 6≤8 YES | high=6 |
+| 2 | 1 | 6 | 3 | ceil(3/3)+ceil(6/3)+ceil(7/3)+ceil(11/3) = 1+2+3+4 = 10 | 10>8 NO | low=4 |
+| 3 | 4 | 6 | 5 | ceil(3/5)+ceil(6/5)+ceil(7/5)+ceil(11/5) = 1+2+2+3 = 8 | 8≤8 YES | high=5 |
+| 4 | 4 | 5 | 4 | ceil(3/4)+ceil(6/4)+ceil(7/4)+ceil(11/4) = 1+2+2+3 = 8 | 8≤8 YES | high=4 |
+| 5 | 4 | 4 | — | — | — | return 4 |
+
+Answer: 4. Complexity: O(n log m) where m = max pile size.
+
+---
+
+### Binary Search on Rotated Array
+
+**Example:** `arr = [4, 5, 6, 7, 0, 1, 2]`, target = `0`
+
+**Java:**
+```java
+int searchRotated(int[] arr, int target) {
+    int low = 0, high = arr.length - 1;
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        if (arr[mid] == target) return mid;
+        if (arr[low] <= arr[mid]) {
+            if (arr[low] <= target && target < arr[mid]) high = mid - 1;
+            else                                          low = mid + 1;
+        } else {
+            if (arr[mid] < target && target <= arr[high]) low = mid + 1;
+            else                                           high = mid - 1;
+        }
+    }
+    return -1;
+}
+```
+
+**TypeScript:**
+```typescript
+function searchRotated(arr: number[], target: number): number {
+    let low = 0, high = arr.length - 1;
+    while (low <= high) {
+        const mid = low + Math.floor((high - low) / 2);
+        if (arr[mid] === target) return mid;
+        if (arr[low] <= arr[mid]) {
+            if (arr[low] <= target && target < arr[mid]) high = mid - 1;
+            else                                          low = mid + 1;
+        } else {
+            if (arr[mid] < target && target <= arr[high]) low = mid + 1;
+            else                                           high = mid - 1;
+        }
+    }
+    return -1;
+}
+```
+
+**Dry Run Table** (`arr = [4,5,6,7,0,1,2]`, target = `0`):
+
+| Step | low | high | mid | arr[mid] | Left sorted? | Target in left? | Action |
+|------|-----|------|-----|----------|-------------|-----------------|--------|
+| 1 | 0 | 6 | 3 | 7 | arr[0]=4≤arr[3]=7 YES | Is 4≤0<7? NO | low=4 |
+| 2 | 4 | 6 | 5 | 1 | arr[4]=0≤arr[5]=1 YES | Is 0≤0<1? YES | high=4 |
+| 3 | 4 | 4 | 4 | 0 | — | arr[4]==0 | return 4 |
+
+Answer: index 4. Complexity: O(log n) time, O(1) space.
+
+---
+
+## [45–55 min] Pattern Recognition
+
+### Structural Clues — How to Recognize Each Pattern
+
+**Classic Binary Search:**
+- Array is sorted (explicitly stated or obvious)
+- Task: find exact value, check existence, find index
+- Ask yourself: "If I look at the middle, does it immediately tell me which half the answer is in?"
+
+**Lower / Upper Bound:**
+- Array has duplicates AND you need first/last occurrence
+- Task: count elements in a range, find insertion point, "first version where X happens"
+- Ask yourself: "Am I looking for a boundary between elements that satisfy a condition and those that don't?"
+- Clue: the answer is not "is it here" but "where does it start/stop"
+
+**Rotated Array:**
+- Problem says "rotated" or "shifted" sorted array
+- Ask yourself: "Is there a sorted half I can use to narrow down?"
+- Draw the two segments on paper before coding
+
+**Binary Search on Answer:**
+- Keywords: "minimum capacity," "maximum allowed," "minimum speed," "split into K parts"
+- Keywords: "minimize the maximum" or "maximize the minimum"
+- Ask yourself: "Can I phrase this as: for a given candidate answer X, can I check YES/NO in O(n)?"
+- Ask yourself: "If X=10 works, does X=11 also work (or similarly monotonic)?"
+- The feasibility function is almost always a greedy scan
+
+**Search in 2D Matrix:**
+- 2D grid, rows sorted, columns sorted
+- If fully sorted (last of row < first of next row) → binary search on flattened 1D
+- Otherwise → staircase search from top-right or bottom-left
+
+**Exponential Search:**
+- "Infinite sorted array" or size unknown
+- Double the bound until you overshoot, then binary search in the range
+
+**Ternary Search:**
+- "Find maximum" or "find minimum" of a function
+- The function is unimodal (one peak or one valley)
+- NOT about finding a target in a sorted array
+
+### Distinguish From Similar Patterns
+
+| Situation | Use |
+|---|---|
+| Find exact value in sorted array | Classic Binary Search |
+| Find first position ≥ X in sorted array | Lower Bound |
+| Find last position ≤ X in sorted array | Upper Bound − 1 |
+| Sorted array, unknown rotation, find value | Rotated Array Search |
+| "Minimize the maximum value of something" | Binary Search on Answer |
+| Find peak in unimodal function | Ternary Search or Binary Search on derivative |
+| Find element in sorted grid | 2D Matrix Search (pick variant) |
+
+### The Reasoning Flow for Any Searching Problem
+
+```
+Is the data sorted (or does it have a monotonic property)?
+    NO  → Can we sort it? → If not, linear scan only
+    YES → Is it a rotated sorted array?
+              YES → Rotated Array Search
+              NO  → Are we looking for the answer in a VALUE RANGE
+                    (not an index range)?
+                        YES → Binary Search on Answer
+                        NO  → Are we looking for an exact match?
+                                  YES → Classic Binary Search
+                                  NO  → Lower Bound / Upper Bound
+```
+
+### Common Traps
+
+1. **`mid = (low + high) / 2` overflow:** Always use `low + (high - low) / 2`.
+2. **Classic vs Bound convergence:** Classic uses `low <= high` and `high = mid - 1`. Bound-finding uses `low < high` and `high = mid`. Mixing these causes infinite loops or off-by-one errors.
+3. **Lower bound returns a valid index even when target is absent:** Always check `arr[result] == target` after calling lower bound.
+4. **Rotated array with duplicates:** `arr[low] == arr[mid] == arr[high]` — cannot determine sorted half. Must do `low++, high--`. Worst case O(n).
+5. **Binary search on answer — wrong range:** `lo` and `hi` must bracket the answer. Think: what is the absolute minimum and maximum possible answer?
+6. **Ternary search on discrete vs continuous:** Discrete arrays often need `low`, `high` adjusted carefully to avoid infinite loops at small ranges.
+
+---
+
+## [55–60 min] Final Mental Checklist
+
+```
+WHAT IS IT?
+  A family of algorithms that exploit monotonic structure to eliminate
+  half (or more) of the search space per step, achieving O(log n).
+
+WHEN DO I USE IT?
+  - Data is sorted or has a monotonic property
+  - Finding a target, boundary, or optimal answer in a known range
+  - "Minimize the maximum" / "maximize the minimum" type problems
+
+WHEN DO I NOT USE IT?
+  - Data is unsorted with no sortable structure
+  - Multiple peaks/valleys (ternary search fails)
+  - Rotated array with all duplicates (degrades to O(n))
+  - You can compute the exact answer directly
+
+WHAT IS THE CORE IDEA?
+  At each step, one comparison tells you which half of the current
+  search space cannot contain the answer. Discard it. Repeat.
+
+WHAT DO I TRACK?
+  low and high pointers defining the current search space.
+  The invariant: the answer is always within [low, high].
+
+WHAT IS THE INVARIANT/STATE?
+  Classic:    answer (if it exists) is in [low, high] inclusive
+  Bound:      answer is in [low, high) — they converge to the same point
+  On Answer:  the minimum feasible answer is in [low, high]
+
+HOW DO I RECOGNIZE IT?
+  - Sorted data → binary search on indices
+  - "Minimize the maximum" or "maximize the minimum" → search on values
+  - "First Bad Version" / boundary problems → lower/upper bound
+  - "Rotated sorted" → identify sorted half at each step
+  - Peak of unimodal function → ternary search
+
+WHAT ARE THE COMMON TRAPS?
+  1. Integer overflow: use low + (high - low) / 2
+  2. Wrong loop condition: <= for classic, < for bound-finding
+  3. Wrong boundary update: high=mid-1 in classic, high=mid in bound
+  4. Lower bound doesn't check if target actually exists
+  5. Rotated array: duplicates break the "which half is sorted" logic
+  6. Wrong answer range in parametric search
+
+WHAT PATTERNS CAN I CONFUSE IT WITH?
+  - Two Pointers: both use low/high but two-pointer collapses an array,
+    binary search halves a search space
+  - Sliding Window: maintains a range of elements; binary search
+    maintains a range of candidate answers/positions
+  - Greedy: often USED INSIDE binary search on answer as the
+    feasibility check, not a replacement
+
+WHAT IS THE COMPLEXITY?
+  Classic Binary Search:       O(log n) time,     O(1) space
+  Lower / Upper Bound:         O(log n) time,     O(1) space
+  Rotated Array Search:        O(log n) time,     O(1) space
+    (with duplicates worst case O(n))
+  Binary Search on Answer:     O(n log R) time,   O(1) space
+    (R = answer range, n = feasibility check cost)
+  2D Matrix Variant 1:         O(log(m*n)) time,  O(1) space
+  2D Matrix Variant 2:         O(m + n) time,     O(1) space
+  Exponential Search:          O(log n) time,     O(1) space
+  Ternary Search:              O(log n) time,     O(1) space
+  Median of Two Sorted Arrays: O(log(min(m,n))),  O(1) space
+```
+
+---
+
+## Advanced Awareness
+
+These are real patterns but require deeper study beyond this module:
+
+- **Median of Two Sorted Arrays in O(log(min(m,n))):** Partition-based approach. Binary search on the partition of the smaller array. One of the hardest binary search problems.
+- **Binary Search on Floating Point:** Binary search on continuous ranges (e.g., find the square root). Use an epsilon convergence criterion instead of `low == high`.
+- **Fractional Cascading:** Speed up binary search across multiple sorted arrays from O(k log n) to O(k + log n). Rarely asked in interviews but worth knowing exists.
+- **Find Kth Smallest in Sorted Matrix:** Binary search on value with an O(m+n) count function. Combines matrix staircase search with binary search on answer.
+
+---
+
+## Active Recall
+
+Test yourself. Close the file first.
+
+1. Why does `mid = (low + high) / 2` cause a bug, and what is the fix?
+2. What is the difference between the loop condition in classic binary search (`low <= high`) and bound-finding (`low < high`)? Why does this difference exist?
+3. You have a sorted array `[1, 2, 2, 2, 3, 4]`. How do you find the count of occurrences of `2` using binary search?
+4. You are given a rotated sorted array `[5, 6, 7, 1, 2, 3, 4]`. Trace through one iteration of the rotated array search for target = `1`. Which half is sorted? Is the target in that half?
+5. A problem says "find the minimum speed such that all workers finish within T hours." What pattern is this? What is the search range? What is the feasibility check?
+6. What makes a function "monotonic" in the context of binary search on answer? Give an example of a feasibility function that IS monotonic and one that is NOT.
+7. You have a sorted matrix where `matrix[i][j] < matrix[i][j+1]` and `matrix[i][j] < matrix[i+1][j]`, but the last element of row i is NOT less than the first element of row i+1. Which 2D matrix variant applies, and what is the time complexity?
+8. What are the sentinels needed in the median of two sorted arrays algorithm, and when are they used?
+9. Ternary search eliminates one-third of the space per step. Why do we prefer binary search on the derivative over ternary search for "find peak element" in practice?
+10. Binary Search on Answer vs Two Pointers: both produce a single number as an answer. How do you decide which applies?
+
+---
+
+## Recommended Practice Direction
+
+Work through these in order. Each level adds one layer of complexity.
+
+**Level 1 — Core mechanics (must be flawless):**
+- LeetCode 704 — Binary Search (classic, get the template right)
+- LeetCode 35 — Search Insert Position (lower bound, understand the template)
+- LeetCode 34 — Find First and Last Position of Element in Sorted Array (lower + upper bound together)
+
+**Level 2 — Structural variation:**
+- LeetCode 33 — Search in Rotated Sorted Array (rotated, no duplicates)
+- LeetCode 81 — Search in Rotated Sorted Array II (rotated, with duplicates — O(n) worst case)
+- LeetCode 153 — Find Minimum in Rotated Sorted Array
+
+**Level 3 — Binary Search on Answer (the most interview-relevant):**
+- LeetCode 875 — Koko Eating Bananas (gentle intro to parametric search)
+- LeetCode 1011 — Capacity to Ship Packages Within D Days
+- LeetCode 410 — Split Array Largest Sum (harder feasibility check)
+
+**Level 4 — 2D and combined:**
+- LeetCode 74 — Search a 2D Matrix (Variant 1)
+- LeetCode 240 — Search a 2D Matrix II (Variant 2, staircase)
+
+**Level 5 — Advanced (awareness):**
+- LeetCode 4 — Median of Two Sorted Arrays (the hardest binary search)
+- LeetCode 162 — Find Peak Element (binary search on derivative, O(log n))
+
+---
+
+## 2-Minute Cheat Sheet
+
+```
+CLASSIC BINARY SEARCH
+  low=0, high=n-1
+  while (low <= high):
+      mid = low + (high-low)/2
+      if arr[mid]==target: return mid
+      if arr[mid]<target:  low=mid+1
+      else:                high=mid-1
+  return -1
+
+LOWER BOUND (first index where arr[i] >= target)
+  low=0, high=n
+  while (low < high):
+      mid = low + (high-low)/2
+      if arr[mid] < target: low=mid+1
+      else:                 high=mid
+  return low                         ← always verify arr[low]==target
+
+UPPER BOUND (first index where arr[i] > target)
+  Same as lower bound, change condition to: arr[mid] <= target → low=mid+1
+
+ROTATED ARRAY
+  Same loop as classic, but at each step:
+  if arr[low] <= arr[mid]: LEFT half is sorted → check if target fits
+  else:                    RIGHT half is sorted → check if target fits
+
+BINARY SEARCH ON ANSWER
+  lo=min_answer, hi=max_answer
+  while (lo < hi):
+      mid = lo + (hi-lo)/2
+      if isFeasible(mid): hi=mid
+      else:               lo=mid+1
+  return lo
+
+2D MATRIX (row+col sorted, NOT concatenated)
+  row=0, col=n-1
+  while in bounds:
+      if matrix[row][col]==target: return true
+      if matrix[row][col]>target:  col--
+      else:                        row++
+  return false
+
+KEY NUMBERS
+  Classic:        O(log n)
+  Bounds:         O(log n)
+  Rotated:        O(log n), O(n) with duplicates
+  Param Search:   O(n log R)   R = answer range
+  2D Staircase:   O(m + n)
+  Median Two Arr: O(log min(m,n))
+```
 
 ---
 

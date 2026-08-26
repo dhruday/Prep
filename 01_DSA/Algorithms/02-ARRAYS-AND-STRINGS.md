@@ -1,834 +1,1230 @@
-# Arrays & Strings — Complete Pattern Guide
+# Arrays & Strings — 1-Hour Learning Module
 
 > *"Arrays are the soil from which all other data structures grow. Master them, and you master the foundation of everything."*
+
+**Estimated time:** 60 minutes  
+**Target:** Google SWE interview preparation  
+**Level:** Beginner-friendly, interview-depth
 
 ---
 
 ## Table of Contents
 
-1. [Two Pointers — Opposite Direction](#two-pointers--opposite-direction)
-2. [Two Pointers — Same Direction](#two-pointers--same-direction)
-3. [Three Pointers](#three-pointers)
-4. [Sliding Window — Fixed Size](#sliding-window--fixed-size)
-5. [Sliding Window — Variable Size](#sliding-window--variable-size)
-6. [Sliding Window with HashMap](#sliding-window-with-hashmap)
-7. [Prefix Sum](#prefix-sum)
-8. [Prefix XOR](#prefix-xor)
-9. [Kadane's Algorithm](#kadanes-algorithm)
-10. [Dutch National Flag / Three-Way Partition](#dutch-national-flag--three-way-partition)
-11. [Boyer-Moore Voting Algorithm](#boyer-moore-voting-algorithm)
-12. [In-Place Array Manipulation](#in-place-array-manipulation)
-13. [Matrix Traversal Patterns](#matrix-traversal-patterns)
-14. [Subarray vs Subsequence vs Substring](#subarray-vs-subsequence-vs-substring)
-15. [Rotate Array / Reverse Trick](#rotate-array--reverse-trick)
+- [[0–10 min] Big Picture](#0-10-min-big-picture)
+- [[10–20 min] Mental Model](#10-20-min-mental-model)
+- [[20–35 min] Core Patterns](#20-35-min-core-patterns)
+- [[35–45 min] Concrete Code + Dry Run](#35-45-min-concrete-code--dry-run)
+- [[45–55 min] Pattern Recognition](#45-55-min-pattern-recognition)
+- [[55–60 min] Final Mental Checklist](#55-60-min-final-mental-checklist)
+- [Active Recall](#active-recall)
+- [Recommended Practice Direction](#recommended-practice-direction)
+- [2-Minute Cheat Sheet](#2-minute-cheat-sheet)
 
 ---
 
-## Two Pointers — Opposite Direction
+## [0–10 min] Big Picture
 
-### What is this approach?
+### What is an array? Why does it exist?
 
-**Intuition:** Imagine you and a friend stand at opposite ends of a corridor. You walk toward each other, checking something at each step. You stop when you meet. That is opposite-direction two pointers.
+An array is the simplest possible way to store multiple values: a fixed-size, contiguous block of memory where every slot is the same size and has a number (its index).
 
-**Formal:** Maintain two indices, one starting at the beginning (left) and one at the end (right) of a sorted array or string. Move them toward each other based on a condition, eliminating portions of the search space with each step.
+The problem it solves: "I need to store N items and access any one of them instantly."
 
-### When should I use this?
+**Real-world analogy:** Think of a parking lot with numbered spaces. Space 0, space 1, space 2, ... space n-1. To find your car, you don't walk from space 0 — you go directly to the number you wrote down. That direct jump is O(1) access. An array works exactly the same way.
 
-- The array or string is **sorted** (or can be sorted without affecting the answer)
-- You need to find a **pair** that satisfies a condition (sum, difference, etc.)
-- You are checking **symmetry** (palindromes)
-- You need to **partition** elements based on a condition
-- Keywords: "pair with sum," "two numbers that," "is palindrome," "container with most water"
+**Why is access O(1)?**  
+Because the memory address of any element is `base_address + index * element_size`. One multiplication, one addition. No searching.
 
-### When should I NOT use this?
+**A string is just a character array.** All array patterns apply to strings as well.
 
-- The array is unsorted AND sorting would lose information (e.g., you need original indices) — use HashMap instead
-- You need to find **all pairs** (not just one) — consider combining with other techniques
-- The problem is about **contiguous subarrays** — sliding window is likely better
+### One tiny example
 
-### Core Idea
+```
+arr = [3, 1, 4, 1, 5, 9, 2, 6]
+       0  1  2  3  4  5  6  7
+```
 
-1. Initialize `left = 0`, `right = n - 1`
-2. Evaluate a condition involving elements at left and right
-3. If the condition suggests "too small," move left forward (increase the value)
-4. If the condition suggests "too large," move right backward (decrease the value)
-5. If matched, record the answer and decide which pointer to move
-6. Stop when left >= right
+- `arr[0]` = 3 (instant)
+- `arr[5]` = 9 (instant)
+- Sum of `arr[2..5]` = 4+1+5+9 = 19 (but you had to visit 4 elements — this is where patterns like prefix sum help)
 
-**Mental model:** You are squeezing a search space from both ends. Each step guarantees you eliminate at least one candidate.
+### What are the patterns in this module?
 
-### Complexity
+Every array/string problem is really asking you to efficiently explore a range or a pair of indices. The patterns in this module are strategies for that exploration:
 
-- **Time:** O(n) — each pointer moves at most n times, and they never cross, so total work is at most 2n
-- **Space:** O(1) — only two index variables
-
-### Variants
-
-- **Two Sum (sorted array):** Move left if sum too small, right if too large
-- **Container With Most Water:** Move the pointer pointing to the shorter line (greedy: moving the taller line can never help)
-- **Trapping Rain Water (two-pointer version):** Track left_max and right_max; process from the smaller side
-- **Valid Palindrome:** Compare characters at left and right, skip non-alphanumeric
-- **Remove Duplicates from Sorted Array:** Slow pointer marks write position, fast pointer scans
-
-### Related Patterns
-
-- [Two Pointers — Same Direction](#two-pointers--same-direction) (different pointer movement)
-- [Sliding Window](02-ARRAYS-AND-STRINGS.md#sliding-window--variable-size) (same direction, but window-based)
-- [Binary Search](03-SEARCHING-TECHNIQUES.md) (also halves search space, but on a different axis)
-
-### Interview Insights
-
-- **Trap:** Forgetting to handle duplicates in problems like 3Sum. After finding a pair, you must skip duplicate values for both pointers to avoid duplicate results.
-- **Twist:** "What if the array isn't sorted?" — The interviewer is testing if you know that sorting + two pointers = O(n log n), while HashMap = O(n). Discuss the tradeoff.
-- **Follow-up:** "Can you find all pairs?" — You continue moving both pointers inward after each match, skipping duplicates.
+| Pattern | One-line description |
+|---|---|
+| Two Pointers (Opposite) | Squeeze from both ends of a sorted array |
+| Two Pointers (Same Direction) | Fast/slow scan to filter or compress |
+| Three Pointers | Partition into three regions in one pass |
+| Sliding Window (Fixed) | Maintain a window of size K efficiently |
+| Sliding Window (Variable) | Expand/shrink a window under a constraint |
+| Sliding Window + HashMap | Variable window where state = frequencies |
+| Prefix Sum | Pre-compute cumulative sums for O(1) range queries |
+| Prefix XOR | Same idea but with XOR instead of addition |
+| Kadane's Algorithm | Maximum sum subarray in O(n) |
+| Dutch National Flag | Sort three categories in one pass |
+| Boyer-Moore Voting | Find majority element in O(1) space |
+| In-Place Manipulation | Use the array itself as scratch space |
+| Matrix Traversal | Spiral, diagonal, rotation patterns |
+| Rotate Array | Triple-reverse trick for O(1) space rotation |
 
 ---
 
-## Two Pointers — Same Direction
+## [10–20 min] Mental Model
 
-### What is this approach?
+### Key observation: all array problems are about "which indices to look at"
 
-**Intuition:** Imagine two people walking in the same direction, but at different speeds. The slow one processes elements carefully; the fast one scouts ahead. This is the fast/slow pointer pattern on arrays.
+The difference between O(n) and O(n²) is almost always: "Did you avoid looking at every pair of indices?"
 
-**Formal:** Two indices both start at the beginning (or near it) and move in the same direction. The fast pointer advances every step; the slow pointer advances only when a condition is met. The gap between them represents a filtered or processed region.
+**The naive approach** for any "find a pair" problem: check every pair. That's O(n²).  
+**The insight** for every pattern in this module: use structure (sorted order, running state, precomputed sums) to skip pairs you don't need.
 
-### When should I use this?
+### Critical vocabulary: Subarray vs Subsequence vs Substring
 
-- You need to **remove** or **filter** elements in place
-- You need to **compress** or **deduplicate** a sorted array
-- You need to partition into "processed" and "unprocessed" regions
-- Keywords: "remove element," "move zeroes," "remove duplicates"
-
-### When should I NOT use this?
-
-- You need to find a **pair with a target sum** — use opposite-direction instead
-- You need a **window** of contiguous elements — sliding window is more appropriate
-- The problem requires knowing both ends — use opposite-direction
-
-### Core Idea
-
-1. Initialize `slow = 0`, `fast = 0`
-2. Fast pointer scans through the entire array
-3. When fast pointer finds an element that should be "kept," copy it to the slow position and advance slow
-4. After fast reaches the end, everything from 0 to slow-1 is the processed result
-
-**Mental model:** Slow is the "writer." Fast is the "reader." The writer only writes when the reader finds something worth keeping.
-
-### Complexity
-
-- **Time:** O(n) — fast pointer visits each element exactly once
-- **Space:** O(1) — in-place modification
-
-### Variants
-
-- **Remove Element:** Skip elements equal to a target
-- **Remove Duplicates from Sorted Array:** Keep only the first of each value
-- **Remove Duplicates (allow at most K):** Keep at most K copies
-- **Move Zeroes:** Move all zeroes to the end while preserving order of non-zeroes
-
-### Related Patterns
-
-- [Two Pointers — Opposite Direction](#two-pointers--opposite-direction) (different pointer setup)
-- [Fast/Slow Pointer on Linked Lists](06-LINKED-LISTS.md) (same idea, different data structure)
-- [Sliding Window](#sliding-window--variable-size) (two same-direction pointers, but focused on a "window")
-
-### Interview Insights
-
-- **Trap:** Not maintaining relative order. If the problem says "maintain order," you must use the slow/fast approach, not swap with the end.
-- **Twist:** "Do it with O(1) extra space" — if you weren't already thinking in-place, the interviewer is pushing you toward two-pointer.
-- **Follow-up:** "What if duplicates can appear at most K times?" — Generalize: slow pointer is at position j, check if arr[j - K] == arr[fast]. If not, keep it.
-
----
-
-## Three Pointers
-
-### What is this approach?
-
-**Intuition:** Sometimes two pointers aren't enough because you need to track three regions. Think of sorting laundry into three piles — you process each item and toss it into the correct pile while tracking the boundaries of all three.
-
-**Formal:** Three pointers partition the array into three (or four) regions simultaneously. Used when elements belong to one of three categories.
-
-### When should I use this?
-
-- You need to partition an array into **three categories** in place
-- The problem involves **three groups** (e.g., negatives, zeroes, positives)
-- Keywords: "sort colors," "three-way partition," "separate into three groups"
-
-### When should I NOT use this?
-
-- Only two categories — two pointers suffice
-- More than three categories — consider counting sort or bucket approach
-- Element order within categories matters — this approach doesn't guarantee stability
-
-### Core Idea
-
-1. Three pointers: `low = 0`, `mid = 0`, `high = n - 1`
-2. `[0, low)` = category 1, `[low, mid)` = category 2, `(high, n-1]` = category 3
-3. Scan with `mid`:
-   - If arr[mid] is category 1 → swap with low, advance both low and mid
-   - If arr[mid] is category 2 → just advance mid
-   - If arr[mid] is category 3 → swap with high, decrement high (do NOT advance mid — the swapped element needs inspection)
-4. Stop when mid > high
-
-### Complexity
-
-- **Time:** O(n) — mid pointer traverses the array once
-- **Space:** O(1)
-
-### Variants
-
-- **Sort Colors (Dutch National Flag)** — The canonical problem (0s, 1s, 2s)
-- **Three-way partition around pivot** — Used as a subroutine in Quick Sort (fat partition)
-- **Separate negatives, zeroes, positives**
-
-### Related Patterns
-
-- [Dutch National Flag](#dutch-national-flag--three-way-partition) (same concept with detailed treatment)
-- [Two Pointers — Opposite Direction](#two-pointers--opposite-direction) (the two-category version)
-
-### Interview Insights
-
-- **Trap:** Advancing mid after a swap with high. The element you just swapped in from the high end hasn't been examined yet — you must check it before moving on.
-- **Twist:** "Can you do it in one pass?" — This is exactly the three-pointer approach. Two-pass solutions (count then fill) are O(n) too but use two passes.
-
----
-
-## Sliding Window — Fixed Size
-
-### What is this approach?
-
-**Intuition:** Imagine looking through a window of fixed width that slides across a long wall of paintings. At each position, you see exactly K paintings. Instead of re-examining all K paintings each time, you just note what new painting entered and what old painting left.
-
-**Formal:** Maintain a window of exactly K elements. Slide it across the array one element at a time. At each step, add the incoming element's contribution and remove the outgoing element's contribution. This avoids recomputing the entire window from scratch.
-
-### When should I use this?
-
-- The problem mentions a **subarray/substring of fixed size K**
-- You need to compute an aggregate (sum, max, average) over **every window of size K**
-- Keywords: "subarray of size K," "K consecutive elements," "average of K"
-
-### When should I NOT use this?
-
-- The window size is **variable** (depends on a condition) — use variable sliding window
-- You need to process **all** possible subarray sizes — different approach needed
-- The aggregate is not incrementally computable (e.g., median — need augmented structures)
-
-### Core Idea
-
-1. Initialize the window with the first K elements. Compute the initial aggregate.
-2. Slide: add element at position `right + 1`, remove element at position `left`
-3. Update the aggregate incrementally
-4. Track the best aggregate across all windows
-5. Repeat until the right edge reaches the end
-
-**Mental model:** You are maintaining a "running total" and making two O(1) modifications per step instead of recomputing K elements.
-
-### Complexity
-
-- **Time:** O(n) — each element enters and leaves the window exactly once
-- **Space:** O(1) for sum/average; O(K) if you need to store window contents
-
-**Why O(n)?** Even though the window size is K, each element is added once and removed once. Total operations = 2n.
-
-### Variants
-
-- **Maximum Sum Subarray of Size K**
-- **Average of All Subarrays of Size K**
-- **Max of Each Window of Size K** — Requires monotonic deque for O(n), not just simple sliding window (see [Monotonic Queue](07-STACKS-AND-QUEUES.md#monotonic-queue))
-- **String permutation check** — Fixed window of size len(pattern) with frequency matching
-
-### Related Patterns
-
-- [Sliding Window — Variable Size](#sliding-window--variable-size) (when K isn't fixed)
-- [Prefix Sum](#prefix-sum) (alternative for range sum)
-- [Monotonic Queue](07-STACKS-AND-QUEUES.md) (when you need min/max within the window)
-
-### Interview Insights
-
-- **Trap:** Using prefix sum for this. It works but misses the point — the interviewer wants to see the sliding window technique because it generalizes to non-sum aggregates.
-- **Twist:** "What about duplicates in the window?" — Combine sliding window with a HashMap to track frequencies.
-- **Follow-up:** "Find max in each window" — This upgrades from basic sliding window to monotonic deque.
-
----
-
-## Sliding Window — Variable Size
-
-### What is this approach?
-
-**Intuition:** Now the window has no fixed width. It expands to the right until a condition is violated, then shrinks from the left until the condition is restored. Like a rubber band that stretches and contracts.
-
-**Formal:** Maintain two pointers (left, right) representing a window. Expand right to include elements until a constraint is violated, then advance left to shrink the window until the constraint is restored. Track the optimal window throughout.
-
-### When should I use this?
-
-- "Longest/shortest subarray/substring such that some condition holds"
-- The condition is about a **property of the window** (sum ≤ K, all unique characters, at most K distinct values, etc.)
-- The condition is **monotonic**: if a window fails, adding more elements to the right can only make it worse (or vice versa)
-- Keywords: "longest substring," "minimum window," "at most K," "subarray with sum ≤ / ≥"
-
-### When should I NOT use this?
-
-- The condition is NOT monotonic (e.g., "subarray with sum exactly K" for arrays with negative numbers — the window can't simply shrink from left)
-- You need ALL windows, not just the longest/shortest — consider prefix sum with HashMap
-- The problem is about subsequences (not contiguous) — sliding window only works for contiguous ranges
-
-### Core Idea
-
-1. Initialize `left = 0`, `right = 0`
-2. Expand: Move right forward, update window state
-3. Check: If the window violates the constraint, shrink from left until the constraint is restored
-4. Track: At each valid window, update the best answer (longest or shortest)
-5. Repeat until right reaches the end
-
-**Mental model:** Right pointer is greedy — it always wants to expand. Left pointer is the disciplinarian — it shrinks when things go wrong. The answer hides in the tension between them.
-
-**The two templates:**
-- **Longest valid window:** Expand right always. Shrink left only when invalid. Track max(right - left + 1).
-- **Shortest valid window:** Expand right until valid. Then shrink left as much as possible while staying valid. Track min(right - left + 1).
-
-### Complexity
-
-- **Time:** O(n) — each of left and right moves at most n times. Total operations = 2n.
-- **Space:** O(1) or O(K) depending on the window state (frequency map, etc.)
-
-**Why O(n) and not O(n²)?** Key insight: left never moves backward. The inner "shrink" loop across ALL iterations of the outer loop moves left at most n total times.
-
-### Variants
-
-- **Longest Substring Without Repeating Characters:** Window state = set of characters. Shrink when a repeat appears.
-- **Minimum Window Substring:** Expand until all target characters are covered. Shrink to minimize. Track shortest.
-- **Longest Substring with At Most K Distinct Characters:** Window state = frequency map. Shrink when distinct count > K.
-- **Subarray Product Less Than K:** Window state = running product. Shrink when product ≥ K.
-- **Minimum Size Subarray Sum:** Shortest subarray with sum ≥ target.
-
-### Related Patterns
-
-- [Sliding Window — Fixed Size](#sliding-window--fixed-size) (simpler special case)
-- [Sliding Window with HashMap](#sliding-window-with-hashmap) (when window state needs a frequency map)
-- [Two Pointers — Same Direction](#two-pointers--same-direction) (same pointer structure, different intent)
-- [Prefix Sum + HashMap](05-HASHING-AND-SETS.md) (alternative when sliding window doesn't apply due to negative numbers)
-
-### Interview Insights
-
-- **Trap:** Trying to use sliding window when the array has negative numbers and you want exact sum. The shrink logic breaks because adding elements doesn't monotonically change the sum direction. Use prefix sum + hashmap instead.
-- **Trap:** Off-by-one errors on window size. Practice mentally: when left = 2 and right = 5, the window size is right - left + 1 = 4.
-- **Twist:** "Count all valid subarrays (not just the longest)" — For the "at most K" variant, the number of valid subarrays ending at right is (right - left + 1). Sum these across all right positions.
-- **Follow-up:** "What if we need exactly K distinct characters?" — Use the trick: exactly(K) = atMost(K) - atMost(K-1).
-
----
-
-## Sliding Window with HashMap
-
-### What is this approach?
-
-**Intuition:** The variable sliding window, but now you need to track frequencies, counts, or conditions that require a lookup table. The HashMap IS the window state.
-
-**Formal:** A variable sliding window where the window's validity condition depends on frequency counts or membership, tracked via a HashMap (or frequency array for limited character sets).
-
-### When should I use this?
-
-- Window validity depends on **character frequency** or **element count**
-- Problems involving **anagrams**, **permutations within a string**, or **minimum window covering all characters**
-- Keywords: "anagram," "permutation," "minimum window substring," "all characters included"
-
-### When should I NOT use this?
-
-- The window condition is a simple numeric threshold (sum, product) — a running variable suffices, no need for a map
-- The alphabet is fixed and small — a frequency array is faster (constant factor optimization)
-
-### Core Idea
-
-1. Maintain a HashMap for the window's character/element frequencies
-2. Maintain a counter tracking how many characters/conditions are "satisfied"
-3. Expand right: add element to map, update counter if this element's condition is now fully met
-4. When all conditions are met, shrink left as much as possible, updating the map and counter
-5. Track the optimum
-
-**Mental model:** The HashMap is a scoreboard. Expanding right adds points. Shrinking left removes points. You track when the score reaches "winning."
-
-### Complexity
-
-- **Time:** O(n) — same argument as variable sliding window; map operations are O(1) amortized
-- **Space:** O(K) where K = number of distinct elements (26 for lowercase English letters)
-
-### Variants
-
-- **Find All Anagrams in a String:** Fixed window of size len(pattern), frequency map match
-- **Minimum Window Substring:** Variable window covering all target characters
-- **Longest Substring with At Most K Distinct Characters:** Frequency map, shrink when distinctCount > K
-- **Permutation in String:** Fixed window, frequency match check
-
-### Related Patterns
-
-- [Sliding Window — Variable Size](#sliding-window--variable-size) (general framework)
-- [Hashing & Frequency Counting](05-HASHING-AND-SETS.md) (the data structure used inside the window)
-
-### Interview Insights
-
-- **Trap:** Recomputing the entire frequency map at each step instead of incrementally updating. This turns O(n) into O(n×K).
-- **Twist:** "What if the target has duplicate characters?" — Your "satisfied" counter must track individual character fulfillment, not just presence.
-- **Follow-up:** "Can you make it work for Unicode?" — HashMap instead of 26-element array. Mention the tradeoff.
-
----
-
-## Prefix Sum
-
-### What is this approach?
-
-**Intuition:** Imagine numbering every fence post along a road with the total distance from the start. Now if someone asks "what's the distance between post 3 and post 7?" you just subtract: distance[7] - distance[3]. That's prefix sum.
-
-**Formal:** Precompute an array where prefix[i] = sum of elements from index 0 to i-1. Then the sum of any subarray [l, r] = prefix[r+1] - prefix[l]. This transforms range-sum queries from O(n) to O(1) after O(n) preprocessing.
-
-### When should I use this?
-
-- You need to compute **many range sum queries** on a static array
-- The problem asks about **subarray sums** (especially "subarray sum equals K" combined with HashMap)
-- You need to **compare** sums of different regions
-- Keywords: "range sum," "subarray sum," "sum between indices," "sum equals K"
-
-### When should I NOT use this?
-
-- The array is **modified** between queries — use Fenwick Tree or Segment Tree instead
-- You only need one range sum — just compute it directly in O(n)
-- The operation is min/max (not sum) — use Sparse Table or Segment Tree
-
-### Core Idea
-
-1. Build prefix array: prefix[0] = 0, prefix[i] = prefix[i-1] + arr[i-1]
-2. Range sum [l, r] = prefix[r+1] - prefix[l]
-3. For "subarray sum equals K": iterate through prefix sums, using a HashMap to count how many previous prefix sums equal (current_prefix - K)
-
-**Mental model:** Prefix sum converts a "segment question" into a "two-point subtraction." Every range sum is encoded as the difference between two checkpoints.
-
-### Complexity
-
-- **Time:** O(n) to build, O(1) per query
-- **Space:** O(n) for the prefix array
-
-**Why O(1) per query?** Because the prefix array has already accumulated all the partial sums. Any range sum is just one subtraction.
-
-### Variants
-
-- **1D Prefix Sum:** Standard range sum queries
-- **2D Prefix Sum:** Range sum in a matrix. prefix[i][j] = sum of rectangle from (0,0) to (i-1, j-1). Uses inclusion-exclusion for rectangle queries.
-- **Prefix Sum + HashMap (Subarray Sum = K):** Count subarrays with exact sum = K. Track counts of each prefix sum in a HashMap. At each index, check if (current_prefix - K) exists in the map.
-- **Prefix Sum with Modular Arithmetic:** "Subarray sum divisible by K" — track prefix_sum % K in a HashMap.
-- **Difference Array:** The inverse of prefix sum. Used for **range updates**: add value to a range [l, r] in O(1), then reconstruct with prefix sum.
-
-### Related Patterns
-
-- [Kadane's Algorithm](#kadanes-algorithm) (max subarray sum — optimized beyond prefix sum)
-- [Prefix XOR](#prefix-xor) (same idea but with XOR)
-- [Subarray Sum + HashMap](05-HASHING-AND-SETS.md) (prefix sum as a building block)
-- [Fenwick Tree / Segment Tree](16-ADVANCED-DATA-STRUCTURES.md) (dynamic version with updates)
-
-### Interview Insights
-
-- **Trap:** Off-by-one in prefix sum indexing. Convention: prefix[0] = 0, so prefix has n+1 elements. Range [l, r] inclusive = prefix[r+1] - prefix[l].
-- **Trap:** For "subarray sum = K" with negative numbers, you MUST use prefix sum + HashMap. Sliding window fails here because shrinking from left doesn't necessarily decrease the sum.
-- **Twist:** "2D version" — Prefix sum on a matrix. The interviewer tests if you can apply inclusion-exclusion: sum(r1,c1,r2,c2) = prefix[r2+1][c2+1] - prefix[r1][c2+1] - prefix[r2+1][c1] + prefix[r1][c1].
-- **Follow-up:** "What if the array gets updated?" — Mention Fenwick Tree / Segment Tree for dynamic prefix sums.
-
----
-
-## Prefix XOR
-
-### What is this approach?
-
-**Intuition:** Same fence-post idea as prefix sum, but using XOR instead of addition. Since XOR is its own inverse (a ⊕ a = 0), the "subtraction" is also XOR.
-
-**Formal:** Precompute prefixXOR[i] = arr[0] ⊕ arr[1] ⊕ ... ⊕ arr[i-1]. Then XOR of any subarray [l, r] = prefixXOR[r+1] ⊕ prefixXOR[l].
-
-### When should I use this?
-
-- Problems involving **XOR of subarrays**
-- "Find subarray with XOR equal to K"
-- Keywords: "XOR," "subarray XOR," "XOR sum"
-
-### When should I NOT use this?
-
-- The operation is addition, not XOR — use prefix sum
-- You need range updates — XOR prefix doesn't support dynamic updates easily
-
-### Core Idea
-
-1. Build prefixXOR array (same as prefix sum but with ⊕)
-2. Range XOR = prefixXOR[r+1] ⊕ prefixXOR[l]
-3. For "count subarrays with XOR = K": use HashMap on prefixXOR values (same pattern as subarray sum = K)
-
-### Complexity
-
-- **Time:** O(n) build, O(1) per query
-- **Space:** O(n)
-
-### Variants
-
-- **Count subarrays with XOR = K:** HashMap of prefix XOR values
-- **Maximum XOR subarray:** Combine with Trie for bit-by-bit greedy
-
-### Related Patterns
-
-- [Prefix Sum](#prefix-sum) (same technique, different operator)
-- [Bit Manipulation](14-BIT-MANIPULATION.md) (XOR properties)
-- [Trie / XOR Trie](16-ADVANCED-DATA-STRUCTURES.md) (maximum XOR problems)
-
-### Interview Insights
-
-- **Trap:** Forgetting that XOR is its own inverse. No need for "subtraction" — just XOR again.
-- **Twist:** "Maximum XOR subarray" — This needs a Trie, not just prefix XOR.
-
----
-
-## Kadane's Algorithm
-
-### What is this approach?
-
-**Intuition:** You are walking along a number line collecting coins (positive numbers) and paying tolls (negative numbers). At each step, you decide: "Should I keep the running total, or start fresh from here?" If the running total is negative, it's better to start fresh — a negative prefix can only hurt you.
-
-**Formal:** Find the maximum sum contiguous subarray. Maintain a running sum; at each element, decide whether to extend the current subarray or start a new one. The decision is: current = max(arr[i], current + arr[i]).
-
-### When should I use this?
-
-- **"Maximum subarray sum"** — the classic application
-- Any problem reducible to "best contiguous segment"
-- Keywords: "maximum subarray," "largest sum contiguous," "best time to buy and sell" (one transaction)
-
-### When should I NOT use this?
-
-- You need the actual subarray (not just the sum) — Kadane's finds the sum; tracking indices requires extra work
-- The array is circular — need the circular variant (below)
-- You need max sum with **constraints** (e.g., subarray length ≥ K) — need modified approach
-- The problem asks about subsequences (non-contiguous) — Kadane's only works for contiguous subarrays
-
-### Core Idea
-
-1. Initialize `current_sum = arr[0]`, `global_max = arr[0]`
-2. For each element from index 1:
-   - `current_sum = max(arr[i], current_sum + arr[i])`
-   - If current_sum > global_max, update global_max
-3. Return global_max
-
-**Mental model:** At each position, you ask: "Is it better to join the party (extend current subarray) or start my own party (new subarray from here)?" You start your own party whenever the existing one has negative value.
-
-### Complexity
-
-- **Time:** O(n) — single pass
-- **Space:** O(1) — only two variables
-
-**Why O(n)?** Each element is considered exactly once. The decision at each step is O(1).
-
-### Variants
-
-- **Maximum Subarray Sum (standard):** As described above
-- **Maximum Subarray Sum — Circular Array:** max(standard_kadane, total_sum - min_subarray_sum). The idea: the max circular subarray is either (a) a regular subarray, or (b) total minus the minimum subarray (the wraparound case). Edge case: if all elements are negative, use scenario (a).
-- **Maximum Subarray Sum with at Least K Elements:** Use prefix sum + sliding window min.
-- **Maximum Product Subarray:** Track both current_max and current_min (because a negative times a negative can become the max). At each step: new_max = max(arr[i], current_max * arr[i], current_min * arr[i]), similarly for new_min.
-- **Maximum Sum of Two Non-Overlapping Subarrays:** Run Kadane's from left and right, combine.
-- **Best Time to Buy and Sell Stock (one transaction):** Transform to "max subarray of daily differences."
-
-### Related Patterns
-
-- [Prefix Sum](#prefix-sum) (alternative approach: max subarray sum = max(prefix[j] - prefix[i]) for j > i)
-- [Dynamic Programming](09-DYNAMIC-PROGRAMMING.md) (Kadane's IS a 1D DP with space optimization)
-- [Divide and Conquer](04-SORTING-AND-ORDER.md) (alternative O(n log n) approach via merge sort)
-
-### Interview Insights
-
-- **Trap:** The circular variant. Many candidates know standard Kadane's but freeze on circular. Remember: max_circular = total - min_subarray (unless all elements negative).
-- **Trap:** Maximum product subarray — you MUST track both max and min at each step because of negative numbers.
-- **Twist:** "What if you want the actual subarray, not just the sum?" — Track start and end indices. Reset start when you start a new subarray.
-- **Follow-up:** "What about 2D max subarray (max sum rectangle)?" — Fix two rows, compute column sums, apply 1D Kadane's. O(n²m) for n×m matrix.
-
----
-
-## Dutch National Flag / Three-Way Partition
-
-### What is this approach?
-
-**Intuition:** You have a pile of red, white, and blue balls. You want them sorted: all reds, then whites, then blues. You scan through, tossing each ball to the correct region, using three markers to track region boundaries.
-
-**Formal:** Partition an array into three regions around a pivot value: elements < pivot, elements == pivot, elements > pivot. Done in a single pass with three pointers.
-
-### When should I use this?
-
-- Sort an array with **exactly three distinct values** (or three categories)
-- **Three-way partitioning** step in Quick Sort (handles duplicate pivot values)
-- Keywords: "sort colors," "three values," "0s, 1s, 2s"
-
-### When should I NOT use this?
-
-- More than three categories — use counting sort or bucket approach
-- Two categories — standard partition (two pointers) is simpler
-- Elements need to maintain relative order within categories — this approach is not stable
-
-### Core Idea
-
-See [Three Pointers](#three-pointers) for the detailed algorithm. The Dutch National Flag is the canonical application.
-
-### Complexity
-
-- **Time:** O(n) — single pass
-- **Space:** O(1) — in-place
-
-### Variants
-
-- **Sort Colors:** The classic LeetCode problem
-- **Three-Way Partition for Quick Sort:** Improves Quick Sort performance on arrays with many duplicates
-- **Partition into negatives, zeros, positives**
-
-### Related Patterns
-
-- [Three Pointers](#three-pointers) (identical technique)
-- [Quick Select / Quick Sort](04-SORTING-AND-ORDER.md) (uses partitioning as subroutine)
-
-### Interview Insights
-
-- **Trap:** Moving mid forward after swapping with high — don't do it. The swapped element hasn't been inspected yet.
-- **Twist:** "Can you do it in one pass?" — That's the whole point of this algorithm.
-
----
-
-## Boyer-Moore Voting Algorithm
-
-### What is this approach?
-
-**Intuition:** Imagine a crowd at an election rally. Everyone holds up a sign with their candidate's name. You go through person by person: if the current person supports the same candidate as your current "leader," the leader's count goes up. If they support a different candidate, the leader loses a supporter. When the count hits zero, the next person becomes the new leader. If any candidate has a true majority (> n/2), they WILL survive this process.
-
-**Formal:** Find an element that appears more than n/2 times (majority element). Maintain a candidate and a count. For each element, if count is 0, set the new candidate. Increment count if the element matches, decrement otherwise. The surviving candidate is the majority element (if one exists).
-
-### When should I use this?
-
-- Finding the element that appears **more than n/2 times** (guaranteed to exist)
-- Finding elements appearing **more than n/3 times** (extended version)
-- Keywords: "majority element," "more than half," "most frequent element"
-
-### When should I NOT use this?
-
-- The majority element is **not guaranteed** to exist — you must do a second pass to verify
-- You need the element appearing **exactly K times** — use HashMap frequency counting
-- You need **all** frequencies — not just the majority
-
-### Core Idea
-
-1. Initialize candidate = first element, count = 1
-2. For each subsequent element:
-   - If count == 0, set candidate = current element, count = 1
-   - Else if current == candidate, count++
-   - Else count--
-3. The surviving candidate is the majority element (verify with a second pass if not guaranteed)
-
-**Mental model:** Think of it as a battle. Each element "fights" the current leader. When the leader's army reaches zero, a new leader rises. The true majority can never be fully eliminated because it has more supporters than all others combined.
-
-### Complexity
-
-- **Time:** O(n) — single pass (or two passes with verification)
-- **Space:** O(1) — only candidate and count
-
-### Variants
-
-- **Majority Element (> n/2):** Standard Boyer-Moore, one candidate
-- **Elements appearing > n/3 times:** At most 2 such elements. Use two candidates and two counts. Requires a verification pass.
-- **Elements appearing > n/k times:** At most k-1 candidates. Generalized Boyer-Moore.
-
-### Related Patterns
-
-- [Hashing / Frequency Counting](05-HASHING-AND-SETS.md) (O(n) time O(n) space alternative)
-- [Sorting](04-SORTING-AND-ORDER.md) (sort and check middle element — O(n log n) approach)
-- [Quick Select](04-SORTING-AND-ORDER.md) (find median — also O(n) average)
-
-### Interview Insights
-
-- **Trap:** Assuming the majority element always exists. If it doesn't, Boyer-Moore still returns a candidate, but it's wrong. Always clarify: "Is a majority element guaranteed?"
-- **Twist:** "What about elements appearing more than n/3 times?" — Extend to two candidates. Tricky implementation.
-- **Follow-up:** "Can you prove this works?" — The key insight: a majority element has more than n/2 occurrences, so it can never be completely "voted out."
-
----
-
-## In-Place Array Manipulation
-
-### What is this approach?
-
-**Intuition:** You are given strict instructions: "No extra rooms. You must rearrange everything in the space you already have." In-place manipulation means using the array itself as your workspace, encoding information into existing cells.
-
-**Formal:** Modify the array in-place to achieve a desired result using O(1) extra space. Often involves using the array itself to store additional information (e.g., marking visited elements by negating them, using values mod n to encode two numbers in one slot).
-
-### When should I use this?
-
-- Space constraint is O(1)
-- The array contains values in a known range (often [1, n] or [0, n-1])
-- You need to "mark" elements as visited or processed
-- Keywords: "O(1) extra space," "in-place," "find duplicate," "find missing," "first missing positive"
-
-### When should I NOT use this?
-
-- The array values can be anything (no useful range to exploit)
-- Modifying the input is not allowed
-- A cleaner O(n) space solution is acceptable and simpler
-
-### Core Idea
-
-Common tricks:
-- **Negation marking:** For values in [1, n], visit arr[abs(arr[i]) - 1] and negate it. Positive values at the end indicate unvisited indices.
-- **Modular encoding:** Store two pieces of information in one cell as `original + new * n`. Extract original with `val % n`, extract new with `val / n`.
-- **Cyclic placement:** Place each element at its "correct" position (arr[i] should be i+1). Swap until done.
-
-### Complexity
-
-- **Time:** O(n) typically
-- **Space:** O(1) — the whole point
-
-### Variants
-
-- **Find All Duplicates:** Negate values at index arr[i]-1; if already negative, it's a duplicate
-- **Find All Missing Numbers:** After negation marking, positive positions are missing
-- **First Missing Positive:** Cyclic placement (or negation) restricted to range [1, n]
-- **Set Matrix Zeroes:** Use first row/column as markers
-
-### Related Patterns
-
-- [Cyclic Sort](04-SORTING-AND-ORDER.md) (systematic approach to "place each at correct position")
-- [Bit Manipulation](14-BIT-MANIPULATION.md) (alternative for O(1) space encoding)
-
-### Interview Insights
-
-- **Trap:** Forgetting to handle the absolute value when reading negated cells.
-- **Twist:** "First Missing Positive" is one of the hardest array problems because you must first ignore non-positive and out-of-range values, then apply cyclic placement only on valid elements.
-- **Follow-up:** "What if modifying the array is not allowed?" — Then you cannot use in-place techniques; switch to hashing or bit manipulation.
-
----
-
-## Matrix Traversal Patterns
-
-### What is this approach?
-
-**Intuition:** Navigating a 2D grid in specific patterns: spiral, diagonal, zigzag, or layer-by-layer. Each has its own "walking rule."
-
-**Formal:** Systematic ways to visit all cells of an m×n matrix in a specific order, typically requiring boundary tracking or direction vectors.
-
-### When should I use this?
-
-- "Print matrix in spiral order"
-- "Traverse diagonals"
-- "Rotate matrix 90 degrees"
-- Keywords: "spiral," "diagonal," "rotate," "layer," "zigzag"
-
-### When should I NOT use this?
-
-- You need graph traversal on a grid (BFS/DFS) — that's a graph problem, not a traversal pattern
-- The problem is about matrix DP (unique paths, etc.) — see DP section
-
-### Core Idea
-
-**Spiral:** Maintain four boundaries (top, bottom, left, right). Walk right across top row, down right column, left across bottom row, up left column. Shrink boundaries after each direction. Repeat.
-
-**Diagonal:** For each diagonal d (sum of indices = d), iterate cells (i, d-i) for valid i.
-
-**90-degree Rotation:** Transpose the matrix, then reverse each row (clockwise). Or reverse each row then transpose (counterclockwise).
-
-**Layer-by-Layer (Onion Peeling):** Process outermost ring, then move inward. Useful for rotation in place.
-
-### Complexity
-
-- **Time:** O(m × n) — visit each cell once
-- **Space:** O(1) extra (excluding output)
-
-### Variants
-
-- **Spiral Matrix:** Return elements in spiral order
-- **Spiral Matrix II:** Fill an n×n matrix with 1 to n² in spiral order
-- **Rotate Image:** 90-degree clockwise rotation in place
-- **Diagonal Traverse:** Zigzag along diagonals (alternating direction)
-
-### Related Patterns
-
-- [Grid-based BFS/DFS](11-GRAPHS.md) (when the grid represents a graph problem)
-- [2D Prefix Sum](#prefix-sum) (when the problem is about region sums)
-
-### Interview Insights
-
-- **Trap:** Off-by-one on spiral boundaries. Draw a 4×4 and 3×3 example to verify your boundary update logic.
-- **Twist:** "Rotate in place" — The interviewer tests whether you know transpose + reverse, or whether you try to move elements one by one.
-- **Follow-up:** "What about non-square matrices?" — Spiral works the same. Rotation is only defined for square matrices (or you're transposing a rectangular one).
-
----
-
-## Subarray vs Subsequence vs Substring
-
-### What is this approach?
-
-This is not an algorithm but a critical **vocabulary distinction** that determines which techniques apply.
-
-### Definitions
+Get this wrong and you apply the wrong technique entirely.
 
 | Term | Contiguous? | Order? | Example from [1,2,3,4] |
 |---|---|---|---|
 | **Subarray** | Yes | Original | [2,3,4], [1,2], [3] |
-| **Substring** | Yes | Original | Same as subarray but for strings |
+| **Substring** | Yes | Original | Same concept, but for strings |
 | **Subsequence** | No | Original | [1,3,4], [2,4], [1,4] |
 | **Subset** | No | Any | {3,1}, {2,4}, {1,2,3} |
 
-### Why this matters
+**Why it matters:**
+- Subarray/Substring problems → Sliding Window, Prefix Sum, Kadane's, Two Pointers
+- Subsequence problems → DP (LIS, LCS), Binary Search
+- Subset problems → Backtracking, Bitmask DP
 
-- **Subarray/Substring problems:** Sliding Window, Prefix Sum, Kadane's, Two Pointers
-- **Subsequence problems:** DP (LIS, LCS), Backtracking, Binary Search
-- **Subset problems:** Backtracking, Bitmask, DP (knapsack)
+**Trap:** If the problem says "subsequence" and you apply sliding window, you will get it wrong. Always clarify: "Does this mean adjacent elements?"
 
-### Interview Insights
+### Mental model for Two Pointers
 
-- **Trap:** Confusing subarray and subsequence. If you apply sliding window to a subsequence problem, you will get it wrong. Always clarify: "Does contiguous mean adjacent elements?"
-- **Trap:** The number of subarrays of length n is n(n+1)/2. The number of subsequences is 2^n. The number of subsets is 2^n. These different magnitudes affect what techniques are feasible.
+Two pointers maintain two "cursors" in the array. The question is always: which one should move, and when?
+
+```
+Opposite direction (sorted array, find pair):
+[1, 2, 4, 7, 11, 15]
+ L                 R
+  -> L moves right when sum too small
+  -> R moves left when sum too large
+
+Same direction (filter/compress):
+[3, 2, 2, 3, 1, 2]
+ S                   S = slow (writer)
+    F                F = fast (reader/scanner)
+  -> F scans all, S writes only what we keep
+```
+
+**Key insight for opposite-direction:** On a sorted array, moving left forward increases the sum; moving right backward decreases it. You can always eliminate one candidate per step.
+
+**Key insight for same-direction:** Slow is the write head. Fast is the read head. The gap between them is the "discarded" region. After fast finishes, `arr[0..slow-1]` is your result.
+
+### Mental model for Sliding Window
+
+```
+Fixed window (K=3):
+[2, 1, 5, 1, 3, 2]
+[2, 1, 5]          sum=8
+   [1, 5, 1]       sum=7  (subtract 2, add 1)
+      [5, 1, 3]    sum=9  (subtract 1, add 3)
+         [1, 3, 2] sum=6  (subtract 5, add 2)
+
+Variable window (sum < 7, find longest):
+[2, 1, 5, 1, 3, 2]
+ L
+       R            expand until violation
+         L          shrink to fix
+```
+
+**Key insight for sliding window:** Left never moves backward. The inner shrink loop's total work across the entire algorithm is at most n steps. So the total is O(n), not O(n²).
+
+### Mental model for Prefix Sum
+
+```
+arr     = [3,  1,  4,  1,  5,  9]
+prefix  = [0,  3,  4,  8,  9, 14, 23]
+           ^                        ^
+           always 0                 sum of all
+
+Sum of arr[2..4] = prefix[5] - prefix[2] = 14 - 4 = 10
+                              (index 2,3,4 = 4+1+5 = 10) correct!
+```
+
+**Key insight:** prefix[i] = total distance traveled to reach checkpoint i. Any range sum = distance[end] - distance[start]. One subtraction, no looping.
+
+### Mental model for Kadane's Algorithm
+
+```
+arr = [-2, 1, -3, 4, -1, 2, 1, -5, 4]
+
+At each position: "Should I extend the current subarray, or start fresh here?"
+If current running sum < 0, it only hurts future elements. Start fresh.
+
+running: -2 → 1 → -2 → 4 → 3 → 5 → 6 → 1 → 5
+           ^start   ^start fresh  
+max seen:  -2  1    1   4   4   5   6   6   6 → answer = 6
+```
+
+**Key insight:** A negative running prefix can never help. Discard it and start fresh. This is actually a 1D dynamic programming problem with space optimization.
 
 ---
 
-## Rotate Array / Reverse Trick
+## [20–35 min] Core Patterns
 
-### What is this approach?
+### Pattern 1: Two Pointers — Opposite Direction
 
-**Intuition:** Rotating an array by K positions is the same as cutting a deck of cards at position K and swapping the two halves. The clever trick: three reverses achieve this in place.
+**When to use:**
+- The array/string is sorted (or can be sorted without losing needed information)
+- You need a pair satisfying a condition (sum, difference, symmetry)
+- You are checking palindromes
+- Keywords: "pair with sum," "two numbers that," "is palindrome," "container with most water"
 
-**Formal:** To rotate an array right by K positions in O(n) time and O(1) space: reverse the entire array, reverse the first K elements, reverse the remaining n-K elements.
+**When NOT to use:**
+- Array is unsorted AND sorting loses original index information — use HashMap instead
+- Problem is about contiguous subarrays — sliding window is better
 
-### When should I use this?
+**Brute force → observation → optimized:**
 
+Brute force (O(n²)): Check every pair (i, j) where i < j.
+
+Observation: On a sorted array, if arr[left] + arr[right] > target, moving right left makes the sum smaller. If sum < target, moving left right makes it larger. Each step eliminates one index from consideration.
+
+Optimized (O(n)): Initialize left=0, right=n-1. Move one pointer per step based on comparison.
+
+**Algorithm:**
+1. left = 0, right = n-1
+2. If condition met → record answer, move both (skip duplicates)
+3. If "too small" → left++
+4. If "too large" → right--
+5. Stop when left >= right
+
+**Complexity:** Time O(n), Space O(1) — each pointer moves at most n times, total work ≤ 2n.
+
+**Variants:**
+- Two Sum (sorted array): move left if sum too small, right if too large
+- Container With Most Water: move the pointer at the shorter line (moving the taller line can only decrease or maintain the height limit)
+- Trapping Rain Water: track left_max and right_max; process from the smaller side
+- Valid Palindrome: compare characters at left and right, skip non-alphanumeric
+- Remove Duplicates (sorted): slow pointer marks write position, fast pointer scans
+
+**Interview traps:**
+- Forgetting to skip duplicates in 3Sum: after finding a match, advance both pointers past all equal values
+- "What if unsorted?" — HashMap is O(n) time O(n) space; sorting + two pointers is O(n log n) time O(1) space. Know the tradeoff.
+
+---
+
+### Pattern 2: Two Pointers — Same Direction (Fast/Slow)
+
+**When to use:**
+- Remove or filter elements in-place
+- Compress or deduplicate a sorted array
+- Keywords: "remove element," "move zeroes," "remove duplicates in-place"
+
+**When NOT to use:**
+- Finding a pair with a target sum — use opposite-direction
+- Needing a contiguous window — use sliding window
+
+**Algorithm:**
+1. slow = 0, fast = 0
+2. fast scans through entire array
+3. When fast finds an element worth keeping, write it to arr[slow], slow++
+4. After fast finishes, arr[0..slow-1] is the result
+
+**Mental model:** slow = writer, fast = reader. Writer only writes when reader finds something worth keeping.
+
+**Complexity:** Time O(n), Space O(1)
+
+**Variants:**
+- Remove Element: skip elements equal to a target value
+- Remove Duplicates (sorted): keep only first of each value
+- Remove Duplicates (allow at most K): keep at most K copies — check if arr[slow - K] == arr[fast]
+- Move Zeroes: preserve order of non-zeroes, zeroes go to end
+
+**Interview traps:**
+- If order must be preserved, you must use slow/fast, not swap with the end
+- "At most K duplicates" generalization: if slow >= K and arr[slow - K] == arr[fast], skip it
+
+---
+
+### Pattern 3: Three Pointers (Dutch National Flag)
+
+**When to use:**
+- Partition into exactly three categories in-place
+- Keywords: "sort colors," "three values," "0s 1s 2s," "negatives zeros positives"
+
+**When NOT to use:**
+- Two categories — standard two-pointer partition suffices
+- More than three categories — counting sort or bucket approach
+- Stability required — this is not a stable sort
+
+**Algorithm:**
+1. low = 0, mid = 0, high = n-1
+2. Invariant: [0, low) = category 1, [low, mid) = category 2, (high, n-1] = category 3
+3. While mid <= high:
+   - arr[mid] is category 1 → swap(low, mid), low++, mid++
+   - arr[mid] is category 2 → mid++
+   - arr[mid] is category 3 → swap(mid, high), high-- (do NOT advance mid)
+
+**Critical:** After swapping with high, the element at mid is unknown — it just arrived. You must inspect it before advancing mid.
+
+**Complexity:** Time O(n), Space O(1) — mid traverses the array once.
+
+**Variants:**
+- Sort Colors (the canonical LeetCode problem)
+- Three-way partition in Quick Sort (handles duplicate pivot values efficiently)
+- Separate negatives, zeros, positives
+
+---
+
+### Pattern 4: Sliding Window — Fixed Size
+
+**When to use:**
+- "Subarray/substring of exactly size K"
+- Computing an aggregate (sum, average, frequency) over every window of size K
+- Keywords: "K consecutive elements," "average of K," "subarray of size K"
+
+**When NOT to use:**
+- Window size is variable — use variable sliding window
+- You need min/max within each window — requires monotonic deque (O(n), but different technique)
+
+**Brute force → observation → optimized:**
+
+Brute force: For each starting position, sum K elements. O(n*K).
+
+Observation: When the window slides one step, only one element enters and one element leaves. The rest are unchanged. You don't need to recompute K elements — just add one and remove one.
+
+Optimized (O(n)): Maintain a running aggregate. At each step: aggregate += enter - leave.
+
+**Algorithm:**
+1. Compute aggregate for arr[0..K-1]
+2. For i from K to n-1: aggregate += arr[i] - arr[i-K], track best
+3. Each element enters once and leaves once → 2n total operations
+
+**Complexity:** Time O(n), Space O(1) for numeric aggregates; O(K) if storing window contents
+
+**Variants:**
+- Maximum Sum Subarray of Size K
+- Average of All Subarrays of Size K
+- String permutation check (fixed window of size len(pattern), frequency matching)
+- Max of each window of size K: requires monotonic deque — see Advanced Awareness
+
+**Interview traps:**
+- Using prefix sum for this works but misses the point. Interviewer wants to see sliding window because it generalizes to non-sum aggregates.
+- Adding a HashMap for frequency matching: combine with character frequency tracking for anagram/permutation problems.
+
+---
+
+### Pattern 5: Sliding Window — Variable Size
+
+**When to use:**
+- "Longest/shortest subarray/substring such that [condition]"
+- The condition is monotonic: if a window is invalid, adding more elements can only make it more invalid (or vice versa)
+- Keywords: "longest substring," "minimum window," "at most K," "subarray with sum ≤ / ≥"
+
+**When NOT to use:**
+- The condition is NOT monotonic (e.g., "subarray with sum exactly K" and array has negative numbers — shrinking from left doesn't reliably decrease the sum). Use prefix sum + HashMap instead.
+- Problem is about subsequences — sliding window only applies to contiguous ranges
+
+**Brute force → observation → optimized:**
+
+Brute force: For every pair (l, r), check if the window arr[l..r] satisfies the condition. O(n²).
+
+Observation: If a window arr[l..r] is invalid, arr[l..r+1] is also invalid (for the "too long" direction). So once left finds a valid position, all positions to its left are also invalid.
+
+Optimized (O(n)): Right expands greedily. Left shrinks only when needed. Left never moves backward.
+
+**Two templates:**
+
+*Find longest valid window:*
+```
+left = 0
+for right in 0..n-1:
+    add arr[right] to window state
+    while window is INVALID:
+        remove arr[left] from window state
+        left++
+    best = max(best, right - left + 1)
+```
+
+*Find shortest valid window:*
+```
+left = 0
+for right in 0..n-1:
+    add arr[right] to window state
+    while window is VALID:    <- note: while valid, try to shrink
+        best = min(best, right - left + 1)
+        remove arr[left] from window state
+        left++
+```
+
+**Why O(n)?** Left never moves backward. The total number of times left advances across the entire algorithm is at most n. Total operations = O(n) outer + O(n) total inner = O(n).
+
+**Variants:**
+- Longest Substring Without Repeating Characters: window state = set; shrink when repeat appears
+- Minimum Window Substring: expand until all target characters covered, shrink to minimize
+- Longest Substring with At Most K Distinct Characters: frequency map, shrink when distinct count > K
+- Subarray Product Less Than K: running product, shrink when product >= K
+- Minimum Size Subarray Sum: shortest subarray with sum >= target
+
+**Interview traps:**
+- Trying to use this for negative-number exact-sum problems. The shrink logic breaks because adding elements doesn't monotonically change the sum.
+- Off-by-one: when left=2 and right=5, window size = right - left + 1 = 4.
+- "Count all valid subarrays" (not just longest): for the "at most K" variant, number of valid subarrays ending at right = (right - left + 1). Sum this across all right positions.
+- "Exactly K distinct" = atMost(K) - atMost(K-1). This is a powerful reduction.
+
+---
+
+### Pattern 6: Sliding Window with HashMap
+
+**When to use:**
+- Variable sliding window where validity condition depends on character/element frequencies
+- Keywords: "anagram," "permutation," "minimum window substring," "all characters included"
+
+**When NOT to use:**
+- Condition is a simple numeric threshold (sum, product) — a running variable suffices
+- Fixed small alphabet — a 26-element frequency array is faster (constant factor optimization)
+
+**Core idea:**
+
+The HashMap IS the window state. You maintain:
+1. A frequency map of elements in the current window
+2. A counter of how many conditions are currently "satisfied"
+
+Expanding right: add element to map, check if this element's count now matches the requirement, increment satisfied counter if so.  
+Shrinking left: if removing left causes a count to drop below requirement, decrement satisfied counter, remove from map if count reaches zero.
+
+**Mental model:** The HashMap is a scoreboard. Expanding adds points. Shrinking removes points. You track when the score reaches "all conditions met."
+
+**Complexity:** Time O(n) — map operations are O(1) amortized. Space O(K) where K = distinct elements.
+
+**Variants:**
+- Find All Anagrams in a String: fixed window of size len(pattern), frequency map match
+- Minimum Window Substring: variable window covering all target characters
+- Longest Substring with At Most K Distinct Characters: shrink when distinct count > K
+- Permutation in String: fixed window, frequency match
+
+**Interview traps:**
+- Recomputing the entire frequency map at each step instead of incrementally updating — turns O(n) into O(n*K).
+- Target has duplicate characters: your "satisfied" counter must track individual character fulfillment, not just presence.
+
+---
+
+### Pattern 7: Prefix Sum
+
+**When to use:**
+- Multiple range sum queries on a static array
+- "Subarray sum equals K" (combine with HashMap)
+- Comparing sums of different regions
+- Keywords: "range sum," "subarray sum," "sum between indices," "sum equals K"
+
+**When NOT to use:**
+- Array is modified between queries — use Fenwick Tree or Segment Tree
+- Only one range sum needed — compute directly in O(n)
+- Operation is min/max (not sum) — use Sparse Table or Segment Tree
+
+**Brute force → observation → optimized:**
+
+Brute force for range sum query [l, r]: iterate from l to r, sum up. O(n) per query.
+
+Observation: If we know the sum of arr[0..r] and the sum of arr[0..l-1], we get arr[l..r] = total[r] - total[l-1]. Both are precomputed.
+
+Optimized: Build prefix array in O(n). Every query is O(1).
+
+**Algorithm:**
+1. Build: prefix[0] = 0; prefix[i] = prefix[i-1] + arr[i-1]  (prefix has n+1 elements)
+2. Query: sum(l, r) = prefix[r+1] - prefix[l]  (inclusive l, r)
+
+**For "subarray sum equals K" (with HashMap):**
+- At each index i, we have prefix[i]
+- We want to know: how many previous indices j have prefix[i] - prefix[j] = K?
+- That means prefix[j] = prefix[i] - K
+- Maintain a HashMap: {prefix_value → count of times seen}
+- At each step: count += map.get(prefix[i] - K), then add prefix[i] to map
+- Start with map = {0: 1} (empty prefix sum of 0 seen once)
+
+**Complexity:** Build O(n), Query O(1). For subarray sum = K: O(n) time, O(n) space.
+
+**Variants:**
+- 2D Prefix Sum: prefix[i][j] = sum of rectangle (0,0) to (i-1,j-1). Rectangle query uses inclusion-exclusion: sum(r1,c1,r2,c2) = prefix[r2+1][c2+1] - prefix[r1][c2+1] - prefix[r2+1][c1] + prefix[r1][c1]
+- Prefix Sum + HashMap (subarray sum = K): as above
+- Prefix Sum with modular arithmetic: "subarray sum divisible by K" — track prefix_sum % K in HashMap
+- Difference Array: inverse of prefix sum — for range updates: add value to [l, r] in O(1), reconstruct with prefix sum
+
+**Interview traps:**
+- Off-by-one: prefix[0] = 0, so prefix has n+1 elements. Range [l, r] inclusive = prefix[r+1] - prefix[l].
+- For "subarray sum = K" with negative numbers, you MUST use prefix sum + HashMap. Sliding window fails because shrinking doesn't reliably decrease the sum.
+- "2D version": the inclusion-exclusion formula catches candidates off guard — practice deriving it from the fence-post analogy applied to a rectangle.
+- "What if array gets updated?" — Mention Fenwick Tree / Segment Tree for dynamic prefix sums.
+
+---
+
+### Pattern 8: Prefix XOR
+
+**When to use:**
+- XOR of subarrays
+- "Find subarray with XOR equal to K"
+- Keywords: "XOR," "subarray XOR"
+
+**When NOT to use:**
+- Operation is addition — use prefix sum
+- Dynamic updates needed — XOR prefix doesn't support this easily
+
+**Core idea:**
+
+Same fence-post idea as prefix sum, but XOR is its own inverse (a XOR a = 0), so "subtraction" is also XOR.
+
+1. Build: prefixXOR[0] = 0; prefixXOR[i] = prefixXOR[i-1] XOR arr[i-1]
+2. Range XOR of [l, r] = prefixXOR[r+1] XOR prefixXOR[l]
+3. For "count subarrays with XOR = K": use HashMap on prefixXOR values (identical pattern to subarray sum = K)
+
+**Complexity:** Time O(n) build, O(1) per query. Space O(n).
+
+**Variants:**
+- Count subarrays with XOR = K: HashMap of prefix XOR values
+- Maximum XOR subarray: combine with Trie for bit-by-bit greedy (Advanced Awareness)
+
+**Interview traps:**
+- Forgetting that XOR is its own inverse — no need for "subtraction," just XOR again.
+- "Maximum XOR subarray" needs a Trie, not just prefix XOR. Don't conflate.
+
+---
+
+### Pattern 9: Kadane's Algorithm
+
+**When to use:**
+- "Maximum subarray sum" — the classic application
+- Any problem reducible to "best contiguous segment"
+- Keywords: "maximum subarray," "largest sum contiguous," "best time to buy and sell stock (one transaction)"
+
+**When NOT to use:**
+- You need the actual subarray (not just sum) — track indices additionally
+- Circular array — need the circular variant
+- Constraints on subarray length (e.g., length >= K) — need modified approach
+- Subsequences (non-contiguous) — Kadane's only works for contiguous subarrays
+
+**Brute force → observation → optimized:**
+
+Brute force: Try all (l, r) pairs, compute sum. O(n²) or O(n³).
+
+Observation: When you're building up a subarray element by element, if the running sum becomes negative, it can only hurt whatever comes next. Better to start a fresh subarray at the current position.
+
+Optimized (O(n)): At each element, decide: extend the current subarray (current_sum + arr[i]) or start fresh (arr[i]). Take the max.
+
+**Algorithm:**
+1. current_sum = arr[0], global_max = arr[0]
+2. For each element from index 1:
+   - current_sum = max(arr[i], current_sum + arr[i])
+   - global_max = max(global_max, current_sum)
+3. Return global_max
+
+**Why does this work?** Kadane's is a DP where dp[i] = max sum subarray ending at index i. The recurrence is dp[i] = max(arr[i], dp[i-1] + arr[i]). Since dp[i] only depends on dp[i-1], we don't need the array — just one variable.
+
+**Complexity:** Time O(n), Space O(1)
+
+**Variants:**
+- Maximum Subarray Sum — Circular Array: max(standard_kadane, total_sum - min_subarray_sum). The circular case wraps around: the max wrapping subarray = total minus the min non-wrapping subarray. Edge case: if all elements negative, use standard result.
+- Maximum Product Subarray: track both current_max and current_min because negative × negative = positive. new_max = max(arr[i], current_max * arr[i], current_min * arr[i]).
+- Maximum Sum of Two Non-Overlapping Subarrays: run Kadane's from left and right, combine.
+- Best Time to Buy and Sell Stock (one transaction): transform to max subarray of daily price differences.
+- Max Subarray with at Least K Elements: use prefix sum + sliding window min.
+
+**Interview traps:**
+- Circular variant: many know standard Kadane's but freeze on circular. Key: max_circular = total - min_subarray. Handle all-negative edge case.
+- Maximum product: MUST track both max and min at each step because of negatives.
+- Finding the actual subarray: track start_index and end_index, reset start_index when starting fresh.
+- 2D max subarray (max sum rectangle): fix two rows, compute column sums, apply 1D Kadane's. O(n²m) for n×m matrix.
+
+---
+
+### Pattern 10: Boyer-Moore Voting Algorithm
+
+**When to use:**
+- Finding element appearing more than n/2 times
+- Finding elements appearing more than n/3 times (extended)
+- Keywords: "majority element," "more than half," "most frequent element"
+
+**When NOT to use:**
+- Majority element is not guaranteed to exist — do a second pass to verify
+- You need element appearing exactly K times — use HashMap frequency counting
+- You need all frequencies — HashMap
+
+**Core idea:**
+
+Maintain a candidate and a count. Each element either reinforces the candidate (+1) or cancels one supporter (-1). When count hits zero, the next element becomes the new candidate. A true majority (> n/2) has more occurrences than all other elements combined — it can never be fully eliminated.
+
+**Algorithm:**
+1. candidate = arr[0], count = 1
+2. For each subsequent element:
+   - If count == 0: candidate = current, count = 1
+   - Else if current == candidate: count++
+   - Else: count--
+3. Candidate is the majority element (verify with a second pass if not guaranteed)
+
+**Complexity:** Time O(n) (or 2n with verification), Space O(1)
+
+**Variants:**
+- Majority Element (> n/2): standard Boyer-Moore, one candidate
+- Elements appearing > n/3 times: at most 2 such elements — use two candidates and two counts, then a verification pass
+- Elements appearing > n/k times: at most k-1 candidates — generalized Boyer-Moore
+
+**Interview traps:**
+- Assuming the majority always exists. Boyer-Moore returns a candidate regardless — it might be wrong. Always ask: "Is a majority element guaranteed?"
+- "More than n/3 times" variant is a tricky implementation. Two candidates with careful bookkeeping.
+
+---
+
+### Pattern 11: In-Place Array Manipulation
+
+**When to use:**
+- Space constraint is O(1)
+- Array values are in a known range (often [1, n] or [0, n-1])
+- Keywords: "O(1) extra space," "in-place," "find duplicate," "find missing," "first missing positive"
+
+**When NOT to use:**
+- Values have no exploitable range
+- Modifying the input is not allowed
+- A cleaner O(n) space solution is acceptable and simpler
+
+**Common tricks:**
+
+*Negation marking:* For values in [1, n], visit arr[abs(arr[i]) - 1] and negate it. Positive positions at the end = unvisited indices (i.e., the missing numbers are (index+1)).
+
+*Modular encoding:* Store two pieces of info in one cell: new_val = original + new * n. Extract original: val % n. Extract new: val / n.
+
+*Cyclic placement:* Place each element at its "correct" position (arr[i] should be i+1 for values 1..n). Swap until done. Used in Cyclic Sort.
+
+**Complexity:** Time O(n), Space O(1)
+
+**Variants:**
+- Find All Duplicates: negate at index arr[i]-1; if already negative, it's a duplicate
+- Find All Missing Numbers: after negation marking, positive positions are missing
+- First Missing Positive: cyclic placement (or negation) for range [1, n]
+- Set Matrix Zeroes: use first row/column as markers instead of extra space
+
+**Interview traps:**
+- Forgetting to use absolute value when reading negated cells: always use abs(arr[i]) as the index.
+- "First Missing Positive" is one of the hardest array problems — you must first ignore non-positive and out-of-range values, then apply cyclic placement only on valid elements.
+- "What if modifying input is not allowed?" — switch to hashing or bit manipulation.
+
+---
+
+### Pattern 12: Matrix Traversal Patterns
+
+**When to use:**
+- "Print matrix in spiral order," "traverse diagonals," "rotate matrix 90 degrees"
+- Keywords: "spiral," "diagonal," "rotate," "layer," "zigzag"
+
+**When NOT to use:**
+- Graph traversal on a grid (BFS/DFS) — that's a graph problem
+- Matrix DP problems — see DP section
+
+**Spiral:** Maintain four boundaries (top, bottom, left, right). Walk right across top, down right column, left across bottom, up left column. Shrink boundaries after each direction. Repeat.
+
+```
+top=0, bottom=3, left=0, right=3
+
+→ → → →
+        ↓
+← ← ← ↓
+↑       ↓
+↑ ← ← ←
+```
+
+**90-degree Rotation (clockwise):** Transpose the matrix (swap arr[i][j] with arr[j][i]), then reverse each row.
+
+**Diagonal:** For diagonal d where row + col = d, iterate cells (i, d-i) for valid i.
+
+**Complexity:** Time O(m × n) — visit each cell once. Space O(1) extra.
+
+**Variants:**
+- Spiral Matrix: return elements in spiral order
+- Spiral Matrix II: fill n×n matrix with 1 to n² in spiral order
+- Rotate Image: 90-degree clockwise rotation in place
+- Diagonal Traverse: zigzag along diagonals
+
+**Interview traps:**
+- Off-by-one on spiral boundaries — always test with a 4×4 and a 3×3 matrix.
+- "Rotate in place" — interviewer tests whether you know transpose + reverse.
+- Non-square matrices: spiral works; rotation is only defined for square (otherwise it's a transpose).
+
+---
+
+### Pattern 13: Rotate Array / Reverse Trick
+
+**When to use:**
 - "Rotate array by K positions"
-- Any problem where you need to shift a block of elements cyclically
+- Any cyclic shift of a block of elements
 - Keywords: "rotate," "circular shift"
 
-### When should I NOT use this?
+**When NOT to use:**
+- Dynamic rotation at each step — precompute modular indices instead
+- Array is a linked list — just re-link pointers
 
-- You need to rotate by a dynamic amount at each step — precompute modular indices instead
-- The array is a linked list — just re-link pointers
+**Brute force → observation → optimized:**
 
-### Core Idea
+Brute force: Shift elements one position at a time, K times. O(n*K).
 
-To rotate right by K:
-1. K = K % n (handle K > n)
+Observation: Rotating right by K = moving last K elements to the front. [A | B] → [B | A]. We need to reverse both parts and then reverse the whole, or vice versa.
+
+Optimized (O(n), O(1) space): Triple reverse.
+
+**Algorithm (rotate right by K):**
+1. K = K % n (K > n reduces to K mod n)
 2. Reverse entire array [0, n-1]
-3. Reverse [0, K-1]
-4. Reverse [K, n-1]
+3. Reverse first K elements [0, K-1]
+4. Reverse remaining [K, n-1]
 
-**Why does this work?** Think of the array as [A | B] where B is the last K elements. You want [B | A]. Reversing gives [A^R | B^R → whole^R], then reversing each half un-reverses them individually, giving [B | A].
+**Why does this work?**  
+[A | B] → reverse all → [B^R | A^R] → reverse first K → [B | A^R] → reverse rest → [B | A]
 
-### Complexity
+**Complexity:** Time O(n), Space O(1)
 
-- **Time:** O(n) — three passes
-- **Space:** O(1)
+**Variants:**
+- Rotate Left by K: reverse first K, reverse last n-K, reverse all
+- Rotate String: check if s2 is a rotation of s1 by checking if s2 is a substring of s1+s1
 
-### Variants
+**Interview traps:**
+- Forgetting K = K % n. If K > n, rotating more than a full cycle is redundant.
+- "How to check if two arrays are rotations of each other?" — concatenate one with itself and check if the other is a subarray.
 
-- **Rotate Left by K:** Reverse first K, reverse last n-K, reverse all
-- **Rotate String:** Check if s2 is a rotation of s1 by checking if s2 is a substring of s1+s1
+---
 
-### Related Patterns
+## [35–45 min] Concrete Code + Dry Run
 
-- [In-Place Array Manipulation](#in-place-array-manipulation) (same philosophy)
-- [String Algorithms](17-STRING-ALGORITHMS.md) (for string rotation problems)
+Four representative problems, each with Java + JavaScript code and a step-by-step dry run table.
 
-### Interview Insights
+---
 
-- **Trap:** Forgetting K = K % n. If K > n, you rotate more than a full cycle, which is redundant.
-- **Twist:** "Can you do it in O(1) extra space?" — That's the entire point of the triple-reverse trick.
-- **Follow-up:** "How would you check if two arrays are rotations of each other?" — Concatenate one with itself and check if the other is a subarray.
+### Example 1: Two Sum II — Two Pointers Opposite Direction
+
+**Problem:** Given sorted array `numbers`, find indices of two numbers that add to `target`. (1-indexed output)
+
+**Input:** numbers = [2, 7, 11, 15], target = 9  
+**Expected output:** [1, 2] (numbers[0] + numbers[1] = 2 + 7 = 9)
+
+**Java:**
+```java
+public int[] twoSum(int[] numbers, int target) {
+    int left = 0;
+    int right = numbers.length - 1;
+    while (left < right) {
+        int sum = numbers[left] + numbers[right];
+        if (sum == target) {
+            return new int[]{left + 1, right + 1};
+        } else if (sum < target) {
+            left++;
+        } else {
+            right--;
+        }
+    }
+    return new int[]{-1, -1};
+}
+```
+
+**JavaScript:**
+```javascript
+function twoSum(numbers, target) {
+    let left = 0;
+    let right = numbers.length - 1;
+    while (left < right) {
+        const sum = numbers[left] + numbers[right];
+        if (sum === target) return [left + 1, right + 1];
+        if (sum < target) left++;
+        else right--;
+    }
+    return [-1, -1];
+}
+```
+
+**Dry run:** numbers = [2, 7, 11, 15], target = 9
+
+| Step | left | right | numbers[left] | numbers[right] | sum | Action |
+|---|---|---|---|---|---|---|
+| 1 | 0 | 3 | 2 | 15 | 17 | sum > 9, right-- |
+| 2 | 0 | 2 | 2 | 11 | 13 | sum > 9, right-- |
+| 3 | 0 | 1 | 2 | 7 | 9 | sum == 9, return [1, 2] |
+
+**Complexity:** Time O(n), Space O(1). Each pointer moves at most n times.
+
+---
+
+### Example 2: Longest Substring Without Repeating Characters — Variable Sliding Window
+
+**Problem:** Given string s, find the length of the longest substring without repeating characters.
+
+**Input:** s = "abcabcbb"  
+**Expected output:** 3 (the substring "abc")
+
+**Java:**
+```java
+public int lengthOfLongestSubstring(String s) {
+    Set<Character> windowChars = new HashSet<>();
+    int left = 0;
+    int best = 0;
+    for (int right = 0; right < s.length(); right++) {
+        while (windowChars.contains(s.charAt(right))) {
+            windowChars.remove(s.charAt(left));
+            left++;
+        }
+        windowChars.add(s.charAt(right));
+        best = Math.max(best, right - left + 1);
+    }
+    return best;
+}
+```
+
+**JavaScript:**
+```javascript
+function lengthOfLongestSubstring(s) {
+    const windowChars = new Set();
+    let left = 0;
+    let best = 0;
+    for (let right = 0; right < s.length; right++) {
+        while (windowChars.has(s[right])) {
+            windowChars.delete(s[left]);
+            left++;
+        }
+        windowChars.add(s[right]);
+        best = Math.max(best, right - left + 1);
+    }
+    return best;
+}
+```
+
+**Dry run:** s = "abcabcbb"
+
+| right | char | action | window | left | best |
+|---|---|---|---|---|---|
+| 0 | 'a' | add | {a} | 0 | 1 |
+| 1 | 'b' | add | {a,b} | 0 | 2 |
+| 2 | 'c' | add | {a,b,c} | 0 | 3 |
+| 3 | 'a' | 'a' in set → remove 'a', left=1; add 'a' | {b,c,a} | 1 | 3 |
+| 4 | 'b' | 'b' in set → remove 'b', left=2; add 'b' | {c,a,b} | 2 | 3 |
+| 5 | 'c' | 'c' in set → remove 'c', left=3; add 'c' | {a,b,c} | 3 | 3 |
+| 6 | 'b' | 'b' in set → remove 'a', left=4; 'b' still in set → remove 'b', left=5; add 'b' | {c,b} | 5 | 3 |
+| 7 | 'b' | 'b' in set → remove 'c', left=6; 'b' still in set → remove 'b', left=7; add 'b' | {b} | 7 | 3 |
+
+**Result:** 3
+
+**Complexity:** Time O(n) — left and right each move at most n times total. Space O(min(n, alphabet_size)).
+
+---
+
+### Example 3: Subarray Sum Equals K — Prefix Sum + HashMap
+
+**Problem:** Given integer array nums and integer k, return the number of subarrays whose sum equals k.
+
+**Input:** nums = [1, 1, 1], k = 2  
+**Expected output:** 2 (subarrays [1,1] appear twice: indices 0-1 and 1-2)
+
+**Java:**
+```java
+public int subarraySum(int[] nums, int k) {
+    Map<Integer, Integer> prefixCounts = new HashMap<>();
+    prefixCounts.put(0, 1);
+    int prefixSum = 0;
+    int count = 0;
+    for (int num : nums) {
+        prefixSum += num;
+        count += prefixCounts.getOrDefault(prefixSum - k, 0);
+        prefixCounts.put(prefixSum, prefixCounts.getOrDefault(prefixSum, 0) + 1);
+    }
+    return count;
+}
+```
+
+**JavaScript:**
+```javascript
+function subarraySum(nums, k) {
+    const prefixCounts = new Map([[0, 1]]);
+    let prefixSum = 0;
+    let count = 0;
+    for (const num of nums) {
+        prefixSum += num;
+        count += prefixCounts.get(prefixSum - k) ?? 0;
+        prefixCounts.set(prefixSum, (prefixCounts.get(prefixSum) ?? 0) + 1);
+    }
+    return count;
+}
+```
+
+**Dry run:** nums = [1, 1, 1], k = 2
+
+| index | num | prefixSum | prefixSum - k | map.get(prefixSum-k) | count | map after |
+|---|---|---|---|---|---|---|
+| init | — | 0 | — | — | 0 | {0:1} |
+| 0 | 1 | 1 | -1 | 0 (not found) | 0 | {0:1, 1:1} |
+| 1 | 1 | 2 | 0 | 1 | 1 | {0:1, 1:1, 2:1} |
+| 2 | 1 | 3 | 1 | 1 | 2 | {0:1, 1:1, 2:1, 3:1} |
+
+**Result:** 2
+
+**Why `map.put(0, 1)` at the start?** This handles the case where a prefix sum from the beginning equals k. The "empty prefix" has sum 0 and needs to be counted as a valid starting point.
+
+**Complexity:** Time O(n), Space O(n) for the prefix sum map.
+
+---
+
+### Example 4: Maximum Subarray — Kadane's Algorithm
+
+**Problem:** Find the contiguous subarray with the largest sum and return its sum.
+
+**Input:** nums = [-2, 1, -3, 4, -1, 2, 1, -5, 4]  
+**Expected output:** 6 (subarray [4, -1, 2, 1])
+
+**Java:**
+```java
+public int maxSubArray(int[] nums) {
+    int currentSum = nums[0];
+    int globalMax = nums[0];
+    for (int i = 1; i < nums.length; i++) {
+        currentSum = Math.max(nums[i], currentSum + nums[i]);
+        globalMax = Math.max(globalMax, currentSum);
+    }
+    return globalMax;
+}
+```
+
+**JavaScript:**
+```javascript
+function maxSubArray(nums) {
+    let currentSum = nums[0];
+    let globalMax = nums[0];
+    for (let i = 1; i < nums.length; i++) {
+        currentSum = Math.max(nums[i], currentSum + nums[i]);
+        globalMax = Math.max(globalMax, currentSum);
+    }
+    return globalMax;
+}
+```
+
+**Dry run:** nums = [-2, 1, -3, 4, -1, 2, 1, -5, 4]
+
+| i | nums[i] | currentSum + nums[i] | currentSum (max of two) | globalMax |
+|---|---|---|---|---|
+| 0 | -2 | — (init) | -2 | -2 |
+| 1 | 1 | -2 + 1 = -1 | max(1, -1) = 1 | 1 |
+| 2 | -3 | 1 + (-3) = -2 | max(-3, -2) = -2 | 1 |
+| 3 | 4 | -2 + 4 = 2 | max(4, 2) = 4 | 4 |
+| 4 | -1 | 4 + (-1) = 3 | max(-1, 3) = 3 | 4 |
+| 5 | 2 | 3 + 2 = 5 | max(2, 5) = 5 | 5 |
+| 6 | 1 | 5 + 1 = 6 | max(1, 6) = 6 | 6 |
+| 7 | -5 | 6 + (-5) = 1 | max(-5, 1) = 1 | 6 |
+| 8 | 4 | 1 + 4 = 5 | max(4, 5) = 5 | 6 |
+
+**Result:** 6
+
+**Complexity:** Time O(n) — single pass. Space O(1) — two variables.
+
+---
+
+## [45–55 min] Pattern Recognition
+
+### How to decide which pattern to use in a new problem
+
+Don't memorize by keyword. Ask these questions in order:
+
+**Step 1: What is the structure of what you're looking for?**
+- A single pair of elements → Two Pointers (Opposite if sorted, Same-direction if filtering)
+- A contiguous range (subarray/substring) → Sliding Window or Prefix Sum
+- A single element with a property → Kadane's, Boyer-Moore, or simple scan
+- Partitioning the array → Two/Three Pointers or Dutch National Flag
+- Grid/matrix problem → Matrix Traversal
+
+**Step 2: Is there a constraint on the window/range?**
+- Fixed size K → Fixed Sliding Window
+- Variable size under a monotonic condition (sum ≤ K, all unique, at most K distinct) → Variable Sliding Window
+- Exact sum/count, possibly with negatives → Prefix Sum + HashMap
+
+**Step 3: Is the array sorted? Can I sort it?**
+- Sorted + pair search → Two Pointers Opposite
+- Sorting would lose original indices → HashMap approach
+- Three categories to partition → Dutch National Flag (no sort needed, one pass)
+
+**Step 4: Space constraints?**
+- O(1) space required → Two Pointers, Kadane's, Boyer-Moore, In-Place Manipulation, Rotate Trick
+- O(n) space acceptable → Prefix Sum, Sliding Window + HashMap
+
+### Structural clues and what they suggest
+
+| You see this in the problem | Think this |
+|---|---|
+| Sorted array, find a pair | Two Pointers Opposite |
+| "In-place," "O(1) space," "remove elements" | Two Pointers Same Direction |
+| "Exactly three values / sort 0s 1s 2s" | Dutch National Flag |
+| "Subarray of exactly size K" | Fixed Sliding Window |
+| "Longest/shortest subarray/substring where [monotonic condition]" | Variable Sliding Window |
+| "Minimum window," "anagram," "permutation in string" | Sliding Window + HashMap |
+| "Subarray sum equals K," "count subarrays with sum" | Prefix Sum + HashMap |
+| "Maximum subarray sum" | Kadane's |
+| "Majority element," "more than half" | Boyer-Moore |
+| "Spiral," "rotate matrix," "diagonal" | Matrix Traversal |
+| "Rotate array by K" | Triple Reverse |
+| "Find missing / duplicate," "O(1) space," values in [1,n] | In-Place Manipulation (Negation/Cyclic) |
+
+### How to distinguish similar patterns
+
+**Two Pointers Opposite vs. Sliding Window:**
+- Two Pointers Opposite: fixed endpoints, move toward each other, problem about a PAIR of elements
+- Sliding Window: continuous range of elements, expand/shrink based on a condition about the RANGE
+
+**Sliding Window vs. Prefix Sum + HashMap:**
+- Sliding Window: works when the condition is monotonic (if window [l, r] is invalid, [l, r+1] is also invalid)
+- Prefix Sum + HashMap: needed when the condition is NOT monotonic (e.g., exact sum with negative numbers — expanding doesn't consistently make things worse)
+
+**Kadane's vs. Prefix Sum for max subarray:**
+- Both work. Kadane's is O(1) space and more elegant.
+- Prefix Sum connection: max subarray sum = max over all j of (prefix[j] - min prefix[0..j-1])
+- Kadane's implicitly maintains this "minimum prefix seen so far" as currentSum
+
+**Boyer-Moore vs. HashMap:**
+- Boyer-Moore: O(1) space, finds majority (> n/2). Cannot directly find frequency of all elements.
+- HashMap: O(n) space, finds any element by frequency, works for all variants.
+
+**Fixed Sliding Window vs. Prefix Sum for range sum:**
+- Fixed window: O(n) for all windows of size K simultaneously
+- Prefix Sum: O(1) per individual query after O(n) build — better when many arbitrary queries are needed
+
+### What to ask yourself at the start of a problem
+
+1. "Is it asking about a pair, a range, or a single element?"
+2. "Is the array sorted? Does order matter?"
+3. "Is the condition monotonic?" (If window is invalid, does adding more make it strictly worse?)
+4. "Am I allowed to modify the array? Is there a space constraint?"
+5. "Is 'subarray' here truly contiguous, or is it 'subsequence'?"
+
+---
+
+## [55–60 min] Final Mental Checklist
+
+```
+PATTERN: Two Pointers — Opposite Direction
+WHAT IS IT?      Two indices from both ends moving toward each other
+WHEN TO USE?     Sorted array, find a pair, palindrome check, partition
+WHEN NOT TO?     Unsorted + need original indices; contiguous range problems
+CORE IDEA?       Eliminate one candidate per step by moving the pointer that helps
+WHAT DO I TRACK? left index, right index
+INVARIANT?       arr[left..right] is the unprocessed search space
+HOW TO RECOGNIZE? Sorted + pair condition, or "squeeze from both ends"
+TRAPS?           Duplicates in 3Sum; unsorted array losing index info
+CONFUSED WITH?   Sliding window (that's about a range, not a pair)
+COMPLEXITY?      O(n) time, O(1) space
+
+
+PATTERN: Two Pointers — Same Direction (Fast/Slow)
+WHAT IS IT?      Fast reader, slow writer, both moving left to right
+WHEN TO USE?     Filter/remove/compress elements in-place
+WHEN NOT TO?     Pair search; window-based problems
+CORE IDEA?       slow is the write head; write only when fast finds a keeper
+WHAT DO I TRACK? slow (next write position), fast (current read position)
+INVARIANT?       arr[0..slow-1] = processed result, arr[fast..] = unread
+HOW TO RECOGNIZE? "Remove element," "move zeroes," "deduplicate"
+TRAPS?           Swapping with end loses order; "at most K" needs generalization
+CONFUSED WITH?   Sliding window (similar structure, different intent)
+COMPLEXITY?      O(n) time, O(1) space
+
+
+PATTERN: Sliding Window — Variable Size
+WHAT IS IT?      Left + right pointers forming a window that expands and shrinks
+WHEN TO USE?     Longest/shortest subarray under a monotonic condition
+WHEN NOT TO?     Non-monotonic conditions (exact sum with negatives); subsequences
+CORE IDEA?       Right expands greedily; left shrinks only when constraint violated
+WHAT DO I TRACK? left, right, window state (sum, set, frequency map)
+INVARIANT?       Window [left..right] always satisfies the constraint (after shrink)
+HOW TO RECOGNIZE? "Longest/shortest ... such that ..." with a monotonic condition
+TRAPS?           Exact sum + negatives → use prefix sum; off-by-one on window size
+CONFUSED WITH?   Prefix sum + HashMap (use that when condition is non-monotonic)
+COMPLEXITY?      O(n) time, O(1) or O(K) space
+
+
+PATTERN: Prefix Sum
+WHAT IS IT?      Pre-computed cumulative sum array enabling O(1) range queries
+WHEN TO USE?     Multiple range sum queries; subarray sum = K (with HashMap)
+WHEN NOT TO?     Dynamic updates (use Fenwick Tree); single query; min/max queries
+CORE IDEA?       prefix[i] = total from start to i. Range = prefix[r+1] - prefix[l]
+WHAT DO I TRACK? prefix array (or running sum + HashMap for count problems)
+INVARIANT?       prefix[0] = 0, prefix[i] = prefix[i-1] + arr[i-1]
+HOW TO RECOGNIZE? Range sum queries; "subarray sum equals K"
+TRAPS?           Off-by-one (prefix has n+1 elements); sliding window for negatives
+CONFUSED WITH?   Sliding window (use prefix sum when condition is non-monotonic)
+COMPLEXITY?      O(n) build, O(1) query, O(n) space
+
+
+PATTERN: Kadane's Algorithm
+WHAT IS IT?      1D DP (space-optimized) for maximum sum contiguous subarray
+WHEN TO USE?     Max subarray sum; max product; circular variant
+WHEN NOT TO?     Subsequences; length constraints; need to find the actual subarray
+CORE IDEA?       Extend or start fresh — a negative prefix only hurts future elements
+WHAT DO I TRACK? currentSum (best ending here), globalMax (best seen so far)
+INVARIANT?       currentSum = max sum subarray ending at current index
+HOW TO RECOGNIZE? "Maximum subarray sum," "best contiguous segment"
+TRAPS?           Circular variant (total - min subarray); product variant (track min too)
+CONFUSED WITH?   Prefix sum (also works but O(n) space; Kadane's is O(1))
+COMPLEXITY?      O(n) time, O(1) space
+
+
+PATTERN: Dutch National Flag / Three Pointers
+WHAT IS IT?      Partition array into three regions in a single pass
+WHEN TO USE?     Three distinct values/categories, in-place
+WHEN NOT TO?     More than three categories; stability required
+CORE IDEA?       low/mid/high boundaries; DO NOT advance mid after swapping with high
+WHAT DO I TRACK? low, mid, high pointers
+INVARIANT?       [0,low)=cat1, [low,mid)=cat2, (high,n-1]=cat3, [mid,high]=unknown
+HOW TO RECOGNIZE? "Sort colors," "0s 1s 2s," "three-way partition"
+TRAPS?           Advancing mid after swap with high (that element is uninspected)
+CONFUSED WITH?   Two-pointer partition (that's only two categories)
+COMPLEXITY?      O(n) time, O(1) space
+
+
+PATTERN: Boyer-Moore Voting
+WHAT IS IT?      Find majority element (> n/2) using O(1) space
+WHEN TO USE?     Guaranteed majority exists; or verify after
+WHEN NOT TO?     No guaranteed majority; need all frequencies; exact counts
+CORE IDEA?       Supporters cancel opposition; true majority survives all cancellations
+WHAT DO I TRACK? candidate, count
+INVARIANT?       candidate is the majority among elements seen if majority exists
+HOW TO RECOGNIZE? "Majority element," "more than n/2 times"
+TRAPS?           Majority not guaranteed — always verify with second pass
+CONFUSED WITH?   HashMap frequency counting (use that for all frequencies)
+COMPLEXITY?      O(n) time, O(1) space
+```
+
+---
+
+## Advanced Awareness
+
+These topics are related to this module but require deeper treatment than fits here:
+
+- **Monotonic Deque:** Max/min in each sliding window of size K in O(n). See Stacks & Queues module.
+- **Fenwick Tree / Segment Tree:** Dynamic prefix sums with updates. See Advanced Data Structures module.
+- **Prefix XOR + Trie:** Maximum XOR subarray. See Tries module.
+- **Cyclic Sort:** Systematic O(n) sorting when values are 1..n. See Sorting module.
+- **2D Max Subarray (Max Sum Rectangle):** Fix two rows, apply column-sum Kadane's. O(n²m) for n×m.
+- **Generalized Boyer-Moore (> n/k):** At most k-1 candidates. See Hashing module.
+- **Difference Array:** Range updates in O(1). The inverse of prefix sum. Reconstruct with prefix sum.
+
+---
+
+## Active Recall
+
+Test yourself before moving on. If you can't answer these from memory, re-read that section.
+
+1. Why does a variable sliding window run in O(n) even though there's an inner while loop? Where does the amortization come from?
+
+2. You have a sorted array and want to find all pairs with sum = target (not just one pair). How do you extend the basic two-pointer approach to handle duplicates?
+
+3. In the Dutch National Flag algorithm, you swap arr[mid] with arr[high] and then do NOT advance mid. Why? What would go wrong if you did advance mid?
+
+4. The "subarray sum equals K" problem cannot be solved with a sliding window when the array has negative numbers. Explain specifically why the shrink step breaks down, and what technique you use instead.
+
+5. Kadane's recurrence is: current = max(arr[i], current + arr[i]). Translate this into a plain English sentence about the decision you are making at each step.
+
+6. What is the difference between a subarray and a subsequence? Give an example of a problem that looks like one but is actually the other.
+
+7. You want to rotate an array right by K positions in O(n) time and O(1) space. Describe the three-reverse steps and explain WHY they produce the correct rotation (don't just state the steps).
+
+8. Boyer-Moore returns a candidate even when no majority element exists. How do you handle this in code?
+
+9. For the prefix sum formula, why is prefix defined with n+1 elements (prefix[0] = 0)? What problem does this solve?
+
+10. When should you use prefix sum + HashMap vs. sliding window for counting subarrays with a given sum property? What specific condition determines the choice?
+
+---
+
+## Recommended Practice Direction
+
+Work problems in this order to build intuition progressively:
+
+**Foundation (do these first):**
+- Two Sum II (LeetCode 167) — opposite-direction two pointers on sorted array
+- Remove Duplicates from Sorted Array (LeetCode 26) — same-direction two pointers
+- Maximum Average Subarray I (LeetCode 643) — fixed sliding window
+- Running Sum of 1D Array (LeetCode 1480) — prefix sum basics
+
+**Core patterns (cement understanding):**
+- Longest Substring Without Repeating Characters (LeetCode 3) — variable sliding window
+- Minimum Size Subarray Sum (LeetCode 209) — variable sliding window
+- Subarray Sum Equals K (LeetCode 560) — prefix sum + HashMap
+- Maximum Subarray (LeetCode 53) — Kadane's
+
+**Harder applications (push your understanding):**
+- Minimum Window Substring (LeetCode 76) — sliding window + HashMap
+- Sort Colors (LeetCode 75) — Dutch National Flag
+- Majority Element (LeetCode 169) — Boyer-Moore
+- Find All Duplicates in an Array (LeetCode 442) — in-place negation marking
+- Rotate Image (LeetCode 48) — matrix rotation (transpose + reverse)
+- Maximum Product Subarray (LeetCode 152) — Kadane's variant (track min too)
+- Container With Most Water (LeetCode 11) — greedy two pointers
+- Spiral Matrix (LeetCode 54) — matrix traversal
+
+**Google-style stretch problems:**
+- Sliding Window Maximum (LeetCode 239) — requires monotonic deque
+- Minimum Window Substring (LeetCode 76) — full HashMap sliding window
+- Subarray Sum Divisible by K (LeetCode 974) — prefix sum mod + HashMap
+- Maximum Sum Circular Subarray (LeetCode 918) — Kadane's circular variant
+- Find All Numbers Disappeared in an Array (LeetCode 448) — in-place manipulation
+
+---
+
+## 2-Minute Cheat Sheet
+
+```
+ARRAYS & STRINGS — QUICK REFERENCE
+
+Two Pointers (Opposite)    Sorted array + pair condition
+  left=0, right=n-1        O(n) time, O(1) space
+  Move smaller toward larger; stop when left>=right
+
+Two Pointers (Same Dir)    Filter/compress in-place
+  slow=writer, fast=reader  O(n) time, O(1) space
+  Write arr[slow++] when fast finds a keeper
+
+Sliding Window (Fixed K)   Every subarray of size K
+  running aggregate         O(n) time, O(1) space
+  add incoming, subtract outgoing
+
+Sliding Window (Variable)  Longest/shortest under monotonic condition
+  expand right always       O(n) time, O(1) or O(K) space
+  shrink left when invalid
+  -- NOT for exact sum with negatives --
+
+Prefix Sum                 Range sum queries; subarray sum = K
+  prefix[0]=0, prefix[i]=prefix[i-1]+arr[i-1]   O(n) build, O(1) query
+  range[l,r] = prefix[r+1] - prefix[l]
+  + HashMap for "subarray sum = K": count += map[prefixSum - K]
+
+Kadane's Algorithm         Max subarray sum
+  current = max(arr[i], current+arr[i])          O(n) time, O(1) space
+  globalMax = max(globalMax, current)
+  -- Circular: max(kadane, total - minSubarray) --
+
+Dutch National Flag        Partition 3 categories
+  low=0, mid=0, high=n-1   O(n) time, O(1) space
+  DO NOT advance mid after swap with high
+
+Boyer-Moore                Majority element (>n/2)
+  candidate + count        O(n) time, O(1) space
+  count==0 → new candidate; always verify if majority not guaranteed
+
+In-Place Manipulation      Find missing/duplicate, O(1) space
+  Negation: arr[abs(arr[i])-1] *= -1             O(n) time, O(1) space
+  Cyclic: swap until arr[i] == i+1
+
+Rotate Array               Rotate right by K
+  reverse all, reverse [0,K-1], reverse [K,n-1]  O(n) time, O(1) space
+  K = K % n first!
+
+KEY DECISIONS:
+  Sorted + pair → Two Pointers Opposite
+  Remove/filter in-place → Two Pointers Same Dir
+  Window with monotonic condition → Sliding Window
+  Exact sum (negatives possible) → Prefix Sum + HashMap
+  Max contiguous sum → Kadane's
+  Three categories in-place → Dutch National Flag
+  Majority in O(1) space → Boyer-Moore
+  Subarray vs Subsequence → determines which technique family
+```
 
 ---
 
