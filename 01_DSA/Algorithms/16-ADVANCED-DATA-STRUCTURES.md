@@ -1,5 +1,22 @@
 # Advanced Data Structures — Google Interview Prep
 
+> **9 data structures covered:** Trie (Prefix Tree) · Union-Find / DSU · Segment Tree · Fenwick Tree / BIT · Monotonic Deque · XOR Trie · Sparse Table · Weighted DSU · Balanced BST / Ordered Set
+
+---
+
+## Table of Contents
+1. [Trie (Prefix Tree)](#trie-prefix-tree)
+2. [Union-Find / DSU](#union-find--dsu)
+3. [Segment Tree](#segment-tree)
+4. [Fenwick Tree / BIT](#fenwick-tree--bit)
+5. [Monotonic Deque](#monotonic-deque)
+6. [XOR Trie (Binary Trie)](#xor-trie-binary-trie)
+7. [Sparse Table](#sparse-table)
+8. [Weighted DSU / DSU with Rollback](#weighted-dsu--dsu-with-rollback)
+9. [Balanced BST / Ordered Set](#balanced-bst--ordered-set)
+
+---
+
 > Read fast. Understand deeply. Go practice on LeetCode immediately.
 
 ---
@@ -911,3 +928,888 @@ Sliding window MAX or MIN                   Monotonic Deque
 ```
 
 *Next: [17-STRING-ALGORITHMS.md](17-STRING-ALGORITHMS.md)*
+
+---
+
+## XOR Trie (Binary Trie)
+
+### What is it?
+A binary trie that stores integers bit-by-bit from the most significant bit (bit 31 down to bit 0). Used to find the maximum XOR pair in O(32) per query instead of O(n²) brute force. Each node has exactly 2 children: one for bit 0, one for bit 1.
+
+### Visual
+```
+Inserting [3, 10, 5, 25, 2, 8] — showing top 5 bits (bit4..bit0):
+  3  = 00011
+  10 = 01010
+  5  = 00101
+  25 = 11001
+  2  = 00010
+  8  = 01000
+
+              root
+             /    \
+           [0]    [1]          ← bit 4  (25 goes right; rest go left)
+           / \      \
+         [0] [1]   [1]         ← bit 3
+         /\   \      \
+       [0][0] [0]   [0]        ← bit 2  ...
+
+Query maxXOR(25 = 11001):
+  bit4: x=1 → want 0-child (exists: 3,10,5,2,8) → result |= bit4 → go left
+  bit3: x=1 → want 0-child (exists) → result |= bit3 → go left
+  bit2: x=0 → want 1-child (exists: 5=00101) → result |= bit2 → go right
+  bit1: x=0 → want 1-child (exists: 5 has bit1=0... let's check 3=011) → result |= bit1
+  bit0: x=1 → want 0-child → result |= bit0
+  maxXOR(25) = 28  (25 XOR 5 = 11001 XOR 00101 = 11100 = 28)
+```
+
+### How does it work?
+1. Each node has 2 children: `children[0]` and `children[1]`.
+2. **Insert:** For each bit from bit 31 down to bit 0, go to the child corresponding to that bit, creating it if absent.
+3. **Query maxXOR(x):** At each bit position of x, greedily try to go to the OPPOSITE bit's child (to produce a 1 in the XOR result). If the opposite child exists, go there and add 2^bit to the result. Otherwise go to the same child (XOR gets 0 for this bit).
+4. Repeat for all 32 bits.
+
+### Why does it work?
+XOR is maximized when corresponding bits differ. By greedily choosing the opposite bit at each step from MSB to LSB, we maximize the most significant differences first. A 1 in a higher bit always outweighs any combination of 1s in lower bits, so this greedy choice is always globally optimal.
+
+### When to use?
+- "Find the maximum XOR of any two numbers in an array."
+- "Given a query x, find the number in the set that maximizes XOR with x."
+- Any problem involving maximizing a bitwise XOR metric over a set of integers.
+
+### When NOT to use?
+- XOR is not part of the problem — don't reach for this structure unless XOR is explicit.
+- Input size is tiny (n ≤ 1000) — O(n²) brute force is acceptable and simpler.
+
+### How to recognize it in a problem?
+Ask: "Does the problem involve maximizing XOR between elements, or finding a number that XORs best with a query?"
+
+Concrete signals:
+- "Maximum XOR of two numbers"
+- "For each query, find the element maximizing XOR with it"
+- "Path XOR" or "subarray XOR" maximization
+
+### Example problem
+Array = [3, 10, 5, 25, 2, 8]. Find the maximum XOR of any two numbers.
+
+### Code
+```java
+// Java — XOR Trie (32-bit integers)
+class XORTrie {
+    int[][] children;
+    int cnt = 1; // node 0 is root
+
+    XORTrie(int maxNodes) {
+        children = new int[maxNodes][2];
+    }
+
+    void insert(int num) {
+        int node = 0;
+        for (int i = 31; i >= 0; i--) {
+            int bit = (num >> i) & 1;
+            if (children[node][bit] == 0)
+                children[node][bit] = cnt++;
+            node = children[node][bit];
+        }
+    }
+
+    int maxXOR(int num) {
+        int node = 0, result = 0;
+        for (int i = 31; i >= 0; i--) {
+            int bit = (num >> i) & 1;
+            int want = 1 - bit; // opposite bit maximizes XOR
+            if (children[node][want] != 0) {
+                result |= (1 << i);
+                node = children[node][want];
+            } else {
+                node = children[node][bit];
+            }
+        }
+        return result;
+    }
+}
+
+// LC 421: Maximum XOR of Two Numbers in an Array
+class Solution {
+    public int findMaximumXOR(int[] nums) {
+        XORTrie trie = new XORTrie(32 * nums.length + 5);
+        int max = 0;
+        for (int n : nums) trie.insert(n);
+        for (int n : nums) max = Math.max(max, trie.maxXOR(n));
+        return max;
+    }
+}
+```
+
+```javascript
+// JavaScript — XOR Trie
+class XORTrieNode {
+    constructor() { this.children = [null, null]; }
+}
+
+class XORTrie {
+    constructor() { this.root = new XORTrieNode(); }
+
+    insert(num) {
+        let node = this.root;
+        for (let i = 31; i >= 0; i--) {
+            const bit = (num >>> i) & 1;
+            if (!node.children[bit]) node.children[bit] = new XORTrieNode();
+            node = node.children[bit];
+        }
+    }
+
+    maxXOR(num) {
+        let node = this.root, result = 0;
+        for (let i = 31; i >= 0; i--) {
+            const bit = (num >>> i) & 1;
+            const want = 1 - bit;
+            if (node.children[want]) {
+                result |= (1 << i);
+                node = node.children[want];
+            } else {
+                node = node.children[bit];
+            }
+        }
+        return result;
+    }
+}
+
+// LC 421
+function findMaximumXOR(nums) {
+    const trie = new XORTrie();
+    nums.forEach(n => trie.insert(n));
+    return nums.reduce((max, n) => Math.max(max, trie.maxXOR(n)), 0);
+}
+```
+
+### Dry Run
+```
+nums = [3, 10, 5, 25, 2, 8]
+After inserting all 6 numbers, trie has 32-level paths for each.
+
+maxXOR(25 = 11001):
+  Greedy traversal from bit 31 → bit 0.
+  At bits 31-5: 25 has 0s, opposite is 1, but no numbers have those high bits set → same child
+  bit4: 25=1 → want 0-child (exists: 3,10,5,2,8 all have bit4=0) → result |= 16
+  bit3: 25=1 → want 0-child (exists) → result |= 8
+  bit2: 25=0 → want 1-child (5=00101 has bit2=1) → result |= 4
+  bit1: 25=0 → want 1-child (from 5's path) → result |= 2
+  bit0: 25=1 → want 0-child (5's bit0=1, so 0-child from 5 path... 3=011 has bit0=1)
+  maxXOR(25) = 28  (25 XOR 5 = 28)  ✓
+```
+
+### Complexity
+```
+Insert:  O(32) per number
+Query:   O(32) per query
+Total:   O(32n) for n numbers
+Space:   O(32n) nodes in the worst case
+```
+
+### Common traps
+- Using 31 bits instead of 32 — numbers up to 2^31-1 need bits 31 down to 0 (32 iterations: `i = 31; i >= 0`).
+- In JavaScript, use `>>>` (unsigned right shift) instead of `>>` to avoid sign-bit issues with negative numbers.
+- Forgetting that `want = 1 - bit` is the XOR-maximizing choice, not `bit` itself.
+
+### Experience Tip
+**Experience Tip:** For "Maximum XOR With an Element From Array" (LC 1707), sort both queries and the array, then process queries offline in increasing order of their limit. Insert numbers into the trie only when they are ≤ the current query's limit. This turns an O(n²) problem into O((n+q) log(n+q) + 32(n+q)).
+
+### Do Not Confuse With
+- **Regular Trie:** Stores characters (a–z), up to 26 children per node. XOR Trie stores bits (0/1), exactly 2 children per node.
+- **Bitmask DP:** Used for small sets (n ≤ 20). XOR Trie handles large integer values and large arrays.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 421 | Maximum XOR of Two Numbers in an Array | Medium | Insert all, then query maxXOR for each — the template | https://leetcode.com/problems/maximum-xor-of-two-numbers-in-an-array/ |
+| 1707 | Maximum XOR With an Element From Array | Hard | Offline queries sorted by limit; insert numbers as limit grows | https://leetcode.com/problems/maximum-xor-with-an-element-from-array/ |
+| 1803 | Count Pairs With XOR in a Range | Hard | Trie + count paths giving XOR ≤ upper minus XOR ≤ lower | https://leetcode.com/problems/count-pairs-with-xor-in-a-range/ |
+| 1938 | Maximum Genetic Difference Query | Hard | Tree path XOR + offline DFS with trie insert/remove | https://leetcode.com/problems/maximum-genetic-difference-query/ |
+| 2935 | Maximum Strong Pair XOR II | Hard | Sliding window + XOR trie under a size constraint | https://leetcode.com/problems/maximum-strong-pair-xor-ii/ |
+
+### One-Minute Revision
+```
+STRUCTURE:       XOR Trie (Binary Trie)
+IN SIMPLE WORDS: Binary trie on integer bits; greedy opposite-bit traversal maximizes XOR
+USE WHEN:        Maximize XOR of two numbers; "best XOR match" queries
+DON'T USE WHEN:  XOR not involved; tiny input (use O(n²))
+KEY OPERATIONS:  insert O(32), maxXOR O(32)
+TIME:            O(32n) total
+SPACE:           O(32n) nodes
+COMMON TRAP:     Loop from bit 31 to 0 (32 iterations); want = 1 - currentBit
+```
+
+---
+
+## Sparse Table
+
+### What is it?
+A static data structure for range minimum/maximum queries (RMQ) with O(1) query time after O(n log n) preprocessing. Works only on immutable arrays and idempotent functions — functions where applying them twice on the same data gives the same result (min, max, GCD). Does NOT work for range sum.
+
+### Visual
+```
+Array (0-indexed): [2, 4, 3, 1, 6, 7, 8, 9]
+                    0  1  2  3  4  5  6  7
+
+sparse[i][j] = min of arr[i .. i + 2^j - 1]
+
+j=0 (length 1): [2, 4, 3, 1, 6, 7, 8, 9]
+j=1 (length 2): [2, 3, 1, 1, 6, 7, 8, -]
+  sparse[0][1]=min(2,4)=2  sparse[1][1]=min(4,3)=3  sparse[2][1]=min(3,1)=1  ...
+j=2 (length 4): [1, 1, 1, 1, 6, -, -, -]
+  sparse[0][2]=min(sparse[0][1],sparse[2][1])=min(2,1)=1  ...
+j=3 (length 8): [1, -, -, -, -, -, -, -]
+
+Query min(2, 6): length=5, k=floor(log2(5))=2 (2^2=4)
+  min(sparse[2][2], sparse[6-4+1][2]) = min(sparse[2][2], sparse[3][2]) = min(1,1) = 1 ✓
+  (The two ranges [2..5] and [3..6] overlap — OK because min is idempotent)
+```
+
+### How does it work?
+1. **Build:** `sparse[i][0] = arr[i]`. For j ≥ 1: `sparse[i][j] = func(sparse[i][j-1], sparse[i + 2^(j-1)][j-1])`. Each cell stores the answer for a range of length 2^j starting at i.
+2. **Query(l, r):** Compute `k = floor(log2(r - l + 1))`. Return `func(sparse[l][k], sparse[r - 2^k + 1][k])`.
+3. The two query ranges of length 2^k together cover all of [l, r] (possibly with overlap).
+4. Overlap is harmless because min/max/GCD are idempotent.
+5. Precompute a `log2[]` integer array to make step 2 a simple lookup.
+
+### Why does it work?
+Any range of length n can be covered by two (possibly overlapping) ranges of length 2^k where k = floor(log2(n)). Since min/max are idempotent — min(min(a,b), min(b,c)) = min(a,b,c) — the overlap does not double-count or corrupt the answer.
+
+### When to use?
+- Static array (no updates) with repeated range min, max, or GCD queries.
+- Situations requiring O(1) per query (tight time limits, massive query counts).
+- LCA (Lowest Common Ancestor) via Euler tour + Sparse Table for RMQ.
+
+### When NOT to use?
+- Array has updates — Sparse Table is static; any update requires full O(n log n) rebuild. Use Segment Tree.
+- You need range sum — sum is NOT idempotent (overlap would double-count). Use Fenwick Tree or prefix sum array.
+
+### How to recognize it in a problem?
+Ask: "Do I have a fixed array and need many fast range min/max queries?"
+
+Concrete signals:
+- "Array is fixed, answer Q range minimum queries efficiently"
+- "LCA in a tree" (Euler tour reduces to RMQ)
+- Problems requiring O(1) per range query after preprocessing
+
+### Example problem
+Array = [2, 4, 3, 1, 6, 7, 8, 9]. Answer: min(0,5), min(2,7), min(3,6).
+
+### Code
+```java
+// Java — Sparse Table for Range Minimum Query
+class SparseTable {
+    int[][] sparse;
+    int[] log2;
+    int n;
+
+    SparseTable(int[] arr) {
+        n = arr.length;
+        int LOG = 1;
+        while ((1 << LOG) <= n) LOG++;
+        sparse = new int[n][LOG];
+        log2 = new int[n + 1];
+
+        log2[1] = 0;
+        for (int i = 2; i <= n; i++) log2[i] = log2[i / 2] + 1;
+
+        for (int i = 0; i < n; i++) sparse[i][0] = arr[i];
+
+        for (int j = 1; j < LOG; j++)
+            for (int i = 0; i + (1 << j) <= n; i++)
+                sparse[i][j] = Math.min(sparse[i][j-1],
+                                        sparse[i + (1 << (j-1))][j-1]);
+    }
+
+    // O(1) range minimum query [l, r] inclusive
+    int query(int l, int r) {
+        int k = log2[r - l + 1];
+        return Math.min(sparse[l][k], sparse[r - (1 << k) + 1][k]);
+    }
+}
+```
+
+```javascript
+// JavaScript — Sparse Table for Range Minimum Query
+class SparseTable {
+    constructor(arr) {
+        this.n = arr.length;
+        const LOG = Math.floor(Math.log2(this.n)) + 2;
+        this.sparse = Array.from({length: this.n}, () => new Array(LOG).fill(0));
+        this.log2 = new Array(this.n + 1).fill(0);
+
+        for (let i = 2; i <= this.n; i++) this.log2[i] = this.log2[i >> 1] + 1;
+
+        for (let i = 0; i < this.n; i++) this.sparse[i][0] = arr[i];
+
+        for (let j = 1; j < LOG; j++)
+            for (let i = 0; i + (1 << j) <= this.n; i++)
+                this.sparse[i][j] = Math.min(this.sparse[i][j-1],
+                                              this.sparse[i + (1 << (j-1))][j-1]);
+    }
+
+    // O(1) range minimum query [l, r] inclusive
+    query(l, r) {
+        const k = this.log2[r - l + 1];
+        return Math.min(this.sparse[l][k], this.sparse[r - (1 << k) + 1][k]);
+    }
+}
+```
+
+### Dry Run
+```
+arr = [2, 4, 3, 1, 6, 7, 8, 9], n=8
+
+Build:
+  sparse[i][0] = arr[i]:   [2, 4, 3, 1, 6, 7, 8, 9]
+  sparse[i][1] (len 2):    [2, 3, 1, 1, 6, 7, 8, -]
+  sparse[i][2] (len 4):    [1, 1, 1, 1, 6, -, -, -]
+  sparse[i][3] (len 8):    [1, -, -, -, -, -, -, -]
+
+query(0, 5): length=6, k=log2[6]=2 (2^2=4)
+  min(sparse[0][2], sparse[5-4+1][2]) = min(sparse[0][2], sparse[2][2])
+  = min(1, 1) = 1  ✓  (min of [2,4,3,1,6,7] = 1)
+
+query(2, 7): length=6, k=2
+  min(sparse[2][2], sparse[4][2]) = min(1, 6) = 1  ✓  (min of [3,1,6,7,8,9] = 1)
+
+query(3, 6): length=4, k=2
+  min(sparse[3][2], sparse[3][2]) = 1  ✓  (min of [1,6,7,8] = 1)
+```
+
+### Complexity
+```
+Build:   O(n log n) time, O(n log n) space
+Query:   O(1) — exactly two table lookups + a min/max
+Log precompute: O(n)
+Note:    NOT for range sum (not idempotent); NOT for mutable arrays
+```
+
+### Common traps
+- Using Sparse Table for range sum — sum is NOT idempotent; overlapping ranges double-count. Only valid for min, max, GCD.
+- Updating the array after building — Sparse Table is fully static. Any change requires a complete rebuild.
+- Off-by-one in query formula: right anchor is `r - (1 << k) + 1`, not `r - (1 << k)`.
+- Using `Math.log2()` in the query itself — floating-point errors can give wrong k. Always use a precomputed integer `log2[]` array.
+
+### Experience Tip
+**Experience Tip:** Precompute `log2[i] = log2[i/2] + 1` as an integer array (starting from `log2[1] = 0`) rather than calling `Math.log()` or `(int)(Math.log(x)/Math.log(2))` on every query. Floating-point can give k = 2 when k should be 3 for some inputs near powers of 2.
+
+### Do Not Confuse With
+- **Segment Tree:** Supports updates O(log n) and any merge function. Sparse Table is faster for static queries but cannot update.
+- **Fenwick Tree:** For prefix sums with point updates. Cannot do range min/max.
+- **Prefix Sum Array:** O(1) range sum on static arrays — but only for sum, not min/max.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 239 | Sliding Window Maximum | Hard | Sparse Table gives O(1) per window query vs O(n) deque total | https://leetcode.com/problems/sliding-window-maximum/ |
+| 1793 | Maximum Score of a Good Subarray | Hard | Range minimum within a fixed center — sparse table enables O(1) checks | https://leetcode.com/problems/maximum-score-of-a-good-subarray/ |
+| 2866 | Beautiful Towers II | Hard | Range max queries for each candidate peak position | https://leetcode.com/problems/beautiful-towers-ii/ |
+| 1567 | Maximum Length of Subarray With Positive Product | Medium | Range product sign queries — sparse table for static subarrays | https://leetcode.com/problems/maximum-length-of-subarray-with-positive-product/ |
+| 2104 | Sum of Subarray Ranges | Medium | Range min and max queries — sparse table accelerates O(n²) to O(n log n) | https://leetcode.com/problems/sum-of-subarray-ranges/ |
+
+### One-Minute Revision
+```
+STRUCTURE:       Sparse Table
+IN SIMPLE WORDS: 2D precomputed table; any range min/max answered in O(1) via two lookups
+USE WHEN:        Static array, many range min/max/GCD queries, O(1) query needed
+DON'T USE WHEN:  Array has updates (use Segment Tree); range SUM (use prefix array/Fenwick)
+KEY OPERATIONS:  build O(n log n), query O(1)
+TIME:            O(1) query after O(n log n) build
+SPACE:           O(n log n)
+COMMON TRAP:     NOT for sum (not idempotent); static only; use integer log2 array
+```
+
+---
+
+## Weighted DSU / DSU with Rollback
+
+### What is it?
+Two powerful extensions of the standard Union-Find:
+- **Weighted DSU:** Each node stores a weight relative to its parent. Enables finding the relative ratio or difference between any two connected nodes without storing absolute values.
+- **DSU with Rollback:** Can undo union operations by maintaining a stack of changes. Required for offline dynamic connectivity (edges added AND removed over time). Must use union by rank WITHOUT path compression — path compression changes multiple parent pointers and cannot be reversed.
+
+### Visual
+```
+Weighted DSU — a/b=2.0, b/c=3.0 (weight[x] = value[x] / value[parent[x]]):
+  union(a→0, b→1, ratio=2.0): parent[0]=1, weight[0]=2.0
+  union(b→1, c→2, ratio=3.0): parent[1]=2, weight[1]=3.0
+
+  find(0): root=2, weight[0] = 2.0 * 3.0 = 6.0  (path compression composes weights)
+  query(0, 2): weight[0]/weight[2] = 6.0/1.0 = 6.0  → a/c = 6  ✓
+
+DSU with Rollback — stack of reversible changes:
+  state:  parent=[0,1,2,3,4]  (each is its own root)
+  union(1,2) → push {node=1, oldParent=1, rankOf2=0}; parent[1]=2
+  union(0,2) → push {node=0, oldParent=0, rankOf2=1}; parent[0]=2
+  rollback() → pop: restore parent[0]=0, rank[2] as saved
+  rollback() → pop: restore parent[1]=1, rank[2] as saved
+  state:  parent=[0,1,2,3,4]  (fully restored) ✓
+```
+
+### How does it work?
+**Weighted DSU:**
+1. `weight[x]` = `value[x] / value[parent[x]]`. Roots have `weight[root] = 1.0`.
+2. `find(x)`: recurse to root, compose weights with path compression. After `find(x)`, `weight[x] = value[x] / value[root]`.
+3. `union(x, y, r)` where `r = value[x] / value[y]`: find roots, set `parent[rootX] = rootY`, compute `weight[rootX] = r * weight[y] / weight[x]`.
+4. `query(x, y)`: if same root, return `weight[x] / weight[y]`.
+
+**DSU with Rollback:**
+1. `find(x)`: plain iterative walk up, NO path compression.
+2. `union(x, y)`: find roots, attach smaller-rank root under larger. Push `{node, oldParent, oldRankOfNewRoot}` to stack.
+3. `rollback()`: pop stack entry, reverse the single parent-pointer change and rank change.
+
+### Why does it work?
+Weighted DSU: path compression propagates composed weights, so after any `find`, the weight is always relative to the root — enabling O(1) ratio queries.
+
+Rollback DSU: union by rank makes exactly ONE structural change (one `parent[y] = x`), which is trivially reversible. Path compression would change O(log n) pointers per call — impossible to roll back without storing the entire path.
+
+### When to use?
+- **Weighted DSU:** "Given ratios or differences between pairs of variables, answer queries about their relative values."
+- **DSU with Rollback:** Offline queries with both edge insertions and deletions (dynamic connectivity); backtracking search where you try unions and undo them.
+
+### When NOT to use?
+- Standard DSU is sufficient when no weights and no rollback are needed.
+- Online edge deletions only (no insertions) — consider link-cut trees instead.
+
+### How to recognize it in a problem?
+Ask: "Do nodes have relative weights/ratios between them?" → Weighted DSU.
+Ask: "Do I need to undo union operations or process edge deletions?" → DSU with Rollback.
+
+Concrete signals:
+- "Given equations a/b = k, evaluate a/c"
+- "Dynamic connectivity: add and remove edges, answer connectivity queries"
+- "Persistent or rollback-capable union-find"
+
+### Example problem
+Weighted DSU — Given a/b = 2.0, b/c = 3.0. Evaluate a/c and c/a.
+
+### Code
+```java
+// Java — Weighted DSU (ratios: value[x] / value[parent[x]] = weight[x])
+class WeightedDSU {
+    int[] parent;
+    double[] weight; // weight[x] = value[x] / value[parent[x]]
+
+    WeightedDSU(int n) {
+        parent = new int[n];
+        weight = new double[n];
+        Arrays.fill(weight, 1.0);
+        for (int i = 0; i < n; i++) parent[i] = i;
+    }
+
+    int find(int x) {
+        if (parent[x] == x) return x;
+        int root = find(parent[x]);
+        weight[x] *= weight[parent[x]]; // compose: weight[x] = value[x]/value[root]
+        parent[x] = root;               // path compression
+        return root;
+    }
+
+    // union(x, y, r): value[x] / value[y] = r
+    void union(int x, int y, double r) {
+        int px = find(x), py = find(y);
+        if (px == py) return;
+        // weight[x] = value[x]/value[px], weight[y] = value[y]/value[py]
+        // want weight[px] = value[px]/value[py] = (1/weight[x]) * r * weight[y]
+        parent[px] = py;
+        weight[px] = r * weight[y] / weight[x];
+    }
+
+    // Returns value[x] / value[y], or -1 if not connected
+    double query(int x, int y) {
+        if (find(x) != find(y)) return -1.0;
+        return weight[x] / weight[y];
+    }
+}
+
+// Java — DSU with Rollback (NO path compression; union by rank only)
+class RollbackDSU {
+    int[] parent, rank;
+    Deque<int[]> stack = new ArrayDeque<>(); // [node, oldParent, oldRank]
+
+    RollbackDSU(int n) {
+        parent = new int[n]; rank = new int[n];
+        for (int i = 0; i < n; i++) parent[i] = i;
+    }
+
+    int find(int x) { // NO path compression
+        while (parent[x] != x) x = parent[x];
+        return x;
+    }
+
+    void union(int x, int y) {
+        x = find(x); y = find(y);
+        if (x == y) { stack.push(new int[]{-1, -1, -1}); return; } // no-op sentinel
+        if (rank[x] < rank[y]) { int t = x; x = y; y = t; }
+        stack.push(new int[]{y, parent[y], rank[x]});
+        parent[y] = x;
+        if (rank[x] == rank[y]) rank[x]++;
+    }
+
+    void rollback() {
+        int[] entry = stack.pop();
+        if (entry[0] == -1) return;
+        int y = entry[0];
+        int x = parent[y]; // current parent (the root we attached y under)
+        rank[x] = entry[2];
+        parent[y] = entry[1];
+    }
+
+    boolean connected(int x, int y) { return find(x) == find(y); }
+}
+```
+
+```javascript
+// JavaScript — Weighted DSU
+class WeightedDSU {
+    constructor(n) {
+        this.parent = Array.from({length: n}, (_, i) => i);
+        this.weight = new Array(n).fill(1.0);
+    }
+
+    find(x) {
+        if (this.parent[x] === x) return x;
+        const root = this.find(this.parent[x]);
+        this.weight[x] *= this.weight[this.parent[x]];
+        this.parent[x] = root;
+        return root;
+    }
+
+    union(x, y, r) {
+        const px = this.find(x), py = this.find(y);
+        if (px === py) return;
+        this.parent[px] = py;
+        this.weight[px] = r * this.weight[y] / this.weight[x];
+    }
+
+    query(x, y) {
+        if (this.find(x) !== this.find(y)) return -1.0;
+        return this.weight[x] / this.weight[y];
+    }
+}
+
+// JavaScript — DSU with Rollback
+class RollbackDSU {
+    constructor(n) {
+        this.parent = Array.from({length: n}, (_, i) => i);
+        this.rank = new Array(n).fill(0);
+        this.stack = [];
+    }
+
+    find(x) {
+        while (this.parent[x] !== x) x = this.parent[x]; // NO path compression
+        return x;
+    }
+
+    union(x, y) {
+        x = this.find(x); y = this.find(y);
+        if (x === y) { this.stack.push(null); return; }
+        if (this.rank[x] < this.rank[y]) { [x, y] = [y, x]; }
+        this.stack.push([y, this.parent[y], this.rank[x]]);
+        this.parent[y] = x;
+        if (this.rank[x] === this.rank[y]) this.rank[x]++;
+    }
+
+    rollback() {
+        const entry = this.stack.pop();
+        if (!entry) return;
+        const [y, oldParent, oldRank] = entry;
+        this.rank[this.parent[y]] = oldRank;
+        this.parent[y] = oldParent;
+    }
+
+    connected(x, y) { return this.find(x) === this.find(y); }
+}
+```
+
+### Dry Run
+```
+Weighted DSU — equations: a/b=2, b/c=3 (map a→0, b→1, c→2)
+
+union(0, 1, 2.0): find(0)=0, find(1)=1 → parent[0]=1, weight[0]=2.0*1.0/1.0=2.0
+union(1, 2, 3.0): find(1)=1, find(2)=2 → parent[1]=2, weight[1]=3.0*1.0/1.0=3.0
+
+query(0, 2) — a/c:
+  find(0): parent[0]=1→find(1): parent[1]=2→find(2)=2
+           weight[1] *= weight[2]=1.0 → weight[1]=3.0, parent[1]=2
+           weight[0] *= weight[1]=3.0 → weight[0]=6.0, parent[0]=2
+  find(2)=2, weight[2]=1.0
+  Same root: return weight[0]/weight[2] = 6.0/1.0 = 6.0  ✓  (a/c = a/b * b/c = 2*3=6)
+
+query(2, 0) — c/a:
+  return weight[2]/weight[0] = 1.0/6.0 ≈ 0.167  ✓
+```
+
+### Complexity
+```
+Weighted DSU:
+  find / union / query: O(α(n)) amortized (path compression + union by rank)
+  Space: O(n)
+
+DSU with Rollback:
+  find:     O(log n) — no path compression; tree height = O(log n) with union by rank
+  union:    O(log n)
+  rollback: O(1) per call
+  Space:    O(n + number of unions stored on stack)
+```
+
+### Common traps
+- Using path compression with rollback DSU — path compression modifies multiple parent pointers per call, making rollback impossible. Use union by rank ONLY for rollback.
+- Weight direction in Weighted DSU: `weight[x] = value[x] / value[parent[x]]`. During path compression, weights must be multiplied (composed), not assigned directly.
+- Not handling the "no-op" case in rollback (when x and y were already connected) — push a sentinel so every union has a matching rollback.
+
+### Experience Tip
+**Experience Tip:** For Evaluate Division (LC 399), map variable names to integers via a HashMap, then use Weighted DSU. The query answer for a/b is `weight[a] / weight[b]` after both find calls — you never need to track absolute variable values. If a query involves an unknown variable, return -1.0 immediately before even calling find.
+
+### Do Not Confuse With
+- **Standard DSU:** No weights, no rollback — simpler, and O(α(n)) vs O(log n) for rollback variant.
+- **Bellman-Ford / BFS on a weighted graph:** Valid alternative for ratio queries but O(V+E) per query vs O(α(n)) amortized with Weighted DSU.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 399 | Evaluate Division | Medium | Classic weighted DSU — variable ratios as edge weights | https://leetcode.com/problems/evaluate-division/ |
+| 721 | Accounts Merge | Medium | Standard DSU — same email means same person | https://leetcode.com/problems/accounts-merge/ |
+| 685 | Redundant Connection II | Hard | Directed graph: DSU + case analysis for in-degree-2 nodes | https://leetcode.com/problems/redundant-connection-ii/ |
+| 2421 | Number of Good Paths | Hard | Sort edges by value; DSU merges groups with matching endpoint values | https://leetcode.com/problems/number-of-good-paths/ |
+| 1168 | Optimize Water Distribution in a Village | Hard | Add virtual well node 0; Kruskal's MST with standard DSU | https://leetcode.com/problems/optimize-water-distribution-in-a-village/ |
+
+### One-Minute Revision
+```
+STRUCTURE:       Weighted DSU / DSU with Rollback
+IN SIMPLE WORDS: DSU with edge weights for ratio queries, or with undo stack for dynamic connectivity
+USE WHEN:        Ratio/difference queries between connected nodes; offline add+delete edge queries
+DON'T USE WHEN:  No weights and no deletions needed (standard DSU is faster)
+KEY OPERATIONS:  find/query O(α(n)) weighted; find O(log n) rollback; rollback O(1)
+TIME:            O(α(n)) weighted; O(log n) rollback
+SPACE:           O(n)
+COMMON TRAP:     NO path compression with rollback; compose weights on path compression
+```
+
+---
+
+## Balanced BST / Ordered Set (TreeMap / TreeSet)
+
+### What is it?
+A self-balancing binary search tree that maintains elements in sorted order and supports O(log n) insert, delete, floor (largest key ≤ x), ceiling (smallest key ≥ x), and range queries. In Java: `TreeMap<K,V>` and `TreeSet<E>` (Red-Black Tree internally). In JavaScript: no built-in equivalent — use a sorted array with binary search for simple cases, or an AVL/Red-Black library for production.
+
+### Visual
+```
+TreeSet after inserting [5, 3, 7, 1, 4, 6, 9]:
+
+         5 (Black)
+        / \
+     3(R)   7(R)
+     / \    / \
+  1(B) 4(B) 6(B) 9(B)
+  (Red-Black Tree — self-balancing, height ≤ 2 log n)
+
+Key queries on this set:
+  floor(4.5)  → 4    (largest element ≤ 4.5)
+  ceiling(4.5)→ 5    (smallest element ≥ 4.5)
+  lower(3)    → 1    (strictly less than 3)
+  higher(3)   → 4    (strictly greater than 3)
+  first()     → 1    (minimum)
+  last()      → 9    (maximum)
+  subSet(3,7) → [3, 4, 5, 6]  (elements in [3, 7))
+```
+
+### How does it work?
+1. Internally a Red-Black Tree ensures height = O(log n) via color-based rotation rules after every insert/delete.
+2. **insert(x):** BST-insert at correct sorted position, then rebalance.
+3. **delete(x):** BST-delete, then rebalance.
+4. **floorKey(x):** Walk BST; at each node, if `node.key ≤ x` it is a candidate; take the best one found.
+5. **ceilingKey(x):** Same, but take the best candidate where `node.key ≥ x`.
+6. **subMap(l, r):** Returns a live sorted view of all keys in [l, r). Iteration is O(log n + k).
+
+### Why does it work?
+Red-Black Tree rotations and recoloring maintain the invariant that the longest path is at most 2× the shortest, guaranteeing O(log n) height. This gives O(log n) worst-case for all operations — unlike a plain BST which degrades to O(n) for sorted or adversarial input.
+
+### When to use?
+- "Find the closest number to x in a dynamic set."
+- "Check if any two elements in a sliding window are within k of each other."
+- Interval scheduling — find the nearest non-overlapping event using floor/ceiling.
+- Sliding window median (two TreeSets acting as a lower/upper half).
+
+### When NOT to use?
+- You only need O(1) existence check — use HashSet.
+- The dataset is static and sorted — use binary search on a plain array.
+- You need frequent access by rank/index — TreeMap does not support O(log n) rank queries without augmentation.
+
+### How to recognize it in a problem?
+Ask: "Do I need to dynamically maintain a sorted set and query floor/ceiling of a value?"
+
+Concrete signals:
+- "Find if any two elements in the array are within k indices AND t values of each other"
+- "My Calendar" — find the nearest non-overlapping interval
+- "Sliding window median" — order statistics on a changing window
+- "Count elements in range [l, r]" on a changing dataset
+
+### Example problem
+Problem: Contains Duplicate III — for any pair (i, j) with |i-j| ≤ k, is |nums[i] - nums[j]| ≤ t?
+
+Trace:
+```
+Maintain a TreeSet as a sliding window of size k.
+For each nums[i]:
+  Check: does the set contain any value in [nums[i]-t, nums[i]+t]?
+  Java: Long floor = set.floor(n+t); return floor != null && floor >= n-t;
+  Add nums[i]. If window size > k, remove nums[i-k].
+```
+
+### Code
+```java
+// Java — TreeMap and TreeSet key operations
+import java.util.TreeMap;
+import java.util.TreeSet;
+
+// TreeSet — ordered set
+TreeSet<Integer> set = new TreeSet<>();
+set.add(3); set.add(7); set.add(1); set.add(5);
+set.floor(4);    // 3 — largest element ≤ 4
+set.ceiling(4);  // 5 — smallest element ≥ 4
+set.lower(3);    // 1 — strictly less than 3
+set.higher(3);   // 5 — strictly greater than 3
+set.first();     // 1 — minimum
+set.last();      // 7 — maximum
+
+// TreeMap — sorted key-value map
+TreeMap<Integer, Integer> map = new TreeMap<>();
+map.put(1, 100); map.put(3, 300); map.put(5, 500);
+map.floorKey(4);              // 3
+map.ceilingKey(4);            // 5
+map.headMap(4).keySet();      // [1, 3] — all keys < 4
+map.tailMap(3).keySet();      // [3, 5] — all keys >= 3
+map.subMap(2, 5).keySet();    // [3]    — keys in [2, 5)
+map.getOrDefault(3, 0);       // 300
+
+// LC 220: Contains Duplicate III
+class Solution {
+    public boolean containsNearbyAlmostDuplicate(int[] nums, int k, long t) {
+        TreeSet<Long> set = new TreeSet<>();
+        for (int i = 0; i < nums.length; i++) {
+            long n = (long) nums[i];
+            Long floor = set.floor(n + t);
+            if (floor != null && floor >= n - t) return true;
+            set.add(n);
+            if (i >= k) set.remove((long) nums[i - k]);
+        }
+        return false;
+    }
+}
+```
+
+```javascript
+// JavaScript — no native TreeSet; use sorted array + binary search
+// Binary search: index of first element >= target
+function lowerBound(arr, target) {
+    let lo = 0, hi = arr.length;
+    while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (arr[mid] < target) lo = mid + 1;
+        else hi = mid;
+    }
+    return lo;
+}
+
+// floor(x): largest element <= x
+function floorVal(arr, x) {
+    const i = lowerBound(arr, x + 1) - 1;
+    return i >= 0 ? arr[i] : undefined;
+}
+
+// ceiling(x): smallest element >= x
+function ceilingVal(arr, x) {
+    const i = lowerBound(arr, x);
+    return i < arr.length ? arr[i] : undefined;
+}
+
+// Sorted insert — O(n) due to splice; acceptable for small windows
+function sortedInsert(arr, val) {
+    arr.splice(lowerBound(arr, val), 0, val);
+}
+
+function sortedRemove(arr, val) {
+    const i = lowerBound(arr, val);
+    if (i < arr.length && arr[i] === val) arr.splice(i, 1);
+}
+
+// LC 220: Contains Duplicate III
+function containsNearbyAlmostDuplicate(nums, k, t) {
+    const window = [];
+    for (let i = 0; i < nums.length; i++) {
+        const n = nums[i];
+        const f = floorVal(window, n + t);
+        if (f !== undefined && f >= n - t) return true;
+        sortedInsert(window, n);
+        if (i >= k) sortedRemove(window, nums[i - k]);
+    }
+    return false;
+}
+// Note: JS sorted array insert/remove is O(n); for O(log n), use a BST library.
+```
+
+### Dry Run
+```
+LC 220: nums=[1,5,9,1,5,9], k=2, t=3
+
+i=0: n=1. window=[]. No floor. Insert 1. window=[1]
+i=1: n=5. floor(5+3=8)=1. Is 1 >= 5-3=2? No. Insert 5. window=[1,5]
+i=2: n=9. floor(9+3=12)=5. Is 5 >= 9-3=6? No. Insert 9. Remove nums[0]=1. window=[5,9]
+i=3: n=1. floor(1+3=4)=undefined (window=[5,9], no elem ≤ 4). Insert 1. Remove nums[1]=5.
+     window=[1,9]
+i=4: n=5. floor(5+3=8)=1. Is 1 >= 5-3=2? No. Insert 5. Remove nums[2]=9. window=[1,5]
+i=5: n=9. floor(9+3=12)=5. Is 5 >= 9-3=6? No. window=[1,5,9]... wait remove nums[3]=1 first.
+     Remove 1, window=[5]. floor(12)=5. Is 5 >= 6? No. Return false. ✓ (no such pair exists)
+```
+
+### Complexity
+```
+Java TreeSet / TreeMap:
+  insert, delete, floor, ceiling, lower, higher: O(log n) each
+  subSet / headSet / tailSet (view):             O(log n) to obtain the view
+  Iterating a view of k elements:                O(log n + k)
+  Space: O(n)
+
+JavaScript sorted array workaround:
+  floor, ceiling (binary search): O(log n)
+  insert, remove (array splice):  O(n) — not suitable for large inputs
+  For O(log n) all ops in JS: use a BST library (e.g., 'sorted-btree', 'avl')
+```
+
+### Common traps
+- In Java, `floor(x)` and `ceiling(x)` return `null` when no qualifying element exists — always null-check before using the result.
+- Confusing `floor`/`lower` and `ceiling`/`higher`: `floor(x)` includes x (≤ x); `lower(x)` is strictly less (< x). Same distinction for `ceiling` (≥) vs `higher` (>).
+- In JavaScript, `splice` makes sorted-array insert/remove O(n) — this breaks performance guarantees for large inputs.
+- Using `TreeSet` when there are duplicates — TreeSet ignores duplicates. Use `TreeMap<Integer, Integer>` (value = count) to track frequencies.
+
+### Experience Tip
+**Experience Tip:** For "My Calendar I" (LC 729), store bookings in a TreeMap keyed by start time. For a new booking [s, e), call `floorKey(s)` to get the previous event and check if it ends after s; call `ceilingKey(s)` to get the next event and check if it starts before e. Both checks are O(log n) — far cleaner than scanning an interval list.
+
+### Do Not Confuse With
+- **PriorityQueue / Heap:** O(1) peek at min/max, but no floor/ceiling, and arbitrary deletes are O(n).
+- **HashSet / HashMap:** O(1) lookup but NO ordering — cannot find floor or ceiling.
+- **Sorted Array:** O(log n) binary search but O(n) insert/delete — fine for static data, not for dynamic.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 220 | Contains Duplicate III | Hard | Sliding window TreeSet; floor/ceiling to check value proximity | https://leetcode.com/problems/contains-duplicate-iii/ |
+| 729 | My Calendar I | Medium | TreeMap floor/ceiling for O(log n) overlap detection | https://leetcode.com/problems/my-calendar-i/ |
+| 731 | My Calendar II | Medium | TreeMap difference array: +1 at start, -1 at end; scan for overlap count ≥ 2 | https://leetcode.com/problems/my-calendar-ii/ |
+| 315 | Count of Smaller Numbers After Self | Hard | TreeMap as frequency map; count smaller elements to the right | https://leetcode.com/problems/count-of-smaller-numbers-after-self/ |
+| 480 | Sliding Window Median | Hard | Two TreeMaps (for duplicates): lower half max-side + upper half min-side | https://leetcode.com/problems/sliding-window-median/ |
+
+### One-Minute Revision
+```
+STRUCTURE:       Balanced BST / Ordered Set (TreeMap / TreeSet)
+IN SIMPLE WORDS: Sorted dynamic set with O(log n) insert/delete/floor/ceiling
+USE WHEN:        Closest element to x; sorted dynamic collection; interval overlap checks
+DON'T USE WHEN:  Only exact lookup (HashMap); static data (sorted array + binary search)
+KEY OPERATIONS:  insert/delete/floor/ceiling: O(log n) each
+TIME:            O(log n) per operation
+SPACE:           O(n)
+COMMON TRAP:     floor() returns null in Java — always null-check; no native TreeSet in JS
+```

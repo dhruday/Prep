@@ -1,5 +1,7 @@
 # Interval and Sweep Line
 
+> **6 algorithms covered:** Merge Intervals · Insert Interval · Non-Overlapping Intervals (Minimum Removal) · Meeting Rooms II (Minimum Rooms) · Minimum Arrows to Burst Balloons · Sweep Line for Counting Overlaps
+
 > "An interval is a range represented as [start, end]. Almost every interval problem reduces to: sort them, then scan left to right."
 
 ---

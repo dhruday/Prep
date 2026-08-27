@@ -1,5 +1,7 @@
 # Graphs — Google Interview Deep Dive
 
+> **5 algorithms covered:** BFS (Shortest Path Unweighted) · DFS (Connected Components / Cycle Detection) · Topological Sort (Kahn's Algorithm) · Dijkstra (Weighted Shortest Path) · Union-Find / DSU
+
 > Read fast. Understand deeply. Go practice on LeetCode immediately.
 
 ---

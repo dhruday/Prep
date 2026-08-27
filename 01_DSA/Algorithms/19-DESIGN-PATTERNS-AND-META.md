@@ -1,5 +1,7 @@
 # Design Patterns and Meta-Strategies — Google Interview Thinking Framework
 
+> **13 patterns covered:** Universal Problem-Solving Framework · Design Patterns Overview · Iterator Pattern · State Machine · Simulation · Minimax / Game Theory · Meet in the Middle · Randomized Algorithms · Amortized Analysis · Monotonic Patterns · Reverse Thinking · Add / Remove Constraint · Design Problems
+
 > Read this file to internalize HOW to think, not just what to code.
 > Goal: read fast, get the frameworks into your head, apply them immediately.
 

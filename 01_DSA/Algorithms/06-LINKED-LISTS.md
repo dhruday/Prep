@@ -1,5 +1,7 @@
 # Linked Lists — Google Interview Patterns
 
+> **9 algorithms covered:** Fast/Slow Pointers (Cycle Detection) · Fast/Slow Pointers (Find Cycle Start) · Fast/Slow Pointers (Find Middle) · Remove Nth Node From End · In-Place Reversal (Full) · In-Place Reversal (Partial) · Dummy Node Trick · Merge Two Sorted Lists · LRU Cache
+
 > Read fast. Understand deeply. Go practice on LeetCode immediately.
 
 ---

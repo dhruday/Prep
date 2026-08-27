@@ -1,5 +1,7 @@
 # Recursion & Backtracking
 
+> **7 algorithms covered:** Basic Recursion · Subsets / Power Set · Permutations · Combinations (Combination Sum) · Palindrome Partitioning · N-Queens (Constraint Satisfaction) · Grid DFS / Word Search
+
 ---
 
 ## Basic Recursion

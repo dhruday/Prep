@@ -1,5 +1,7 @@
 # Sorting & Order — Complete Interview Guide
 
+> **5 algorithms covered:** Merge Sort · Counting Sort · Cyclic Sort · Custom Comparator Sorting · Sorting as Preprocessing
+
 > Read fast. Understand deeply. Go practice on LeetCode immediately.
 
 ---

@@ -1,5 +1,7 @@
 # Searching Techniques
 
+> **6 algorithms covered:** Classic Binary Search · Find First/Last Position (Lower/Upper Bound) · Binary Search on Answer (Parametric) · Search in Rotated Sorted Array · Find Peak Element · Search in 2D Matrix
+
 > *"Binary search is not just an algorithm — it is a way of thinking. Any time you can discard half the possibilities in one step, binary search is hiding in the problem."*
 
 ---

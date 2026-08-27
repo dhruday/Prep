@@ -1,5 +1,7 @@
 # Stacks & Queues
 
+> **7 algorithms covered:** Stack Basics (Parentheses Matching) · Monotonic Stack (Next Greater Element) · Monotonic Decreasing Stack (Largest Rectangle) · Trapping Rain Water · Min Stack · Sliding Window Maximum (Monotonic Deque) · Expression Evaluation
+
 ---
 
 ## Stack Basics — Parentheses Matching

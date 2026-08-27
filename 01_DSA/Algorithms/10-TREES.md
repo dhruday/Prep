@@ -1,5 +1,7 @@
 # Trees — Google Interview Prep
 
+> **7 algorithms covered:** DFS Traversals (Inorder/Preorder/Postorder) · BFS Level-Order · Tree Height / Depth · Tree Diameter · Path Sum (Root-to-Leaf) · BST Validate / Search / Insert · Serialize and Deserialize
+
 > Goal: Read fast, understand deeply, go practice on LeetCode immediately.
 
 ---

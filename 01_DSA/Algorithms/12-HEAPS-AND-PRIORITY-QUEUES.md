@@ -1,5 +1,7 @@
 # Heaps and Priority Queues
 
+> **5 algorithms covered:** Top-K Elements · Kth Largest / Kth Smallest · Merge K Sorted Lists · Two-Heap for Median · Sliding Window Maximum
+
 > "Whenever you need the top something from a changing set — think heap."
 
 ---

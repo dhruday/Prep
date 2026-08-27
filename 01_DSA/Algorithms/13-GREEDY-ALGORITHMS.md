@@ -1,5 +1,7 @@
 # Greedy Algorithms — Pattern-by-Pattern Guide
 
+> **6 algorithms covered:** Activity Selection / Non-Overlapping Intervals · Jump Game I · Jump Game II · Gas Station · Task Scheduler · Candy
+
 > "Make the best-looking choice at each step. If you can prove you will never regret it, that is greedy."
 
 **Goal:** Read each pattern, understand the core idea, then go practice on LeetCode immediately.

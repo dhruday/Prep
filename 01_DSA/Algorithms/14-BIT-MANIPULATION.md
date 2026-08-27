@@ -1,5 +1,7 @@
 # Bit Manipulation — Complete Reference for Google Interviews
 
+> **7 algorithms covered:** Bitwise AND/OR/XOR/NOT/Shifts (Basics) · XOR Cancellation (Single Number) · n & (n-1) Clear Lowest Set Bit · Count Set Bits (Brian Kernighan) · Power of 2 Check · Missing Number (XOR with Index) · Bitmask Basics (Represent Set as Integer)
+
 > Zero DSA knowledge assumed. Every technique explained from scratch. Read fast, understand deeply, go practice on LeetCode immediately.
 
 ---

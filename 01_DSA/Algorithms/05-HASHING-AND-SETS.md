@@ -1,5 +1,7 @@
 # Hashing & Sets — Google Interview Patterns
 
+> **5 algorithms covered:** Frequency Count · Two Sum / Complement Lookup · Grouping by Key (Anagrams) · Subarray Sum with HashMap (Prefix Sum + Hash) · HashSet for Existence / Deduplication
+
 > Read fast. Understand deeply. Go practice on LeetCode immediately.
 
 ---

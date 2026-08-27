@@ -1,5 +1,7 @@
 # String Algorithms
 
+> **4 algorithms covered:** String Sliding Window · Two Pointers on Strings · KMP Pattern Matching · Palindrome (Expand Around Center)
+
 > Read fast. Understand deeply. Practice immediately.
 
 ---

@@ -1,5 +1,7 @@
 # Math and Number Theory
 
+> **8 algorithms covered:** GCD (Euclidean Algorithm) · LCM · Sieve of Eratosthenes · Fast Power / Binary Exponentiation · Modular Arithmetic · Combinatorics (nCr) · Fisher-Yates Shuffle · Reservoir Sampling
+
 > For someone with almost zero DSA knowledge preparing for Google interviews. Every algorithm gets its own section. Read fast, understand deeply, go practice on LeetCode immediately.
 
 ---
