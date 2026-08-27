@@ -1,372 +1,196 @@
-# Recursion & Backtracking — 1-Hour Learning Module
-
-> *"Recursion is faith: trust that the function will solve the smaller problem correctly. Backtracking is discipline: explore everything, but retreat from dead ends immediately."*
-
-**Target:** Google SWE interview prep | Estimated time: 60 minutes
+# Recursion & Backtracking
 
 ---
 
-## Table of Contents
+## Basic Recursion
 
-1. [[0–10 min] Big Picture](#0-10-min-big-picture)
-2. [[10–20 min] Mental Model](#10-20-min-mental-model)
-3. [[20–35 min] Core Pattern](#20-35-min-core-pattern)
-4. [[35–45 min] Concrete Code + Dry Run](#35-45-min-concrete-code--dry-run)
-5. [[45–55 min] Pattern Recognition](#45-55-min-pattern-recognition)
-6. [[55–60 min] Final Mental Checklist](#55-60-min-final-mental-checklist)
-7. [Active Recall](#active-recall)
-8. [Recommended Practice Direction](#recommended-practice-direction)
-9. [2-Minute Cheat Sheet](#2-minute-cheat-sheet)
+### What is it?
+A function that calls itself on a smaller version of the same problem. You define a base case (the simplest input with a known answer) and a recursive case (reduce the problem and call yourself). The call stack handles the rest.
 
----
-
-## [0–10 min] Big Picture
-
-### What is Recursion?
-
-A function that calls itself on a **smaller version of the same problem** until it hits a trivially solvable case (the base case).
-
-**Why does it exist?** Some problems are naturally self-similar — a tree node has subtrees that are also trees, a list has a head and a smaller list as its tail, a problem of size n depends on a solution of size n-1. Recursion lets you express that self-similarity directly in code.
-
-**Real-world analogy — Russian nesting dolls (Matryoshka):**
-To count all dolls, open the outermost one, count it (1), then ask: "how many dolls are inside?" The inner doll answers the same question on a smaller input. The smallest doll that can't open answers: "just me — 1." You combine: 1 + answer from inner = total.
-
+### Visual
 ```
-countDolls(doll) =
-  1  +  countDolls(inner doll)    ← recursive case
-  1                               ← base case: no inner doll
+factorial(4)
+└── 4 * factorial(3)
+        └── 3 * factorial(2)
+                └── 2 * factorial(1)
+                        └── base case: return 1
 ```
 
-### What is Backtracking?
-
-Recursion where you **make a choice, explore it, then undo it** to try the next choice.
-
-**Real-world analogy — solving a maze:**
-At each fork, pick a direction and walk. If you hit a dead end, walk back to the last fork and try the other direction. You undo your steps to try alternatives. Backtracking is systematic maze-solving.
-
-### One Tiny Example
-
-**Problem:** Print all subsets of `[1, 2]`.
-
-At each element, you make a binary decision: include or exclude.
-
-```
-Start: []
-  Include 1 → [1]
-    Include 2 → [1, 2]   ✓ record
-    Exclude 2 → [1]      ✓ record
-  Exclude 1 → []
-    Include 2 → [2]      ✓ record
-    Exclude 2 → []       ✓ record
-
-Result: [1,2], [1], [2], []
-```
-
-Every backtracking problem is a decision tree like this. Your job is to draw that tree and write code that walks it.
-
----
-
-## [10–20 min] Mental Model
-
-### What Is Actually Happening: The Call Stack
-
-Every recursive call creates a **stack frame** that stores:
-- Local variables (current element, current path, counters)
-- A return address (where to go when done)
-
-When the call returns, its frame is popped. Backtracking exploits this: the calling frame's state is automatically restored when the recursive call returns. Any mutations you made explicitly (pushing to a list) must be manually undone.
-
-```
-solve([], index=0)
-  solve([1], index=1)
-    solve([1,2], index=2)   ← base case, record [1,2], RETURN
-    ← back here, undo: remove 2
-    solve([1], index=2)     ← base case, record [1], RETURN
-  ← back here, undo: remove 1
-  solve([], index=1)
-    solve([2], index=2)     ← base case, record [2], RETURN
-    ← back here, undo: remove 2
-    solve([], index=2)      ← base case, record [], RETURN
-```
-
-### Key Insight: Trust the Recursion
-
-The hardest thing for beginners: **you do not need to mentally simulate the full recursion**. Instead, ask:
-
-1. What does this function represent (its contract)?
-2. What is the base case?
-3. Assuming the recursive call returns the correct answer for a smaller input, how do I use it to answer the current input?
-
-This is called the **leap of faith**. Fibonacci: `fib(n) = fib(n-1) + fib(n-2)` — trust that `fib(n-1)` and `fib(n-2)` are correct. Your only job is to combine them.
-
-### The Three Laws Every Recursive Function Must Follow
-
-1. **Base case:** A condition that stops the recursion (no more recursive call)
-2. **Progress:** Every recursive call must move closer to the base case
-3. **Trust:** Assume the recursive call is correct and use its result
-
-### Recursion vs Backtracking: The Core Difference
-
-| | Recursion | Backtracking |
-|---|---|---|
-| Goal | Compute a result | Explore all possibilities |
-| Undo step? | No | Yes — un-choose after exploring |
-| Example | Fibonacci, factorial, tree traversal | Subsets, permutations, N-Queens |
-| Return type | Usually a single value | Usually void, collects into a result list |
-
-**Recursion:** `f(n) = combine(current, f(n-1))`
-
-**Backtracking:**
-```
-explore(state, choices):
-  if done: record(state); return
-  for each choice in choices:
-    make(choice)       ← add to state
-    explore(state, remaining choices)
-    undo(choice)       ← remove from state
-```
-
-### Call Tree: Fibonacci (Pure Recursion)
-
-```
-fib(4)
-├── fib(3)
-│   ├── fib(2)
-│   │   ├── fib(1) = 1
-│   │   └── fib(0) = 0
-│   └── fib(1) = 1
-└── fib(2)
-    ├── fib(1) = 1
-    └── fib(0) = 0
-```
-
-Notice: fib(2) is computed twice. This is the overlap problem — recursion without memoization recomputes. That is why DP exists (but more on that in [Pattern Recognition](#45-55-min-pattern-recognition)).
-
-### Call Tree: Subsets of [1,2] (Backtracking)
-
-```
-solve(path=[], i=0)
-├── include 1 → solve(path=[1], i=1)
-│   ├── include 2 → solve(path=[1,2], i=2) → record [1,2]
-│   └── exclude 2 → solve(path=[1], i=2)  → record [1]
-└── exclude 1 → solve(path=[], i=1)
-    ├── include 2 → solve(path=[2], i=2)   → record [2]
-    └── exclude 2 → solve(path=[], i=2)    → record []
-```
-
-Depth = n (number of elements). Leaves = 2^n (all subsets). Every non-leaf node makes exactly two choices.
-
----
-
-## [20–35 min] Core Pattern
-
-### When to Use Recursion
-
-- The problem decomposes into the **same problem on a smaller input**
-- Tree/graph traversal (a subtree is a smaller tree)
-- Divide and conquer (merge sort, binary search)
-- Computing values that depend on smaller values (Fibonacci, factorial)
-
-### When to Use Backtracking
-
-- You need to **enumerate all possible configurations** (all subsets, all permutations, all valid placements)
-- You are building a solution incrementally and need to **explore choices and abandon dead ends**
-- Problems with the word "all," "every possible," "generate all," "find all valid"
-
-### When NOT to Use Either
-
-- **Use DP instead:** if you need the optimal solution (min/max) and subproblems overlap (Fibonacci, knapsack)
-- **Use BFS instead:** if you need the shortest path (BFS explores by layers, backtracking explores depth-first)
-- **Use a formula:** if you only need the count, not the actual configurations (C(n,k), Catalan number)
-- If n is large: 2^n or n! grows fast. Backtracking is only practical for small n (typically n ≤ 20 for 2^n, n ≤ 12 for n!).
-
-### How to Recognize Backtracking in a Problem Statement
-
-- "Generate all..."
-- "Find all subsets / combinations / permutations / arrangements"
-- "Place N queens... return all solutions"
-- "Partition the string such that..."
-- "Find all paths..."
-- A constraint satisfaction problem where you must try possibilities and check validity
-
-### The Universal Backtracking Template
-
-Every backtracking problem fits this shape:
-
-```
-backtrack(current_state, available_choices):
-    if current_state is complete:
-        record(current_state)
-        return
-
-    for each choice in available_choices:
-        if isValid(choice, current_state):    ← optional: prune early
-            make(choice)                       ← modify state
-            backtrack(updated_state, remaining_choices)
-            undo(choice)                       ← restore state
-```
-
-**The six variables you always need to identify:**
-
-| Variable | Question to ask |
-|---|---|
-| State | What am I building? (current path, current board, current string) |
-| Choices | What can I add at this step? |
-| Validity | What makes a choice legal right now? |
-| Termination | How do I know I'm done? |
-| Recording | When and how do I save a solution? |
-| Undo | What exactly must I reverse after exploring? |
-
-### The Five Most Important Backtracking Patterns
-
-#### Pattern 1: Include/Exclude (Subsets)
-
-At each index, binary choice: include this element or skip it. Produces all 2^n subsets.
-
-```
-subsets(nums, index, current, result):
-    if index == nums.length:
-        result.add(copy of current)
-        return
-    current.add(nums[index])          ← include
-    subsets(nums, index+1, current, result)
-    current.remove(last)               ← undo include
-    subsets(nums, index+1, current, result)  ← exclude (no undo needed)
-```
-
-**Why it works:** Every element is independently included or excluded. The recursion depth is n. Each leaf represents one unique decision sequence → one unique subset.
-
-**Handles duplicates:** Sort first. Before making the "include" call, skip if this element equals the previous AND the previous was not included at this level. More commonly: at a for-loop level (see Combinations), after processing `nums[i]`, skip all `nums[i+1] == nums[i]`.
-
-#### Pattern 2: For-Loop with Start Index (Combinations)
-
-Choose k elements from n, order doesn't matter. Use a start index to avoid picking the same element twice (in different orders).
-
-```
-combine(nums, start, k, current, result):
-    if current.size == k:
-        result.add(copy of current)
-        return
-    for i from start to nums.length - 1:
-        current.add(nums[i])
-        combine(nums, i+1, k, current, result)   ← i+1 prevents reuse
-        current.remove(last)
-
-    // Pruning: if nums.length - i < k - current.size, not enough elements left → stop
-```
-
-**Combination Sum (unlimited reuse):** Pass `i` instead of `i+1` to allow re-picking the same element.
-
-**Combination Sum II (input has duplicates):** Sort first. Inside the loop, `if (i > start && nums[i] == nums[i-1]) continue;` — skip duplicates at the same recursive level.
-
-#### Pattern 3: Used Array (Permutations)
-
-Order matters. Each element can appear once per permutation. Track which elements are used.
-
-```
-permute(nums, used, current, result):
-    if current.size == nums.length:
-        result.add(copy of current)
-        return
-    for i from 0 to nums.length - 1:
-        if used[i]: continue
-        used[i] = true
-        current.add(nums[i])
-        permute(nums, used, current, result)
-        current.remove(last)
-        used[i] = false
-```
-
-**With duplicates:** Sort first. Add condition: `if (i > 0 && nums[i] == nums[i-1] && !used[i-1]) continue;`
-
-**Swap-based alternative:** Swap `nums[i]` with `nums[start]`, recurse on `start+1`, swap back. Avoids the `used` array but is harder to reason about with duplicates.
-
-#### Pattern 4: Constraint Sets (N-Queens / Sudoku)
-
-Placement problems where constraints reduce the choice domain.
-
-```
-placeQueens(row, cols, diag1, diag2, board, result):
-    if row == n:
-        result.add(buildBoard(board))
-        return
-    for col from 0 to n-1:
-        if col in cols or (row-col) in diag1 or (row+col) in diag2:
-            continue                           ← constraint check
-        board[row] = col
-        add col to cols, (row-col) to diag1, (row+col) to diag2
-        placeQueens(row+1, cols, diag1, diag2, board, result)
-        remove col from cols, (row-col) from diag1, (row+col) from diag2
-```
-
-**Insight:** Use three hash sets for O(1) constraint checking. Column conflict: `c in cols`. Main diagonal: `(row - col)` is constant. Anti-diagonal: `(row + col)` is constant.
-
-#### Pattern 5: Grid DFS with Undo (Word Search)
-
-Walk through a 2D grid, marking visited cells. Undo the mark when backtracking.
-
-```
-search(board, word, r, c, index):
-    if index == word.length: return true
-    if r/c out of bounds or board[r][c] != word[index]: return false
-    temp = board[r][c]
-    board[r][c] = '#'                  ← mark visited
-    found = search(..., r+1,c, index+1) OR search(..., r-1,c, ...) OR ...
-    board[r][c] = temp                 ← restore (undo)
-    return found
-```
-
-### Pruning: The Difference Between Passing and Failing
-
-Pruning = cutting branches of the decision tree that cannot lead to a solution.
-
-| Technique | When to apply | Example |
-|---|---|---|
-| Constraint check | Before making a choice | N-Queens: skip columns with attacking queens |
-| Bound check | Current partial sum exceeds target | Combination Sum: prune if `current_sum > target` |
-| Sort + early exit | Sorted candidates, too large means all remaining are too large | `if (nums[i] > remaining) break;` in Combination Sum |
-| Symmetry breaking | Duplicate elements at the same level | Skip `nums[i] == nums[i-1]` at same depth |
-| Forward checking | Can remaining choices even satisfy the constraint? | If remaining length < characters still needed in Word Search |
-
-**Always discuss pruning in an interview.** Unpruned backtracking may time out; pruning is the difference between exponential and practical.
-
----
-
-## [35–45 min] Concrete Code + Dry Run
-
-### Example 1: Subsets
-
-**Input:** `nums = [1, 2, 3]`
-**Output:** `[[], [1], [1,2], [1,2,3], [1,3], [2], [2,3], [3]]`
-
-**Java:**
+### How does it work?
+1. Define what the function should return (its contract).
+2. Identify the base case — the smallest input you can answer directly.
+3. For any other input, express the answer in terms of a smaller call.
+4. Trust that the smaller call returns the correct answer (leap of faith).
+5. Combine the current step's contribution with the recursive result.
+6. Return the combined result.
+
+### Why does it work?
+Every recursive call reduces the problem size by at least one step, so eventually you always hit the base case and the stack unwinds with correct answers from the bottom up.
+
+### When to use?
+- Computing a value that depends on the same value for a smaller input (factorial, fibonacci, power).
+- Tree or linked-list traversal (a subtree is the same structure, just smaller).
+- Divide-and-conquer problems (merge sort, binary search).
+- When the problem is naturally self-similar.
+
+### When NOT to use?
+- When subproblems overlap and you're recomputing the same call many times — add memoization or switch to DP.
+- When n is huge (n > 10^5) and the recursion depth would blow the stack.
+
+### How to recognize in a new problem?
+Ask: "Can I solve this by solving a slightly smaller version of it?" If yes, recursion fits. Signals: "compute nth value", "traverse a tree", "split and process halves", "reduce by one element each time".
+
+### Simple Example
+Input: `n = 4` → Expected output: `24`
+
+`factorial(4)` = 4 × `factorial(3)` = 4 × 3 × `factorial(2)` = 4 × 3 × 2 × `factorial(1)` = 4 × 3 × 2 × 1 = 24
+
+### Code
 ```java
+// Java
+int factorial(int n) {
+    if (n <= 1) return 1;           // base case
+    return n * factorial(n - 1);   // recursive case
+}
+```
+```javascript
+// JavaScript
+function factorial(n) {
+    if (n <= 1) return 1;
+    return n * factorial(n - 1);
+}
+```
+
+### Dry Run
+```
+factorial(4)
+  → 4 * factorial(3)
+         → 3 * factorial(2)
+                → 2 * factorial(1)
+                       → return 1
+                → return 2
+         → return 6
+  → return 24
+```
+
+### Complexity
+```
+Time:  O(n) — one call per value from n down to 1
+Space: O(n) — call stack holds n frames at peak depth
+```
+
+### Common Trap
+1. Forgetting the base case — causes infinite recursion and a stack overflow.
+2. Base case is wrong (e.g., using `n == 0` for factorial when the loop should end at 1) — causes off-by-one errors or wrong answers.
+
+### Experience Tip
+**Experience Tip:** Before writing any code, write a one-sentence description of what the function returns. If you cannot describe it clearly, you do not understand the recursion yet. That sentence becomes your contract and prevents you from writing recursive calls that violate it.
+
+### Do Not Confuse With
+- **Backtracking:** Recursion that also undoes choices to explore alternatives. Basic recursion computes a result; backtracking explores a space.
+- **DP:** Recursion with memoization. When the same recursive call gets triggered multiple times, cache it.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 509 | Fibonacci Number | Easy | Direct recursive definition; use to practice base case + trust | https://leetcode.com/problems/fibonacci-number/ |
+| 206 | Reverse Linked List | Easy | Recursive: reverse tail, then fix head's link | https://leetcode.com/problems/reverse-linked-list/ |
+| 104 | Maximum Depth of Binary Tree | Easy | Tree recursion: depth = 1 + max(left, right) | https://leetcode.com/problems/maximum-depth-of-binary-tree/ |
+| 344 | Reverse String | Easy | Swap outer chars, recurse on inner substring | https://leetcode.com/problems/reverse-string/ |
+| 50 | Pow(x, n) | Medium | Use x^n = x^(n/2) * x^(n/2) to get O(log n) | https://leetcode.com/problems/powx-n/ |
+
+### One-Minute Revision
+```
+ALGORITHM:     Basic Recursion
+IN SIMPLE WORDS: Function calls itself on a smaller input; base case stops it
+USE WHEN:      Problem = same problem on smaller input (tree, linked list, math)
+DON'T USE WHEN: Overlapping subproblems (use DP) or n too large (stack overflow)
+CORE IDEA:     Trust the recursive call; just handle the current step
+TRACK:         Current value + return from recursive call
+TIME:          O(n) typically
+SPACE:         O(n) call stack depth
+COMMON TRAP:   Missing or wrong base case
+EXPERIENCE TIP: Write what the function returns in one sentence before coding
+```
+
+---
+
+## Subsets / Power Set
+
+### What is it?
+Generate every possible subset of a given array (including empty set and the full array). For n elements there are 2^n subsets because each element is either in or out. This is the most fundamental backtracking pattern.
+
+### Visual
+```
+nums = [1, 2]
+
+                    []
+                 /       \
+           [1]              []
+          /    \           /    \
+       [1,2]   [1]       [2]    []
+      (record)(record) (record)(record)
+```
+At each level: left branch = include current element, right branch = exclude it.
+
+### How does it work?
+1. Start with an empty current path and index 0.
+2. At each call, immediately record the current path as a valid subset.
+3. Loop from the current index to end of array.
+4. Add `nums[i]` to path (Choose).
+5. Recurse with index `i+1` (Explore).
+6. Remove last element from path (Undo).
+7. The loop naturally handles the "exclude" case by moving to the next element.
+
+### Why does it work?
+Recording the path at the start of every call (not just the leaves) captures all subsets — the empty set, all single-element subsets, all two-element subsets, etc. The for-loop starting at `index` ensures elements are never repeated in reverse order, so `[1,2]` and `[2,1]` are not both generated.
+
+### When to use?
+- "Generate all subsets / power set."
+- "Find all subsequences."
+- Any problem where you pick a subset of items and check a condition on it.
+- When the answer needs every possible combination without caring about order.
+
+### When NOT to use?
+- When you need permutations (order matters) — use the permutation pattern.
+- When n is large (> 20) — 2^n explodes.
+
+### How to recognize in a new problem?
+The problem asks for "all possible" selections from a set where order does not matter and each element is either included or not. Signals: "all subsets", "all subsequences", "power set", "every possible selection".
+
+### Simple Example
+Input: `[1, 2]` → Expected output: `[[], [1], [1,2], [2]]`
+
+Start at index 0, path=[]. Record []. Add 1, path=[1]. Record [1]. Add 2, path=[1,2]. Record [1,2]. Remove 2, path=[1]. Remove 1, path=[]. Add 2, path=[2]. Record [2]. Remove 2, path=[]. Done.
+
+### Code
+```java
+// Java
 public List<List<Integer>> subsets(int[] nums) {
     List<List<Integer>> result = new ArrayList<>();
     backtrack(nums, 0, new ArrayList<>(), result);
     return result;
 }
 
-private void backtrack(int[] nums, int index, List<Integer> current, List<List<Integer>> result) {
-    result.add(new ArrayList<>(current));
-    for (int i = index; i < nums.length; i++) {
-        current.add(nums[i]);
-        backtrack(nums, i + 1, current, result);
-        current.remove(current.size() - 1);
+private void backtrack(int[] nums, int start, List<Integer> path, List<List<Integer>> result) {
+    result.add(new ArrayList<>(path));   // record current subset
+    for (int i = start; i < nums.length; i++) {
+        path.add(nums[i]);               // choose
+        backtrack(nums, i + 1, path, result); // explore
+        path.remove(path.size() - 1);   // undo
     }
 }
 ```
-
-**JavaScript:**
 ```javascript
+// JavaScript
 function subsets(nums) {
     const result = [];
-    function backtrack(index, current) {
-        result.push([...current]);
-        for (let i = index; i < nums.length; i++) {
-            current.push(nums[i]);
-            backtrack(i + 1, current);
-            current.pop();
+    function backtrack(start, path) {
+        result.push([...path]);          // record current subset
+        for (let i = start; i < nums.length; i++) {
+            path.push(nums[i]);          // choose
+            backtrack(i + 1, path);     // explore
+            path.pop();                  // undo
         }
     }
     backtrack(0, []);
@@ -374,36 +198,117 @@ function subsets(nums) {
 }
 ```
 
-**Dry Run for `[1, 2, 3]` — Call Tree:**
+### Dry Run
 ```
-backtrack(i=0, path=[])         → record []
-  add 1 → backtrack(i=1, [1])  → record [1]
-    add 2 → backtrack(i=2, [1,2])  → record [1,2]
-      add 3 → backtrack(i=3, [1,2,3]) → record [1,2,3]
-      remove 3
-    remove 2
-    add 3 → backtrack(i=3, [1,3])  → record [1,3]
-    remove 3
-  remove 1
-  add 2 → backtrack(i=2, [2])  → record [2]
-    add 3 → backtrack(i=3, [2,3])  → record [2,3]
-    remove 3
-  remove 2
-  add 3 → backtrack(i=3, [3])  → record [3]
-  remove 3
+backtrack(start=0, path=[])       → record []
+  i=0: add 1, path=[1]
+    backtrack(start=1, path=[1])  → record [1]
+      i=1: add 2, path=[1,2]
+        backtrack(start=2, path=[1,2]) → record [1,2]
+      remove 2, path=[1]
+    (loop ends)
+  remove 1, path=[]
+  i=1: add 2, path=[2]
+    backtrack(start=2, path=[2])  → record [2]
+    (loop ends)
+  remove 2, path=[]
+(loop ends)
+
+Result: [], [1], [1,2], [2]
 ```
 
-**Complexity:** Time O(n × 2^n) — 2^n subsets, each O(n) to copy. Space O(n) recursion depth.
+### Complexity
+```
+Time:  O(n × 2^n) — 2^n subsets, each takes O(n) to copy into result
+Space: O(n) — call stack depth is at most n; path list also O(n)
+```
+
+### Common Trap
+1. Not making a copy of `path` when recording — you add a reference that gets mutated later, so all entries in result end up being the same empty list.
+2. Passing `i` instead of `i+1` — causes each element to be included multiple times in one subset.
+
+### Experience Tip
+**Experience Tip:** The for-loop version (record at top, loop from start) is easier to extend than the include/exclude binary-branch version. All combination-style problems use this same skeleton — learn it once.
+
+### Do Not Confuse With
+- **Permutations:** Order matters, uses a `used[]` array, not a start index.
+- **Combinations of size k:** Same pattern but only record when `path.size() == k`.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 78 | Subsets | Medium | Classic pattern; record at top of every call | https://leetcode.com/problems/subsets/ |
+| 90 | Subsets II | Medium | Sort first; skip `nums[i] == nums[i-1]` when `i > start` | https://leetcode.com/problems/subsets-ii/ |
+| 784 | Letter Case Permutation | Medium | At each char choose lowercase or uppercase | https://leetcode.com/problems/letter-case-permutation/ |
+| 491 | Non-decreasing Subsequences | Medium | Cannot sort; use a set to track used values per level | https://leetcode.com/problems/non-decreasing-subsequences/ |
+| 1239 | Maximum Length of a Concatenated String with Unique Characters | Medium | Subset of strings; prune when chars overlap | https://leetcode.com/problems/maximum-length-of-a-concatenated-string-with-unique-characters/ |
+
+### One-Minute Revision
+```
+ALGORITHM:     Subsets / Power Set
+IN SIMPLE WORDS: For each element: include or skip; record every partial state
+USE WHEN:      "All subsets", "all subsequences", power set
+DON'T USE WHEN: Order matters (use permutations) or n > 20
+CORE IDEA:     Record path at top of every call; loop from start to avoid duplicates
+TRACK:         current path, current start index
+TIME:          O(n × 2^n)
+SPACE:         O(n) call stack
+COMMON TRAP:   Forget new ArrayList(path) — all results point to same list
+EXPERIENCE TIP: For-loop version generalizes to all combination problems; master it
+```
 
 ---
 
-### Example 2: Permutations
+## Permutations
 
-**Input:** `nums = [1, 2, 3]`
-**Output:** `[[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]`
+### What is it?
+Generate all orderings of a given array. Unlike subsets, order matters here — `[1,2]` and `[2,1]` are different results. For n distinct elements there are n! permutations. A boolean `used[]` array tracks which elements are already in the current path.
 
-**Java:**
+### Visual
+```
+nums = [1, 2, 3]
+
+                    []
+           /         |         \
+        [1]         [2]         [3]
+       /   \       /   \       /   \
+    [1,2] [1,3] [2,1] [2,3] [3,1] [3,2]
+      |     |     |     |     |     |
+  [1,2,3][1,3,2][2,1,3][2,3,1][3,1,2][3,2,1]
+```
+
+### How does it work?
+1. Start with an empty path and `used[]` all false.
+2. If path length equals nums length, record it as a complete permutation (base case).
+3. Loop through every index from 0 to n-1 (Choose from all elements).
+4. Skip if `used[i]` is true.
+5. Mark `used[i] = true`, add `nums[i]` to path (Choose).
+6. Recurse (Explore).
+7. Remove last element from path, mark `used[i] = false` (Undo).
+
+### Why does it work?
+By iterating from index 0 every time (not from a start index), every element can appear at every position. The `used[]` array prevents an element from being used twice in a single permutation.
+
+### When to use?
+- "Generate all permutations / arrangements / orderings."
+- When order matters and each element is used exactly once.
+- Scheduling problems where you try every sequence.
+
+### When NOT to use?
+- When order does not matter (use subsets/combinations).
+- When n > 12 — n! is enormous.
+
+### How to recognize in a new problem?
+The problem needs every possible ordering of a set of items. Signals: "all permutations", "all arrangements", "rearrange all elements", "every possible sequence".
+
+### Simple Example
+Input: `[1, 2]` → Expected output: `[[1,2], [2,1]]`
+
+Path=[]. Try index 0: use 1, path=[1]. Try index 1 (0 is used): use 2, path=[1,2]. Record. Undo. Undo. Try index 1: use 2, path=[2]. Try index 0 (1 not used): use 1, path=[2,1]. Record.
+
+### Code
 ```java
+// Java
 public List<List<Integer>> permute(int[] nums) {
     List<List<Integer>> result = new ArrayList<>();
     boolean[] used = new boolean[nums.length];
@@ -411,38 +316,37 @@ public List<List<Integer>> permute(int[] nums) {
     return result;
 }
 
-private void backtrack(int[] nums, boolean[] used, List<Integer> current, List<List<Integer>> result) {
-    if (current.size() == nums.length) {
-        result.add(new ArrayList<>(current));
+private void backtrack(int[] nums, boolean[] used, List<Integer> path, List<List<Integer>> result) {
+    if (path.size() == nums.length) {
+        result.add(new ArrayList<>(path));
         return;
     }
     for (int i = 0; i < nums.length; i++) {
         if (used[i]) continue;
         used[i] = true;
-        current.add(nums[i]);
-        backtrack(nums, used, current, result);
-        current.remove(current.size() - 1);
+        path.add(nums[i]);                   // choose
+        backtrack(nums, used, path, result); // explore
+        path.remove(path.size() - 1);        // undo
         used[i] = false;
     }
 }
 ```
-
-**JavaScript:**
 ```javascript
+// JavaScript
 function permute(nums) {
     const result = [];
     const used = new Array(nums.length).fill(false);
-    function backtrack(current) {
-        if (current.length === nums.length) {
-            result.push([...current]);
+    function backtrack(path) {
+        if (path.length === nums.length) {
+            result.push([...path]);
             return;
         }
         for (let i = 0; i < nums.length; i++) {
             if (used[i]) continue;
             used[i] = true;
-            current.push(nums[i]);
-            backtrack(current);
-            current.pop();
+            path.push(nums[i]);    // choose
+            backtrack(path);       // explore
+            path.pop();            // undo
             used[i] = false;
         }
     }
@@ -451,108 +355,470 @@ function permute(nums) {
 }
 ```
 
-**Dry Run for `[1, 2, 3]` (first branch only):**
+### Dry Run
 ```
 backtrack(path=[], used=[F,F,F])
   i=0: used[0]=T, path=[1]
     i=1: used[1]=T, path=[1,2]
-      i=2: used[2]=T, path=[1,2,3] → record [1,2,3]
+      i=2: used[2]=T, path=[1,2,3] → RECORD [1,2,3]
       used[2]=F, path=[1,2]
     used[1]=F, path=[1]
     i=2: used[2]=T, path=[1,3]
-      i=1: used[1]=T, path=[1,3,2] → record [1,3,2]
+      i=1: used[1]=T, path=[1,3,2] → RECORD [1,3,2]
       used[1]=F, path=[1,3]
     used[2]=F, path=[1]
   used[0]=F, path=[]
-  ... (continue for i=1, i=2)
+  (continue i=1, i=2 — produces 4 more permutations)
 ```
 
-**Complexity:** Time O(n × n!) — n! permutations, each O(n) to copy. Space O(n) for `used` array and recursion depth.
+### Complexity
+```
+Time:  O(n × n!) — n! permutations, each takes O(n) to copy
+Space: O(n) — used array O(n) + call stack depth O(n)
+```
+
+### Common Trap
+1. Forgetting to reset `used[i] = false` after the recursive call — future iterations think that element is still in use.
+2. Using a start index (like subsets) instead of iterating from 0 — you will miss permutations.
+
+### Experience Tip
+**Experience Tip:** For Permutations II (with duplicates), sort the array first then add: `if (i > 0 && nums[i] == nums[i-1] && !used[i-1]) continue;`. The `!used[i-1]` condition skips a duplicate only when the previous identical element was NOT used in this path (meaning it was already counted at this level), preventing identical permutations.
+
+### Do Not Confuse With
+- **Subsets:** Order does not matter, use start index. Permutations use `used[]` and restart loop from 0.
+- **Combinations:** Pick k elements, order does not matter, use start index.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 46 | Permutations | Medium | Classic; used[] array, restart loop from 0 each level | https://leetcode.com/problems/permutations/ |
+| 47 | Permutations II | Medium | Sort + skip when nums[i]==nums[i-1] && !used[i-1] | https://leetcode.com/problems/permutations-ii/ |
+| 31 | Next Permutation | Medium | Not backtracking but tests understanding of permutation order | https://leetcode.com/problems/next-permutation/ |
+| 60 | Permutation Sequence | Hard | Find kth permutation without generating all — math + backtracking | https://leetcode.com/problems/permutation-sequence/ |
+| 567 | Permutation in String | Medium | Sliding window; tests permutation recognition, not generation | https://leetcode.com/problems/permutation-in-string/ |
+
+### One-Minute Revision
+```
+ALGORITHM:     Permutations
+IN SIMPLE WORDS: Try every element at each position; skip already-used ones
+USE WHEN:      Order matters, use each element once, generate all orderings
+DON'T USE WHEN: Order doesn't matter (use subsets/combos) or n > 12
+CORE IDEA:     Loop from 0 every time + used[] array to avoid reuse
+TRACK:         current path, used[] boolean array
+TIME:          O(n × n!)
+SPACE:         O(n) call stack + used array
+COMMON TRAP:   Forget used[i]=false on undo; or use start index instead of 0
+EXPERIENCE TIP: Permutations II — sort + !used[i-1] condition handles duplicates
+```
 
 ---
 
-### Example 3: Generate Parentheses
+## Combinations (Combination Sum Style)
 
-**Input:** `n = 3`
-**Output:** `["((()))","(()())","(())()","()(())","()()()"]`
+### What is it?
+Pick numbers from a list to reach a target sum. There are two sub-variants: (1) each number can be used unlimited times (Combination Sum), (2) each number used at most once (Combination Sum II). The for-loop-with-start-index is the core skeleton. Recording only happens at the leaves (when target is met), unlike subsets.
 
-**Java:**
+### Visual
+```
+candidates = [2, 3, 6, 7], target = 7
+
+                       []  target=7
+              /         |         \       \
+          [2] t=5    [3] t=4    [6] t=1  [7] t=0
+         / | \       / \          |        RECORD
+      [2,2][2,3][2,6][3,3][3,6] [6,6]
+      t=3  t=2  t=-1  t=1  t=-2  t=-5
+      ...
+```
+
+### How does it work?
+1. Start with empty path, target remaining = original target.
+2. If remaining == 0, record the current path (base case — found a valid combination).
+3. If remaining < 0, return (pruning — overshot, no point continuing).
+4. Loop from current start index to end of candidates.
+5. Add `candidates[i]` to path, subtract from remaining (Choose).
+6. Recurse with `i` as start (for reuse) or `i+1` (no reuse) (Explore).
+7. Remove last element, restore remaining (Undo).
+
+### Why does it work?
+Passing `i` (not `i+1`) as the next start index allows reusing the same element. Passing `i+1` prevents reuse. The start index always moves forward, so you never generate `[2,3]` and `[3,2]` as separate answers — order is fixed by construction.
+
+### When to use?
+- "Find all combinations that sum to target."
+- Picking items with or without replacement where you need all valid picks.
+- "Choose k numbers from 1..9 that sum to target" (Combination Sum III).
+
+### When NOT to use?
+- When you need all subsets regardless of any constraint — use the subsets pattern.
+- When only the count matters and n is large — use DP.
+
+### How to recognize in a new problem?
+The problem asks for all ways to reach a target by summing elements. Signals: "combination sum", "find all combinations", "reach target by adding", "choose numbers that add to".
+
+### Simple Example
+Input: `candidates = [2, 3]`, `target = 5` → Expected output: `[[2,2,2,... no], [2,3], [3,2]... wait]`
+Correct: `[[2,3], [3,2]` are the same combination — output is `[[2,3]]` because we go left to right.
+
+Trace: path=[], rem=5. Take 2, path=[2], rem=3. Take 2 again, path=[2,2], rem=1. Take 2, rem=-1 → prune. Back. Take 3, path=[2,3], rem=0 → RECORD. Back. Back. Take 3, path=[3], rem=2. Take 3, rem=-1 → prune. Back.
+Result: `[[2,3]]`
+
+### Code
 ```java
-public List<String> generateParenthesis(int n) {
-    List<String> result = new ArrayList<>();
-    backtrack(n, 0, 0, new StringBuilder(), result);
+// Java — Combination Sum (unlimited reuse, LC 39)
+public List<List<Integer>> combinationSum(int[] candidates, int target) {
+    List<List<Integer>> result = new ArrayList<>();
+    backtrack(candidates, 0, target, new ArrayList<>(), result);
     return result;
 }
 
-private void backtrack(int n, int open, int close, StringBuilder current, List<String> result) {
-    if (current.length() == 2 * n) {
-        result.add(current.toString());
+private void backtrack(int[] candidates, int start, int remaining,
+                        List<Integer> path, List<List<Integer>> result) {
+    if (remaining == 0) {
+        result.add(new ArrayList<>(path));
         return;
     }
-    if (open < n) {
-        current.append('(');
-        backtrack(n, open + 1, close, current, result);
-        current.deleteCharAt(current.length() - 1);
-    }
-    if (close < open) {
-        current.append(')');
-        backtrack(n, open, close + 1, current, result);
-        current.deleteCharAt(current.length() - 1);
+    for (int i = start; i < candidates.length; i++) {
+        if (candidates[i] > remaining) break; // prune (works when sorted)
+        path.add(candidates[i]);
+        backtrack(candidates, i, remaining - candidates[i], path, result); // i not i+1
+        path.remove(path.size() - 1);
     }
 }
 ```
-
-**JavaScript:**
 ```javascript
-function generateParenthesis(n) {
+// JavaScript — Combination Sum (unlimited reuse, LC 39)
+function combinationSum(candidates, target) {
     const result = [];
-    function backtrack(open, close, current) {
-        if (current.length === 2 * n) {
-            result.push(current);
+    candidates.sort((a, b) => a - b);
+    function backtrack(start, remaining, path) {
+        if (remaining === 0) {
+            result.push([...path]);
             return;
         }
-        if (open < n) backtrack(open + 1, close, current + '(');
-        if (close < open) backtrack(open, close + 1, current + ')');
+        for (let i = start; i < candidates.length; i++) {
+            if (candidates[i] > remaining) break;
+            path.push(candidates[i]);
+            backtrack(i, remaining - candidates[i], path); // i not i+1
+            path.pop();
+        }
     }
-    backtrack(0, 0, '');
+    backtrack(0, target, []);
     return result;
 }
 ```
 
-**Why the constraints work:** Adding `(` is valid whenever `open < n`. Adding `)` is valid whenever `close < open` (you can only close what you've opened). These two rules eliminate all invalid strings upfront — no need to generate and filter.
-
-**Call Tree for n=2:**
+### Dry Run
 ```
-backtrack(open=0, close=0, "")
-  add ( → backtrack(1, 0, "(")
-    add ( → backtrack(2, 0, "((")
-      add ) → backtrack(2, 1, "(()")
-        add ) → backtrack(2, 2, "(())") → record
-    add ) → backtrack(2, 1, "()")     ← wait: open=1, close can be added
-    (actually add ( → open=2 → then close twice)
+candidates=[2,3,6,7], target=7
+
+backtrack(start=0, rem=7, path=[])
+  i=0 (val=2): path=[2], rem=5
+    i=0 (val=2): path=[2,2], rem=3
+      i=0 (val=2): path=[2,2,2], rem=1
+        i=0 (val=2): 2>1 → break (pruned)
+      remove 2, path=[2,2]
+      i=1 (val=3): 3>1 → break (pruned)
+    remove 2, path=[2]
+    i=1 (val=3): path=[2,3], rem=0 → RECORD [2,3]
+    remove 3
+    i=2 (val=6): 6>2 → break
+  remove 2
+  i=1 (val=3): path=[3], rem=4
+    i=1 (val=3): path=[3,3], rem=1 → all > 1 → break
+    remove 3
+  remove 3
+  i=2 (val=6): 6>7? no. path=[6], rem=1 → 2>1 → break
+  remove 6
+  i=3 (val=7): path=[7], rem=0 → RECORD [7]
+  remove 7
+
+Result: [[2,3],[7]]
 ```
 
-**Complexity:** Time O(4^n / √n) — the nth Catalan number. Space O(n) recursion depth.
+### Complexity
+```
+Time:  O(n^(T/M)) — T=target, M=min candidate; branching factor n, depth T/M
+Space: O(T/M) — call stack depth (path length bounded by target/min)
+```
+
+### Common Trap
+1. Passing `i+1` instead of `i` for Combination Sum — you will miss combinations that reuse an element.
+2. Not sorting candidates before using the `break` pruning — the break only works correctly when candidates are in ascending order.
+
+### Experience Tip
+**Experience Tip:** Combination Sum II (LC 40) uses `i+1` (no reuse) and requires duplicate handling: sort the array, then inside the loop add `if (i > start && candidates[i] == candidates[i-1]) continue;`. This skips starting a new branch with a value already tried at this level — preventing duplicate combinations.
+
+### Do Not Confuse With
+- **Subsets:** No target sum, record everything. Combinations record only when target is met.
+- **Permutations:** Order matters, candidates are distinct positions.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 39 | Combination Sum | Medium | Reuse allowed — pass i not i+1; sort + break to prune | https://leetcode.com/problems/combination-sum/ |
+| 40 | Combination Sum II | Medium | No reuse, duplicates in input — sort + skip same val at same level | https://leetcode.com/problems/combination-sum-ii/ |
+| 216 | Combination Sum III | Medium | Choose k numbers from 1-9 summing to n; add size check | https://leetcode.com/problems/combination-sum-iii/ |
+| 377 | Combination Sum IV | Medium | Count combinations (order matters) — use DP, not backtracking | https://leetcode.com/problems/combination-sum-iv/ |
+| 17 | Letter Combinations of a Phone Number | Medium | Map digit → letters; same for-loop skeleton over mapped chars | https://leetcode.com/problems/letter-combinations-of-a-phone-number/ |
+
+### One-Minute Revision
+```
+ALGORITHM:     Combinations / Combination Sum
+IN SIMPLE WORDS: Pick numbers adding to target; use start index to avoid duplicate combos
+USE WHEN:      "All combinations summing to target", pick-with-or-without-replacement
+DON'T USE WHEN: Only count needed (use DP) or n large
+CORE IDEA:     Record at rem==0; pass i (reuse) or i+1 (no reuse)
+TRACK:         path, start index, remaining target
+TIME:          O(n^(T/M)) roughly
+SPACE:         O(T/M) call stack
+COMMON TRAP:   i vs i+1 confusion; forgetting to sort before break-pruning
+EXPERIENCE TIP: Combo Sum II — sort + skip nums[i]==nums[i-1] when i>start
+```
 
 ---
 
-### Example 4: N-Queens
+## Palindrome Partitioning
 
-**Input:** `n = 4`
-**Output:** `[[".Q..","...Q","Q...","..Q."],["..Q.","Q...","...Q",".Q.."]]`
+### What is it?
+Split a string into all possible substrings such that every substring is a palindrome. This combines backtracking (try all split points) with a palindrome check at each step. Every valid complete partition (where all parts together equal the original string) is recorded.
 
-**Java:**
+### Visual
+```
+s = "aab"
+
+                     ""  (start=0)
+              /             \
+           "a"               "aa"
+          (start=1)          (start=2)
+          /    \                 \
+       "a"     "ab"             "b"
+      (start=2) (not full)     (start=3 = end)
+          \                    RECORD ["aa","b"]
+          "b"
+         (start=3)
+         RECORD ["a","a","b"]
+```
+
+### How does it work?
+1. Start with an empty path and index 0.
+2. If index equals string length, record the current path (base case — full string partitioned).
+3. Loop from index to end of string (try every possible first cut).
+4. Extract the substring from index to i (inclusive).
+5. If it is a palindrome: add it to path (Choose), recurse with start = i+1 (Explore), remove it (Undo).
+6. If not a palindrome: skip (prune).
+
+### Why does it work?
+By trying all cut points, you explore every possible way to split the string. The palindrome check at each step prunes branches early — if a prefix is not a palindrome, no point exploring deeper with that prefix.
+
+### When to use?
+- "Partition a string such that every part is a palindrome."
+- Any string splitting problem where every segment must satisfy a property.
+
+### When NOT to use?
+- When you only need the minimum cuts (use DP — Palindrome Partitioning II).
+
+### How to recognize in a new problem?
+"Partition" + "every part must be X" is the signal. The pattern: try all prefixes, check the condition, recurse on the remaining suffix.
+
+### Simple Example
+Input: `"aab"` → Expected output: `[["a","a","b"], ["aa","b"]]`
+
+At index 0: try "a" (palindrome) → recurse on "ab". At index 1: try "a" (palindrome) → recurse on "b". At index 2: "b" palindrome → RECORD ["a","a","b"]. Back. Try "ab" — not palindrome, skip. Back. Try "aa" (palindrome) → recurse on "b". "b" palindrome → RECORD ["aa","b"]. Try "aab" — not palindrome, skip.
+
+### Code
 ```java
+// Java
+public List<List<String>> partition(String s) {
+    List<List<String>> result = new ArrayList<>();
+    backtrack(s, 0, new ArrayList<>(), result);
+    return result;
+}
+
+private void backtrack(String s, int start, List<String> path, List<List<String>> result) {
+    if (start == s.length()) {
+        result.add(new ArrayList<>(path));
+        return;
+    }
+    for (int end = start; end < s.length(); end++) {
+        if (isPalindrome(s, start, end)) {
+            path.add(s.substring(start, end + 1)); // choose
+            backtrack(s, end + 1, path, result);   // explore
+            path.remove(path.size() - 1);           // undo
+        }
+    }
+}
+
+private boolean isPalindrome(String s, int left, int right) {
+    while (left < right) {
+        if (s.charAt(left++) != s.charAt(right--)) return false;
+    }
+    return true;
+}
+```
+```javascript
+// JavaScript
+function partition(s) {
+    const result = [];
+    function isPalindrome(left, right) {
+        while (left < right) {
+            if (s[left++] !== s[right--]) return false;
+        }
+        return true;
+    }
+    function backtrack(start, path) {
+        if (start === s.length) {
+            result.push([...path]);
+            return;
+        }
+        for (let end = start; end < s.length; end++) {
+            if (isPalindrome(start, end)) {
+                path.push(s.slice(start, end + 1)); // choose
+                backtrack(end + 1, path);           // explore
+                path.pop();                          // undo
+            }
+        }
+    }
+    backtrack(0, []);
+    return result;
+}
+```
+
+### Dry Run
+```
+s = "aab"
+
+backtrack(start=0, path=[])
+  end=0: "a" isPalin? yes → path=["a"]
+    backtrack(start=1, path=["a"])
+      end=1: "a" isPalin? yes → path=["a","a"]
+        backtrack(start=2, path=["a","a"])
+          end=2: "b" isPalin? yes → path=["a","a","b"]
+            backtrack(start=3) → start==len → RECORD ["a","a","b"]
+          remove "b"
+      remove "a"
+      end=2: "ab" isPalin? no → skip
+    remove "a"
+  end=1: "aa" isPalin? yes → path=["aa"]
+    backtrack(start=2, path=["aa"])
+      end=2: "b" isPalin? yes → path=["aa","b"]
+        backtrack(start=3) → RECORD ["aa","b"]
+      remove "b"
+  remove "aa"
+  end=2: "aab" isPalin? no → skip
+```
+
+### Complexity
+```
+Time:  O(n × 2^n) — 2^(n-1) ways to partition, palindrome check O(n) each
+Space: O(n) — call stack depth O(n), path length O(n)
+```
+
+### Common Trap
+1. Using `s.substring(start, end)` (exclusive end) when you mean `s.substring(start, end+1)` — off-by-one misses the last character.
+2. Not checking isPalindrome before recursing — this wastes time and generates invalid partitions.
+
+### Experience Tip
+**Experience Tip:** For large inputs, precompute a 2D boolean table `dp[i][j] = true if s[i..j] is palindrome` in O(n^2) time and O(n^2) space. Then each palindrome check during backtracking is O(1). This optimization is often expected at Google level.
+
+### Do Not Confuse With
+- **Palindrome Partitioning II (LC 132):** Only asks for minimum cuts — use DP, not backtracking.
+- **Valid Palindrome:** Single string check, no partitioning.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 131 | Palindrome Partitioning | Medium | Classic; try all prefixes, check palindrome, recurse on suffix | https://leetcode.com/problems/palindrome-partitioning/ |
+| 132 | Palindrome Partitioning II | Hard | Min cuts only — switch to DP here | https://leetcode.com/problems/palindrome-partitioning-ii/ |
+| 93 | Restore IP Addresses | Medium | Same structure: try all split points with a validity check instead | https://leetcode.com/problems/restore-ip-addresses/ |
+| 139 | Word Break | Medium | Can the string be split into valid words — DP or backtrack+memo | https://leetcode.com/problems/word-break/ |
+| 140 | Word Break II | Hard | All ways to split — backtracking; add memo for efficiency | https://leetcode.com/problems/word-break-ii/ |
+
+### One-Minute Revision
+```
+ALGORITHM:     Palindrome Partitioning
+IN SIMPLE WORDS: Try all ways to cut the string; keep only palindrome cuts
+USE WHEN:      "All partitions where every part is a palindrome"
+DON'T USE WHEN: Only min cuts needed (use DP instead)
+CORE IDEA:     For-loop over all end points; check palindrome; recurse on rest
+TRACK:         current path of substrings, start index
+TIME:          O(n × 2^n)
+SPACE:         O(n) call stack
+COMMON TRAP:   substring end index off-by-one; skipping palindrome check
+EXPERIENCE TIP: Precompute dp[i][j] palindrome table for O(1) checks during backtrack
+```
+
+---
+
+## N-Queens (Constraint Satisfaction)
+
+### What is it?
+Place n queens on an n×n chessboard so no two queens attack each other (no shared row, column, or diagonal). Place one queen per row; at each row try every column that does not conflict with already-placed queens. Three hash sets give O(1) conflict checking for columns and both diagonal directions.
+
+### Visual
+```
+n = 4, placing row by row:
+
+Row 0: try col 0,1,2,3
+  col 0: place Q at (0,0)
+    Row 1: col 0 blocked (same col), col 1 blocked (diag), col 2: place Q at (1,2)
+      Row 2: check all cols...
+        col 0: blocked by row1 diag? (2-0=2, 1-0=1 diff diag)
+        ... eventually finds no valid placement → backtrack
+    col 1: place Q at (0,1) → explore row 1...
+    ...
+
+Two solutions for n=4:
+  .Q..    ..Q.
+  ...Q    Q...
+  Q...    ...Q
+  ..Q.    .Q..
+```
+
+### How does it work?
+1. Process one row at a time. When `row == n`, all queens placed — record the board.
+2. For the current row, try each column from 0 to n-1 (Choose column).
+3. Check three constraints: column already used? main diagonal `(row-col)` already used? anti-diagonal `(row+col)` already used?
+4. If any conflict, skip this column.
+5. If valid: record queen at `board[row] = col`, add to all three sets (Choose).
+6. Recurse on `row+1` (Explore).
+7. Remove from all three sets (Undo).
+
+### Why does it work?
+Since exactly one queen is placed per row (we go row by row), row conflicts are impossible by design. Columns and two diagonal directions are the only remaining constraints. The `row-col` value is constant along any main diagonal; `row+col` is constant along any anti-diagonal. Hash sets make each constraint check O(1).
+
+### When to use?
+- Placement problems where constraints eliminate most choices.
+- "Place n items satisfying mutual exclusion constraints."
+- Any grid constraint-satisfaction problem.
+
+### When NOT to use?
+- When there is no constraint to prune — pure brute force has no advantage.
+- When you only need to know whether a solution exists (not all solutions) — stop at first.
+
+### How to recognize in a new problem?
+Grid + mutual constraint + "find all valid placements / configurations". Signals: "place pieces", "no two can attack", "satisfy constraints", "fill the board".
+
+### Simple Example
+Input: `n = 4` → Expected output: 2 solutions (see Visual above)
+
+At row 0 col 1: place queen. At row 1 col 3: place queen. At row 2 col 0: place queen. At row 3 col 2: place queen. Row 4 == n → record first solution.
+
+### Code
+```java
+// Java
 public List<List<String>> solveNQueens(int n) {
     List<List<String>> result = new ArrayList<>();
-    int[] board = new int[n];
-    Set<Integer> cols = new HashSet<>(), diag1 = new HashSet<>(), diag2 = new HashSet<>();
+    int[] board = new int[n];   // board[row] = col of queen in that row
+    Set<Integer> cols = new HashSet<>();
+    Set<Integer> diag1 = new HashSet<>();  // row - col
+    Set<Integer> diag2 = new HashSet<>();  // row + col
     backtrack(0, n, board, cols, diag1, diag2, result);
     return result;
 }
 
-private void backtrack(int row, int n, int[] board, Set<Integer> cols,
-                        Set<Integer> diag1, Set<Integer> diag2, List<List<String>> result) {
+private void backtrack(int row, int n, int[] board,
+                        Set<Integer> cols, Set<Integer> diag1, Set<Integer> diag2,
+                        List<List<String>> result) {
     if (row == n) {
         result.add(buildBoard(board, n));
         return;
@@ -561,9 +827,13 @@ private void backtrack(int row, int n, int[] board, Set<Integer> cols,
         if (cols.contains(col) || diag1.contains(row - col) || diag2.contains(row + col))
             continue;
         board[row] = col;
-        cols.add(col); diag1.add(row - col); diag2.add(row + col);
-        backtrack(row + 1, n, board, cols, diag1, diag2, result);
-        cols.remove(col); diag1.remove(row - col); diag2.remove(row + col);
+        cols.add(col);
+        diag1.add(row - col);
+        diag2.add(row + col);
+        backtrack(row + 1, n, board, cols, diag1, diag2, result); // explore
+        cols.remove(col);
+        diag1.remove(row - col);
+        diag2.remove(row + col);
     }
 }
 
@@ -578,224 +848,292 @@ private List<String> buildBoard(int[] board, int n) {
     return rows;
 }
 ```
+```javascript
+// JavaScript
+function solveNQueens(n) {
+    const result = [];
+    const board = new Array(n).fill(0);
+    const cols = new Set(), diag1 = new Set(), diag2 = new Set();
 
-**Key insight on diagonals:**
-- On a main diagonal (top-left to bottom-right): every cell has `row - col = constant`
-- On an anti-diagonal (top-right to bottom-left): every cell has `row + col = constant`
+    function backtrack(row) {
+        if (row === n) {
+            result.push(board.map(c => '.'.repeat(c) + 'Q' + '.'.repeat(n - c - 1)));
+            return;
+        }
+        for (let col = 0; col < n; col++) {
+            if (cols.has(col) || diag1.has(row - col) || diag2.has(row + col)) continue;
+            board[row] = col;
+            cols.add(col); diag1.add(row - col); diag2.add(row + col);
+            backtrack(row + 1);
+            cols.delete(col); diag1.delete(row - col); diag2.delete(row + col);
+        }
+    }
+    backtrack(0);
+    return result;
+}
+```
 
-Two queens share a diagonal if and only if they have the same `row - col` or `row + col` value.
+### Dry Run
+```
+n=4, row=0:
+  col=0: cols={0}, diag1={0}, diag2={0}, board[0]=0
+    row=1:
+      col=0: cols has 0 → skip
+      col=1: diag2 has 0+1=1? no. diag1 has 1-1=0? yes → skip
+      col=2: all clear → cols={0,2}, diag1={0,-1}, diag2={0,3}, board[1]=2
+        row=2:
+          col=0: diag2 has 2+0=2? no. diag1 has 2-0=2? no. cols has 0? yes → skip
+          col=1: diag1 has 2-1=1? no. diag2 has 2+1=3? yes → skip
+          col=2: cols has 2 → skip
+          col=3: diag2 has 2+3=5? no. diag1 has 2-3=-1? yes → skip
+        → no valid col at row=2 → backtrack
+      remove col=2 → ...
+      col=3: all clear → board[1]=3, ...
+        row=2: col=1 valid → board[2]=1
+          row=3: col=2 valid → board[3]=2 → row=4=n → RECORD [".Q..","...Q","Q...","..Q."]
+```
 
-**Complexity:** Time approximately O(n!) in the worst case, but constraints prune heavily. Space O(n) for board + sets.
+### Complexity
+```
+Time:  O(n!) — at row 0: n choices, row 1: at most n-1, etc.; constraints prune heavily
+Space: O(n) — board array O(n) + three sets O(n) + call stack depth O(n)
+```
+
+### Common Trap
+1. Using a 2D boolean array `visited[row][col]` to check conflicts — O(n) per check. Use three hash sets (or three boolean arrays indexed by col, row-col+n, row+col) for O(1).
+2. Forgetting to remove from all three sets on undo — one forgotten removal corrupts future placements.
+
+### Experience Tip
+**Experience Tip:** The diagonal insight is the key interview talking point: on any main diagonal, `row - col` is constant; on any anti-diagonal, `row + col` is constant. If you can explain this clearly and use it for O(1) checking, you demonstrate strong problem decomposition skill.
+
+### Do Not Confuse With
+- **Sudoku Solver (LC 37):** Same paradigm — constraint sets per row/col/box, try all digits, backtrack. Slightly more complex state but identical skeleton.
+- **Grid DFS:** Just visiting/counting, no conflict constraints, no undo of constraint sets.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 51 | N-Queens | Hard | Classic; three sets for O(1) constraint check | https://leetcode.com/problems/n-queens/ |
+| 52 | N-Queens II | Hard | Count solutions only; same backtracking, skip board building | https://leetcode.com/problems/n-queens-ii/ |
+| 37 | Sudoku Solver | Hard | Same pattern; constraint sets per row, col, 3x3 box | https://leetcode.com/problems/sudoku-solver/ |
+| 22 | Generate Parentheses | Medium | Simpler constraint: open<n and close<open; good warm-up | https://leetcode.com/problems/generate-parentheses/ |
+| 1001 | Grid Illumination | Hard | Constraint tracking across placements — advanced variant | https://leetcode.com/problems/grid-illumination/ |
+
+### One-Minute Revision
+```
+ALGORITHM:     N-Queens / Constraint Satisfaction
+IN SIMPLE WORDS: Place one queen per row; skip any column that conflicts; backtrack
+USE WHEN:      Grid placement with mutual exclusion constraints
+DON'T USE WHEN: No constraints to prune (pure brute force offers no speedup)
+CORE IDEA:     row-col constant on main diag; row+col constant on anti-diag
+TRACK:         cols set, diag1 set (row-col), diag2 set (row+col), board[] array
+TIME:          O(n!) heavily pruned
+SPACE:         O(n) sets + call stack
+COMMON TRAP:   Forget to remove from all 3 sets on undo; using O(n) conflict scan
+EXPERIENCE TIP: Explain the diagonal math clearly — it signals real understanding
+```
 
 ---
 
-## [45–55 min] Pattern Recognition
+## Grid DFS / Backtracking (Word Search)
 
-### Structural Clues in Problem Statements
+### What is it?
+Navigate a 2D grid by making a sequence of moves (up/down/left/right), building up a path. To avoid revisiting a cell in the same path, temporarily mark it as visited and restore it when backtracking. Word Search is the canonical problem: find a word by walking adjacent cells.
 
-| Clue | Likely approach |
-|---|---|
-| "Generate all", "find all", "enumerate" | Backtracking |
-| "Minimum", "maximum", "optimal" | DP (if overlapping subproblems) or Greedy |
-| "Is it possible" | DFS/BFS or backtracking with early return |
-| "Shortest path" | BFS |
-| "Tree traversal", "tree height" | Recursion |
-| "Split array/string into parts" | Recursion or DP |
-| "Sort then choose k" | Combinations with pruning |
-| Choices at each step, choices are independent | Backtracking |
-| Choices at each step, result can be reused | DP |
+### Visual
+```
+board:
+  A B C E
+  S F C S
+  A D E E
 
-### What to Ask Yourself
+Searching for "ABCCED":
 
-1. Am I computing a **single value** from smaller values? → Recursion (possibly with memoization → DP)
-2. Am I **exploring all configurations** and collecting valid ones? → Backtracking
-3. Do subproblems **overlap** (same subproblem solved multiple times)? → Add memoization (DP)
-4. Do I need the **shortest / fewest** steps? → BFS (not backtracking)
-5. After making a choice, do I need to **undo it** to try others? → Backtracking (not just DFS)
+(0,0)A → (0,1)B → (0,2)C → (0,3)? no, need C
+                           → (1,2)C → (2,2)E → (2,3)? no, need D
+                                              → (2,1)? 'D' → match! → ...
+```
 
-### Recursion vs Backtracking
+### How does it work?
+1. For each cell in the grid, try starting the search from it.
+2. At each recursive step, check: out of bounds? cell already visited? cell letter doesn't match word[index]? If any → return false.
+3. If `index == word.length`, all letters matched → return true.
+4. Mark current cell as visited (e.g., replace with `#`) (Choose).
+5. Try all 4 directions recursively for `word[index+1]` (Explore).
+6. Restore the cell's original character (Undo).
+7. Return true if any direction succeeded.
 
-| | Recursion | Backtracking |
+### Why does it work?
+Marking the cell prevents the path from looping back on itself (using the same cell twice). Restoring it after backtracking allows other starting paths to use that cell freely — the mark is path-local, not global.
+
+### When to use?
+- "Find a word / path in a grid."
+- "Count distinct paths with constraints."
+- Any problem that walks a grid and needs to avoid revisiting cells in the current path.
+
+### When NOT to use?
+- When you need the shortest path — use BFS.
+- When you need to visit every cell (no constraint on revisiting) — plain DFS without undo.
+
+### How to recognize in a new problem?
+Grid + sequence/word/path matching + cannot reuse cells in one path. Signals: "word search", "find path spelling", "walk adjacent cells", "path visiting each cell once".
+
+### Simple Example
+Input: `board = [["A","B"],["C","D"]]`, `word = "ABD"` → Expected output: `true`
+
+Start at (0,0)='A', match word[0]. Move right to (0,1)='B', match word[1]. From (0,1) try down to (1,1)='D', match word[2]. `index == word.length` → return true.
+
+### Code
+```java
+// Java
+public boolean exist(char[][] board, String word) {
+    int rows = board.length, cols = board[0].length;
+    for (int r = 0; r < rows; r++) {
+        for (int c = 0; c < cols; c++) {
+            if (dfs(board, word, r, c, 0)) return true;
+        }
+    }
+    return false;
+}
+
+private boolean dfs(char[][] board, String word, int r, int c, int index) {
+    if (index == word.length()) return true;
+    if (r < 0 || r >= board.length || c < 0 || c >= board[0].length) return false;
+    if (board[r][c] != word.charAt(index)) return false;
+
+    char temp = board[r][c];
+    board[r][c] = '#';                          // mark visited (choose)
+
+    boolean found = dfs(board, word, r + 1, c, index + 1) ||
+                    dfs(board, word, r - 1, c, index + 1) ||
+                    dfs(board, word, r, c + 1, index + 1) ||
+                    dfs(board, word, r, c - 1, index + 1); // explore all 4 dirs
+
+    board[r][c] = temp;                         // restore (undo)
+    return found;
+}
+```
+```javascript
+// JavaScript
+function exist(board, word) {
+    const rows = board.length, cols = board[0].length;
+    function dfs(r, c, index) {
+        if (index === word.length) return true;
+        if (r < 0 || r >= rows || c < 0 || c >= cols) return false;
+        if (board[r][c] !== word[index]) return false;
+
+        const temp = board[r][c];
+        board[r][c] = '#';                      // mark visited (choose)
+
+        const found = dfs(r + 1, c, index + 1) ||
+                      dfs(r - 1, c, index + 1) ||
+                      dfs(r, c + 1, index + 1) ||
+                      dfs(r, c - 1, index + 1); // explore
+
+        board[r][c] = temp;                     // restore (undo)
+        return found;
+    }
+    for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+            if (dfs(r, c, 0)) return true;
+    return false;
+}
+```
+
+### Dry Run
+```
+board = [['A','B'],['C','D']], word = "ABD"
+
+Start outer loop: r=0, c=0, board[0][0]='A' == word[0]
+dfs(0,0, index=0):
+  match 'A'. mark board[0][0]='#'
+  try dfs(1,0, index=1): board[1][0]='C' != 'B' → false
+  try dfs(-1,0, index=1): out of bounds → false
+  try dfs(0,1, index=1): board[0][1]='B' == 'B'
+    dfs(0,1, index=1):
+      match 'B'. mark board[0][1]='#'
+      try dfs(1,1, index=2): board[1][1]='D' == 'D'
+        dfs(1,1, index=2):
+          match 'D'. mark board[1][1]='#'
+          index+1=3 == word.length → return true ← FOUND
+      restore board[0][1]='B'
+      return true
+  restore board[0][0]='A'
+  return true
+
+exist returns true
+```
+
+### Complexity
+```
+Time:  O(m × n × 4^L) — start from each of m×n cells, explore 4 directions up to L steps
+Space: O(L) — call stack depth equals word length L
+```
+
+### Common Trap
+1. Using a separate `visited[][]` boolean array but forgetting to reset it after backtracking — cells incorrectly stay blocked for subsequent starting positions.
+2. Checking bounds after accessing `board[r][c]` — always check bounds first to avoid array index out of bounds.
+
+### Experience Tip
+**Experience Tip:** Modifying the board in-place (marking `#`) is cleaner and saves space compared to a separate visited array — and is expected at Google. Just make sure your restore step is unconditional (runs even when the recursive call returns false) so the board is always left intact.
+
+### Do Not Confuse With
+- **Plain DFS on a graph:** No undo — once visited, stay visited. Grid DFS with backtracking undoes the visit for the next starting path.
+- **BFS on a grid:** Finds shortest path, not a specific sequence of characters.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 79 | Word Search | Medium | Classic grid backtracking; mark '#' then restore | https://leetcode.com/problems/word-search/ |
+| 212 | Word Search II | Hard | Multiple words — use Trie to prune dead branches early | https://leetcode.com/problems/word-search-ii/ |
+| 200 | Number of Islands | Medium | DFS on grid (no undo needed — just mark and count) | https://leetcode.com/problems/number-of-islands/ |
+| 329 | Longest Increasing Path in a Matrix | Hard | DFS with memo (no undo — no revisit within one path either) | https://leetcode.com/problems/longest-increasing-path-in-a-matrix/ |
+| 980 | Unique Paths III | Hard | Visit every non-obstacle cell exactly once — classic grid backtracking | https://leetcode.com/problems/unique-paths-iii/ |
+
+### One-Minute Revision
+```
+ALGORITHM:     Grid DFS / Backtracking (Word Search)
+IN SIMPLE WORDS: Walk the grid matching chars; mark cell visited, explore 4 dirs, restore
+USE WHEN:      Grid path matching, visit cells once per path, explore all routes
+DON'T USE WHEN: Need shortest path (BFS) or cells can be reused (plain DFS)
+CORE IDEA:     board[r][c]='#' before recursing; restore after — undo is the key
+TRACK:         current (r,c), index into word, in-place board marks
+TIME:          O(m × n × 4^L)
+SPACE:         O(L) call stack
+COMMON TRAP:   Bounds check must come before board access; restore must be unconditional
+EXPERIENCE TIP: In-place marking avoids a separate visited array — cleaner and expected
+```
+
+---
+
+## Quick Reference: Choosing the Right Pattern
+
+| Signal in problem | Pattern | Key variable |
 |---|---|---|
-| State change | Passed as argument (immutable from caller's view) | Modified shared structure |
-| Undo step | Not needed | Always present |
-| Use case | Compute and return a value | Collect all valid configurations |
-| Pattern | `return f(n) = combine(current, f(n-1))` | `choose → explore → undo` |
+| "All subsets", "all subsequences" | Subsets (record at top, for-loop from start) | start index |
+| "All permutations", "all orderings" | Permutations (used[] array, loop from 0) | used[] boolean |
+| "Combinations summing to target" | Combination Sum (for-loop, pass i or i+1) | start, remaining |
+| "Partition string, each part satisfies X" | Palindrome Partitioning (try all prefixes) | start index |
+| "Place N items with mutual constraints" | N-Queens (constraint sets, row by row) | cols/diag1/diag2 sets |
+| "Find word/path in grid, no cell reuse" | Grid DFS (mark '#', explore 4 dirs, restore) | (r, c), index |
 
-### Backtracking vs Dynamic Programming
-
-Both use recursion. The key question: **do subproblems overlap?**
-
-- **Backtracking:** Each path in the decision tree is unique. No repeated subproblems. Cannot memoize (state includes full path).
-- **DP:** The same subproblem (e.g., Fibonacci(3)) is reached from multiple paths. Memoize to avoid recomputation.
+## Duplicate Handling Cheat Sheet
 
 ```
-Fibonacci: fib(3) called from fib(5) AND from fib(4) → overlap → use DP
-Subsets: [1,2,3] path is unique per branch → no overlap → backtracking
+// In for-loop patterns (subsets, combos, palindrome partitioning):
+// Sort first, then:
+if (i > start && nums[i] == nums[i-1]) continue;
+
+// In permutation used-array pattern:
+// Sort first, then:
+if (i > 0 && nums[i] == nums[i-1] && !used[i-1]) continue;
 ```
 
-**Practical test:** If your recursive state includes a **list/path being built**, it's backtracking — you can't memoize it because two calls with the same `index` but different `path` contents are NOT the same subproblem.
-
-### DFS vs Backtracking
-
-| | DFS | Backtracking |
-|---|---|---|
-| Undo required? | No — just visiting nodes | Yes — undo after exploring each child |
-| Mutates state? | No (or uses a visited set without undoing) | Yes (modifies path/board, then undoes) |
-| Goal | Traverse/reach nodes | Build and collect all valid configurations |
-| Example | Find if path exists | Find all paths |
-
-DFS on a graph is not backtracking unless you're explicitly undoing state to explore alternative paths (e.g., Word Search marks a cell visited and then unmarks it — that is backtracking, not pure DFS).
-
-### Recognizing Which Backtracking Sub-Pattern
-
-| Problem type | Pattern to use | Key variable |
-|---|---|---|
-| All subsets | Include/exclude binary tree | index |
-| All combinations of size k | For-loop with start index | start, remaining count |
-| Combination sum | For-loop with start, allow reuse | start (pass `i` not `i+1` for reuse) |
-| All permutations | For-loop with `used[]` | used boolean array |
-| Grid path / word search | 4-directional DFS with mark/unmark | visited state on board |
-| Constraint satisfaction (N-Queens, Sudoku) | For-loop with constraint sets | sets for O(1) validity check |
-| String partition | For-loop over all split points | start index |
-| Phone letter combinations | For-loop over mapped letters | digit index |
-
-### Divide and Conquer vs Backtracking
-
-Both use recursion. Key difference: **what happens to subproblem results**.
-
-- **Divide and Conquer:** Split into independent subproblems, solve each, **merge** results. Subproblems do not share state. (Merge Sort, Count Inversions)
-- **Backtracking:** Build a configuration step by step, trying all choices. No merge — just collect complete configurations at leaves.
-
-D&C is top-down decomposition. Backtracking is bottom-up construction through exploration.
-
-**Master Theorem for D&C complexity:** T(n) = a × T(n/b) + O(n^d)
-- d > log_b(a): O(n^d)
-- d = log_b(a): O(n^d × log n)
-- d < log_b(a): O(n^(log_b a))
-
----
-
-## [55–60 min] Final Mental Checklist
-
-Before writing any recursion/backtracking solution, answer these 7 questions:
+## Decision: Backtracking vs DP vs BFS
 
 ```
-[ ] 1. What does my function represent? (contract: given this state, it does what?)
-[ ] 2. What is the base case? (termination condition)
-[ ] 3. Does every recursive call make progress toward the base case?
-[ ] 4. What is my state? (what am I building? what have I used?)
-[ ] 5. What are my choices at each step?
-[ ] 6. What do I need to undo after each recursive call?
-[ ] 7. What pruning can I add? (sort + early break, constraint sets, bound checks)
+"All configurations / all solutions"  → Backtracking
+"Optimal (min/max) + overlapping subs" → DP
+"Shortest path / fewest steps"         → BFS
+"Single recursive value, no overlap"   → Pure Recursion
 ```
-
-After writing the solution:
-```
-[ ] Does the base case correctly terminate recursion?
-[ ] Do I make a COPY of the current path when recording? (not a reference)
-[ ] Do I undo EXACTLY what I did before the recursive call?
-[ ] Are duplicates handled? (sort first + skip same value at same level)
-[ ] Stack overflow risk? (n > 10^4 → consider iterative with explicit stack)
-[ ] Complexity: is 2^n or n! acceptable for given n?
-```
-
----
-
-## Active Recall
-
-Test yourself without looking at the notes:
-
-1. What are the three laws every recursive function must follow?
-2. What is the "choose, explore, undo" pattern and why is the undo step necessary?
-3. Draw the complete call tree for `subsets([1, 2])`. How many nodes? How many leaves?
-4. In the Combinations pattern, why do we pass `i+1` instead of `i` to the recursive call? When would you pass `i`?
-5. In Permutations with duplicates, what exact condition do you add to skip duplicates, and why does it require sorting first?
-6. For N-Queens, what mathematical property identifies a main diagonal? An anti-diagonal?
-7. What is the difference between DFS on a graph and backtracking on a grid (Word Search)?
-8. When should you switch from backtracking to DP? Give a concrete example.
-9. How do you handle duplicates in Subsets vs Combination Sum II — what is the difference in approach?
-10. What does the Catalan number count? Which problems from this module have Catalan-number counts?
-
----
-
-## Recommended Practice Direction
-
-**Start here (core patterns, must-solve):**
-- LeetCode 78 — Subsets (include/exclude pattern)
-- LeetCode 46 — Permutations (used-array pattern)
-- LeetCode 77 — Combinations (for-loop with start index)
-- LeetCode 39 — Combination Sum (allow reuse: pass `i` not `i+1`)
-- LeetCode 22 — Generate Parentheses (constraint-guided backtracking)
-
-**After the above feel solid:**
-- LeetCode 40 — Combination Sum II (duplicates in input, skip at same level)
-- LeetCode 90 — Subsets II (subsets with duplicates)
-- LeetCode 47 — Permutations II (permutations with duplicates)
-- LeetCode 131 — Palindrome Partitioning (backtracking + precompute palindrome table)
-- LeetCode 17 — Letter Combinations of a Phone Number
-
-**Grid and constraint satisfaction:**
-- LeetCode 79 — Word Search (grid backtracking, mark/unmark)
-- LeetCode 51 — N-Queens (constraint sets for O(1) validity)
-- LeetCode 37 — Sudoku Solver (same paradigm as N-Queens)
-
-**Advanced:**
-- LeetCode 212 — Word Search II (backtracking + Trie for pruning)
-- LeetCode 332 — Reconstruct Itinerary (backtracking with graph structure)
-- LeetCode 93 — Restore IP Addresses (constrained string partitioning)
-
-**For Divide and Conquer specifically:**
-- LeetCode 241 — Different Ways to Add Parentheses
-- LeetCode 315 — Count of Smaller Numbers After Self (merge sort variant)
-
----
-
-## 2-Minute Cheat Sheet
-
-```
-RECURSION
-  f(n) = combine(current step, f(n-1))
-  Base case → Progress → Trust
-
-BACKTRACKING TEMPLATE
-  backtrack(state):
-    if done: record(state); return
-    for each choice:
-      if valid(choice):
-        make(choice)
-        backtrack(state)
-        undo(choice)
-
-PATTERNS AT A GLANCE
-  Subsets      → include/exclude binary tree, 2^n leaves
-  Combinations → for-loop + start index, no reuse
-  Comb Sum     → for-loop + start index, pass i (reuse)
-  Permutations → for-loop + used[] array, n! leaves
-  N-Queens     → constraint sets cols/diag1/diag2, O(1) checks
-  Word Search  → 4-dir DFS, mark '#'/unmark
-  Gen Parens   → open<n → add (, close<open → add )
-
-DUPLICATE HANDLING
-  Sort first, then:
-  • In for-loop: if (i > start && nums[i] == nums[i-1]) continue
-  • In used-array: if (i > 0 && nums[i] == nums[i-1] && !used[i-1]) continue
-
-DECISION KEY
-  "All configurations"    → Backtracking
-  "Optimal value"         → DP (if overlapping) / Greedy
-  "Shortest path"         → BFS
-  "Overlapping subprobs"  → Add memoization → DP
-  "Same problem smaller"  → Recursion / D&C
-
-COMPLEXITY
-  Subsets/Combinations: O(n × 2^n)
-  Permutations: O(n × n!)
-  Gen Parens: O(4^n / √n)   [Catalan number]
-  N-Queens: O(n!)            [heavily pruned in practice]
-  Word Search: O(m×n × 4^L) [L = word length]
-```
-
----
-
-*Next: [09-DYNAMIC-PROGRAMMING.md](09-DYNAMIC-PROGRAMMING.md) — When subproblems overlap, backtracking becomes DP.*

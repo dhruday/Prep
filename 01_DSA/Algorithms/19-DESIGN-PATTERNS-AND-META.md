@@ -1,649 +1,701 @@
-# Design Patterns and Meta-Strategies — 1-Hour Learning Module
+# Design Patterns and Meta-Strategies — Google Interview Thinking Framework
 
-> *"These are the patterns that transcend categories — the thinking tools that experienced problem solvers reach for when the problem doesn't fit a single label."*
-
-**Time budget:** 60 minutes total. Timestamps guide your pacing.
+> Read this file to internalize HOW to think, not just what to code.
+> Goal: read fast, get the frameworks into your head, apply them immediately.
 
 ---
 
 ## Table of Contents
 
-1. [[0–10 min] Big Picture](#0-10-min-big-picture)
-2. [[10–20 min] Mental Model](#10-20-min-mental-model)
-3. [[20–35 min] Core Patterns and Meta-Strategies](#20-35-min-core-patterns-and-meta-strategies)
-4. [[35–45 min] Concrete Examples](#35-45-min-concrete-examples)
-5. [[45–55 min] Pattern Recognition at the Meta Level](#45-55-min-pattern-recognition-at-the-meta-level)
-6. [[55–60 min] Final Mental Checklist](#55-60-min-final-mental-checklist)
-7. [Active Recall Questions](#active-recall-questions)
-8. [Recommended Practice Direction](#recommended-practice-direction)
-9. [2-Minute Cheat Sheet](#2-minute-cheat-sheet)
+1. [Universal Problem-Solving Framework](#1-universal-problem-solving-framework)
+2. [Constraint → Complexity Table](#2-constraint--complexity-table)
+3. [Pattern Recognition Flowchart](#3-pattern-recognition-flowchart)
+4. [Design Patterns and Meta-Patterns](#4-design-patterns-and-meta-patterns)
+   - [Iterator Pattern](#iterator-pattern)
+   - [State Machine](#state-machine)
+   - [Simulation](#simulation)
+   - [Minimax / Game Theory](#minimax--game-theory)
+   - [Meet in the Middle](#meet-in-the-middle)
+   - [Randomized Algorithms](#randomized-algorithms)
+   - [Amortized Analysis](#amortized-analysis)
+   - [Monotonic Patterns](#monotonic-patterns)
+   - [Reverse Thinking](#reverse-thinking)
+   - [Add / Remove Constraint](#add--remove-constraint)
+5. [Common Interview Mistakes](#5-common-interview-mistakes)
 
 ---
 
-## [0–10 min] Big Picture
+## 1. Universal Problem-Solving Framework
 
-### What are design patterns in the DSA/interview context?
-
-Most DSA topics teach you *specific* algorithms: BFS, DP, binary search. This module is different. It teaches you **how to think** — the meta-layer above all specific algorithms.
-
-Design patterns in interviews are reusable problem-solving strategies that cut across algorithm categories. They are:
-
-- **Iterator Pattern:** Give sequential access to complex structures without exposing internals.
-- **State Machine:** Model problems with finite modes and transitions between them.
-- **Simulation:** Follow the rules of the problem literally, step by step.
-- **Minimax / Game Theory:** Optimal play with two adversarial players.
-- **Meet in the Middle:** Split the input, solve each half, combine — turns O(2ⁿ) into O(2^(n/2)).
-- **Randomized Algorithms:** Use probability to get good average-case performance.
-- **Amortized Analysis:** Understand why an "expensive" operation is actually cheap in total.
-- **Monotonic Patterns:** Maintain a sorted stack/queue to answer range queries in O(n).
-
-On top of these, there are two meta-patterns that are pure thinking tools:
-
-- **Reverse Thinking:** When the forward problem is hard, solve its reverse.
-- **Add/Remove Constraint:** Simplify the problem to a tractable version, then generalize.
-
-### What meta-skills does this file cover?
-
-1. A universal 13-step problem-solving framework you can apply to ANY problem.
-2. How to recognize which pattern to reach for from the problem statement alone.
-3. How constraints (the size of `n`) mechanically narrow down your algorithm choice.
-4. Common interview anti-patterns that cost candidates offers.
-
-### Why do these matter for Google interviews?
-
-Google interviewers are not checking whether you memorized a solution. They are evaluating:
-
-- **Structured thinking:** Do you approach the problem methodically?
-- **Pattern recognition:** Can you see through the surface story to the underlying structure?
-- **Communication:** Do you narrate your reasoning, or do you silently code and hope for the best?
-- **Adaptability:** When your first approach fails, do you pivot gracefully?
-
-The content in this module is what separates candidates who "can code" from candidates who "can solve problems." These are exactly the skills Google's rubric rewards at the "Googley" and "Hire" levels.
-
----
-
-## [10–20 min] Mental Model
-
-### Universal Problem-Solving Framework
-
-Internalize this 13-step sequence. It works on every problem you will ever see. Do not skip steps under pressure — that is exactly when skipping them hurts you.
+Apply this 13-step sequence to EVERY problem. Do not skip steps under pressure — that is exactly when skipping them hurts you.
 
 ```
 1.  Understand the problem
-      - Restate it in your own words. What are the inputs? What are the outputs?
+      Restate it in your own words. What goes in? What comes out?
 
 2.  Identify input structure
-      - Is it an array, tree, graph, string, stream?
-      - Is it sorted? Does it have duplicates? Can values be negative?
+      Array? Graph? String? Tree? Sorted? Duplicates? Negative values?
 
-3.  Understand constraints
-      - What is n? What are the value ranges?
-      - This step tells you your target complexity (see constraint table below).
+3.  Look at constraints
+      What is n? This tells you your TARGET COMPLEXITY (see Section 2).
 
-4.  Think about brute force
-      - State the naive O(2ⁿ) or O(n²) solution out loud. Always. It grounds discussion.
+4.  Think brute force
+      Always state the naive solution first. It grounds the conversation.
 
 5.  Find repeated work / useful property
-      - Where is the brute force doing redundant computation?
-      - Is there monotonicity, sorted order, or a recurrence to exploit?
+      Where is brute force doing redundant computation?
+      Is there sorted order, monotonicity, or a recurrence to exploit?
 
 6.  Identify candidate pattern
-      - Based on structure + constraint, which pattern fits? (See pattern table in section 5.)
+      Based on structure + constraint, which pattern fits? (See Section 3.)
 
 7.  Define state / variables
-      - What do your variables represent? State this precisely before coding.
+      What exactly do your variables represent? Say it out loud before coding.
 
-8.  Derive transition
-      - How does state change as you process each element?
+8.  Derive transitions
+      How does state change as you process each element?
 
-9.  Dry run
-      - Trace through a small example by hand before writing a single line of code.
+9.  Dry run on small example
+      Trace through by hand before writing a single line of code.
 
 10. Analyze complexity
-      - State time and space complexity. Does it fit within the constraint budget?
+      State time AND space complexity. Does it fit the constraint budget?
 
 11. Check edge cases
-      - Empty input, single element, all identical values, maximum n, negative values.
+      Empty input. Single element. All identical. Maximum n. Negative values.
 
 12. Implement
-      - Write clean, modular code. Name variables meaningfully. Talk as you type.
+      Write clean code. Name variables meaningfully. Narrate as you type.
 
 13. Optimize if needed
-      - Only after a correct solution exists. Ask the interviewer before optimizing.
+      Only AFTER a correct solution exists. Ask interviewer before optimizing.
 ```
 
-### How to approach an unfamiliar problem
+### How to Handle an Unfamiliar Problem
 
-When you see a problem you have never encountered:
-
-1. **Do not panic and do not go silent.** Narrate what you observe.
-2. Apply steps 1–3 (understand, identify structure, read constraints). This alone narrows the field dramatically.
-3. Solve a stripped-down version first. Remove one constraint. Solve the simpler problem. Then add the constraint back.
-4. Ask: "What if I solved the opposite problem?" (Reverse Thinking).
-5. Look for the thing the brute force does *repeatedly* — that is your optimization target.
-
-### Pattern recognition meta-skills
-
-The best interviewers do not recognize problems by name ("oh this is LeetCode 322"). They recognize them by shape:
-
-- **Shape of the input** (sorted array, tree, directed graph) → narrows data structures
-- **Shape of the query** (range query, shortest path, count subsets) → narrows algorithms
-- **Shape of the constraint** (n ≤ 20 vs n ≤ 10⁶) → narrows complexity class
-
-Practice reading the problem statement and immediately asking: "What shape is this?"
+1. Do NOT go silent. Narrate what you observe.
+2. Apply steps 1-3 (understand, structure, constraints). This alone narrows the field.
+3. Solve a stripped-down version first — remove one constraint, solve that, then add it back.
+4. Ask: "What if I solved the opposite problem?" (Reverse Thinking, Section 4.)
+5. The thing brute force does *repeatedly* is your optimization target.
 
 ---
 
-## [20–35 min] Core Patterns and Meta-Strategies
+## 2. Constraint → Complexity Table
 
-### Iterator Pattern
+**Read this first on EVERY problem. The constraint tells you which algorithms are allowed.**
 
-**Core intuition:** Provide sequential access to elements of a complex structure without exposing its internal representation. In interviews: implement `next()` and `hasNext()`.
+```
+╔══════════════════╦═══════════════╦═══════════════════════════════════════════╗
+║  n (input size)  ║  Max Allowed  ║  What to reach for                        ║
+╠══════════════════╬═══════════════╬═══════════════════════════════════════════╣
+║  n ≤ 20          ║  O(2^n)       ║  Backtracking, bitmask DP, subset enum    ║
+║  n ≤ 40          ║  O(2^(n/2))   ║  Meet in the Middle                       ║
+║  n ≤ 500         ║  O(n³)        ║  Interval DP, Floyd-Warshall              ║
+║  n ≤ 1,000       ║  O(n²)        ║  Nested loops OK, simple DP               ║
+║  n ≤ 100,000     ║  O(n log n)   ║  Sort, heap, binary search, BIT           ║
+║  n ≤ 1,000,000   ║  O(n)         ║  Single pass, hashing, two pointers       ║
+║  n ≤ 10^9        ║  O(log n)     ║  Binary search on answer, math            ║
+╚══════════════════╩═══════════════╩═══════════════════════════════════════════╝
+```
 
-**When to use:**
-- "Implement an iterator for a BST / Linked List / Nested List"
-- "Flatten Nested List Iterator," "Peeking Iterator," "Zigzag Iterator"
+### How to use this in an interview
 
-**How it works:**
+1. Read constraint on n.
+2. Immediately say: "With n up to X, I need an O(Y) solution."
+3. Only consider patterns that can achieve O(Y).
 
-- **BST Iterator:** Controlled inorder traversal using a stack. Push all left children upfront. `next()` pops the top, then pushes the right child's entire left chain.
-- **Flatten Nested List Iterator:** Stack-based. Push elements in reverse order. Before `next()` / `hasNext()`, keep flattening the top element if it is still a list.
-- **Peeking Iterator:** Wrapper around an existing iterator. Cache the next value. `peek()` returns the cache. `next()` returns the cache and advances.
-- **Zigzag Iterator:** Two (or K) iterators. Round-robin: advance each in turn. Use a queue of iterators.
+### Examples for each row
 
-**Key design principle:** Lazy evaluation. Only compute the next element when asked. Do not flatten the entire structure upfront.
-
-**Amortized cost:** Each element is visited once across all `next()` calls → O(1) amortized per call, O(n) total.
-
----
-
-### State Machine
-
-**Core intuition:** Model the problem as a finite set of states and rules for transitioning between them. At each step, your current state plus the current input determines the next state.
-
-**When to use:**
-- "Valid Number" — string parsing with complex multi-character rules
-- "Regular Expression Matching" — NFA simulation
-- "UTF-8 Validation"
-- Keywords: "validate format," "parse," "modes," "phases"
-- Also: Stock Buy/Sell problems (holding, not holding, in cooldown) — this is an *implicit* state machine solved with DP
-
-**How it works (explicit):**
-1. Define states (e.g., `START`, `SEEN_DIGIT`, `SEEN_DOT`, `SEEN_E`, `INVALID`)
-2. Define transitions: for each `(current_state, input_char_type)` → `next_state`
-3. Define accepting states (valid end states)
-4. Process the string character by character, following transitions
-
-**Trick:** Draw the state diagram on paper before coding. The diagram makes the implementation mechanical.
-
-**Pattern recognition signal:** "Finite set of modes with rules about how to move between them" → state machine.
-
----
-
-### Simulation
-
-**Core intuition:** When there is no clever mathematical shortcut, do exactly what the problem says. Step by step, follow the rules literally.
-
-**When to use:**
-- "Spiral Matrix," "Robot Bounded in Circle," "Game of Life," "Asteroid Collision"
-- Keywords: "simulate," "step by step," "apply rules"
-
-**Key techniques:**
-- **Spiral Matrix:** Maintain boundary pointers (top, bottom, left, right). Traverse right → down → left → up. Shrink boundaries after each pass.
-- **Game of Life:** Compute next state per cell based on neighbors. Encode intermediate states in-place (e.g., `2` = was alive, now dead) to avoid a copy array.
-- **Robot Bounded in Circle:** Simulate one instruction cycle. After one cycle: if robot is back at origin OR direction changed → the robot will loop and return.
-
-**Interview insight:** Simulation problems test *implementation precision*, not algorithmic cleverness. The main trap is off-by-one errors in boundary conditions. Write slow and careful.
-
-**Optimization question:** Ask yourself "Can I avoid simulating all N steps?" → Look for cycles in the state space.
-
----
-
-### Minimax and Game Theory
-
-**Core intuition:** Two players alternate turns. One maximizes the score, the other minimizes. At each state, the current player makes the locally optimal choice, assuming the opponent also plays optimally.
-
-**When to use:**
-- "Stone Game" variants, "Predict the Winner," "Nim Game," "Tic-Tac-Toe AI"
-- Keywords: "two players," "optimal play," "game," "turn-based"
-
-**How it works:**
-1. Build the game tree: each node is a game state
-2. At maximizer's turn: pick the child with the maximum value
-3. At minimizer's turn: pick the child with the minimum value
-4. Evaluate leaves (terminal states) directly
-
-**Alpha-Beta Pruning:** Prune subtrees that cannot affect the final decision. Maintain `alpha` (best guaranteed score for maximizer) and `beta` (best guaranteed score for minimizer). Prune when `alpha >= beta`. Reduces O(b^d) to O(b^(d/2)) best case.
-
-**DP reduction:** Many minimax problems collapse to interval DP. For Stone Game: `dp[i][j]` = maximum score *difference* the current player can achieve on subarray `[i..j]`.
-
-**Complexity:**
-- Raw minimax: O(b^d) — b = branching factor, d = depth
-- With alpha-beta: O(b^(d/2)) best case
-- Stone Game DP: O(n²)
-
-**Key shortcut — Nim Game:** n stones, take 1–3 per turn. You lose if `n % 4 == 0`. Pure math — no tree search needed. Always try small cases to find the mathematical pattern before building a game tree.
-
----
-
-### Meet in the Middle
-
-**Core intuition:** Split the input in half. Solve each half independently (enumerate all possibilities). Combine the results. Converts O(2ⁿ) to O(2^(n/2) * n).
-
-**When to use:**
-- "Subset sum with n up to 40" — too large for O(2ⁿ), but 2²⁰ ≈ 10⁶ is fine per half
-- "Closest Subsequence Sum," "Count pairs with XOR/sum in range"
-- **Constraint signal:** n ≤ 40 is the canonical trigger
-
-**How it works:**
-1. Split input into two halves A and B
-2. Generate all 2^(n/2) subset sums for each half
-3. Sort one half
-4. For each value in A, binary search in sorted B for the complement (or closest value)
-5. Combine
-
-**Complexity:**
-- Time: O(2^(n/2) * n)
-- Space: O(2^(n/2))
-
----
-
-### Randomized Algorithms
-
-**Key algorithms:**
-
-- **Quick Select (randomized pivot):** Find the Kth smallest element in O(n) average. Random pivot prevents worst-case O(n²) degenerate behavior.
-- **Reservoir Sampling:** Uniformly random sample of K elements from a stream of unknown length. Maintain a reservoir; at step i, replace a random element with probability K/i.
-- **Fisher-Yates Shuffle:** Uniform random permutation. Iterate i from n-1 to 1, swap `arr[i]` with `arr[random(0, i)]`.
-- **Random Pick with Weight:** Pick index i with probability `weight[i] / total_weight`. Use prefix sum array + binary search on a uniform random float in `[0, total_weight)`.
-
-**Monte Carlo vs. Las Vegas:**
-- Monte Carlo: always finishes fast, may produce a wrong answer (e.g., Rabin-Karp with hash collisions)
-- Las Vegas: always produces the correct answer, but runtime varies (e.g., Randomized Quick Sort)
-
-**Interview insight:** "Random pick" problems almost always reduce to: prefix sum array + binary search on a random value.
-
----
-
-### Amortized Analysis
-
-**Core intuition:** Some operations are expensive occasionally but cheap almost always. Amortized analysis spreads the cost of expensive operations over the entire sequence. Like a prepaid card — you pay a large cost once, then spend gradually.
-
-**Key examples to know:**
-
-| Operation | Worst-Case Single | Amortized per Operation |
+| Constraint | Example Problem | Algorithm |
 |---|---|---|
-| Dynamic array push | O(n) when resizing | O(1) |
-| Union-Find (path compression) | O(log n) | O(α(n)) ≈ O(1) |
-| Monotonic stack (n total pushes) | O(n) for a single push | O(1) |
-| BST Iterator next() (n total calls) | O(h) per call | O(1) |
-
-**Why this matters in interviews:** When you use a monotonic stack and the interviewer asks "isn't this O(n²) because of all the pops?" — the answer is no. Each element is pushed once and popped once. Total work across all iterations is O(n). This is amortized O(1) per operation.
+| n ≤ 20 | All subsets / permutations | Backtracking or bitmask DP |
+| n ≤ 40 | Subset sum, n=38 | Split halves, Meet in the Middle |
+| n ≤ 500 | Burst Balloons, Matrix Chain | Interval DP |
+| n ≤ 1,000 | Longest common subsequence | O(n²) DP |
+| n ≤ 100,000 | Find kth largest in stream | Min-heap O(n log n) |
+| n ≤ 1,000,000 | Two Sum, longest substring | HashMap or two pointers |
+| n ≤ 10^9 | Find sqrt(n) | Binary search on answer |
 
 ---
 
-### Monotonic Patterns Recap
+## 3. Pattern Recognition Flowchart
 
-Monotonic structures appear across multiple algorithm categories but share one idea: maintain a stack or queue that is always sorted (either ascending or descending). Incoming elements pop all prior elements that violate the monotonic property.
+Start here when you cannot immediately identify a pattern.
 
-| Structure | Use Case |
+```
+WHAT IS THE INPUT SHAPE?
+│
+├── ARRAY / STRING
+│     ├── Sorted?            → Binary Search, Two Pointers
+│     ├── Subarray / Window  → Sliding Window, Prefix Sum + HashMap
+│     ├── Top-K / Kth        → Heap or Quick Select
+│     ├── Permutations?      → Backtracking
+│     └── Subsets?           → Backtracking or Bitmask DP (n ≤ 20)
+│
+├── LINKED LIST
+│     ├── Cycle?             → Floyd's fast/slow pointers
+│     ├── Middle / Kth?      → Two pointers (fast/slow)
+│     └── Reverse / Merge?   → Pointer manipulation
+│
+├── TREE
+│     ├── Any path / value   → DFS (recursion)
+│     ├── Level by level     → BFS (queue)
+│     ├── BST property       → Inorder = sorted, binary search
+│     └── Iterator needed    → Stack-based lazy traversal
+│
+├── GRAPH
+│     ├── Shortest path, unweighted    → BFS
+│     ├── Shortest path, non-neg wts   → Dijkstra
+│     ├── Shortest path, neg weights   → Bellman-Ford
+│     ├── All-pairs shortest paths     → Floyd-Warshall
+│     ├── Connected components         → DFS / BFS / Union-Find
+│     └── Ordering with dependencies   → Topological Sort
+│
+└── PROBLEM TYPE CLUES
+      ├── "Optimal", repeated subproblems → DP
+      ├── "Greedy choice works"           → Greedy + proof
+      ├── "Two players, optimal play"     → Minimax or Game DP
+      ├── "Validate / parse format"       → State Machine
+      ├── "Simulate step by step"         → Simulation
+      ├── "Iterator / next()"             → Iterator Pattern
+      ├── "Stuck on forward pass"         → Reverse Thinking
+      └── "Problem too hard as-is"        → Add/Remove Constraint
+```
+
+### Quick keyword lookup
+
+| If you see this... | Try this pattern |
 |---|---|
-| Monotonic Stack (decreasing) | Next greater element, largest rectangle in histogram |
-| Monotonic Stack (increasing) | Next smaller element, trapping rain water |
-| Monotonic Deque (max) | Sliding window maximum |
-| Monotonic Deque for DP | DP optimization over a sliding range |
-
-**One-line rule:** Each element enters and exits at most once → O(n) total regardless of how many pops happen.
+| Sorted array | Binary search, two pointers |
+| "Top K" / "Kth largest" | Min-heap or Quick Select |
+| Shortest path, unweighted | BFS |
+| Shortest path, weighted | Dijkstra |
+| Permutations / combinations / subsets | Backtracking |
+| Overlapping subproblems | Dynamic Programming |
+| Interval merging / scheduling | Sort by start, sweep line |
+| Prefix matching / autocomplete | Trie |
+| n ≤ 20, subsets | Bitmask DP |
+| n ≤ 40, subset sum | Meet in the Middle |
+| Subarray sum / running sum | Prefix sum + HashMap |
+| Parentheses / matching brackets | Stack |
+| Stream / online algorithm | Heap, reservoir sampling |
+| "Validate", "parse", "legal format" | State Machine |
+| "Simulate", "apply rules", "N steps" | Simulation |
+| "Surrounded", "not reachable" | BFS/DFS + Reverse Thinking |
 
 ---
 
-### Meta-Pattern: Reverse Thinking
+## 4. Design Patterns and Meta-Patterns
 
-**Core idea:** Sometimes the forward problem is hard but the reverse is easy. Instead of building forward, tear down from the end. Instead of "where does this go?" ask "where did this come from?"
+---
+
+## Iterator Pattern
+
+### What is it?
+An Iterator gives sequential access to elements of a complex data structure without exposing its internals. In interviews, you implement `next()` and `hasNext()` using a stack for lazy (on-demand) traversal.
+
+### When to use?
+- Problem says "implement an iterator" for a BST, nested list, or multi-source structure.
+- You need to flatten a complex structure one element at a time.
+- Keywords: `next()`, `hasNext()`, `peek()`, "lazy access", "flatten on demand".
+- The structure is too large to fully traverse upfront.
+
+### Simple Example
+**Binary Search Tree Iterator:** You need `next()` to return the next smallest value in O(1) amortized.
+
+Instead of doing a full inorder traversal upfront and storing it (uses O(n) space all at once), use a stack. Push all left-spine nodes at start. When `next()` is called, pop the top, then push its right child's entire left spine. Each node is pushed and popped exactly once.
+
+### Experience Tip
+**Experience Tip:** The key insight is lazy evaluation — only compute the next element when asked. This is almost always implemented with a stack. When you see "iterator", think "stack + controlled traversal".
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---|---|---|---|
+| 173 | Binary Search Tree Iterator | Medium | Stack, push left-spine, O(1) amortized | https://leetcode.com/problems/binary-search-tree-iterator/ |
+| 341 | Flatten Nested List Iterator | Medium | Stack, reverse push, flatten top lazily | https://leetcode.com/problems/flatten-nested-list-iterator/ |
+| 284 | Peeking Iterator | Medium | Cache the next value, `peek()` returns cache | https://leetcode.com/problems/peeking-iterator/ |
+| 155 | Min Stack | Easy | Two stacks — one for data, one for minimums | https://leetcode.com/problems/min-stack/ |
+
+### One-Minute Revision
+```
+PATTERN:   Iterator (Stack-based Lazy Traversal)
+USE WHEN:  "Implement next()/hasNext()" for BST, nested list, multiple sources
+KEY STEP:  Use a stack. Only advance the traversal when next() is called.
+           Each element pushed/popped once → O(1) amortized.
+```
+
+---
+
+## State Machine
+
+### What is it?
+A State Machine models a problem as a finite set of states and explicit rules for transitioning between them. At each step, your current state plus the current input determines the next state.
+
+### When to use?
+- String parsing with complex multi-character rules (e.g., "Valid Number").
+- Problem has "modes" or "phases" — the meaning of an input depends on context.
+- Stock buy/sell problems (holding, not holding, cooldown) — this is an implicit state machine.
+- Keywords: "validate format", "parse", "legal sequence", "modes".
+
+### Simple Example
+**Valid Number:** Is a string like `"-3.5e2"` a valid number? You have states like `START`, `SIGN`, `DIGIT`, `DOT`, `EXPONENT`, `INVALID`. Each character transitions you between states. If you end in a valid state, the number is valid.
+
+Draw the state diagram on paper first — the code becomes mechanical once the diagram is clear.
+
+### Experience Tip
+**Experience Tip:** Always draw the state diagram before writing code. Label each arrow with what input causes the transition. The diagram IS the solution — code just implements it.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---|---|---|---|
+| 65 | Valid Number | Hard | Draw the state diagram first; ~6 states | https://leetcode.com/problems/valid-number/ |
+| 926 | Flip String to Monotone Increasing | Medium | Two states: seen 0s, seen 1s | https://leetcode.com/problems/flip-string-to-monotone-increasing/ |
+| 309 | Best Time to Buy and Sell Stock with Cooldown | Medium | States: held, sold, rest — implicit state machine DP | https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-cooldown/ |
+
+### One-Minute Revision
+```
+PATTERN:   State Machine
+USE WHEN:  "Validate format", "parse string", "modes", "phases"
+KEY STEP:  1. Define states  2. Define transitions (state + input → next state)
+           3. Define accepting states  4. Process input left to right
+```
+
+---
+
+## Simulation
+
+### What is it?
+When there is no clever mathematical shortcut, do exactly what the problem says. Follow the rules literally, step by step. Simulation tests implementation precision, not algorithmic cleverness.
+
+### When to use?
+- Problem says "simulate", "apply rules", "after N steps".
+- Rules are clear and the grid/board is small enough to iterate.
+- You cannot find a pattern or formula to skip steps.
+- Keywords: "spiral", "robot", "game board", "next state", "step".
+
+### Simple Example
+**Spiral Matrix:** Traverse a matrix in spiral order. No clever formula — just maintain four boundary pointers (top, bottom, left, right). Traverse right → down → left → up. Shrink boundaries after each direction. Stop when boundaries cross.
+
+The trap is off-by-one errors in boundary conditions. Slow down and be precise.
+
+### Experience Tip
+**Experience Tip:** For simulation, slow is fast. Write careful, explicit boundary handling. The most common bugs are off-by-one at edges. Consider: can you detect a cycle to avoid simulating all N steps?
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---|---|---|---|
+| 54 | Spiral Matrix | Medium | 4 boundary pointers, shrink after each pass | https://leetcode.com/problems/spiral-matrix/ |
+| 289 | Game of Life | Medium | Encode intermediate states in-place to avoid copy | https://leetcode.com/problems/game-of-life/ |
+| 1041 | Robot Bounded in Circle | Medium | After 1 cycle: if at origin OR direction changed → loops | https://leetcode.com/problems/robot-bounded-in-circle/ |
+| 735 | Asteroid Collision | Medium | Stack-based simulation; handle collision cases carefully | https://leetcode.com/problems/asteroid-collision/ |
+
+### One-Minute Revision
+```
+PATTERN:   Simulation
+USE WHEN:  Follow rules literally; no formula to skip steps
+KEY STEP:  Write slow, careful code. Handle boundaries explicitly.
+           Ask: can I detect cycles to skip N steps?
+```
+
+---
+
+## Minimax / Game Theory
+
+### What is it?
+Two players alternate turns. One maximizes the score, the other minimizes. At each game state, the current player picks the move that is best for them, assuming the opponent also plays perfectly.
+
+### When to use?
+- Two players, turn-based, both playing optimally.
+- Keywords: "predict the winner", "stone game", "optimal play", "both players play best".
+- When the game state space is small enough for recursion + memoization.
+
+### Simple Example
+**Stone Game:** Two piles of stones at each end of an array. Players alternate picking from either end. The player with more stones wins. Who wins?
+
+Define `dp[i][j]` = the maximum score difference (your score minus opponent's score) the current player can achieve on the subarray `[i..j]`. The transition: pick left or pick right, whichever gives better score difference. `dp[i][i] = stones[i]`.
+
+### Experience Tip
+**Experience Tip:** Before building a game tree, check if there is a mathematical pattern. Nim Game (take 1-3 stones): you lose if `n % 4 == 0`. Always try small cases to find a formula before coding a full minimax tree.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---|---|---|---|
+| 877 | Stone Game | Medium | Interval DP or notice first player always wins | https://leetcode.com/problems/stone-game/ |
+| 486 | Predict the Winner | Medium | Interval DP: dp[i][j] = score difference for current player | https://leetcode.com/problems/predict-the-winner/ |
+| 292 | Nim Game | Easy | Pure math: lose if n % 4 == 0 | https://leetcode.com/problems/nim-game/ |
+
+### One-Minute Revision
+```
+PATTERN:   Minimax / Game Theory DP
+USE WHEN:  Two players, turn-based, optimal play
+KEY STEP:  dp[i][j] = max score difference current player achieves on [i..j]
+           Try small cases for math shortcut before building a full game tree
+```
+
+---
+
+## Meet in the Middle
+
+### What is it?
+Split the input in half. Solve each half independently (enumerate all possibilities). Combine the two halves. This converts O(2^n) to O(2^(n/2) * n) — a massive speedup.
+
+### When to use?
+- Subset sum or subset enumeration with n between 30 and 40.
+- Pure backtracking O(2^n) is too slow (n > 25) but O(n^2) DP is also too slow.
+- Constraint signal: n ≤ 40 is the canonical trigger.
+
+### Simple Example
+**Subset sum, n = 38, target T:** O(2^38) is way too slow. Split into two halves of 19. Generate all 2^19 ≈ 524k subset sums for each half. Sort one half. For each sum in the first half, binary search in the sorted second half for `T - sum`. Total: ~10 million operations — fits easily.
+
+### Experience Tip
+**Experience Tip:** When you see n ≤ 40 and the problem involves choosing/not choosing elements, your brain should immediately fire "Meet in the Middle". It is one of the few situations where this exact technique applies.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---|---|---|---|
+| 1755 | Closest Subsequence Sum | Hard | Classic Meet in the Middle on subsequence sums | https://leetcode.com/problems/closest-subsequence-sum/ |
+| 2035 | Partition Array Into Two Arrays to Minimize Difference | Hard | Split halves, sort, binary search for complement | https://leetcode.com/problems/partition-array-into-two-arrays-to-minimize-sum-difference/ |
+
+### One-Minute Revision
+```
+PATTERN:   Meet in the Middle
+USE WHEN:  n ≤ 40, subset enumeration, O(2^n) too slow
+KEY STEP:  Split in half → enumerate both halves → sort one → binary search
+           Complexity: O(2^(n/2) * n) instead of O(2^n)
+```
+
+---
+
+## Randomized Algorithms
+
+### What is it?
+Use randomness to get good average-case performance or to handle adversarial inputs. The two main types: Las Vegas (always correct, variable time) and Monte Carlo (always fast, occasionally wrong).
+
+### When to use?
+- "Kth largest element" in O(n) average → Quick Select with random pivot.
+- "Uniform random sample from unknown-length stream" → Reservoir Sampling.
+- "Random shuffle" → Fisher-Yates.
+- "Pick random index weighted by probabilities" → Prefix sum + binary search on random float.
+
+### Simple Example
+**Random Pick with Weight:** Array `weights = [1, 3, 2]`. Pick index 0 with probability 1/6, index 1 with probability 3/6, index 2 with probability 2/6.
+
+Build prefix sums `[1, 4, 6]`. Generate a random float in `[0, 6)`. Binary search to find which bucket it falls in. That is your index.
+
+### Experience Tip
+**Experience Tip:** "Random pick by weight" almost always reduces to prefix sum + binary search on a random value. Reservoir sampling rule: at step i, replace any reservoir element with probability K/i. These two patterns cover 90% of randomized interview questions.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---|---|---|---|
+| 528 | Random Pick with Weight | Medium | Prefix sum + binary search on random float | https://leetcode.com/problems/random-pick-with-weight/ |
+| 215 | Kth Largest Element in an Array | Medium | Quick Select with random pivot — O(n) average | https://leetcode.com/problems/kth-largest-element-in-an-array/ |
+| 382 | Linked List Random Node | Medium | Reservoir sampling (K=1 case) | https://leetcode.com/problems/linked-list-random-node/ |
+| 384 | Shuffle an Array | Medium | Fisher-Yates: swap arr[i] with arr[random(0,i)] | https://leetcode.com/problems/shuffle-an-array/ |
+
+### One-Minute Revision
+```
+PATTERN:   Randomized Algorithms
+USE WHEN:  "Random pick", "Kth largest", "shuffle", "stream sampling"
+KEY STEP:  Weighted pick → prefix sum + binary search on random value
+           Stream sampling → Reservoir: replace slot i with prob K/i
+```
+
+---
+
+## Amortized Analysis
+
+### What is it?
+Some operations look expensive in isolation but are cheap when averaged over many operations. Amortized analysis spreads the total cost evenly. An "expensive" operation is only possible after many cheap ones have been done — so the average is still low.
+
+### When to use?
+- Justifying why a monotonic stack with many pops is still O(n) total.
+- Explaining why dynamic array push is O(1) average despite occasional O(n) resize.
+- Whenever an interviewer challenges "isn't that O(n²)?" on a stack or queue operation.
+
+### Simple Example
+**Monotonic Stack:** In Largest Rectangle in Histogram, each bar is pushed once and popped once. Even though one bar might trigger a cascade of pops, the total number of pops across the entire array is at most n. So the algorithm is O(n) total, not O(n²).
+
+This is the amortized argument: total work = n pushes + n pops = O(n).
+
+### Experience Tip
+**Experience Tip:** When an interviewer asks "isn't that O(n²) because of the pops?", say: "No, because each element is pushed exactly once and popped at most once across the entire array. The total work is O(n) amortized."
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---|---|---|---|
+| 84 | Largest Rectangle in Histogram | Hard | Each bar pushed/popped once — total O(n) | https://leetcode.com/problems/largest-rectangle-in-histogram/ |
+| 155 | Min Stack | Easy | Push/pop — track min alongside data | https://leetcode.com/problems/min-stack/ |
+
+### One-Minute Revision
+```
+PATTERN:   Amortized Analysis
+USE WHEN:  Stack/queue with many pops; dynamic array resize; Union-Find
+KEY STEP:  Count TOTAL work across ALL operations, not worst-case per step.
+           "Each element pushed once, popped once → O(n) total"
+```
+
+---
+
+## Monotonic Patterns
+
+### What is it?
+Maintain a stack or deque that is always sorted (ascending or descending). When a new element arrives, pop all elements that violate the monotonic property before pushing. This gives you O(n) solutions to "next greater/smaller element" and "sliding window max/min" problems.
+
+### When to use?
+- "Next greater element" / "next smaller element" for each position.
+- "Largest rectangle" / "trapping rain water" — spans determined by boundaries.
+- "Sliding window maximum" — need max of a window as it slides.
+- DP optimization over a sliding range.
+
+### Simple Example
+**Next Greater Element:** For each element, find the next element to the right that is larger.
+
+Use a decreasing monotonic stack. Process left to right. When element `x` arrives, pop all stack elements smaller than `x` — `x` is their "next greater". Push `x`. Elements still in the stack at the end have no next greater element.
+
+### Experience Tip
+**Experience Tip:** Decide direction first: "next greater to the RIGHT" → process left-to-right, decreasing stack. "next smaller to the LEFT" → process right-to-left or use the reverse. Drawing the stack state for 3-4 elements usually makes the direction clear.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---|---|---|---|
+| 496 | Next Greater Element I | Easy | Decreasing stack, process left to right | https://leetcode.com/problems/next-greater-element-i/ |
+| 739 | Daily Temperatures | Medium | Same idea: decreasing stack, record distances | https://leetcode.com/problems/daily-temperatures/ |
+| 84 | Largest Rectangle in Histogram | Hard | Increasing stack, pop when height drops | https://leetcode.com/problems/largest-rectangle-in-histogram/ |
+| 239 | Sliding Window Maximum | Hard | Monotonic deque, maintain decreasing front = max | https://leetcode.com/problems/sliding-window-maximum/ |
+
+### One-Minute Revision
+```
+PATTERN:   Monotonic Stack / Deque
+USE WHEN:  "Next greater/smaller", "largest rectangle", "sliding window max"
+KEY STEP:  Each element enters and exits at most once → O(n) total.
+           Decreasing stack → next greater. Increasing stack → next smaller.
+```
+
+---
+
+## Reverse Thinking
+
+### What is it?
+When the forward problem is hard, solve the reverse. Instead of asking "where does this go?", ask "where did this come from?". Instead of building forward, start from the end state and work backwards.
+
+### When to use?
+- You are stuck on the forward pass and cannot find an efficient approach.
+- "Not reachable" or "not surrounded" is easier to characterize than "is surrounded".
+- The problem involves "minimum deletions" — flip it to "maximum valid elements kept".
+- You need to undo operations in reverse order.
+
+### Simple Example
+**Surrounded Regions (LC 130):** Flip all 'O' regions fully surrounded by 'X'. Forward approach: check each 'O' cell, DFS to border — O(n^2 * m^2), too slow.
+
+Reverse: "not surrounded" = "connected to the border". BFS/DFS from all border 'O' cells, mark them safe. Then flip everything remaining. O(m*n).
 
 | Forward Direction (Hard) | Reverse Direction (Easier) |
 |---|---|
-| Find surrounded regions from inside | Start from border O's (unsurrounded), DFS/BFS outward, flip the rest |
-| Reach end from start | Reach start from all valid ends |
-| Build final answer step by step | Start from the answer, undo operations in reverse |
-| Count elements removed | Count elements kept; answer = total − kept |
-| Minimum deletions for valid string | Maximum valid subsequence length; deletions = n − max_valid |
+| Find surrounded regions from inside | Start from border O's, BFS outward, flip the rest |
+| Count elements removed | Count elements kept; removals = total - kept |
+| Minimum deletions for valid string | Maximum valid subsequence; deletions = n - max_valid |
+| Build answer step by step | Start from answer, undo operations in reverse |
 
-**When to reach for this:** You are stuck on the forward pass and your approach feels like brute force with no clear optimization. Ask: "What if I solved the *opposite* problem?"
+### Experience Tip
+**Experience Tip:** The trigger phrase is "I'm stuck on the forward pass". The moment you feel that, explicitly ask yourself: "What is the reverse of this problem? What if I started from the answer?" This alone unblocks a surprising number of hard problems.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---|---|---|---|
+| 130 | Surrounded Regions | Medium | BFS from border 'O' cells, flip the rest | https://leetcode.com/problems/surrounded-regions/ |
+| 417 | Pacific Atlantic Water Flow | Medium | BFS from both oceans inward, find intersection | https://leetcode.com/problems/pacific-atlantic-water-flow/ |
+| 1293 | Shortest Path in a Grid with Obstacles Elimination | Hard | BFS forward but state includes eliminations used | https://leetcode.com/problems/shortest-path-in-a-grid-with-obstacles-elimination/ |
+
+### One-Minute Revision
+```
+PATTERN:   Reverse Thinking
+USE WHEN:  Stuck on forward pass; "not X" is easier than "X"; min deletions
+KEY STEP:  Ask: "What is the OPPOSITE of what I'm trying to find?"
+           Solve the reverse, then map back to original answer.
+```
 
 ---
 
-### Meta-Pattern: Add Constraint / Remove Constraint
+## Add / Remove Constraint
 
-**Core idea:** If a problem is too hard as stated, temporarily add a simplifying constraint to make it tractable. Solve the easier version. Then gradually remove the constraint.
+### What is it?
+If a problem is too hard as stated, temporarily simplify it by adding a constraint or removing one. Solve the easier version first. Then generalize back to the original problem. This is how you make progress on unfamiliar problems.
 
-**Examples:**
+### When to use?
+- You encounter a completely unfamiliar problem.
+- The problem has multiple interacting constraints and you are overwhelmed.
+- You want to show structured thinking even if you do not have the full solution yet.
+- Use this to start any problem — solve it for K=1, or n=1, or the unweighted version.
+
+### Simple Example
+**Longest Substring with at most K Distinct Characters:** Hard for general K.
+
+Simplify: K = 1 (longest run of the same character). Easy — one pass. Now generalize: use sliding window + HashMap to track distinct character counts. When `HashMap.size() > K`, shrink from left. The same sliding window idea scales to any K.
 
 | Hard Version | Simplified Version | How to Generalize |
 |---|---|---|
-| Longest substring with at most K distinct chars | K = 1 (runs of same char) | Use sliding window + HashMap for arbitrary K |
-| Search in 2D matrix | 1D binary search first | Extend to 2D by mapping row/col |
-| Graph with arbitrary weights (shortest path) | Unweighted BFS first | Add weights → Dijkstra |
-| All subsets summing to target (n up to 40) | n up to 20 (brute force) | Split + Meet in the Middle |
+| At most K distinct chars | K = 1 (single char runs) | Sliding window + HashMap |
+| Search in 2D matrix | 1D binary search first | Map row/col to index |
+| Weighted shortest path | Unweighted BFS first | Add weights → Dijkstra |
+| Subset sum, n = 40 | n = 20 (brute force) | Meet in the Middle |
 
-**When to reach for this:** You encounter a completely unfamiliar problem. Solve the K=1 / n=1 / unweighted / single-constraint version. Show your thinking. Then build toward the full solution.
+### Experience Tip
+**Experience Tip:** In an interview, saying "Let me solve the K=1 case first to understand the structure" is a strong signal. It shows methodical thinking. The interviewer knows you know it is simplified — that is fine.
 
----
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---|---|---|---|
+| 340 | Longest Substring with At Most K Distinct Characters | Medium | Start with K=1, generalize to K with HashMap | https://leetcode.com/problems/longest-substring-with-at-most-k-distinct-characters/ |
+| 239 | Sliding Window Maximum | Hard | Solve for window=1 first, then extend | https://leetcode.com/problems/sliding-window-maximum/ |
+| 76 | Minimum Window Substring | Hard | First: does a valid window exist? Then: minimize it | https://leetcode.com/problems/minimum-window-substring/ |
 
-### Interview Process: How to Communicate
-
-**Step 1 — Understand (2–3 min)**
-Restate in your own words. Clarify inputs, outputs, constraints, edge cases. Ask:
-- Is the input sorted? Can there be duplicates? Negative numbers? Empty input?
-
-**Step 2 — Examples (2–3 min)**
-Work through 2–3 examples by hand. Include at least one edge case (empty, single element, all same).
-
-**Step 3 — Approach (3–5 min)**
-- State brute force first: "The naive approach is... with O(?) complexity."
-- Identify the pattern: "This looks like a [sliding window / BFS / DP / monotonic stack] problem because..."
-- Explain the optimized approach at a high level before touching code.
-
-**Step 4 — Implement (10–15 min)**
-Write clean, modular code. Name variables meaningfully. Narrate as you type.
-
-**Step 5 — Verify (2–3 min)**
-Trace your example through the code. Check edge cases. State time and space complexity.
+### One-Minute Revision
+```
+PATTERN:   Add / Remove Constraint
+USE WHEN:  Problem feels too complex; you are stuck; unfamiliar territory
+KEY STEP:  Solve for K=1, n=1, or the unweighted/single-constraint version.
+           Show it working. Then generalize step by step.
+```
 
 ---
 
-### Common Interview Anti-Patterns to Eliminate
+## Design Problems (System-Level)
 
-**1. Jumping to code without planning**
-Spend 5–10 minutes on understanding and approach. Coding should be the *last* step, not the first.
+### What is it?
+You are asked to implement a data structure or system: "Design a LRU Cache", "Design a HashMap", "Design Twitter". These test your ability to combine basic data structures into a working system.
 
-**2. Starting with the optimal solution**
-Always state the brute force. It shows you understand the problem. Optimize from there.
+### When to use?
+- Problem says "Design", "Implement", "Build" a data structure or service.
+- You need O(1) lookups AND O(1) insertions/deletions simultaneously.
+- The problem has multiple operations with different complexity requirements.
 
-**3. Silent coding**
-The interview is a conversation. Narrate your thinking at all times. Silent coding looks like a black box to the interviewer.
+### Simple Example
+**LRU Cache (LC 146):** O(1) get and put. Need fast lookup (HashMap) AND ordered eviction (know which is least recently used). 
 
-**4. Ignoring edge cases until the end**
-Consider edge cases during design, not as an afterthought. They often reveal a flaw in the approach.
+Combine: HashMap (key → node) + Doubly Linked List (order by recency). Get/put: move node to front of list (O(1) with pointers). Evict: remove from tail (O(1)).
 
-**5. Stubbornly debugging a wrong approach**
-If your approach hits a fundamental wall after 5 minutes of trying, acknowledge it and pivot. Say: "I think this approach has a problem with... let me reconsider."
+### Experience Tip
+**Experience Tip:** Most O(1) design problems use HashMap + LinkedList together. The HashMap gives fast lookup; the LinkedList gives ordered traversal or O(1) insertion/deletion at known positions. When you see "O(1) get and O(1) insert", think this combo immediately.
 
-**6. Memorizing solutions instead of patterns**
-Solutions are not transferable. Patterns are. "This looks like a sliding window problem" is worth far more than "I saw this exact problem on LeetCode."
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---|---|---|---|
+| 146 | LRU Cache | Medium | HashMap + Doubly Linked List | https://leetcode.com/problems/lru-cache/ |
+| 706 | Design HashMap | Easy | Array of buckets + linked list for collisions | https://leetcode.com/problems/design-hashmap/ |
+| 705 | Design HashSet | Easy | Same as HashMap without values | https://leetcode.com/problems/design-hashset/ |
+| 232 | Implement Queue using Stacks | Easy | Two stacks: inbox and outbox — amortized O(1) | https://leetcode.com/problems/implement-queue-using-stacks/ |
+| 225 | Implement Stack using Queues | Easy | One queue, rotate elements on push | https://leetcode.com/problems/implement-stack-using-queues/ |
+| 355 | Design Twitter | Medium | Heap for feed merge; HashMap for follow sets | https://leetcode.com/problems/design-twitter/ |
 
-**7. Stating complexity incorrectly**
+### One-Minute Revision
+```
+PATTERN:   Design Problems
+USE WHEN:  "Design X", "Implement X" — multiple O(1) operations required
+KEY STEP:  Identify ALL operations and their required complexity.
+           O(1) lookup → HashMap. O(1) ordered access → LinkedList. Combine.
+```
 
-| Common Mistake | Correct Statement |
+---
+
+## 5. Common Interview Mistakes
+
+### Mistake 1: Jumping to code without a plan
+**Why it happens:** Nervousness. You recognize a pattern and want to prove it quickly.
+**Why it hurts:** You miss edge cases, implement the wrong thing, and waste time debugging.
+**Fix:** Spend the first 5-10 minutes on understanding + approach. Code should be the LAST step.
+
+---
+
+### Mistake 2: Not stating the brute force
+**Why it happens:** You think skipping straight to optimal shows intelligence.
+**Why it hurts:** The brute force confirms you understood the problem and gives a baseline to improve from.
+**Fix:** Always say "The naive approach is... with O(?) complexity." Then optimize from there.
+
+---
+
+### Mistake 3: Silent coding
+**Why it happens:** Concentrating on getting code right.
+**Why it hurts:** The interviewer cannot evaluate your thinking. Silence looks like you are lost.
+**Fix:** Narrate everything. "I'm using a HashMap here because I need O(1) lookup. I'll use the key as the value and..." Talk the entire time.
+
+---
+
+### Mistake 4: Ignoring edge cases until the very end
+**Why it happens:** You are focused on the happy path.
+**Why it hurts:** Edge cases often reveal a fundamental flaw in your approach — too late to fix if discovered after implementation.
+**Fix:** Ask about edge cases BEFORE designing: "Can the array be empty? Negative values? All duplicates?"
+
+---
+
+### Mistake 5: Stubbornly debugging a fundamentally wrong approach
+**Why it happens:** Sunk-cost fallacy. You have spent 10 minutes on this approach.
+**Why it hurts:** You waste time and never recover.
+**Fix:** After 5 minutes of trying, say: "I think this approach has a fundamental problem with X. Let me step back and reconsider." Pivoting gracefully is a POSITIVE signal.
+
+---
+
+### Mistake 6: Memorizing solutions instead of patterns
+**Why it happens:** You grind LeetCode by reading solutions.
+**Why it hurts:** Solutions do not transfer to new problems. Patterns do.
+**Fix:** After each problem, write: "The PATTERN here is ___. USE WHEN: ___." Practice recognizing the pattern, not the problem.
+
+---
+
+### Mistake 7: Stating complexity incorrectly
+**Why it happens:** Common misconceptions.
+
+| Common Wrong Statement | Correct Statement |
 |---|---|
 | "HashMap lookup is O(1)" | O(1) average, O(n) worst case due to collisions |
-| "Sorting is O(n)" | O(n log n) for comparison-based sorting |
-| "DFS on a graph is O(n)" | O(V + E) — edges matter |
+| "Sorting is O(n)" | O(n log n) for comparison-based sort |
+| "DFS on graph is O(n)" | O(V + E) — edges matter |
 | "Binary search is O(n)" | O(log n) |
-
-**8. Not asking clarifying questions**
-"Can the array be empty?" "Are there negative values?" "Can I modify the input?" These prevent entire categories of bugs.
+| "Monotonic stack is O(n²)" | O(n) amortized — each element pushed/popped once |
 
 ---
 
-## [35–45 min] Concrete Examples
-
-### Walkthrough: Universal Framework on "Surrounded Regions"
-
-**Problem:** Given a 2D grid of `'X'` and `'O'`, flip all `'O'` regions that are fully surrounded by `'X'` to `'X'`. Leave `'O'` cells connected to the border unchanged.
-
-Apply the 13 steps:
-
-**Step 1 — Understand:** Input is a 2D char grid. Output is the same grid, modified in-place. "Surrounded" means no path to the border.
-
-**Step 2 — Identify input structure:** 2D grid. Classic DFS/BFS territory.
-
-**Step 3 — Understand constraints:** Typical constraint is m, n ≤ 200. Target: O(m*n).
-
-**Step 4 — Brute force:** For every `'O'` cell, DFS to check if it can reach the border. If not, flip it. Cost: O((m*n)²) — too slow.
-
-**Step 5 — Find repeated work / useful property:** The brute force re-explores cells repeatedly. Also: "not surrounded" is equivalent to "connected to the border." This is the reverse problem.
-
-**Step 6 — Identify candidate pattern:** Reverse Thinking + BFS/DFS from border.
-
-**Step 7 — Define state:** Mark border-connected `'O'` cells with a temporary marker `'S'`.
-
-**Step 8 — Derive transition:**
-1. DFS/BFS from all border `'O'` cells. Mark reachable `'O'` cells as `'S'`.
-2. Scan entire grid: `'O'` → `'X'` (was surrounded), `'S'` → `'O'` (restore border-connected).
-
-**Step 9 — Dry run:**
-```
-Input:          After DFS from border:   Final:
-X X X X         X X X X                  X X X X
-X O O X    →   X O O X    →             X X X X
-X X O X         X X O X                  X X X X
-X O X X         X S X X                  X O X X
-```
-The bottom-left `'O'` touches the border → marked `'S'` → restored to `'O'`. The interior `'O'` cells get flipped.
-
-**Step 10 — Complexity:** O(m*n) time, O(m*n) space for the recursion stack.
-
-**Step 11 — Edge cases:** All border cells are `'O'` → nothing flipped. Single-cell grid. Grid with no `'O'` at all.
-
-**Step 12 — Implement:** (standard DFS/BFS from border — straightforward given the plan above)
-
-**Step 13 — Optimize:** Already O(m*n). No further optimization needed.
+### Mistake 8: Not asking clarifying questions
+**Why it happens:** You assume the input is "normal".
+**Why it hurts:** You build a solution for the wrong problem.
+**Fix:** Before coding, always ask: "Can the array be empty? Are there duplicates? Can values be negative? Can I modify the input?"
 
 ---
 
-### Walkthrough: How Constraints Narrowed the Choice
-
-**Problem:** "Subset sum, n = 38, target T. Does any subset sum to T?"
-
-**Step 3 — Constraints:** n = 38. Let's apply the constraint table.
-
-- n ≤ 20: pure bitmask backtracking, O(2²⁰) ≈ 10⁶ — fine.
-- n = 38: O(2³⁸) ≈ 2.7 × 10¹¹ — way too slow.
-- DP approach: values could be huge (e.g., up to 10⁹ each), so a `dp[target]` DP table is infeasible.
-- n ≤ 40: **Meet in the Middle signal fires.**
-
-**Decision:** Split array into two halves of size 19. Generate all 2¹⁹ ≈ 524k subset sums per half. Sort one half. For each sum in the first half, binary search for `T - sum` in the second half. Total: O(2^(n/2) * n) ≈ 10 million operations. Fits in time.
-
-This is how constraints force your hand to the right algorithm.
-
----
-
-## [45–55 min] Pattern Recognition at the Meta Level
-
-### Constraint Table: n → Target Complexity → Candidate Patterns
-
-This table is one of the most useful tools you can internalize. Read constraints first, map to complexity, then narrow to patterns.
-
-| Constraint (n =) | Target Complexity | Candidate Patterns |
-|---|---|---|
-| n ≤ 10–15 | O(n! ) or O(2ⁿ) | Pure backtracking, permutation enumeration |
-| n ≤ 20 | O(2ⁿ) or O(n * 2ⁿ) | Bitmask DP, subset enumeration, backtracking |
-| n ≤ 40 | O(2^(n/2) * n) | Meet in the Middle |
-| n ≤ 300–500 | O(n³) | Interval DP, Floyd-Warshall, matrix chain |
-| n ≤ 1,000–5,000 | O(n²) | Two-pointer on sorted, simple DP, bubble/selection sort |
-| n ≤ 100,000 | O(n log n) | Sorting, binary search, heap, merge sort, BIT/segment tree |
-| n ≤ 1,000,000 | O(n) | Linear scan, two pointers, sliding window, counting sort, BFS/DFS |
-| n ≤ 10⁹ | O(log n) or O(√n) | Binary search on answer, math, sieve up to √n |
-| n is a very large number | O(log n) or O(1) | Math formula, modular exponentiation, cycle detection |
-
-**How to use this table in an interview:**
-1. Read the constraint on n.
-2. Immediately state: "With n up to X, I need an O(Y) solution."
-3. Now only consider patterns that can achieve O(Y).
-
----
-
-### Keyword → Pattern Quick Guide
-
-| If the problem mentions... | Reach for... |
-|---|---|
-| Sorted array | Binary search, two pointers |
-| "Top K" / "Kth largest/smallest" | Heap (min/max), Quick Select |
-| Tree traversal or path | DFS (recursion), BFS (level-order) |
-| Shortest path, unweighted graph | BFS |
-| Shortest path, weighted, non-negative | Dijkstra |
-| Shortest path, negative weights | Bellman-Ford |
-| All-pairs shortest paths | Floyd-Warshall |
-| Permutations / combinations / subsets | Backtracking |
-| Overlapping subproblems, optimal substructure | Dynamic Programming |
-| O(1) space, find duplicate or missing | Floyd's cycle, XOR trick, math |
-| Interval scheduling / merging | Sort by start/end, sweep line |
-| Prefix matching / autocomplete | Trie |
-| Stream / online algorithm | Heap, reservoir sampling |
-| n ≤ 20, choose/not-choose | Bitmask DP |
-| n ≤ 40, subset sum | Meet in the Middle |
-| String matching / substring search | KMP, rolling hash (Rabin-Karp), Trie |
-| Subarray sum / window condition | Sliding window, prefix sum + HashMap |
-| Parentheses, nesting, matching brackets | Stack |
-| Connected components in a graph | DFS / BFS / Union-Find |
-| Ordering with dependencies | Topological sort (Kahn's / DFS) |
-| "Surrounded," "not reachable," "components" | BFS/DFS + Reverse Thinking |
-| Game, two players, optimal play | Minimax, DP interval game |
-| "Validate," "parse," "legal format" | State machine |
-| "Iterator," "next," "lazy access" | Iterator pattern with stack |
-| "Simulate," "apply rules," "N steps" | Simulation |
-
----
-
-### How to pick when the problem type is unclear
-
-When you genuinely cannot identify the pattern from the problem statement, apply this triage sequence:
-
-1. **Read constraints** → determine target complexity class.
-2. **Identify input structure** → array / tree / graph / string? Each has a natural set of operations.
-3. **Try the simplest approach that fits the complexity budget.** If O(n log n) is needed and input is unsorted, sorting + a linear scan is often the solution.
-4. **Ask: "Does the brute force have repeated subproblems?"** → If yes, DP. If no, probably greedy or direct.
-5. **Ask: "Is there monotonicity or a sortable property?"** → Binary search / greedy / monotonic stack.
-6. **Ask: "Would the reverse problem be easier?"** → Reverse Thinking.
-7. **Ask: "Can I solve a simpler version?"** → Add/Remove Constraint meta-pattern.
-
----
-
-## [55–60 min] Final Mental Checklist
-
-Before you start typing, verify every item:
+## Quick Reference Cheat Sheet
 
 ```
-BEFORE CODING
-[ ] I restated the problem and confirmed I understand it
-[ ] I identified the input structure (array / tree / graph / string / stream)
-[ ] I read and mapped the constraint (n ≤ ?) to a target complexity class
-[ ] I stated the brute force and its complexity out loud
-[ ] I identified which pattern applies and explained why
-[ ] I defined what my key variables / state represents
-[ ] I dry-ran the logic on a small example
-
-DURING CODING
-[ ] I am narrating my reasoning as I type
-[ ] Variable names are descriptive, not single letters (except loop counters)
-[ ] I am handling the base case / loop boundary before the general case
-
-AFTER CODING
-[ ] I traced my code on the original example
-[ ] I checked edge cases: empty input, single element, all same, max n
-[ ] I stated time complexity and space complexity with justification
-[ ] I asked the interviewer if further optimization is desired
-```
-
----
-
-## Active Recall Questions
-
-Test yourself. Cover the answers and try to answer from memory.
-
-1. You see a problem with n ≤ 40 and it involves subsets. What algorithm should you think of first, and why?
-
-2. The brute force for a string parsing problem is a large nested if-else chain that's hard to extend. What design pattern cleans this up? What are the three things you must define?
-
-3. Explain why a monotonic stack that performs O(n) total pops is not O(n²). What technique is this reasoning called?
-
-4. You are stuck on "find all surrounded regions." The forward DFS from each interior `'O'` is complicated. What meta-pattern applies? What does the reverse problem look like?
-
-5. A problem asks you to find the Kth largest element in an unsorted array. What two algorithms can solve this? What are their average-case complexities?
-
-6. You need to sample K random elements from a stream of unknown length, each with equal probability. What algorithm handles this? Describe the core rule for deciding whether to replace a reservoir element.
-
-7. Your Monte Carlo algorithm sometimes gives wrong answers due to hash collisions. How would you convert it to a Las Vegas algorithm?
-
-8. Explain the "Add/Remove Constraint" meta-pattern. Give one concrete example of simplifying a hard problem and then generalizing.
-
-9. In minimax, what is alpha-beta pruning and what is the best-case complexity improvement?
-
-10. You are given a Peeking Iterator to implement around an existing iterator. What state does your wrapper need, and what is the implementation of `peek()` vs. `next()`?
-
----
-
-## Recommended Practice Direction
-
-**Week 1 — Simulation and State Machine**
-- Spiral Matrix (LC 54)
-- Game of Life (LC 289)
-- Valid Number (LC 65) — build the full state machine diagram first
-- Robot Bounded in Circle (LC 1041)
-
-**Week 2 — Iterator and Amortized Reasoning**
-- Binary Search Tree Iterator (LC 173)
-- Flatten Nested List Iterator (LC 341)
-- Peeking Iterator (LC 284)
-- Zigzag Iterator (LC 281)
-
-**Week 3 — Game Theory and Meet in the Middle**
-- Stone Game (LC 877)
-- Predict the Winner (LC 486)
-- Partition Array Into Two Arrays to Minimize Sum Difference (LC 2035) — Meet in the Middle
-- Closest Subset Sum (LC 1755)
-
-**Week 4 — Meta-patterns and Hard Mixed Problems**
-- Surrounded Regions (LC 130) — Reverse Thinking
-- Number of Islands II (LC 305)
-- Random Pick with Weight (LC 528)
-- Any 3 problems where you apply the full 13-step framework and write it out
-
----
-
-## 2-Minute Cheat Sheet
-
-```
-CONSTRAINT → COMPLEXITY MAP
-n ≤ 20        →  O(2ⁿ)         Bitmask / Backtracking
-n ≤ 40        →  O(2^(n/2))    Meet in the Middle
-n ≤ 500       →  O(n³)         Interval DP
-n ≤ 5,000     →  O(n²)         Nested loops / simple DP
-n ≤ 100,000   →  O(n log n)    Sort / Heap / Binary Search
-n ≤ 1,000,000 →  O(n)          Two pointers / Sliding window
-n ≤ 10⁹       →  O(log n)      Binary search on answer
-
-KEYWORD → PATTERN
-Sorted array         → Binary search / Two pointers
-Top-K / Kth          → Heap / Quick Select
-Unweighted SP        → BFS
-Weighted SP          → Dijkstra (non-neg) / Bellman-Ford (neg)
-Permutations/subsets → Backtracking
-Repeated subproblems → DP
-Intervals            → Sort + sweep
-Prefix match         → Trie
-Stream               → Heap / Reservoir Sampling
-n ≤ 20, subsets      → Bitmask DP
-String matching      → KMP / Rolling hash
-Subarray sum         → Prefix sum + HashMap / Sliding window
-Nesting / matching   → Stack
-Components           → DFS / BFS / Union-Find
-Dependencies         → Topological sort
-Two players, optimal → Minimax / Game DP
-Validate / parse     → State machine
-Iterator, next()     → Stack-based lazy iterator
-
-META-PATTERNS
-Stuck on forward? → Reverse Thinking (start from the answer / border)
-Problem too hard? → Add/Remove Constraint (simplify, then generalize)
-Expensive op? → Amortized: count total work, not per-step worst case
-n in [20, 40]? → Split in half, Meet in the Middle
-
-13-STEP FRAMEWORK (memorize this order)
-1. Understand  2. Input structure  3. Constraints  4. Brute force
-5. Repeated work  6. Candidate pattern  7. Define state  8. Transition
-9. Dry run  10. Complexity  11. Edge cases  12. Implement  13. Optimize
+╔══════════════════════════════════════════════════════════════════════╗
+║  CONSTRAINT → COMPLEXITY (memorize this)                             ║
+║  n ≤ 20          → O(2^n)         Backtracking / Bitmask DP         ║
+║  n ≤ 40          → O(2^(n/2))     Meet in the Middle                ║
+║  n ≤ 500         → O(n³)          Interval DP                       ║
+║  n ≤ 1,000       → O(n²)          Nested loops / simple DP          ║
+║  n ≤ 100,000     → O(n log n)     Sort / Heap / Binary Search        ║
+║  n ≤ 1,000,000   → O(n)           Two pointers / Sliding window      ║
+║  n ≤ 10^9        → O(log n)       Binary search on answer            ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  13-STEP FRAMEWORK                                                   ║
+║  1.Understand  2.Structure  3.Constraints  4.Brute force             ║
+║  5.Repeated work  6.Pattern  7.State  8.Transition                   ║
+║  9.Dry run  10.Complexity  11.Edge cases  12.Implement  13.Optimize  ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  META-PATTERNS                                                       ║
+║  Stuck on forward?   → Reverse Thinking                             ║
+║  Too complex?        → Add/Remove Constraint (solve K=1 first)      ║
+║  "O(n²)?" on stack   → Amortized: each element pushed/popped once   ║
+║  n in [30,40]?       → Meet in the Middle                           ║
+╠══════════════════════════════════════════════════════════════════════╣
+║  PRE-CODING CHECKLIST                                                ║
+║  [ ] Restated the problem in my own words                           ║
+║  [ ] Identified input structure                                      ║
+║  [ ] Read constraint → stated target complexity                      ║
+║  [ ] Stated brute force and its complexity                           ║
+║  [ ] Identified pattern and explained why                            ║
+║  [ ] Dry-ran on a small example                                     ║
+║  [ ] Asked about edge cases                                          ║
+╚══════════════════════════════════════════════════════════════════════╝
 ```
 
 ---

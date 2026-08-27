@@ -1,379 +1,106 @@
-# Sorting & Order Statistics — 1-Hour Learning Module
+# Sorting & Order — Complete Interview Guide
 
-> *"Sorting is rarely the answer, but it is often the first step toward the answer."*
-
-**Estimated time:** 60 minutes  
-**Goal:** Understand when and why to use each sorting approach at a Google SWE interview.
+> Read fast. Understand deeply. Go practice on LeetCode immediately.
 
 ---
 
 ## Table of Contents
 
-- [\[0–10 min\] Big Picture](#010-min-big-picture)
-- [\[10–20 min\] Mental Model](#1020-min-mental-model)
-- [\[20–35 min\] Core Patterns](#2035-min-core-patterns)
-- [\[35–45 min\] Concrete Code + Dry Runs](#3545-min-concrete-code--dry-runs)
-- [\[45–55 min\] Pattern Recognition](#4555-min-pattern-recognition)
-- [\[55–60 min\] Final Mental Checklist](#5560-min-final-mental-checklist)
-- [Active Recall](#active-recall)
-- [Recommended Practice Direction](#recommended-practice-direction)
-- [2-Minute Cheat Sheet](#2-minute-cheat-sheet)
+- [Merge Sort](#merge-sort)
+- [Quick Sort](#quick-sort)
+- [Quick Select — Kth Element](#quick-select--kth-element)
+- [Counting Sort](#counting-sort)
+- [Cyclic Sort](#cyclic-sort)
+- [Custom Comparator Sorting](#custom-comparator-sorting)
+- [Sorting as Preprocessing](#sorting-as-preprocessing)
 
 ---
 
-## [0–10 min] Big Picture
+## Merge Sort
 
-### What is sorting and why does it exist?
+### What is it?
+Split the array in half repeatedly until each piece has one element. A single element is already sorted. Then merge sorted pieces back together, two at a time, until the whole array is sorted.
 
-Imagine you have 1,000 student records in random order. You want to find a specific student by name. Without order, you must check every record — 1,000 lookups in the worst case. Once sorted alphabetically, you can find any student with binary search in just 10 lookups (log₂ 1000 ≈ 10). Sorting transforms chaos into structure, and structure enables faster algorithms.
-
-**The real insight for interviews:** Sorting is almost never the final answer. It is the preprocessing step that makes your actual algorithm possible.
-
-### Real-world analogy
-
-A deck of cards in random order. You cannot do much with it. Once sorted by suit and rank, you can cut to any card in seconds, find pairs, spot patterns. The cost of sorting (one-time effort) is paid back many times over by every subsequent operation.
-
-### What problem does each variant solve?
-
-| Approach | Core problem it solves |
-|---|---|
-| Merge Sort | Stable, predictable O(n log n); enables counting inversions during merge |
-| Quick Sort | In-place O(n log n) average; the partition step is a building block |
-| Quick Select | Find the Kth element in O(n) average WITHOUT sorting everything |
-| Counting Sort | Sort bounded-range integers faster than O(n log n) |
-| Radix Sort | Sort fixed-length integers/strings in O(D × n) |
-| Bucket Sort | Sort uniformly distributed values in O(n) average |
-| Cyclic Sort | Find missing/duplicate numbers in [1,n] with O(1) space |
-| Custom Comparator | Sort by a non-standard rule (e.g. maximize concatenated number) |
-
----
-
-## [10–20 min] Mental Model
-
-### The comparison-based lower bound — why O(n log n) is the wall
-
-Think about sorting n distinct elements. Every comparison splits the remaining possibilities: "is A before B or after B?" You need enough comparisons to distinguish n! possible orderings.
-
+### Visual
 ```
-n! orderings need to be resolved.
-A binary decision tree of depth d can separate at most 2^d orderings.
-We need 2^d >= n!, so d >= log2(n!) ≈ n log n.
-```
-
-This means: **any algorithm that only compares elements cannot beat O(n log n) in the worst case.** This is a proven mathematical lower bound.
-
-The only way to beat O(n log n) is to exploit extra information about the values — their range (counting sort), their digits (radix sort), or their distribution (bucket sort).
-
-### Stable vs Unstable sorting
-
-**Simple explanation:** Sorting is "stable" if equal elements keep their original relative order after sorting.
-
-Example: Sort `[(Alice, 90), (Bob, 90), (Carol, 85)]` by grade descending.
-- Stable result: `[(Alice, 90), (Bob, 90), (Carol, 85)]` — Alice still before Bob.
-- Unstable result: `[(Bob, 90), (Alice, 90), (Carol, 85)]` — order of ties not preserved.
-
-Stability matters when you sort by multiple keys in sequence (e.g. sort by grade, then by name — you sort by name first using a stable sort, then by grade).
-
-| Algorithm | Stable? | In-place? |
-|---|---|---|
-| Merge Sort | Yes | No (O(n) space) |
-| Quick Sort | No | Yes (O(log n) stack) |
-| Counting Sort | Yes (careful version) | No |
-| Radix Sort | Yes (if using stable sub-sort) | No |
-| Cyclic Sort | No | Yes |
-
-### The three families of sorting
-
-```
-SORTING ALGORITHMS
-│
-├── Comparison-based (lower bound: Ω(n log n))
-│   ├── Merge Sort   — divide & conquer, stable, O(n) space
-│   └── Quick Sort   — partition, in-place, O(n²) worst case
-│
-├── Non-comparison (can beat Ω(n log n))
-│   ├── Counting Sort — needs bounded range [0, K]
-│   ├── Radix Sort    — needs fixed number of digits
-│   └── Bucket Sort   — needs known, near-uniform distribution
-│
-└── Index-placement (use value as address)
-    └── Cyclic Sort   — needs range [1, n] or [0, n-1]
-```
-
-### What state do we maintain, and why?
-
-Each algorithm maintains a different invariant:
-
-- **Merge Sort:** After each level of recursion, subarrays are sorted. The invariant is: *the left and right halves fed into each merge call are already sorted.*
-- **Quick Sort:** After partition, the pivot is at its final position. *Elements left of pivot ≤ pivot ≤ elements right of pivot.*
-- **Counting Sort:** The count array accurately reflects the frequency of each value. *count[v] = number of times v appears in input.*
-- **Cyclic Sort:** After the main pass, every element that could be placed correctly is at its correct index. *arr[i] == i+1 for all correctly-placed elements.*
-
----
-
-## [20–35 min] Core Patterns
-
-### Pattern 1: Merge Sort & Divide-and-Conquer
-
-**Brute force thought:** To find where each element belongs in a sorted list, you could compare it to every other element — O(n²). Too slow.
-
-**Key observation:** If you have two already-sorted halves, merging them takes only O(n): just walk two pointers, always picking the smaller front element. The sorting work is done by the recursive structure.
-
-**How to derive the algorithm (not memorize it):**
-1. A single element is trivially sorted.
-2. Two sorted halves can be merged in O(n).
-3. Therefore: split until trivial, then merge back up.
-
-```
-Array: [5, 2, 4, 1, 3]
-
-                [5,2,4,1,3]
-               /           \
-           [5,2,4]         [1,3]
-           /     \         /   \
-         [5,2]  [4]      [1]  [3]
-         /   \
-       [5]  [2]
+Split down:
+[5, 2, 4, 1, 3]
+    /         \
+[5, 2, 4]   [1, 3]
+  /    \      /  \
+[5,2]  [4]  [1]  [3]
+ / \
+[5] [2]
 
 Merge up:
-[2,5] ← merge [5],[2]
-[2,4,5] ← merge [2,5],[4]
-[1,3] ← merge [1],[3]
-[1,2,3,4,5] ← merge [2,4,5],[1,3]
+[2,5]  ← merge [5],[2]
+[2,4,5]  ← merge [2,5],[4]
+[1,3]  ← merge [1],[3]
+[1,2,3,4,5]  ← merge [2,4,5],[1,3]
 ```
 
-**Why O(n log n)?** The tree has log n levels. At every level, every element participates in exactly one merge. Each level's total merge work = O(n). Multiply: n × log n.
-
-**The merge-step insight (critical for interviews):** During the merge, every time you pick an element from the RIGHT half before exhausting the LEFT half, you know that this right-side element is smaller than all remaining left-side elements. This is how you count inversions. Every element remaining in the left half at that moment forms an inversion with the current right-side element.
-
-**Variants:**
-- Standard Merge Sort: stable O(n log n) sort
-- Count Inversions: pair (i,j) where i < j but arr[i] > arr[j]. Count during merge: when picking from right half, add `leftRemaining` to inversion count.
-- Count of Smaller Numbers After Self: same idea, but track original indices through the merge.
-- Merge Sort on Linked Lists: natural fit — merging linked lists is O(1) extra space (re-link pointers). Find midpoint with slow/fast pointer.
-
-**When to use:** Stable sort needed; problem involves the merge step (inversions, count smaller); dividing into halves reveals structure.
-
-**When NOT to use:** O(n) space is unacceptable; simpler sort suffices; in-place required.
-
----
-
-### Pattern 2: Quick Sort & Partitioning
-
-**Brute force thought:** Compare every element to every other — O(n²).
-
-**Key observation:** If you can place ONE element in its correct final position, you can recurse on the two sides independently. Partition does exactly this for the pivot.
-
-**How to derive the partition step:**
-- Goal: all elements ≤ pivot on left, all elements > pivot on right, pivot in the middle.
-- Maintain a boundary `i` = rightmost index of "≤ pivot" region.
-- Scan `j` from left to right. When arr[j] ≤ pivot: expand region by swapping arr[i+1] and arr[j].
-- After scan: swap pivot into position i+1.
-
-```
-arr: [3, 6, 8, 10, 1, 2, 1]  pivot = arr[last] = 1
-      i                 j
-
-Scan:
-arr[j]=3 > 1, skip. arr[j]=6 > 1, skip. ... arr[j]=1 ≤ 1, swap → expand region.
-After: pivot placed at correct position.
-```
-
-**Why O(n log n) average?** If pivot lands near the middle each time, the recursion tree has log n levels, each with O(n) total partition work. Random pivot selection makes this expected behavior.
-
-**Why O(n²) worst case?** If pivot is always the min or max (e.g. already-sorted array with last-element pivot), one partition has n-1 elements and one has 0. This degrades to O(n²). Randomized pivot selection eliminates this.
-
-**Three-way partition (Dutch National Flag):** For arrays with many duplicates, partition into three regions: < pivot, == pivot, > pivot. Elements equal to pivot are all in their final position after one pass. This makes Quick Sort O(n) on all-equal arrays.
-
-**When to use:** In-place sorting; building Quick Select; implementing custom partitioning.
-
-**When NOT to use:** Stable sort required; guaranteed O(n log n) needed; sorting linked lists.
-
----
-
-### Pattern 3: Quick Select — Kth Element
-
-**Brute force:** Sort the whole array, return arr[K-1]. O(n log n).
-
-**Key observation:** After partitioning, the pivot is at its FINAL sorted position p. If p == K, you're done. You only need to recurse on ONE side (the side containing index K). You never sort the irrelevant side.
-
-**How to derive from Quick Sort:**
-- Quick Sort recurses on BOTH sides.
-- Quick Select recurses on only ONE side — the side that contains K.
-
-```
-Find 3rd smallest in [7, 2, 1, 6, 5]:
-
-Partition → pivot=5 lands at index 3: [2,1,??,5,7] (simplified)
-K=3, p=3 → p > K, so search left side [2,1,??]
-Partition → pivot lands at index 2: [1,2,5,5,7]
-K=3, p=2 → p < K... 
-
-Actually K is 1-indexed so adjust to 0-indexed K=2:
-When p==K return arr[p].
-```
-
-**Why O(n) average?** Each call reduces problem size roughly by half: n + n/2 + n/4 + ... = 2n = O(n).
-
-**Why O(n²) worst case?** Same reason as Quick Sort — bad pivot. Randomize to avoid.
-
-**Median-of-Medians:** A deterministic algorithm guaranteeing O(n) worst case by choosing a "good" pivot. Rarely needed in interviews, but worth knowing the name.
-
-**When to use:** Find Kth smallest/largest; find median; top K elements (not sorted).
-
-**When NOT to use:** Need all top-K sorted (use heap); data is streaming (use heap of size K); need guaranteed O(n log n) (use heap for O(n log K)).
-
----
-
-### Pattern 4: Counting Sort
-
-**Brute force:** Any comparison sort gives O(n log n).
-
-**Key observation:** If values are integers in [0, K], you can use the value itself as an array index. No comparisons needed. Just count occurrences, then reconstruct.
-
-```
-Input: [3, 1, 4, 1, 5, 9, 2, 6, 5] — values in [0,9]
-
-count: [0, 2, 1, 1, 1, 2, 1, 0, 0, 1]
-index:  0  1  2  3  4  5  6  7  8  9
-
-Reconstruct: 1,1,2,3,4,5,5,6,9
-```
-
-**Why faster than O(n log n)?** It never compares elements. It breaks the Ω(n log n) comparison lower bound by using extra information: values are bounded integers. Time is O(n + K). When K = O(n), this is O(n).
-
-**When to use:** Small bounded integer range [0, K]; sorting by frequency; preprocessing for radix sort.
-
-**When NOT to use:** K >> n (wastes space); floating point values; complex objects.
-
----
-
-### Pattern 5: Radix Sort
-
-**Key observation:** You can decompose a number into its digits. Sort digit-by-digit from least significant to most significant, using a stable sort (counting sort) at each position. After D passes, the array is globally sorted.
-
-**Why least-significant first?** If you sort by the most significant digit first, you need to handle each bucket recursively. Sorting LSD to MSD with a stable sort means that results from earlier passes are preserved correctly by later passes.
-
-**Critical requirement:** Each digit-level sort MUST be stable. If not stable, earlier passes get scrambled by later ones.
-
-**Complexity:** O(D × (n + K)) where D = number of digits, K = base (10 for decimal). When D is small and K = 10, this is effectively O(n).
-
-**When to use:** Sorting large arrays of bounded-length integers; fixed-length strings.
-
-**When NOT to use:** Variable-length data without padding; D proportional to n.
-
----
-
-### Pattern 6: Bucket Sort
-
-**Key observation:** If values are uniformly distributed in [min, max], create n buckets of equal width. Each bucket will have ≈ 1 element on average. Sorting within each tiny bucket is nearly free. Concatenate for the final result.
-
-**Maximum Gap insight:** If you have n numbers in [min, max], create n buckets. The maximum gap between consecutive sorted elements MUST occur between two non-empty consecutive buckets, not within a bucket (by pigeonhole). So: track only min and max per bucket, then compare adjacent buckets. O(n) solution without sorting.
-
-**Top K Frequent Elements:** Use frequency as the bucket index. bucket[freq] = list of elements with that frequency. Scan from high frequency to low frequency to get top K. O(n) time.
-
-**When to use:** Uniform distribution over known range; maximum gap problem; top K frequent elements in O(n).
-
-**When NOT to use:** Clustered values (one bucket gets everything); worst-case guarantees needed.
-
----
-
-### Pattern 7: Cyclic Sort
-
-**Brute force for "find missing number":** Hash set, O(n) space. Or sort, O(n log n) time.
-
-**Key observation:** If values are in [1, n], each value has a "correct" position: value v belongs at index v-1. We can place elements at their correct positions using only swaps — O(1) space. After one pass, any index where arr[i] != i+1 reveals a missing or duplicate value.
-
-```
-[3, 1, 2] — values in [1,3]
-
-i=0: arr[0]=3, correct position is index 2. Swap arr[0] and arr[2].
-     → [2, 1, 3]
-i=0: arr[0]=2, correct position is index 1. Swap arr[0] and arr[1].
-     → [1, 2, 3]
-i=0: arr[0]=1, correct. Move i=1.
-i=1: arr[1]=2, correct. Move i=2.
-i=2: arr[2]=3, correct. Done.
-Scan: all correct → no missing number.
-```
-
-**Why O(n)?** Each swap places at least one element at its final correct position. At most n total swaps across the entire array. The outer loop also runs n times. Total: O(n).
-
-**Duplicate detection:** If during a swap, arr[i] == arr[arr[i]-1] (destination already has the right value), the current value is a duplicate. Break and move on.
-
-**Variants:**
-- Find missing number (range [0,n]): place at index = value
-- Find all missing numbers: after pass, collect all i where arr[i] != i+1
-- Find the duplicate: the value that collides during placement
-- Find all duplicates: after pass, arr[i] at wrong index — arr[i] is the duplicate
-- First missing positive: only place values in [1,n]; ignore others; first wrong index gives answer
-
-**When to use:** Values in contiguous range [1,n] or [0,n-1]; find missing/duplicate; O(1) space required.
-
-**When NOT to use:** Values not in bounded range; problem is not about missing/duplicate detection.
-
----
-
-### Pattern 8: Custom Comparators
-
-**The problem:** You need a non-standard sort order. Example: arrange numbers to form the largest possible concatenated number.
-
-**Key insight:** Define a pairwise comparison function. a "comes before" b if placing a before b produces a better result than placing b before a. For "Largest Number": a comes before b if str(a)+str(b) > str(b)+str(a).
-
-**Critical requirement:** The comparator must be transitive. If a < b and b < c, then a < c must hold. If not, the sort is mathematically undefined (the result is implementation-dependent and likely wrong). For "Largest Number," transitivity can be proven but is not obvious.
-
-**Variants:**
-- Largest Number: compare by string concatenation
-- Interval sort: sort by start time, break ties by end time
-- Relative Sort Array: sort by reference ordering, then standard order for remainder
-- Frequency sort: sort by frequency descending, then by value ascending
-
-**When to use:** Non-standard sort criterion; optimization problems where order is the key decision.
-
-**When NOT to use:** Standard numeric/lexicographic sort suffices; ordering requires global context (use topological sort instead).
-
----
-
-### Sorting as Preprocessing (Meta-Pattern)
-
-This is not a specific algorithm. It is the habit of asking: "Would this problem become easier if the input were sorted?"
-
-| After Sorting, You Can... | Example Problem |
-|---|---|
-| Use two pointers for pair finding | 3Sum, 4Sum |
-| Binary search for targets | Two Sum (sorted), Search Insert Position |
-| Identify clusters and groups | Group consecutive numbers |
-| Enable greedy processing | Activity Selection, Meeting Rooms |
-| Simplify duplicate handling | Remove Duplicates, 3Sum (skip equal elements) |
-| Find gaps and ranges | Missing ranges, Maximum Gap (with bucket) |
-
-**When to sort:** Original index order does not matter (or you can save indices before sorting); O(n log n) sorting cost is acceptable.
-
-**When NOT to sort:** Original order matters (subarray problems, sliding window); hashing gives O(n) without sorting (e.g. Two Sum); the structure is already sorted.
-
----
-
-## [35–45 min] Concrete Code + Dry Runs
-
-### Example 1: Merge Sort (with Inversion Count)
-
-**Problem:** Count the number of inversions in `[5, 3, 1, 4, 2]`. An inversion is a pair (i, j) where i < j but arr[i] > arr[j].
-
-**Expected output:** 7 inversions: (5,3),(5,1),(5,4),(5,2),(3,1),(3,2),(4,2)
-
-**Java:**
+### How does it work?
+1. If the array has 0 or 1 elements, it's already sorted — return.
+2. Find the middle index.
+3. Recursively sort the left half.
+4. Recursively sort the right half.
+5. Merge the two sorted halves into one sorted array.
+6. In the merge: use two pointers, always pick the smaller front element, advance that pointer.
+7. After one side is exhausted, copy the rest of the other side.
+
+### Why does it work?
+If both halves are sorted, you only ever need to compare the front elements of each half — the smallest remaining in each. This makes merging two sorted halves take O(n), and the recursion tree has log n levels, giving O(n log n) total.
+
+### When to use?
+- You need a **stable sort** (equal elements keep their original order).
+- The problem says "count inversions" or "count how many smaller elements appear after each element."
+- You are sorting a **linked list** (merge sort is naturally O(1) extra space for linked lists).
+- Divide-and-conquer structure fits and the merge step itself reveals useful information.
+
+### When NOT to use?
+- O(n) extra space is unacceptable — merge sort always needs O(n) for the temp array.
+- Simple comparison-based sort is enough and you don't need the merge step's special properties.
+
+### How to recognize in a new problem?
+Ask: does the answer involve counting relationships between pairs (i, j) where i < j? That screams merge sort inversion counting. Also: any "sort a linked list" problem — merge sort is the canonical solution.
+
+Concrete signals:
+- "Count the number of inversions in the array."
+- "For each element, count how many elements to the right are smaller."
+- "Sort the linked list."
+
+### Simple Example
+Input: `[5, 3, 1, 4, 2]`
+Expected output (sorted): `[1, 2, 3, 4, 5]`
+Expected inversions: 7 — pairs (5,3),(5,1),(5,4),(5,2),(3,1),(3,2),(4,2)
+
+Trace: Split → `[5,3,1]` and `[4,2]`. Split again → `[5,3]`,`[1]` and `[4]`,`[2]`. Merge `[5]`,`[3]` → `[3,5]`. Merge `[3,5]`,`[1]` → `[1,3,5]`. Merge `[4]`,`[2]` → `[2,4]`. Merge `[1,3,5]`,`[2,4]` → `[1,2,3,4,5]`.
+
+### Code
 ```java
-int mergeSort(int[] arr, int[] temp, int left, int right) {
-    if (left >= right) return 0;
+// Java
+int[] mergeSort(int[] arr, int left, int right) {
+    if (left >= right) return new int[]{arr[left]};
     int mid = left + (right - left) / 2;
-    int count = 0;
-    count += mergeSort(arr, temp, left, mid);
-    count += mergeSort(arr, temp, mid + 1, right);
-    count += merge(arr, temp, left, mid, right);
-    return count;
+    int[] leftSorted = mergeSort(arr, left, mid);
+    int[] rightSorted = mergeSort(arr, mid + 1, right);
+    return merge(leftSorted, rightSorted);
 }
 
-int merge(int[] arr, int[] temp, int left, int mid, int right) {
+int[] merge(int[] left, int[] right) {
+    int[] result = new int[left.length + right.length];
+    int i = 0, j = 0, k = 0;
+    while (i < left.length && j < right.length) {
+        if (left[i] <= right[j]) result[k++] = left[i++];
+        else result[k++] = right[j++];
+    }
+    while (i < left.length) result[k++] = left[i++];
+    while (j < right.length) result[k++] = right[j++];
+    return result;
+}
+
+// Inversion count variant: when you pick from right, add leftRemaining
+int mergeCount(int[] arr, int[] temp, int left, int mid, int right) {
     for (int k = left; k <= right; k++) temp[k] = arr[k];
     int i = left, j = mid + 1, k = left, inversions = 0;
     while (i <= mid && j <= right) {
@@ -381,7 +108,7 @@ int merge(int[] arr, int[] temp, int left, int mid, int right) {
             arr[k++] = temp[i++];
         } else {
             arr[k++] = temp[j++];
-            inversions += (mid - i + 1);
+            inversions += (mid - i + 1); // all remaining left elements form inversions
         }
     }
     while (i <= mid) arr[k++] = temp[i++];
@@ -389,20 +116,37 @@ int merge(int[] arr, int[] temp, int left, int mid, int right) {
     return inversions;
 }
 ```
-
-**JavaScript:**
 ```javascript
-function mergeSort(arr, left, right) {
+// JavaScript
+function mergeSort(arr) {
+    if (arr.length <= 1) return arr;
+    const mid = Math.floor(arr.length / 2);
+    const left = mergeSort(arr.slice(0, mid));
+    const right = mergeSort(arr.slice(mid));
+    return merge(left, right);
+}
+
+function merge(left, right) {
+    const result = [];
+    let i = 0, j = 0;
+    while (i < left.length && j < right.length) {
+        if (left[i] <= right[j]) result.push(left[i++]);
+        else result.push(right[j++]);
+    }
+    return result.concat(left.slice(i)).concat(right.slice(j));
+}
+
+// Inversion count variant
+function mergeSortCount(arr, left, right) {
     if (left >= right) return 0;
     const mid = Math.floor((left + right) / 2);
-    let count = 0;
-    count += mergeSort(arr, left, mid);
-    count += mergeSort(arr, mid + 1, right);
-    count += merge(arr, left, mid, right);
+    let count = mergeSortCount(arr, left, mid);
+    count += mergeSortCount(arr, mid + 1, right);
+    count += mergeCount(arr, left, mid, right);
     return count;
 }
 
-function merge(arr, left, mid, right) {
+function mergeCount(arr, left, mid, right) {
     const leftHalf = arr.slice(left, mid + 1);
     const rightHalf = arr.slice(mid + 1, right + 1);
     let i = 0, j = 0, k = left, inversions = 0;
@@ -420,57 +164,328 @@ function merge(arr, left, mid, right) {
 }
 ```
 
-**Dry Run — merge step on [5,3] and [1,4,2] (already sorted halves: [3,5] and [1,2,4]):**
+### Dry Run
+Merge step on sorted halves `[3, 5]` and `[1, 2, 4]`:
 
+| Step | i | j | Compare | Pick | Inversions Added | Reason |
+|------|---|---|---------|------|-----------------|--------|
+| 1 | 0 | 0 | 3 vs 1 | 1 (right) | +2 | 3 and 5 both > 1 |
+| 2 | 0 | 1 | 3 vs 2 | 2 (right) | +2 | 3 and 5 both > 2 |
+| 3 | 0 | 2 | 3 vs 4 | 3 (left) | 0 | 3 < 4 |
+| 4 | 1 | 2 | 5 vs 4 | 4 (right) | +1 | 5 > 4 |
+| 5 | 1 | - | drain left | 5 | 0 | |
+Total inversions from this merge: 5
+
+### Complexity
 ```
-Left:  [3, 5]    i=0
-Right: [1, 2, 4] j=0
-
-Step | i | j | Compare         | Pick | inversions added | reason
------|---|---|-----------------|------|------------------|---------------------------
-  1  | 0 | 0 | 3 vs 1: 3>1     | 1    | +2               | left has [3,5] remaining = 2
-  2  | 0 | 1 | 3 vs 2: 3>2     | 2    | +2               | left has [3,5] remaining = 2
-  3  | 0 | 2 | 3 vs 4: 3<4     | 3    | 0                | pick from left
-  4  | 1 | 2 | 5 vs 4: 5>4     | 4    | +1               | left has [5] remaining = 1
-  5  | 1 | - | left remaining  | 5    | 0                | drain left
-
-Total inversions from this merge = 5
+Time:  O(n log n) — log n levels in the recursion tree, O(n) merge work at each level
+Space: O(n) — temp array needed for merging; O(log n) recursion stack on top
 ```
 
-**Complexity:** Time O(n log n), Space O(n) for temp array.
+### Common Trap
+- **Forgetting the inversion count formula:** when picking from the right half, add `(mid - i + 1)` — that is, ALL remaining elements in the left half, not just the current pointer.
+- **Linked list merge:** don't copy to a new array. Re-link the `next` pointers in place — merge sort on linked lists needs O(1) extra space per merge.
+
+### Experience Tip
+**Experience Tip:** The merge step is the heart of the algorithm — understanding *why* you add `mid - i + 1` inversions is more important than memorizing the code. Once you see that every remaining left element is greater than the current right element, the formula is obvious.
+
+### Do Not Confuse With
+- **Quick Sort:** also O(n log n) average but NOT stable and in-place. Merge sort needs extra space but guarantees stability.
+- **Two Pointers on a sorted array:** the merge step looks like two pointers, but the array is not pre-sorted — merge sort *creates* the sorted order bottom-up.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 912 | Sort an Array | Medium | Implement merge sort from scratch | https://leetcode.com/problems/sort-an-array/ |
+| 148 | Sort List | Medium | Merge sort on linked list — use slow/fast pointer to find midpoint | https://leetcode.com/problems/sort-list/ |
+| 88 | Merge Sorted Array | Easy | Pure merge step — start from the back to avoid overwriting | https://leetcode.com/problems/merge-sorted-array/ |
+| 315 | Count of Smaller Numbers After Self | Hard | Track original indices through the merge | https://leetcode.com/problems/count-of-smaller-numbers-after-self/ |
+| 493 | Reverse Pairs | Hard | Count pairs during merge before merging | https://leetcode.com/problems/reverse-pairs/ |
+
+### One-Minute Revision
+```
+ALGORITHM:    Merge Sort
+IN SIMPLE WORDS: Split in half recursively, merge sorted halves back up
+USE WHEN:     Stable sort needed; counting inversions; sorting linked lists
+DON'T USE WHEN: O(n) extra space not allowed
+CORE IDEA:    Two sorted halves can be merged in O(n) using two pointers
+TRACK:        Temp array for merge; two pointers i, j; inversion count
+TIME:         O(n log n) — n work per level × log n levels
+SPACE:        O(n) for temp array
+COMMON TRAP:  Inversion count = (mid - i + 1), not just +1
+EXPERIENCE TIP: Master the merge step — it appears in many non-obvious problems
+```
 
 ---
 
-### Example 2: Quick Select — Kth Largest Element
+## Quick Sort
 
-**Problem:** Find the 2nd largest element in `[3, 2, 1, 5, 6, 4]`. (K=2)
+### What is it?
+Pick one element as the "pivot." Rearrange the array so everything smaller than the pivot is on its left, and everything larger is on its right. The pivot is now at its final sorted position. Recursively sort the two sides.
 
-**Expected output:** 5
+### Visual
+```
+[3, 6, 8, 10, 1, 2, 1]   pivot = 3 (first element)
 
-We want Kth largest = (n - K)th smallest in 0-indexed = index 4 in sorted array.
+After partition:
+[1, 2, 1, 3, 6, 8, 10]
+ <-- ≤3 --> ^  <-- >3 -->
+            pivot at final position (index 3)
 
-**Java:**
+Recurse on [1,2,1] and [6,8,10] separately.
+```
+
+### How does it work?
+1. If array has 0 or 1 elements, return — already sorted.
+2. Choose a pivot (last element, random element, or median-of-three).
+3. Move pivot to the end temporarily (swap with last element).
+4. Maintain a `boundary` pointer starting at the beginning.
+5. Scan through the array. If current element ≤ pivot, swap it with `arr[boundary]` and advance `boundary`.
+6. After the scan, swap pivot (at end) into `arr[boundary]` — pivot is now in its final position.
+7. Recurse on `[left, boundary - 1]` and `[boundary + 1, right]`.
+
+### Why does it work?
+After partitioning, the pivot is at its exact final sorted index — everything to its left is smaller and everything to its right is larger. Recursing on both sides independently sorts the whole array, because each recursive call also places its own pivot at its final position.
+
+### When to use?
+- You need an in-place sort with O(log n) extra space (just the recursion stack).
+- Average-case performance matters and guaranteed worst-case is not required.
+- You are implementing Quick Select (the partition step is the building block).
+- You need a three-way partition for arrays with many duplicates.
+
+### When NOT to use?
+- You need a stable sort — Quick Sort is NOT stable.
+- You need a guaranteed O(n log n) worst case — use Merge Sort or heap sort instead.
+
+### How to recognize in a new problem?
+Any problem that says "sort in-place" or where you need to partition values around a threshold. Also: Dutch National Flag (sort 0s, 1s, 2s) is literally a three-way Quick Sort partition.
+
+Concrete signals:
+- "Sort the array in-place without extra space."
+- "Given an array with only 0, 1, 2 — sort it." (three-way partition)
+- "Partition array into elements less than, equal to, greater than a value."
+
+### Simple Example
+Input: `[3, 6, 8, 10, 1, 2, 1]`
+Expected output: `[1, 1, 2, 3, 6, 8, 10]`
+
+Trace one partition step with pivot = `3`:
+- boundary = 0
+- 6 > 3: skip. 8 > 3: skip. 10 > 3: skip. 1 ≤ 3: swap(boundary=0, j=4) → boundary=1. 2 ≤ 3: swap(boundary=1, j=5) → boundary=2. 1 ≤ 3: swap(boundary=2, j=6) → boundary=3.
+- Swap pivot(index 0) with arr[boundary=3] → `[1, 2, 1, 3, 6, 8, 10]`. Pivot 3 is at index 3.
+
+### Code
 ```java
+// Java
+void quickSort(int[] arr, int low, int high) {
+    if (low >= high) return;
+    int pivotIndex = partition(arr, low, high);
+    quickSort(arr, low, pivotIndex - 1);
+    quickSort(arr, pivotIndex + 1, high);
+}
+
+int partition(int[] arr, int low, int high) {
+    // Randomize pivot to avoid O(n^2) on sorted input
+    int randomIndex = low + (int)(Math.random() * (high - low + 1));
+    swap(arr, randomIndex, high);
+    int pivot = arr[high];
+    int boundary = low;
+    for (int j = low; j < high; j++) {
+        if (arr[j] <= pivot) swap(arr, boundary++, j);
+    }
+    swap(arr, boundary, high);
+    return boundary;
+}
+
+void swap(int[] arr, int a, int b) {
+    int temp = arr[a]; arr[a] = arr[b]; arr[b] = temp;
+}
+
+// Three-way partition (Dutch National Flag) for duplicates
+void threeWayPartition(int[] arr, int low, int high) {
+    if (low >= high) return;
+    int pivot = arr[low + (high - low) / 2];
+    int lt = low, gt = high, i = low;
+    while (i <= gt) {
+        if (arr[i] < pivot) swap(arr, lt++, i++);
+        else if (arr[i] > pivot) swap(arr, i, gt--);
+        else i++;
+    }
+    // arr[low..lt-1] < pivot, arr[lt..gt] == pivot, arr[gt+1..high] > pivot
+    threeWayPartition(arr, low, lt - 1);
+    threeWayPartition(arr, gt + 1, high);
+}
+```
+```javascript
+// JavaScript
+function quickSort(arr, low = 0, high = arr.length - 1) {
+    if (low >= high) return;
+    const pivotIndex = partition(arr, low, high);
+    quickSort(arr, low, pivotIndex - 1);
+    quickSort(arr, pivotIndex + 1, high);
+}
+
+function partition(arr, low, high) {
+    const randomIndex = low + Math.floor(Math.random() * (high - low + 1));
+    [arr[randomIndex], arr[high]] = [arr[high], arr[randomIndex]];
+    const pivot = arr[high];
+    let boundary = low;
+    for (let j = low; j < high; j++) {
+        if (arr[j] <= pivot) {
+            [arr[boundary], arr[j]] = [arr[j], arr[boundary]];
+            boundary++;
+        }
+    }
+    [arr[boundary], arr[high]] = [arr[high], arr[boundary]];
+    return boundary;
+}
+```
+
+### Dry Run
+Input: `[5, 3, 1, 4, 2]`, pivot = last element = 2
+
+| j | arr[j] | Action | Array State | boundary |
+|---|--------|--------|-------------|----------|
+| 0 | 5 | 5 > 2, skip | [5,3,1,4,2] | 0 |
+| 1 | 3 | 3 > 2, skip | [5,3,1,4,2] | 0 |
+| 2 | 1 | 1 ≤ 2, swap(0,2) | [1,3,5,4,2] | 1 |
+| 3 | 4 | 4 > 2, skip | [1,3,5,4,2] | 1 |
+| - | - | swap pivot: swap(1,4) | [1,2,5,4,3] | - |
+
+Pivot 2 is now at index 1. Recurse on `[1]` (trivial) and `[5,4,3]`.
+
+### Complexity
+```
+Time:  O(n log n) average — pivot lands near middle on average, log n levels, O(n) per level
+       O(n^2) worst case — pivot is always min or max (avoid with random pivot!)
+Space: O(log n) — recursion stack depth on average
+       O(n) worst case recursion stack if always unbalanced
+```
+
+### Common Trap
+- **Forgetting to randomize the pivot.** If you always pick the last element, a sorted input causes O(n²). Always pick a random pivot or say you would in an interview.
+- **Three-way partition off-by-one.** The `lt`, `i`, `gt` pointers all start at specific places and the loop condition is `i <= gt`, not `i < gt`.
+
+### Experience Tip
+**Experience Tip:** The partition function is the core building block. Once you can write it cleanly in 8 lines, Quick Sort and Quick Select both follow naturally. Practice partition alone until it's automatic.
+
+### Do Not Confuse With
+- **Merge Sort:** Merge Sort splits first then merges. Quick Sort partitions first then recurses. Merge Sort is stable; Quick Sort is not. Merge Sort needs O(n) space; Quick Sort is in-place.
+- **Quick Select:** Same partition step, but Quick Select only recurses on ONE side.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 75 | Sort Colors | Medium | Three-way partition — lt/i/gt pointers | https://leetcode.com/problems/sort-colors/ |
+| 912 | Sort an Array | Medium | Implement quick sort from scratch with random pivot | https://leetcode.com/problems/sort-an-array/ |
+| 280 | Wiggle Sort | Medium | One pass partitioning around a condition | https://leetcode.com/problems/wiggle-sort/ |
+
+### One-Minute Revision
+```
+ALGORITHM:    Quick Sort
+IN SIMPLE WORDS: Pick pivot, partition array around it, recurse both sides
+USE WHEN:     In-place sort needed; three-way partition (duplicates); building Quick Select
+DON'T USE WHEN: Stable sort required; guaranteed O(n log n) worst case required
+CORE IDEA:    Pivot lands at its final sorted index after one partition pass
+TRACK:        boundary pointer (rightmost index of ≤ pivot region); lo and hi of current range
+TIME:         O(n log n) average, O(n^2) worst case
+SPACE:        O(log n) recursion stack average
+COMMON TRAP:  Always randomize pivot — sorted input causes O(n^2) with last-element pivot
+EXPERIENCE TIP: Master partition() alone first — it's the building block for Quick Select too
+```
+
+---
+
+## Quick Select — Kth Element
+
+### What is it?
+Find the Kth smallest (or largest) element without sorting the whole array. Uses the same partition step as Quick Sort, but only recurses on the ONE side that contains the Kth position. Average time is O(n) instead of O(n log n).
+
+### Visual
+```
+Find 3rd smallest in [7, 2, 1, 6, 5, 4]
+Target index (0-based) = 2
+
+After partition (pivot=4 lands at index 3):
+[2, 1, _, 4, 7, 6]  (simplified)
+ 0  1  2  3  4  5
+           ^
+       pivot at 3
+
+Target index 2 < pivot index 3 → only recurse LEFT side [2,1,_]
+
+After next partition (pivot=1 lands at index 0):
+[1, 2, _]
+ 0  1  2
+        ^
+   target index 2 == length-1 of this subrange
+
+... until pivot lands exactly at target index 2 → return arr[2]
+```
+
+### How does it work?
+1. If `low == high`, return `arr[low]` — only one element left.
+2. Choose a random pivot and move it to the end (swap with `arr[high]`).
+3. Partition the current range — pivot lands at position `p`.
+4. If `p == targetIndex`, return `arr[p]` — found it!
+5. If `p < targetIndex`, the Kth element is in the right side — recurse on `[p+1, high]`.
+6. If `p > targetIndex`, the Kth element is in the left side — recurse on `[low, p-1]`.
+7. Never recurse on both sides.
+
+### Why does it work?
+After partitioning, the pivot is at its exact final sorted position. So we know with certainty which side our target is on — we discard the other side completely. Each call roughly halves the problem: n + n/2 + n/4 + ... = 2n = O(n) total work on average.
+
+### When to use?
+- "Find the Kth largest/smallest element."
+- "Find the median of an unsorted array."
+- "Return the top K elements" — you only need to know WHICH elements, not in sorted order.
+- O(n) average is acceptable and you have all data upfront (not streaming).
+
+### When NOT to use?
+- Data is **streaming** (you don't have all data upfront) — use a min-heap of size K instead.
+- You need the **top K elements in sorted order** — Quick Select gives you the set, not sorted.
+- You need a **guaranteed** O(n) (not average) — then use Median-of-Medians or a heap.
+
+### How to recognize in a new problem?
+Any problem with "Kth largest," "Kth smallest," or "median" where O(n) average is good enough. The key tell: you don't need the other elements sorted, you just need the one value at position K.
+
+Concrete signals:
+- "Find the Kth largest element in an unsorted array."
+- "Find the median of an unsorted list."
+- "Return the K closest points to the origin."
+
+### Simple Example
+Input: `[3, 2, 1, 5, 6, 4]`, K = 2 (find 2nd largest)
+Expected output: `5`
+
+2nd largest = element at 0-based index `n - K = 4` in sorted order.
+Sorted: `[1, 2, 3, 4, 5, 6]` — index 4 = `5`. Correct.
+
+### Code
+```java
+// Java
 int findKthLargest(int[] nums, int k) {
-    return quickSelect(nums, 0, nums.length - 1, nums.length - k);
+    int targetIndex = nums.length - k; // kth largest = (n-k)th smallest
+    return quickSelect(nums, 0, nums.length - 1, targetIndex);
 }
 
-int quickSelect(int[] nums, int lo, int hi, int targetIndex) {
-    if (lo == hi) return nums[lo];
-    int pivotIndex = lo + new Random().nextInt(hi - lo + 1);
-    swap(nums, pivotIndex, hi);
-    int partitionIndex = partition(nums, lo, hi);
-    if (partitionIndex == targetIndex) return nums[partitionIndex];
-    if (partitionIndex < targetIndex) return quickSelect(nums, partitionIndex + 1, hi, targetIndex);
-    return quickSelect(nums, lo, partitionIndex - 1, targetIndex);
+int quickSelect(int[] nums, int low, int high, int targetIndex) {
+    if (low == high) return nums[low];
+    // Random pivot to avoid O(n^2) worst case
+    int randomIndex = low + (int)(Math.random() * (high - low + 1));
+    swap(nums, randomIndex, high);
+    int pivotPos = partition(nums, low, high);
+    if (pivotPos == targetIndex) return nums[pivotPos];
+    if (pivotPos < targetIndex) return quickSelect(nums, pivotPos + 1, high, targetIndex);
+    return quickSelect(nums, low, pivotPos - 1, targetIndex);
 }
 
-int partition(int[] nums, int lo, int hi) {
-    int pivot = nums[hi], boundary = lo;
-    for (int j = lo; j < hi; j++) {
+int partition(int[] nums, int low, int high) {
+    int pivot = nums[high], boundary = low;
+    for (int j = low; j < high; j++) {
         if (nums[j] <= pivot) swap(nums, boundary++, j);
     }
-    swap(nums, boundary, hi);
+    swap(nums, boundary, high);
     return boundary;
 }
 
@@ -478,82 +493,320 @@ void swap(int[] nums, int a, int b) {
     int temp = nums[a]; nums[a] = nums[b]; nums[b] = temp;
 }
 ```
-
-**JavaScript:**
 ```javascript
+// JavaScript
 function findKthLargest(nums, k) {
-    return quickSelect(nums, 0, nums.length - 1, nums.length - k);
+    const targetIndex = nums.length - k; // kth largest = (n-k)th smallest (0-indexed)
+    return quickSelect(nums, 0, nums.length - 1, targetIndex);
 }
 
-function quickSelect(nums, lo, hi, targetIndex) {
-    if (lo === hi) return nums[lo];
-    const pivotIndex = lo + Math.floor(Math.random() * (hi - lo + 1));
-    [nums[pivotIndex], nums[hi]] = [nums[hi], nums[pivotIndex]];
-    const partitionIndex = partition(nums, lo, hi);
-    if (partitionIndex === targetIndex) return nums[partitionIndex];
-    if (partitionIndex < targetIndex) return quickSelect(nums, partitionIndex + 1, hi, targetIndex);
-    return quickSelect(nums, lo, partitionIndex - 1, targetIndex);
+function quickSelect(nums, low, high, targetIndex) {
+    if (low === high) return nums[low];
+    const randomIndex = low + Math.floor(Math.random() * (high - low + 1));
+    [nums[randomIndex], nums[high]] = [nums[high], nums[randomIndex]];
+    const pivotPos = partition(nums, low, high);
+    if (pivotPos === targetIndex) return nums[pivotPos];
+    if (pivotPos < targetIndex) return quickSelect(nums, pivotPos + 1, high, targetIndex);
+    return quickSelect(nums, low, pivotPos - 1, targetIndex);
 }
 
-function partition(nums, lo, hi) {
-    const pivot = nums[hi];
-    let boundary = lo;
-    for (let j = lo; j < hi; j++) {
+function partition(nums, low, high) {
+    const pivot = nums[high];
+    let boundary = low;
+    for (let j = low; j < high; j++) {
         if (nums[j] <= pivot) {
             [nums[boundary], nums[j]] = [nums[j], nums[boundary]];
             boundary++;
         }
     }
-    [nums[boundary], nums[hi]] = [nums[hi], nums[boundary]];
+    [nums[boundary], nums[high]] = [nums[high], nums[boundary]];
     return boundary;
 }
 ```
 
-**Dry Run on [3,2,1,5,6,4], K=2, targetIndex=4:**
+### Dry Run
+Input: `[3, 2, 1, 5, 6, 4]`, K=2, targetIndex=4
 
+| Call | Range | Pivot | Pivot Lands At | Decision |
+|------|-------|-------|----------------|----------|
+| 1 | [0..5] | 4 (index 5) | index 3 | 3 < 4 → recurse right [4..5] |
+| 2 | [4..5] | 6 (index 5) | index 5 | 5 > 4 → recurse left [4..4] |
+| 3 | [4..4] | only 1 element | index 4 | 4 == 4 → return arr[4] = 5 |
+
+Answer: `5`
+
+### Complexity
 ```
-Array: [3, 2, 1, 5, 6, 4]
-        0  1  2  3  4  5
-
-Assume pivot = arr[5] = 4, partition:
-j scans: 3<=4 → swap(0,0)→boundary=1
-         2<=4 → swap(1,1)→boundary=2
-         1<=4 → swap(2,2)→boundary=3
-         5>4  → skip
-         6>4  → skip
-After swap pivot: [3,2,1,4,6,5] → partitionIndex=3
-
-partitionIndex=3 < targetIndex=4 → recurse on [4, 3+1..5] = [6,5], lo=4, hi=5
-
-Assume pivot = arr[5] = 5, partition:
-j scans: 6>5 → skip
-After swap pivot: [3,2,1,4,5,6] → partitionIndex=4
-
-partitionIndex=4 == targetIndex=4 → return arr[4] = 5
+Time:  O(n) average — each call halves the remaining range on average
+       O(n^2) worst case — always picking min/max as pivot (random pivot prevents this)
+Space: O(n) worst case recursion stack, O(log n) average
+       Can be made O(1) with iterative version
 ```
 
-**Complexity:** Time O(n) average / O(n²) worst case, Space O(1) iterative or O(n) recursive worst case.
+### Common Trap
+- **Confusing Kth largest vs Kth smallest.** Kth largest maps to targetIndex `n - K` (0-based). Kth smallest maps to targetIndex `K - 1` (0-based). Double-check before coding.
+- **Not randomizing the pivot.** On a sorted input, non-random pivot causes O(n²). Always randomize or mention it.
+
+### Experience Tip
+**Experience Tip:** Quick Select modifies the input array. If the problem requires you not to modify input, either copy it first or use a heap. Always clarify with the interviewer whether the array can be modified.
+
+### Do Not Confuse With
+- **Heap (Top-K):** Heap gives all K elements in O(n log K) — use when you need sorted top-K, streaming data, or guaranteed worst case. Quick Select gives one element in O(n) average — use when you only need the value at position K and have all data.
+- **Quick Sort:** Quick Sort recurses on BOTH sides and sorts everything. Quick Select recurses on ONE side only.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 215 | Kth Largest Element in an Array | Medium | Classic Quick Select — map Kth largest to targetIndex = n-k | https://leetcode.com/problems/kth-largest-element-in-an-array/ |
+| 75 | Sort Colors | Medium | Three-way partition is related — practice partitioning around a value | https://leetcode.com/problems/sort-colors/ |
+| 973 | K Closest Points to Origin | Medium | Quick Select on distance, not value directly | https://leetcode.com/problems/k-closest-points-to-origin/ |
+| 347 | Top K Frequent Elements | Medium | Quick Select on frequency buckets | https://leetcode.com/problems/top-k-frequent-elements/ |
+| 324 | Wiggle Sort II | Hard | Needs median via Quick Select, then placement | https://leetcode.com/problems/wiggle-sort-ii/ |
+
+### One-Minute Revision
+```
+ALGORITHM:    Quick Select
+IN SIMPLE WORDS: Partition around pivot, only recurse on the side containing index K
+USE WHEN:     Kth largest/smallest; median; top-K elements (set, not sorted order)
+DON'T USE WHEN: Streaming data; sorted top-K needed; guaranteed worst-case needed
+CORE IDEA:    After partition, pivot is at final index → only ONE side contains K
+TRACK:        targetIndex (0-based); low and high of current range
+TIME:         O(n) average, O(n^2) worst case
+SPACE:        O(log n) average recursion stack
+COMMON TRAP:  Kth largest → targetIndex = n-k (not k-1); always randomize pivot
+EXPERIENCE TIP: Quick Select modifies the array — clarify with interviewer first
+```
 
 ---
 
-### Example 3: Cyclic Sort — Find All Missing Numbers
+## Counting Sort
 
-**Problem:** In array `[4, 3, 2, 7, 8, 2, 3, 1]`, values are in [1, 8]. Find all missing numbers.
+### What is it?
+If all values are integers within a small known range [0, K], count how many times each value appears, then reconstruct the sorted array from those counts. No comparisons needed — values become array indices directly.
 
-**Expected output:** [5, 6]
+### Visual
+```
+Input: [3, 1, 4, 1, 5, 9, 2, 6, 5]   range: [0, 9]
 
-**Java:**
+Step 1 — Count occurrences:
+index:  0  1  2  3  4  5  6  7  8  9
+count: [0, 2, 1, 1, 1, 2, 1, 0, 0, 1]
+
+Step 2 — Reconstruct from counts:
+1 appears 2 times → output 1, 1
+2 appears 1 time  → output 2
+3 appears 1 time  → output 3
+...
+Output: [1, 1, 2, 3, 4, 5, 5, 6, 9]
+```
+
+### How does it work?
+1. Find the minimum and maximum values in the input.
+2. Create a `count` array of size `(max - min + 1)`, initialized to 0.
+3. For each element in the input, increment `count[element - min]`.
+4. To reconstruct: for each index `i` in `count`, write `i + min` to the output `count[i]` times.
+5. (For stable version: compute prefix sums of count, then place elements from right to left.)
+
+### Why does it work?
+Instead of comparing elements to each other, each value directly tells you its position via `count[value]`. This bypasses the O(n log n) comparison lower bound entirely. The total work is O(n) to fill counts + O(K) to scan the count array = O(n + K).
+
+### When to use?
+- Values are integers in a **small bounded range** (e.g., [0, 1000], ages 0-120, grades 0-100).
+- Only a **few distinct values** exist (like "sort 0s, 1s, 2s").
+- Sorting is a preprocessing step and range K is small enough that O(K) extra space is fine.
+- You need a stable O(n) sort as a sub-step inside Radix Sort.
+
+### When NOT to use?
+- K >> n — for example, sorting 10 elements where values can be up to 10^9 wastes massive space.
+- Values are floats, strings, or complex objects.
+- Range is not known in advance.
+
+### How to recognize in a new problem?
+The tell is a small integer range explicitly mentioned in the constraints, or only a handful of possible values (like RGB colors, ratings 1-5, characters a-z).
+
+Concrete signals:
+- "Values are in the range [0, 1000]."
+- "Array contains only 0, 1, and 2."
+- "Characters are all lowercase English letters."
+
+### Simple Example
+Input: `[2, 0, 2, 1, 1, 0]`
+Expected output: `[0, 0, 1, 1, 2, 2]`
+
+Count: `count[0]=2, count[1]=2, count[2]=2`
+Reconstruct: 0,0 then 1,1 then 2,2 → `[0, 0, 1, 1, 2, 2]`
+
+### Code
 ```java
+// Java
+int[] countingSort(int[] arr, int maxVal) {
+    int[] count = new int[maxVal + 1];
+    for (int num : arr) count[num]++;
+
+    int[] sorted = new int[arr.length];
+    int idx = 0;
+    for (int val = 0; val <= maxVal; val++) {
+        while (count[val]-- > 0) sorted[idx++] = val;
+    }
+    return sorted;
+}
+
+// Sort Colors (LeetCode 75) — only 0,1,2
+void sortColors(int[] nums) {
+    int[] count = new int[3];
+    for (int num : nums) count[num]++;
+    int idx = 0;
+    for (int color = 0; color < 3; color++) {
+        while (count[color]-- > 0) nums[idx++] = color;
+    }
+}
+```
+```javascript
+// JavaScript
+function countingSort(arr, maxVal) {
+    const count = new Array(maxVal + 1).fill(0);
+    for (const num of arr) count[num]++;
+
+    const sorted = [];
+    for (let val = 0; val <= maxVal; val++) {
+        while (count[val]-- > 0) sorted.push(val);
+    }
+    return sorted;
+}
+
+// Sort Colors variant
+function sortColors(nums) {
+    const count = [0, 0, 0];
+    for (const num of nums) count[num]++;
+    let idx = 0;
+    for (let color = 0; color < 3; color++) {
+        while (count[color]-- > 0) nums[idx++] = color;
+    }
+}
+```
+
+### Dry Run
+Input: `[2, 0, 2, 1, 1, 0]`, maxVal = 2
+
+| Step | Action | State |
+|------|--------|-------|
+| Count pass | count each element | count = [2, 2, 2] |
+| Reconstruct val=0 | count[0]=2, write 0 twice | output = [0, 0] |
+| Reconstruct val=1 | count[1]=2, write 1 twice | output = [0, 0, 1, 1] |
+| Reconstruct val=2 | count[2]=2, write 2 twice | output = [0, 0, 1, 1, 2, 2] |
+
+### Complexity
+```
+Time:  O(n + K) — O(n) to count, O(K) to scan count array
+       When K = O(n), this is O(n) — faster than any comparison sort
+Space: O(K) for the count array
+```
+
+### Common Trap
+- **Forgetting to handle a range offset.** If values start at min (not 0), use `count[value - min]` as the index. Forgetting this causes index-out-of-bounds.
+- **Using counting sort when K is huge.** If the problem says values up to 10^9, you cannot allocate a count array of that size — use a different algorithm.
+
+### Experience Tip
+**Experience Tip:** Counting sort is the intended O(n) solution whenever the problem gives you a small explicit value range. The moment you see "values are in [0, K]" with small K in the constraints, think counting sort before reaching for comparison sort.
+
+### Do Not Confuse With
+- **Bucket Sort:** Bucket sort groups a range of values into one bucket; counting sort has one bucket per exact value. Counting sort is a special case of bucket sort with bucket width = 1.
+- **Radix Sort:** Radix sort uses counting sort as a subroutine, applying it digit by digit.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 75 | Sort Colors | Medium | Three distinct values — counting sort in one pass | https://leetcode.com/problems/sort-colors/ |
+| 1122 | Relative Sort Array | Easy | Count first array's elements, then reconstruct with reference order | https://leetcode.com/problems/relative-sort-array/ |
+| 164 | Maximum Gap | Hard | Counting/bucket sort to get O(n) without comparison sort | https://leetcode.com/problems/maximum-gap/ |
+| 347 | Top K Frequent Elements | Medium | Bucket by frequency (variation of counting sort concept) | https://leetcode.com/problems/top-k-frequent-elements/ |
+| 268 | Missing Number | Easy | XOR or math, but counting array approach is the simplest mental model | https://leetcode.com/problems/missing-number/ |
+
+### One-Minute Revision
+```
+ALGORITHM:    Counting Sort
+IN SIMPLE WORDS: Count occurrences of each value, reconstruct sorted order from counts
+USE WHEN:     Integer values in small known range [0, K]; K is much smaller than n^2
+DON'T USE WHEN: K >> n; floats or complex objects; range unknown
+CORE IDEA:    Value IS the index — no comparisons needed, breaks O(n log n) lower bound
+TRACK:        count[value] = frequency; index pointer for reconstruction
+TIME:         O(n + K)
+SPACE:        O(K)
+COMMON TRAP:  Offset values by min; don't use when K is too large
+EXPERIENCE TIP: Small integer range in constraints = strong signal to use counting sort
+```
+
+---
+
+## Cyclic Sort
+
+### What is it?
+When array values are in the range [1, n], each value has exactly one "correct" index (value `v` belongs at index `v - 1`). Cyclic sort places every element at its correct index using only swaps — no extra space. After one pass, missing and duplicate numbers are trivially identified.
+
+### Visual
+```
+Input: [3, 1, 2]   values in [1, 3]
+
+i=0: arr[0]=3, correct index = 3-1 = 2. arr[0] ≠ arr[2]. Swap.
+     [2, 1, 3]
+i=0: arr[0]=2, correct index = 2-1 = 1. arr[0] ≠ arr[1]. Swap.
+     [1, 2, 3]
+i=0: arr[0]=1, correct index = 0. arr[0] = arr[0]. Move i forward.
+i=1: arr[1]=2, correct index = 1. Already correct. Move i forward.
+i=2: arr[2]=3, correct index = 2. Already correct. Done.
+
+Result: [1, 2, 3] — no missing, no duplicate.
+```
+
+### How does it work?
+1. Start with `i = 0`.
+2. Calculate `correctIndex = arr[i] - 1` (where this value should live).
+3. If `arr[i] != arr[correctIndex]` (destination has a different value), swap `arr[i]` and `arr[correctIndex]` — do NOT advance `i`.
+4. If `arr[i] == arr[correctIndex]` (destination already has this value — duplicate!), advance `i`.
+5. If `arr[i] == i + 1` (already at correct index), advance `i`.
+6. After the pass, scan: if `arr[j] != j + 1`, then `j + 1` is the missing number and `arr[j]` is the duplicate.
+
+### Why does it work?
+Each swap places at least one element at its final correct position. So across the entire array, there can be at most n swaps — each element gets placed at most once. The outer loop runs n times. Total: O(n). The O(1) space comes from doing everything in-place.
+
+### When to use?
+- Values are in the range `[1, n]` or `[0, n-1]`.
+- The problem asks to find missing numbers, duplicate numbers, or the first missing positive.
+- O(1) extra space is required.
+- Any of these LeetCode signals: "array of n integers where each integer is in [1, n]."
+
+### When NOT to use?
+- Values are not in a bounded contiguous range starting at 1 or 0.
+- You cannot modify the input array (cyclic sort rearranges it in place).
+
+### How to recognize in a new problem?
+The clearest signal is "n integers in range [1, n]" combined with "find missing" or "find duplicate." If you see both, cyclic sort is the intended O(n) / O(1) solution.
+
+Concrete signals:
+- "Find all numbers from 1 to n that are missing from the array."
+- "Find the duplicate number in an array of n+1 integers where values are in [1, n]."
+- "Find the first missing positive integer."
+
+### Simple Example
+Input: `[4, 3, 2, 7, 8, 2, 3, 1]`, values in [1, 8]
+Expected output: missing = `[5, 6]`
+
+Trace: Place each element at its correct index, then scan for `arr[j] != j + 1`.
+
+### Code
+```java
+// Java — Find All Missing Numbers (LeetCode 448)
 List<Integer> findDisappearedNumbers(int[] nums) {
     int i = 0;
     while (i < nums.length) {
         int correctIndex = nums[i] - 1;
         if (nums[i] != nums[correctIndex]) {
+            // Swap to place nums[i] at its correct index
             int temp = nums[i];
             nums[i] = nums[correctIndex];
             nums[correctIndex] = temp;
         } else {
-            i++;
+            i++; // Already correct OR duplicate — move forward
         }
     }
     List<Integer> missing = new ArrayList<>();
@@ -562,10 +815,29 @@ List<Integer> findDisappearedNumbers(int[] nums) {
     }
     return missing;
 }
-```
 
-**JavaScript:**
+// Find the Duplicate Number (LeetCode 287)
+int findDuplicate(int[] nums) {
+    int i = 0;
+    while (i < nums.length) {
+        if (nums[i] != i + 1) {
+            int correctIndex = nums[i] - 1;
+            if (nums[i] != nums[correctIndex]) {
+                int temp = nums[i];
+                nums[i] = nums[correctIndex];
+                nums[correctIndex] = temp;
+            } else {
+                return nums[i]; // duplicate found — same value at two places
+            }
+        } else {
+            i++;
+        }
+    }
+    return -1;
+}
+```
 ```javascript
+// JavaScript — Find All Missing Numbers
 function findDisappearedNumbers(nums) {
     let i = 0;
     while (i < nums.length) {
@@ -584,323 +856,422 @@ function findDisappearedNumbers(nums) {
 }
 ```
 
-**Dry Run on [4,3,2,7,8,2,3,1]:**
+### Dry Run
+Input: `[4, 3, 2, 7, 8, 2, 3, 1]`
 
+| i | Array State | arr[i] | correctIndex | Action |
+|---|-------------|--------|--------------|--------|
+| 0 | [4,3,2,7,8,2,3,1] | 4 | 3 | arr[0]≠arr[3] → swap(0,3) |
+| 0 | [7,3,2,4,8,2,3,1] | 7 | 6 | arr[0]≠arr[6] → swap(0,6) |
+| 0 | [3,3,2,4,8,2,7,1] | 3 | 2 | arr[0]≠arr[2] → swap(0,2) |
+| 0 | [2,3,3,4,8,2,7,1] | 2 | 1 | arr[0]≠arr[1] → swap(0,1) |
+| 0 | [3,2,3,4,8,2,7,1] | 3 | 2 | arr[0]==arr[2]=3 → duplicate! i++ |
+| 1 | [3,2,3,4,8,2,7,1] | 2 | 1 | arr[1]==2==1+1 → i++ |
+| 2 | ... | 3 | 2 | arr[2]==3==2+1 → i++ |
+| 3 | ... | 4 | 3 | arr[3]==4==3+1 → i++ |
+| 4 | ... | 8 | 7 | swap(4,7) → arr becomes [3,2,3,4,1,2,7,8] |
+| 4 | [3,2,3,4,1,2,7,8] | 1 | 0 | swap(4,0) → [1,2,3,4,3,2,7,8] |
+| 4 | [1,2,3,4,3,2,7,8] | 3 | 2 | arr[4]==arr[2]=3 → duplicate! i++ |
+| 5 | ... | 2 | 1 | arr[5]==arr[1]=2 → duplicate! i++ |
+| 6 | ... | 7 | 6 | arr[6]==7==6+1 → i++ |
+| 7 | ... | 8 | 7 | arr[7]==8==7+1 → i++ |
+
+Scan: index 4 has arr[4]=3 ≠ 5 → missing 5. Index 5 has arr[5]=2 ≠ 6 → missing 6.
+Result: `[5, 6]`
+
+### Complexity
 ```
-i | Array State                 | Action
---|-----------------------------|-----------------------------------------
-0 | [4,3,2,7,8,2,3,1]          | arr[0]=4, correctIdx=3. arr[0]!=arr[3]. Swap(0,3).
-0 | [7,3,2,4,8,2,3,1]          | arr[0]=7, correctIdx=6. arr[0]!=arr[6]. Swap(0,6).
-0 | [3,3,2,4,8,2,7,1]          | arr[0]=3, correctIdx=2. arr[0]!=arr[2]. Swap(0,2).
-0 | [2,3,3,4,8,2,7,1]          | arr[0]=2, correctIdx=1. arr[0]!=arr[1]. Swap(0,1).
-0 | [3,2,3,4,8,2,7,1]          | arr[0]=3, correctIdx=2. arr[0]==arr[2]=3. Duplicate! i++.
-1 | [3,2,3,4,8,2,7,1]          | arr[1]=2, correctIdx=1. arr[1]==1+1=2. Correct. i++.
-2 | [3,2,3,4,8,2,7,1]          | arr[2]=3, correctIdx=2. arr[2]==2+1=3. Correct. i++.
-3 | [3,2,3,4,8,2,7,1]          | arr[3]=4, correctIdx=3. Correct. i++.
-4 | [3,2,3,4,8,2,7,1]          | arr[4]=8, correctIdx=7. Swap(4,7).
-4 | [3,2,3,4,1,2,7,8]          | arr[4]=1, correctIdx=0. arr[0]!=arr[correctIdx]. Swap(4,0).
-4 | [1,2,3,4,3,2,7,8]          | arr[4]=3, correctIdx=2. arr[4]==arr[2]=3. Duplicate! i++.
-5 | [1,2,3,4,3,2,7,8]          | arr[5]=2, correctIdx=1. arr[5]==arr[1]=2. Duplicate! i++.
-6 | [1,2,3,4,3,2,7,8]          | arr[6]=7, correctIdx=6. Correct. i++.
-7 | [1,2,3,4,3,2,7,8]          | arr[7]=8, correctIdx=7. Correct. i++.
-
-Scan: index 4 has arr[4]=3 != 5. Missing: 5.
-      index 5 has arr[5]=2 != 6. Missing: 6.
-
-Result: [5, 6]
-```
-
-**Complexity:** Time O(n), Space O(1).
-
----
-
-## [45–55 min] Pattern Recognition
-
-### Structural clues — what to look for in the problem statement
-
-**Use Merge Sort when:**
-- You need a stable sort with guaranteed O(n log n)
-- The phrase "count inversions" or "count how many smaller elements appear after" appears
-- You're sorting a linked list (merge sort is naturally O(1) space for linked lists)
-- Divide-and-conquer applies and merging sorted halves gives useful information
-
-**Use Quick Select when:**
-- "Find the Kth largest/smallest element"
-- "Find the median"
-- "Top K elements" where you need WHICH elements (not in sorted order)
-- O(n) average is acceptable and you don't need sorted top-K
-
-**Use Counting Sort when:**
-- Values are bounded integers in a small range
-- "Sort colors" or any problem with only a few distinct values
-- Sorting is a preprocessing step and range is small
-
-**Use Radix Sort when:**
-- Sorting integers or fixed-length strings
-- N is large but number of digits D is small
-- Standard O(n log n) is too slow for the given constraints
-
-**Use Bucket Sort when:**
-- "Maximum gap" problem (O(n) by pigeonhole principle on buckets)
-- "Top K frequent elements in O(n)" (bucket by frequency)
-- Values are described as uniformly distributed
-
-**Use Cyclic Sort when:**
-- Values are in range [1, n] or [0, n-1]
-- Problem mentions: "missing number," "find duplicate," "find all duplicates," "first missing positive"
-- O(1) space is required alongside O(n) time
-
-**Use Custom Comparator when:**
-- "Arrange to form the largest number"
-- "Sort by X then by Y"
-- Any problem where the definition of "comes before" is non-trivial
-
-**Sort as preprocessing when:**
-- You can't think of a direct approach, ask: "what if this were sorted?"
-- Two-pointer approach would work IF the array were sorted
-- Greedy processing needs elements in a specific order
-
-### Questions to ask yourself
-
-```
-1. Are values integers in a bounded range?
-   YES → Consider counting sort, radix sort, cyclic sort, bucket sort
-   NO  → Comparison-based sort (merge sort or quick sort)
-
-2. Do I need the Kth element (not all K)?
-   YES → Quick Select (O(n) avg) or Heap (O(n log K) guaranteed)
-
-3. Do I need stability?
-   YES → Merge Sort (or counting sort's stable variant)
-
-4. Is space critical (O(1))?
-   YES, range [1,n] → Cyclic Sort
-   YES, arbitrary → Quick Sort (in-place, O(log n) stack)
-
-5. Is this an inversion-counting or "smaller elements after self" problem?
-   YES → Merge Sort with augmented merge step
-
-6. Is the problem about missing/duplicate numbers in [1,n]?
-   YES → Cyclic Sort
-
-7. Is the comparison rule non-standard?
-   YES → Custom Comparator
-
-8. Would any algorithm after sorting become O(n) or O(n log n)?
-   YES → Sort as preprocessing
+Time:  O(n) — at most n swaps total (each swap places at least one element correctly)
+Space: O(1) — all work done in-place; only a few pointers
 ```
 
-### Distinguishing similar patterns
+### Common Trap
+- **Off-by-one in correctIndex.** If values are in [1, n], `correctIndex = arr[i] - 1`. If values are in [0, n-1], `correctIndex = arr[i]`. Mix these up and you get wrong answers or index-out-of-bounds.
+- **Infinite loop on duplicate.** If you swap when `arr[i] == arr[correctIndex]` (same value at both positions), you swap identical values forever. Always check for this before swapping — if equal, just advance `i`.
 
-**Quick Select vs Heap (Top-K):**
-- Quick Select: O(n) average, O(n²) worst, gives Kth element (not sorted)
-- Heap of size K: O(n log K) guaranteed, gives all K elements sorted
-- Use Quick Select when: you only need the Kth value AND average case is acceptable
-- Use Heap when: you need all K elements, or streaming data, or guaranteed O(n log K)
+### Experience Tip
+**Experience Tip:** The swap-or-advance decision is the entire algorithm. If you can place the element, place it. If the destination already has the right value (either it's correct or it's a duplicate), move on. The second scan is trivial once the placement pass is done.
 
-**Merge Sort vs Quick Sort:**
-- Merge Sort: stable, O(n) space, guaranteed O(n log n)
-- Quick Sort: in-place, O(log n) stack space, O(n²) worst case
-- Use Merge Sort when: stability needed, linked list sorting, merge step itself is useful
-- Use Quick Sort when: in-place needed, average-case performance is the goal
+### Do Not Confuse With
+- **Hash Set approach for missing numbers:** Uses O(n) space but does not modify the array — use when you cannot modify input. Cyclic sort is the O(1) space alternative.
+- **Floyd's Cycle Detection (LeetCode 287 alternative):** Also finds duplicates in O(1) space without modifying the array, by treating values as pointers. More complex — cyclic sort is simpler when modification is allowed.
 
-**Counting Sort vs Bucket Sort:**
-- Counting Sort: one bucket per distinct value, works for exact integers
-- Bucket Sort: one bucket per value range, works when distribution is known
-- Counting Sort is a special case of bucket sort where bucket width = 1
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 268 | Missing Number | Easy | Simplest cyclic sort application — range [0, n] | https://leetcode.com/problems/missing-number/ |
+| 448 | Find All Numbers Disappeared in an Array | Easy | Multiple missing values — scan after placement pass | https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/ |
+| 442 | Find All Duplicates in an Array | Medium | Values appearing twice — same placement logic | https://leetcode.com/problems/find-all-duplicates-in-an-array/ |
+| 287 | Find the Duplicate Number | Medium | Range [1, n] with n+1 elements — one must repeat | https://leetcode.com/problems/find-the-duplicate-number/ |
+| 41 | First Missing Positive | Hard | Place only values in [1, n], ignore others; first wrong index is answer | https://leetcode.com/problems/first-missing-positive/ |
 
-**Cyclic Sort vs Hashing for missing numbers:**
-- Cyclic Sort: O(1) space, modifies the input array
-- Hashing: O(n) space, does not modify input
-- If interviewer says "constant space," Cyclic Sort is the intended answer
-
----
-
-## [55–60 min] Final Mental Checklist
-
+### One-Minute Revision
 ```
-WHAT IS IT?
-  Sorting = arranging elements in order. A family of algorithms,
-  each with different trade-offs and use cases. Rarely the end goal —
-  usually the preprocessing step that enables a faster algorithm.
-
-WHEN DO I USE IT?
-  - Merge Sort: stable sort, inversion counting, linked list sort
-  - Quick Sort: in-place sort, building partitioning logic
-  - Quick Select: Kth element in O(n) average
-  - Counting/Radix: integers in bounded range, faster than O(n log n)
-  - Bucket Sort: uniform distribution, maximum gap, top-K frequent in O(n)
-  - Cyclic Sort: missing/duplicate in [1,n], O(1) space
-  - Custom Comparator: non-standard ordering
-  - Preprocessing: when "what if sorted?" opens a clean algorithm
-
-WHEN DO I NOT USE IT?
-  - Merge Sort: O(n) space is unacceptable
-  - Quick Sort: stability needed; guaranteed O(n log n) needed
-  - Quick Select: streaming data; need sorted top-K
-  - Counting Sort: K >> n; floating point values
-  - Cyclic Sort: values not in bounded range
-  - Sort as preprocessing: when original order matters (subarray,
-    sliding window problems)
-
-WHAT IS THE CORE IDEA?
-  - Merge Sort: split recursively, merge sorted halves bottom-up
-  - Quick Sort: place pivot at correct position, recurse on two sides
-  - Quick Select: place pivot, recurse on only the side containing K
-  - Counting Sort: use value as array index, no comparisons
-  - Cyclic Sort: use value as position, place via swaps
-
-WHAT DO I TRACK?
-  - Merge Sort: temporary array for merge; inversion count for augmented version
-  - Quick Sort: lo, hi, pivot index, partition boundary
-  - Quick Select: lo, hi, target index K
-  - Cyclic Sort: current index i, correct index = arr[i]-1
-  - Bucket Sort: min/max per bucket
-
-WHAT IS THE INVARIANT/STATE?
-  - After each merge: the merged subarray is fully sorted
-  - After partition: pivot is at final position; left ≤ pivot ≤ right
-  - After cyclic sort pass: every value that could be placed is at arr[v-1]
-  - After counting: count[v] = frequency of v in input
-
-HOW DO I RECOGNIZE IT?
-  - "Kth" → Quick Select or Heap
-  - "inversions" / "smaller after self" → Merge Sort augmentation
-  - "missing" / "duplicate" + [1,n] → Cyclic Sort
-  - "maximum gap" / "top-K frequent in O(n)" → Bucket Sort
-  - "arrange to form largest" → Custom Comparator
-  - Can't think of approach → ask "what if sorted?"
-
-WHAT ARE THE COMMON TRAPS?
-  - Quick Sort/Select worst case O(n²): always mention randomized pivot
-  - Radix Sort: forgetting each digit sort must be STABLE
-  - Cyclic Sort: off-by-one in correct index (1-based vs 0-based)
-  - Custom Comparator: not proving transitivity
-  - Sorting when it destroys original index information
-  - Using Quick Select for streaming data (needs all data upfront)
-
-WHAT PATTERNS CAN I CONFUSE IT WITH?
-  - Quick Select ↔ Heap: both solve "Kth largest"
-  - Cyclic Sort ↔ Hashing: both solve missing/duplicate (trade space vs time)
-  - Merge Sort merge step ↔ Two Pointers on sorted arrays
-  - Bucket Sort ↔ Counting Sort (bucket sort generalizes counting sort)
-
-WHAT IS THE COMPLEXITY?
-  Algorithm         | Time (avg) | Time (worst) | Space
-  ------------------|------------|--------------|-------
-  Merge Sort        | O(n log n) | O(n log n)   | O(n)
-  Quick Sort        | O(n log n) | O(n²)        | O(log n)
-  Quick Select      | O(n)       | O(n²)        | O(1) iter
-  Counting Sort     | O(n + K)   | O(n + K)     | O(K)
-  Radix Sort        | O(D×(n+K)) | O(D×(n+K))  | O(n+K)
-  Bucket Sort       | O(n)       | O(n log n)   | O(n)
-  Cyclic Sort       | O(n)       | O(n)         | O(1)
+ALGORITHM:    Cyclic Sort
+IN SIMPLE WORDS: Place each value at index (value-1) using swaps, then scan for mismatches
+USE WHEN:     Values in [1,n] or [0,n-1]; find missing/duplicate; O(1) space required
+DON'T USE WHEN: Values not in bounded range; cannot modify input array
+CORE IDEA:    Value determines its correct index — swap to place, scan to find mismatches
+TRACK:        i (current position); correctIndex = arr[i] - 1
+TIME:         O(n)
+SPACE:        O(1)
+COMMON TRAP:  Check arr[i] == arr[correctIndex] before swapping — prevents infinite loop on duplicates
+EXPERIENCE TIP: swap-or-advance is the whole algorithm; the second scan is just reading results
 ```
 
 ---
 
-## Advanced Awareness
+## Custom Comparator Sorting
 
-These topics exist and may come up in follow-ups. Understand the name and one-line description — do not deep-dive unless asked.
+### What is it?
+Sometimes the natural sort order (ascending numeric, alphabetical) does not give the right answer. Custom comparator sorting lets you define a "comes before" rule for any two elements, then uses that rule to sort. The classic example: arrange numbers to form the largest possible concatenated number.
 
-- **Median of Medians:** Deterministic O(n) worst-case selection algorithm. Finds a "good" pivot by taking the median of groups of 5. Rarely needed in interviews.
-- **TimSort:** Java's `Arrays.sort()` and Python's default sort. Hybrid merge + insertion sort, designed for real-world data patterns. O(n log n) worst case, O(n) best case on nearly-sorted data.
-- **Intro Sort:** C++ STL's `std::sort`. Hybrid of Quick Sort + Heap Sort + Insertion Sort. Guarantees O(n log n) worst case while keeping Quick Sort's average performance.
-- **External Sort:** Sorting data that doesn't fit in RAM. Uses merge sort's sequential-access property for efficient disk I/O.
-- **MSD Radix Sort:** Most Significant Digit first. Natural for lexicographic string sorting. More complex than LSD because it requires recursive partitioning.
-- **Floyd's Cycle Detection for Duplicates:** When you cannot modify the array and need O(1) space, treat values as pointers in a linked list and find the cycle. Detects the duplicate in O(n) time O(1) space.
-
----
-
-## Active Recall
-
-Test yourself — close the file and answer these:
-
-1. Why can comparison-based sorting not beat O(n log n)? Give the argument in 2–3 sentences.
-2. In Merge Sort's inversion counting, when you pick an element from the right half, how many inversions does it create? Why?
-3. Why is Quick Select O(n) average but not O(n log n) like Quick Sort?
-4. You have an array of values in [0, 10000]. The array has 20 elements. Which sorting algorithm is best? Why?
-5. When does Counting Sort become worse than Merge Sort in practice?
-6. In Cyclic Sort, you encounter arr[i] == arr[arr[i]-1] during a swap attempt. What does this mean, and what do you do?
-7. For "Find the Kth Largest" — when would you choose Quick Select over a Heap, and when the reverse?
-8. Why must each digit pass in Radix Sort use a stable sort?
-9. For "Maximum Gap": why must the maximum gap occur between buckets and not within a bucket?
-10. What makes a custom comparator "valid"? What property must it satisfy?
-
----
-
-## Recommended Practice Direction
-
-Work through problems in this order — each one adds one new dimension:
-
-**Foundational:**
-- LeetCode 912 — Sort an Array (implement merge sort from scratch)
-- LeetCode 215 — Kth Largest Element in an Array (Quick Select)
-- LeetCode 75 — Sort Colors (three-way partition / counting sort)
-
-**Merge Step Augmentation:**
-- LeetCode 315 — Count of Smaller Numbers After Self (merge sort + index tracking)
-- LeetCode 493 — Reverse Pairs (merge sort + count during merge)
-
-**Cyclic Sort Family:**
-- LeetCode 448 — Find All Numbers Disappeared in an Array
-- LeetCode 442 — Find All Duplicates in an Array
-- LeetCode 41 — First Missing Positive (hardest — handle negatives and out-of-range)
-
-**Bucket Sort Applications:**
-- LeetCode 347 — Top K Frequent Elements (bucket sort by frequency)
-- LeetCode 164 — Maximum Gap (bucket sort / pigeonhole)
-
-**Custom Comparators:**
-- LeetCode 179 — Largest Number (string concatenation comparator)
-- LeetCode 56 — Merge Intervals (sort by start time as preprocessing)
-
-**Sort as Preprocessing:**
-- LeetCode 15 — 3Sum (sort, then two pointers)
-- LeetCode 452 — Minimum Number of Arrows (sort by end, then greedy)
-
----
-
-## 2-Minute Cheat Sheet
-
+### Visual
 ```
-SORT CHOICE DECISION:
-  Values in [1,n], find missing/dup?       → Cyclic Sort   O(n) / O(1)
-  Values bounded integers, small range?    → Counting Sort O(n+K)
-  Fixed-length integers, large n?          → Radix Sort    O(D·n)
-  Uniform distribution, maximum gap?       → Bucket Sort   O(n) avg
-  Kth element, O(n) avg ok?                → Quick Select  O(n) avg
-  Kth element, guaranteed O(n log K)?      → Heap
-  Stable sort needed?                      → Merge Sort    O(n log n)
-  In-place, no stability needed?           → Quick Sort    O(n log n) avg
-  Non-standard comparison rule?            → Custom Comparator
+Problem: Arrange [3, 30, 34, 5, 9] to form the largest number.
 
-KEY FORMULAS:
-  Merge Sort:   T(n) = 2T(n/2) + O(n) → O(n log n)
-  Quick Select: n + n/2 + n/4 + ... = 2n → O(n) average
-  Counting:     O(n + K) where K = value range
+Naive ascending: 3, 5, 9, 30, 34 → "35930340" (wrong)
+Naive descending: 9, 5, 34, 30, 3 → "9534303" (close but wrong)
 
-KEY INSIGHT — each algorithm's "trick":
-  Merge Sort   → sorted halves merge in O(n); merge step reveals relationships
-  Quick Sort   → pivot goes to final position; recurse on sides
-  Quick Select → pivot goes to final position; recurse on ONE side only
-  Counting     → value as array index, no comparisons needed
-  Cyclic Sort  → value - 1 = correct index; swap to correct position
-  Bucket Sort  → max gap is BETWEEN buckets (pigeonhole); bucket by frequency for top-K
+Custom rule: compare by string concatenation
+  "9" vs "5":  "95" > "59"  → 9 comes first
+  "5" vs "34": "534" > "345" → 5 comes before 34
+  "34" vs "3": "343" > "334" → 34 comes before 3
+  "3" vs "30": "330" > "303" → 3 comes before 30
 
-INVERSION COUNTING (merge sort):
-  When picking from right half: inversions += (leftPointer's remaining count)
-
-CYCLIC SORT TEMPLATE:
-  while arr[i] != correct position:
-    if arr[i] == arr[correctIndex]: i++ (duplicate, can't place)
-    else: swap(arr[i], arr[correctIndex])
-  After pass: scan for arr[i] != i+1 → missing/duplicate
-
-COMPARATOR MUST BE:
-  Transitive: a < b && b < c → a < c (otherwise sort is undefined)
+Custom sorted: 9, 5, 34, 3, 30 → "9534330" ✓
 ```
 
+### How does it work?
+1. Identify the correct "comes before" rule for the problem (the hard part).
+2. Write a comparator: a function `compare(a, b)` that returns negative if `a` should come before `b`, positive if `b` should come before `a`, zero if equal.
+3. Pass the comparator to the standard sort function.
+4. The sort arranges elements such that `compare(arr[i], arr[i+1]) <= 0` for all `i`.
+
+### Why does it work?
+Any standard comparison sort (merge sort, quick sort, timsort) works correctly as long as the comparator defines a valid total order — meaning it is consistent and transitive (if a < b and b < c, then a < c). The sort finds the unique arrangement satisfying the comparator for all adjacent pairs.
+
+### When to use?
+- You need a non-standard ordering: sort by end time, sort by frequency, sort strings by concatenation result.
+- The problem says "arrange X to maximize/minimize some property" — the arrangement is a sorting problem with a custom rule.
+- You need to sort objects by multiple fields (primary key, then tiebreaker).
+
+### When NOT to use?
+- The ordering depends on global context (e.g., topological sort) — custom comparator only uses pairwise comparison.
+- Standard numeric or lexicographic sort already gives the right result.
+
+### How to recognize in a new problem?
+The tell: the problem asks you to "arrange" or "order" elements to achieve some goal, and the right arrangement can be determined by comparing any two elements in isolation.
+
+Concrete signals:
+- "Arrange numbers to form the largest number."
+- "Sort intervals by start time, breaking ties by end time."
+- "Sort by frequency descending, then by value ascending."
+
+### Simple Example
+Input: `[10, 2]`
+Expected output: `"210"` (not `"102"`)
+
+Compare `"10"` and `"2"`: `"210"` (2 first) vs `"102"` (10 first). `"210" > "102"` → 2 comes before 10.
+
+### Code
+```java
+// Java — Largest Number (LeetCode 179)
+String largestNumber(int[] nums) {
+    String[] strs = new String[nums.length];
+    for (int i = 0; i < nums.length; i++) strs[i] = String.valueOf(nums[i]);
+
+    // Custom comparator: a comes before b if a+b > b+a (as strings)
+    Arrays.sort(strs, (a, b) -> (b + a).compareTo(a + b));
+
+    if (strs[0].equals("0")) return "0"; // edge case: all zeros
+    return String.join("", strs);
+}
+
+// Sort intervals by start time, breaking ties by end time
+int[][] sortIntervals(int[][] intervals) {
+    Arrays.sort(intervals, (a, b) -> {
+        if (a[0] != b[0]) return a[0] - b[0]; // sort by start ascending
+        return a[1] - b[1]; // break ties by end ascending
+    });
+    return intervals;
+}
+```
+```javascript
+// JavaScript — Largest Number
+function largestNumber(nums) {
+    const strs = nums.map(String);
+    strs.sort((a, b) => (b + a) > (a + b) ? 1 : -1);
+    if (strs[0] === "0") return "0";
+    return strs.join("");
+}
+
+// Sort intervals by start time
+function sortIntervals(intervals) {
+    return intervals.sort((a, b) => a[0] !== b[0] ? a[0] - b[0] : a[1] - b[1]);
+}
+```
+
+### Dry Run
+Input: `[3, 30, 34, 5, 9]`
+
+Comparisons (b+a vs a+b):
+
+| a | b | a+b | b+a | Winner (larger concatenation first) |
+|---|---|-----|-----|-------------------------------------|
+| "3" | "30" | "330" | "303" | "330" > "303" → 3 before 30 |
+| "3" | "34" | "334" | "343" | "343" > "334" → 34 before 3 |
+| "5" | "34" | "534" | "345" | "534" > "345" → 5 before 34 |
+| "9" | "5" | "95" | "59" | "95" > "59" → 9 before 5 |
+
+After sort: `["9", "5", "34", "3", "30"]` → `"9534330"`
+
+### Complexity
+```
+Time:  O(n log n) — standard sort with custom comparator
+       For "Largest Number": each comparison is O(L) where L = digits per number,
+       so O(n * L * log n) total
+Space: O(n) — for the string conversion array; sort is in-place or O(log n) stack
+```
+
+### Common Trap
+- **Comparator must be transitive.** For "Largest Number," transitivity holds mathematically but is not obvious — if you invent your own comparator, always verify it can't create cycles (a < b < c < a).
+- **Edge case: all zeros.** `[0, 0]` should return `"0"` not `"00"`. Always check if the first element in the sorted result is `"0"`.
+
+### Experience Tip
+**Experience Tip:** For "Largest Number" type problems, always think "what two-element comparison rule gives the right answer?" Test it on `[3, 30]` — that's the trickiest pair. If your rule handles `[3, 30]` correctly, it almost certainly generalizes.
+
+### Do Not Confuse With
+- **Topological Sort:** Topological sort determines order from dependencies (edges in a graph). Custom comparator sort determines order from pairwise element comparison. They solve completely different problems.
+- **Greedy ordering:** Sometimes greedy algorithms also produce a specific order (e.g., activity selection by end time). The difference: greedy reasoning determines the rule; custom comparator implements that rule.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 179 | Largest Number | Medium | Comparator: (b+a).compareTo(a+b) — why does string concat comparison work? | https://leetcode.com/problems/largest-number/ |
+| 435 | Non-overlapping Intervals | Medium | Sort by end time — greedy on sorted intervals | https://leetcode.com/problems/non-overlapping-intervals/ |
+| 56 | Merge Intervals | Medium | Sort by start time, then linear scan | https://leetcode.com/problems/merge-intervals/ |
+| 1029 | Two City Scheduling | Medium | Sort by cost difference to allocate optimally | https://leetcode.com/problems/two-city-scheduling/ |
+| 937 | Reorder Data in Log Files | Medium | Multi-field comparator: letter logs by content then identifier | https://leetcode.com/problems/reorder-data-in-log-files/ |
+
+### One-Minute Revision
+```
+ALGORITHM:    Custom Comparator Sorting
+IN SIMPLE WORDS: Define your own "comes before" rule, use it with standard sort
+USE WHEN:     Non-standard order needed; "arrange to maximize/minimize"; multi-field sort
+DON'T USE WHEN: Order requires global context (use topological sort); standard sort works
+CORE IDEA:    Any pairwise comparison function that is transitive can drive a sort
+TRACK:        The comparator function; edge cases (all zeros, all equal)
+TIME:         O(n log n) — standard sort with custom comparator
+SPACE:        O(n) for string conversions if needed; O(log n) sort stack
+COMMON TRAP:  Verify transitivity; handle all-zeros edge case in "Largest Number"
+EXPERIENCE TIP: Test your comparator on the trickiest pair first (e.g., [3, 30] for largest number)
+```
+
 ---
 
-*Next: [05-HASHING-AND-SETS.md](05-HASHING-AND-SETS.md) — The universal optimizer: trade space for time.*
+## Sorting as Preprocessing
+
+### What is it?
+Sorting is not always the final answer — it is often a first step that makes your actual algorithm possible or much simpler. Sorting trades O(n log n) time to impose order, which then lets you use faster techniques (two pointers, binary search, greedy) on the sorted data.
+
+### Visual
+```
+Without sort (3Sum brute force):
+For each triple (i,j,k): check if sum == 0    → O(n^3)
+
+With sort as preprocessing:
+Sort the array → O(n log n)
+For each i, use two pointers on the rest → O(n^2) total
+                                         → 10x faster!
+
+Pattern: Sort enables two-pointer / binary search / greedy
+```
+
+### How does it work?
+1. Ask: "Would this problem become simpler if the input were sorted?"
+2. If yes, sort first (usually O(n log n)).
+3. Apply the simpler algorithm on the sorted data (often O(n) or O(n log n)).
+4. Total complexity: usually O(n log n).
+
+### Why does it work?
+Sorting creates structure. Structure eliminates uncertainty. With sorted data:
+- Two pointers work because moving left pointer always increases sum, moving right always decreases it.
+- Binary search works because you can eliminate half the search space per step.
+- Greedy works because processing elements in order (by start time, end time, value) guarantees locally optimal choices are globally optimal.
+
+### When to use?
+- You need to find pairs or triples summing to a target — sort enables two pointers.
+- Intervals need to be processed in order — sort by start or end time.
+- Original element order does not matter for the answer.
+- You cannot think of a direct approach — "what if sorted?" often unlocks a clean solution.
+
+### When NOT to use?
+- Original order matters: subarray problems, sliding window, contiguous sequences.
+- Hashing gives O(n) without sorting (e.g., Two Sum with a hash map — no need to sort).
+- The array is already logically sorted (don't sort again).
+
+### How to recognize in a new problem?
+If you're stuck, ask yourself: "What if the array were sorted — would the solution be obvious?" If yes, sort first. The most common pattern: you need pairs/triples with a property, sorting lets you use two pointers.
+
+Concrete signals:
+- "Find pairs that sum to X." (Sort, then two pointers from both ends.)
+- "Merge overlapping intervals." (Sort by start, then linear scan.)
+- "Select maximum non-overlapping intervals." (Sort by end time, greedy.)
+
+### Simple Example
+Input: `[[1,3],[2,6],[8,10],[15,18]]` (intervals)
+Expected output: `[[1,6],[8,10],[15,18]]` (merged overlapping intervals)
+
+Without sorting: hard to know which intervals to merge.
+After sorting by start time: `[1,3], [2,6], [8,10], [15,18]` — scan left to right, extend current interval if next overlaps.
+
+### Code
+```java
+// Java — Merge Intervals (LeetCode 56)
+int[][] merge(int[][] intervals) {
+    Arrays.sort(intervals, (a, b) -> a[0] - b[0]); // sort by start time
+
+    List<int[]> merged = new ArrayList<>();
+    int[] current = intervals[0];
+
+    for (int i = 1; i < intervals.length; i++) {
+        if (intervals[i][0] <= current[1]) {
+            // Overlapping: extend the current interval's end
+            current[1] = Math.max(current[1], intervals[i][1]);
+        } else {
+            // No overlap: save current, move to next
+            merged.add(current);
+            current = intervals[i];
+        }
+    }
+    merged.add(current);
+    return merged.toArray(new int[0][]);
+}
+
+// Non-overlapping Intervals (LeetCode 435) — sort by END time, greedy
+int eraseOverlapIntervals(int[][] intervals) {
+    Arrays.sort(intervals, (a, b) -> a[1] - b[1]); // sort by end time
+    int removals = 0;
+    int lastEnd = intervals[0][1];
+    for (int i = 1; i < intervals.length; i++) {
+        if (intervals[i][0] < lastEnd) {
+            removals++; // overlap — remove this interval
+        } else {
+            lastEnd = intervals[i][1]; // no overlap — keep this interval
+        }
+    }
+    return removals;
+}
+```
+```javascript
+// JavaScript — Merge Intervals
+function merge(intervals) {
+    intervals.sort((a, b) => a[0] - b[0]);
+    const merged = [intervals[0]];
+    for (let i = 1; i < intervals.length; i++) {
+        const current = merged[merged.length - 1];
+        if (intervals[i][0] <= current[1]) {
+            current[1] = Math.max(current[1], intervals[i][1]);
+        } else {
+            merged.push(intervals[i]);
+        }
+    }
+    return merged;
+}
+
+// 3Sum with sort + two pointers
+function threeSum(nums) {
+    nums.sort((a, b) => a - b);
+    const result = [];
+    for (let i = 0; i < nums.length - 2; i++) {
+        if (i > 0 && nums[i] === nums[i - 1]) continue; // skip duplicates
+        let left = i + 1, right = nums.length - 1;
+        while (left < right) {
+            const sum = nums[i] + nums[left] + nums[right];
+            if (sum === 0) {
+                result.push([nums[i], nums[left], nums[right]]);
+                while (left < right && nums[left] === nums[left + 1]) left++;
+                while (left < right && nums[right] === nums[right - 1]) right--;
+                left++; right--;
+            } else if (sum < 0) left++;
+            else right--;
+        }
+    }
+    return result;
+}
+```
+
+### Dry Run
+Input intervals: `[[2,6],[1,3],[8,10],[15,18]]`
+
+| Step | Action | merged |
+|------|--------|--------|
+| Sort by start | `[[1,3],[2,6],[8,10],[15,18]]` | - |
+| current = [1,3] | - | [[1,3]] |
+| [2,6]: 2 ≤ 3 → overlap | extend end to max(3,6)=6 | current=[1,6] |
+| [8,10]: 8 > 6 → no overlap | save [1,6], current=[8,10] | [[1,6]] |
+| [15,18]: 15 > 10 → no overlap | save [8,10], current=[15,18] | [[1,6],[8,10]] |
+| End | save [15,18] | [[1,6],[8,10],[15,18]] |
+
+### Complexity
+```
+Time:  O(n log n) — dominated by the sort; subsequent scan is O(n)
+Space: O(log n) — sort stack; O(n) if output array is counted
+```
+
+### Common Trap
+- **Sorting when original order matters.** Subarray problems (maximum subarray sum, sliding window) depend on element positions. Sorting destroys this. Never sort blindly.
+- **Forgetting to handle duplicates after sorting.** In 3Sum, after sorting, skip equal values at the same pointer position to avoid duplicate triplets.
+
+### Experience Tip
+**Experience Tip:** "What if sorted?" is one of the most powerful questions in an interview. When stuck, say it aloud — it signals good thinking AND often unlocks the solution. Many O(n²) brute-force solutions become O(n log n) after sorting plus a linear scan.
+
+### Do Not Confuse With
+- **Sorting as the final answer:** Some problems literally just ask you to sort. Here we mean sorting as a *step* to enable a better algorithm.
+- **Greedy without sorting:** Some greedy algorithms do not need an explicit sort step if input is already structured. Check first before adding O(n log n) overhead.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 56 | Merge Intervals | Medium | Sort by start; linear scan to merge overlapping pairs | https://leetcode.com/problems/merge-intervals/ |
+| 435 | Non-overlapping Intervals | Medium | Sort by end time; greedy count of intervals to remove | https://leetcode.com/problems/non-overlapping-intervals/ |
+| 15 | 3Sum | Medium | Sort first; two pointers eliminate O(n^3) brute force | https://leetcode.com/problems/3sum/ |
+| 452 | Minimum Number of Arrows to Burst Balloons | Medium | Sort by end; same greedy structure as non-overlapping intervals | https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/ |
+| 164 | Maximum Gap | Hard | Bucket sort insight: max gap must be between buckets, not within | https://leetcode.com/problems/maximum-gap/ |
+
+### One-Minute Revision
+```
+ALGORITHM:    Sorting as Preprocessing
+IN SIMPLE WORDS: Sort first to impose order, then apply a simpler linear algorithm
+USE WHEN:     Pairs/triples with a target sum; interval merging/selection; original order irrelevant
+DON'T USE WHEN: Original order matters (subarray, sliding window); hashing gives O(n) without sort
+CORE IDEA:    Sorted order removes uncertainty — enables two pointers, binary search, greedy
+TRACK:        Depends on follow-up algorithm — usually left/right pointers or current interval
+TIME:         O(n log n) dominated by sort; follow-up algorithm often O(n)
+SPACE:        O(log n) sort stack; follow-up may need O(n) output
+COMMON TRAP:  Don't sort when subarray structure matters; handle duplicates after sorting
+EXPERIENCE TIP: "What if sorted?" is a powerful unstick technique — say it aloud in interviews
+```
+
+---
+
+## Quick Reference — Choosing the Right Sort
+
+| Signal in Problem | Algorithm | Time | Space |
+|---|---|---|---|
+| Values in [1,n], find missing/duplicate, O(1) space | Cyclic Sort | O(n) | O(1) |
+| Integer values in small range [0, K] | Counting Sort | O(n+K) | O(K) |
+| Kth largest/smallest element | Quick Select | O(n) avg | O(1) iter |
+| Kth + streaming data OR sorted top-K | Heap | O(n log K) | O(K) |
+| Stable sort needed | Merge Sort | O(n log n) | O(n) |
+| Count inversions / count smaller after self | Merge Sort (augmented) | O(n log n) | O(n) |
+| Sort linked list | Merge Sort | O(n log n) | O(1) extra |
+| In-place sort, no stability needed | Quick Sort | O(n log n) avg | O(log n) |
+| Non-standard "comes before" rule | Custom Comparator + sort | O(n log n) | O(n) |
+| Intervals need ordered processing | Sort as Preprocessing | O(n log n) | O(log n) |
+| Pairs/triples summing to target | Sort + Two Pointers | O(n log n) | O(log n) |
+
+---
+
+*Next: [05-HASHING-AND-SETS.md](05-HASHING-AND-SETS.md) — Trade space for time: the universal optimizer.*

@@ -1,281 +1,59 @@
-# Dynamic Programming — 1-Hour Learning Module
+# Dynamic Programming — 4 Core Patterns
 
-> *"DP is not about memorizing transitions. DP is about asking: 'What decision did I make, and what smaller problem remains after I make it?'"*
-
-**Estimated time:** 60 minutes | **Difficulty:** Medium-Hard | **Interview frequency:** 30–40% of FAANG problems
-
----
-
-## Table of Contents
-
-- [[0–10 min] Big Picture](#0-10-min-big-picture)
-- [[10–20 min] Mental Model](#10-20-min-mental-model)
-- [[20–35 min] Core Pattern — How to Derive DP](#20-35-min-core-pattern--how-to-derive-dp)
-- [[35–45 min] Concrete Code + Dry Run](#35-45-min-concrete-code--dry-run)
-- [[45–55 min] Pattern Recognition](#45-55-min-pattern-recognition)
-- [[55–60 min] Final Mental Checklist](#55-60-min-final-mental-checklist)
-- [Active Recall Questions](#active-recall-questions)
-- [Recommended Practice Direction](#recommended-practice-direction)
-- [2-Minute Cheat Sheet](#2-minute-cheat-sheet)
-- [Advanced Awareness](#advanced-awareness)
+> *"DP = storing answers to smaller problems so we don't recompute them."*
+> *Never start with a formula — always ask: what decision do I make at each step?*
 
 ---
 
-## [0–10 min] Big Picture
+## Pattern 1: 1D Linear DP
 
-### What is Dynamic Programming?
+### What is it?
+Process a 1D sequence left-to-right. At each index, make a decision (take/skip, jump/stay). The answer at position `i` depends on a few earlier positions. Classic problems: Climbing Stairs, House Robber.
 
-Dynamic Programming (DP) is a technique for solving problems where the same sub-calculation appears over and over again. Instead of recomputing it each time, you compute it once and remember the answer.
-
-That's it. Everything else is a variation of this idea.
-
-### The Analogy: Mountain Checkpoint Notes
-
-Imagine you are hiking a mountain with many branching trails. Some trails share checkpoints — you might pass Checkpoint C whether you came from Path A or Path B. Without DP, you recompute "best route from Checkpoint C to the top" every single time you arrive at C. With DP, you leave a note at C: *"From here, the best route takes 4 more hours."* The next time you arrive, you just read the note.
-
-**Repeated subproblems = wasted work. Remember answers = DP.**
-
-### The Tiny Example: Fibonacci
-
-What is `fib(5)`?
-
+### Visual
 ```
-fib(5) = fib(4) + fib(3)
-fib(4) = fib(3) + fib(2)
-fib(3) = fib(2) + fib(1)
-fib(2) = fib(1) + fib(0)
+nums = [2, 7, 9, 3, 1]
+dp:   [ 2, 7, 11, 11, 12 ]
+         ↑   ↑
+       skip  rob i=2: max(7, 2+9)=11
 ```
 
-Notice: `fib(3)` is computed TWICE. `fib(2)` is computed THREE times. For `fib(50)`, the brute-force recursion makes 2^50 calls — which is over a quadrillion calls. With DP, it takes 50 steps.
-
-**This is why DP exists: exponential recursion → polynomial computation by remembering answers.**
-
-### Why It Matters for Google Interviews
-
-DP appears in 30–40% of hard and medium interview problems. Problems about finding the *minimum cost*, *maximum profit*, *count of ways*, or *longest/shortest sequence* almost always have a DP solution. Getting comfortable with DP derivation is one of the highest-return investments you can make in interview prep.
-
----
-
-## [10–20 min] Mental Model
-
-### The Chain of Reasoning
-
-Before writing any formula, ask these questions in sequence:
-
+### Derivation
 ```
-Big Problem
-  → Can I break it into smaller problems?
-     → Do smaller problems repeat?
-        → If yes: REMEMBER their answers
-           → This is Dynamic Programming
+Decision: at house i, do I rob it or skip it?
+Options:  ROB house i | SKIP house i
+dp[i] means: "max money from houses 0..i"
+Transition: dp[i] = max(dp[i-1], dp[i-2] + nums[i])
+Base case:  dp[0] = nums[0], dp[1] = max(nums[0], nums[1])
 ```
 
-### The Two Core Properties
+### When to use / When NOT to use
+- Use when decisions at each index only affect a bounded number of future indexes.
+- Use for "max/min/count along a sequence" with a no-adjacent or jump constraint.
+- NOT for 2D grids or problems where two sequences are compared (use 2D DP).
 
-**1. Optimal Substructure (plain English first):**
-The best solution to the whole problem can be built from the best solutions to its parts.
+### How to recognize?
+- "Can't pick adjacent elements", "jump up to K steps", "count ways to reach N"
+- Single sequence, answer grows left-to-right.
 
-*Example:* The shortest path from A to C through B is: (shortest path A→B) + (shortest path B→C). If you had a suboptimal path from A→B, you could just swap it for the optimal one. The subproblems are independent.
+### Simple Example (Climbing Stairs, n=5)
+| i | ways |
+|---|------|
+| 0 | 1    |
+| 1 | 1    |
+| 2 | 2    |
+| 3 | 3    |
+| 4 | 5    |
+| 5 | 8    |
 
-*Formal term:* Optimal Substructure.
-
-**2. Overlapping Subproblems:**
-If you solve the problem recursively, the same sub-calls appear many times.
-
-*Example:* In Fibonacci, `fib(3)` is called from both `fib(4)` and `fib(5)`. This is an overlapping subproblem.
-
-Both properties together → DP works and is worth applying.
-
-### Memoization vs Tabulation
-
-These are two ways to implement the same idea:
-
-| | Memoization (Top-Down) | Tabulation (Bottom-Up) |
-|---|---|---|
-| **Approach** | Write natural recursion, add a cache | Fill a table from base cases upward |
-| **Direction** | Starts at the big problem, goes down | Starts at base cases, goes up |
-| **Computes** | Only the states actually needed | All states (even unused ones) |
-| **Space** | Recursion stack + cache | Table only (no stack) |
-| **Interview** | Faster to write, more intuitive | Easier to space-optimize |
-| **Pitfall** | Stack overflow for large inputs | Must figure out fill order |
-
-**Interview strategy:** Start with top-down memoization. Mention you could convert to bottom-up. Convert if asked for space optimization.
-
-### The Four Steps of Any DP Problem
-
-1. **Define the state:** What is `dp[i]` or `dp[i][j]`? Say it in one sentence.
-2. **Define the recurrence:** How does `dp[i]` relate to smaller states?
-3. **Identify base cases:** What do you know without any computation?
-4. **Determine fill order:** Which direction ensures dependencies are computed first?
-
-**If you can clearly define the state in one sentence, you are 80% done.**
-
----
-
-## [20–35 min] Core Pattern — How to Derive DP
-
-### The Derivation Process
-
-Never memorize DP formulas. Instead, derive them every time using this process:
-
-```
-1. What DECISION am I making at each step?
-2. What CHOICES exist at each decision point?
-3. After I make a choice, what SMALLER PROBLEM remains?
-4. What CHANGES between one subproblem and the next?
-5. What must I REMEMBER to make the next decision?
-   → These remembered things define your STATE.
-6. Define dp[state] in one sentence.
-7. Derive the TRANSITION from the decision + choices.
-8. What are the BASE CASES? (smallest subproblems with known answers)
-9. What is the COMPUTATION ORDER? (fill base cases first, then build up)
-10. Can I optimize SPACE? (do I only need the last row/last few values?)
-```
-
-### Worked Derivation: House Robber
-
-**Problem:** You are a robber. Houses in a line each have some money. You cannot rob two adjacent houses. What is the maximum money you can steal?
-
-**Step 1 — What decision am I making at each step?**
-At each house, I decide: rob this house, or skip it.
-
-**Step 2 — What choices exist?**
-Two choices: ROB or SKIP.
-
-**Step 3 — After I choose, what smaller problem remains?**
-- If I rob house i: I cannot rob house i-1. The remaining problem is houses 0..i-2.
-- If I skip house i: I can rob or skip house i-1. The remaining problem is houses 0..i-1.
-
-**Step 4 — What changes between subproblems?**
-The index i (how far along the street I am).
-
-**Step 5 — What must I remember?**
-Just the index i. I don't need to remember which specific houses I robbed before — only the best total from that position onward matters.
-
-**Step 6 — Define dp[i]:**
-`dp[i]` = maximum money I can steal from houses 0 through i.
-
-**Step 7 — Derive the transition:**
-- Option A: Rob house i → I earn `nums[i]`, plus best from houses 0..i-2 → `nums[i] + dp[i-2]`
-- Option B: Skip house i → I earn whatever I got from houses 0..i-1 → `dp[i-1]`
-- Take the best: `dp[i] = max(dp[i-1], nums[i] + dp[i-2])`
-
-**Step 8 — Base cases:**
-- `dp[0] = nums[0]` (only one house, rob it)
-- `dp[1] = max(nums[0], nums[1])` (two houses, rob the richer one)
-
-**Step 9 — Computation order:**
-Left to right. `dp[i]` depends on `dp[i-1]` and `dp[i-2]`, which are always computed first.
-
-**Step 10 — Space optimization:**
-`dp[i]` only uses `dp[i-1]` and `dp[i-2]`. Keep two variables instead of a full array: O(n) space → O(1) space.
-
-### Worked Derivation: Coin Change
-
-**Problem:** Given coins of different denominations and a total amount, find the minimum number of coins to make that amount. You have unlimited coins of each denomination.
-
-**Step 1 — What decision?**
-At each total amount I want to reach, I decide which coin to use as the LAST coin.
-
-**Step 2 — What choices?**
-For each coin denomination `c` in `coins[]`, I can use it if `c <= amount`.
-
-**Step 3 — Smaller problem after choice?**
-If I use coin `c` last, the remaining problem is making amount `amount - c`.
-
-**Step 4 — What changes?**
-The remaining amount to make.
-
-**Step 5 — What to remember?**
-Just the remaining amount.
-
-**Step 6 — Define dp[i]:**
-`dp[i]` = minimum coins to make amount i.
-
-**Step 7 — Transition:**
-`dp[i] = min over all coins c where c <= i: (dp[i - c] + 1)`
-
-**Step 8 — Base cases:**
-`dp[0] = 0` (zero coins needed to make amount 0)
-`dp[i] = infinity` initially (impossible until proven otherwise)
-
-**Step 9 — Computation order:**
-Left to right (amount 0 to target). `dp[i]` depends on `dp[i - c]` for `c > 0`, so smaller amounts are always computed first.
-
-**Step 10 — Space:**
-Already O(amount). Cannot reduce further because all previous values are needed.
-
-### Worked Derivation: Unique Paths (2D)
-
-**Problem:** An m×n grid. Move only right or down. Count paths from top-left to bottom-right.
-
-**Step 1 — What decision?**
-At each cell, I decide: move right or move down.
-
-**Step 2 — What choices?**
-Two: move right (to `[i][j+1]`) or move down (to `[i+1][j]`).
-
-**Step 3 — Smaller problem?**
-"How did I get to cell (i, j)?" Either from (i-1, j) by moving down, or from (i, j-1) by moving right.
-
-**Step 4 — What changes?**
-Both row index i and column index j.
-
-**Step 5 — What to remember?**
-The current position (i, j).
-
-**Step 6 — Define dp[i][j]:**
-`dp[i][j]` = number of distinct paths from (0,0) to (i,j).
-
-**Step 7 — Transition:**
-`dp[i][j] = dp[i-1][j] + dp[i][j-1]`
-(paths arriving from above + paths arriving from the left)
-
-**Step 8 — Base cases:**
-`dp[0][j] = 1` for all j (top row: only one way — always move right)
-`dp[i][0] = 1` for all i (left column: only one way — always move down)
-
-**Step 9 — Computation order:**
-Row by row, left to right. Each cell depends on the cell above and the cell to the left, both already computed.
-
-**Step 10 — Space optimization:**
-`dp[i][j]` only depends on the previous row and current row. Keep a single 1D array of size n and update in place: O(m*n) space → O(n) space.
-
----
-
-## [35–45 min] Concrete Code + Dry Run
-
-### Pattern 1 — 1D Array DP: House Robber
-
-**Input:** `nums = [2, 7, 9, 3, 1]`
-
-**Dry Run — DP Table:**
-
-| i | nums[i] | dp[i-2] + nums[i] | dp[i-1] | dp[i] |
-|---|---------|-------------------|---------|-------|
-| 0 | 2       | — (base case)     | —       | 2     |
-| 1 | 7       | — (base case)     | —       | 7     |
-| 2 | 9       | 2 + 9 = 11        | 7       | 11    |
-| 3 | 3       | 7 + 3 = 10        | 11      | 11    |
-| 4 | 1       | 11 + 1 = 12       | 11      | 12    |
-
-**Answer: dp[4] = 12** (rob houses 0, 2, 4 → 2 + 9 + 1 = 12)
-
-**Where each formula came from:**
-- `dp[2] = max(dp[1], dp[0] + nums[2]) = max(7, 2+9) = 11` — skipping house 2 only gives 7, robbing house 2 gives 11.
-- `dp[3] = max(dp[2], dp[1] + nums[3]) = max(11, 7+3) = 11` — robbing house 3 (7+3=10) is worse than skipping it (11).
-- `dp[4] = max(dp[3], dp[2] + nums[4]) = max(11, 11+1) = 12` — robbing house 4 adds 1 on top of the best from houses 0-2.
-
-**Java:**
+### Code
 ```java
+// House Robber
 public int rob(int[] nums) {
     int n = nums.length;
     if (n == 1) return nums[0];
-    
-    // Space-optimized: only keep prev2 and prev1
     int prev2 = nums[0];
     int prev1 = Math.max(nums[0], nums[1]);
-    
     for (int i = 2; i < n; i++) {
         int curr = Math.max(prev1, prev2 + nums[i]);
         prev2 = prev1;
@@ -283,352 +61,342 @@ public int rob(int[] nums) {
     }
     return prev1;
 }
-// Time: O(n), Space: O(1)
 ```
-
-**JavaScript / TypeScript:**
-```typescript
-function rob(nums: number[]): number {
-    const n = nums.length;
-    if (n === 1) return nums[0];
-    
-    let prev2 = nums[0];
-    let prev1 = Math.max(nums[0], nums[1]);
-    
-    for (let i = 2; i < n; i++) {
-        const curr = Math.max(prev1, prev2 + nums[i]);
-        prev2 = prev1;
-        prev1 = curr;
+```javascript
+function rob(nums) {
+    if (nums.length === 1) return nums[0];
+    let prev2 = nums[0], prev1 = Math.max(nums[0], nums[1]);
+    for (let i = 2; i < nums.length; i++) {
+        [prev2, prev1] = [prev1, Math.max(prev1, prev2 + nums[i])];
     }
     return prev1;
 }
-// Time: O(n), Space: O(1)
 ```
 
-**Why O(n) time?** One pass through the array. Each step is O(1). Total: O(n).
-**Why O(1) space?** `dp[i]` only needs `dp[i-1]` and `dp[i-2]`. Two variables replace the whole array.
+### Complexity
+Time: O(n) — one pass, O(1) work per index
+Space: O(1) — only two variables needed (dp[i] uses dp[i-1] and dp[i-2])
+
+### Common Trap + Experience Tip
+Trap: forgetting `dp[1] = max(nums[0], nums[1])`, not just `nums[1]`.
+Tip: if you can't space-optimize immediately, write the full array first, then shrink.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 70 | Climbing Stairs | Easy | Fibonacci in disguise | https://leetcode.com/problems/climbing-stairs/ |
+| 198 | House Robber | Medium | skip/take with gap constraint | https://leetcode.com/problems/house-robber/ |
+| 746 | Min Cost Climbing Stairs | Easy | dp[i] = cost[i] + min(dp[i-1], dp[i-2]) | https://leetcode.com/problems/min-cost-climbing-stairs/ |
+| 91 | Decode Ways | Medium | careful base cases, dp[i] += dp[i-2] only if two-digit valid | https://leetcode.com/problems/decode-ways/ |
+
+### One-Minute Revision
+```
+PATTERN:    1D Linear DP
+dp[i] MEANS: best answer considering elements 0..i
+TRANSITION: dp[i] = max/min/sum of dp[i-1], dp[i-2] + current
+BASE CASE:  dp[0] = nums[0], dp[1] = max/min(nums[0], nums[1])
+TIME/SPACE: O(n) / O(1) after optimization
+TRAP:       dp[1] base case must be max/min of first two, not just nums[1]
+```
 
 ---
 
-### Pattern 2 — 2D Grid DP: Unique Paths
+## Pattern 2: 2D Grid DP
 
-**Input:** `m = 3, n = 3` (3×3 grid)
+### What is it?
+Fill a 2D table where each cell's answer depends on neighbors (usually from above and left). Used for grid movement problems and problems with two independent varying parameters.
 
-**Dry Run — DP Table:**
-
-Starting state: fill base cases first (all 1s in row 0 and column 0).
-
+### Visual
 ```
-    j=0  j=1  j=2
-i=0 [ 1,   1,   1 ]   <- base case: top row always = 1
-i=1 [ 1,   ?,   ? ]
-i=2 [ 1,   ?,   ? ]
+Unique Paths 3×3:
+[ 1, 1, 1 ]   ← top row base case (only move right)
+[ 1, 2, 3 ]   ← dp[1][1] = dp[0][1]+dp[1][0] = 2
+[ 1, 3, 6 ]   ← dp[2][2] = 3+3 = 6  ✓
 ```
 
-Fill cell (1,1): `dp[1][1] = dp[0][1] + dp[1][0] = 1 + 1 = 2`
-Fill cell (1,2): `dp[1][2] = dp[0][2] + dp[1][1] = 1 + 2 = 3`
-Fill cell (2,1): `dp[2][1] = dp[1][1] + dp[2][0] = 2 + 1 = 3`
-Fill cell (2,2): `dp[2][2] = dp[1][2] + dp[2][1] = 3 + 3 = 6`
-
+### Derivation
 ```
-    j=0  j=1  j=2
-i=0 [ 1,   1,   1 ]
-i=1 [ 1,   2,   3 ]
-i=2 [ 1,   3,   6 ]
+Decision: to reach (i,j), which direction did I come from?
+Options:  from above (i-1,j) | from left (i,j-1)
+dp[i][j] means: "number of paths (or min cost) to reach cell (i,j)"
+Transition: dp[i][j] = dp[i-1][j] + dp[i][j-1]           (Unique Paths)
+            dp[i][j] = grid[i][j] + min(dp[i-1][j], dp[i][j-1])  (Min Path Sum)
+Base case:  dp[0][j] = 1, dp[i][0] = 1  (top row and left col = 1 path each)
 ```
 
-**Answer: dp[2][2] = 6** (there are 6 unique paths from top-left to bottom-right in a 3×3 grid)
+### When to use / When NOT to use
+- Use when moving through a grid with directional constraints (right/down only).
+- Use when state has two dimensions that both change as you make decisions.
+- NOT for grids with unrestricted movement (use BFS/DFS instead).
 
-**Where the formula came from:** To reach (i,j), I must have come from either directly above (i-1,j) or directly to the left (i,j-1). The number of ways to reach (i,j) is the sum of ways to reach each of those two cells.
+### How to recognize?
+- Grid + "how many paths" or "minimum cost path" from top-left to bottom-right.
+- Movement restricted to right/down (no backtracking).
 
-**Java:**
+### Simple Example (Min Path Sum 3×3)
+```
+grid:        dp:
+[1, 3, 1]   [1, 4, 5]
+[1, 5, 1]   [2, 7, 6]
+[4, 2, 1]   [6, 8, 7]  ← answer = 7
+```
+
+### Code
 ```java
+// Unique Paths — space optimized to O(n)
 public int uniquePaths(int m, int n) {
-    // Space-optimized: one row at a time
     int[] dp = new int[n];
-    Arrays.fill(dp, 1); // base case: top row all 1s
-    
+    Arrays.fill(dp, 1);
     for (int i = 1; i < m; i++) {
         for (int j = 1; j < n; j++) {
-            dp[j] = dp[j] + dp[j - 1];
-            // dp[j] (before update) = value from row above = dp[i-1][j]
-            // dp[j-1] (already updated) = value from same row, left = dp[i][j-1]
+            dp[j] += dp[j - 1]; // dp[j] = above, dp[j-1] = left
         }
     }
     return dp[n - 1];
 }
-// Time: O(m*n), Space: O(n)
 ```
-
-**JavaScript / TypeScript:**
-```typescript
-function uniquePaths(m: number, n: number): number {
-    const dp: number[] = new Array(n).fill(1); // top row = all 1s
-    
-    for (let i = 1; i < m; i++) {
-        for (let j = 1; j < n; j++) {
-            dp[j] = dp[j] + dp[j - 1];
-        }
-    }
+```javascript
+function uniquePaths(m, n) {
+    const dp = new Array(n).fill(1);
+    for (let i = 1; i < m; i++)
+        for (let j = 1; j < n; j++)
+            dp[j] += dp[j - 1];
     return dp[n - 1];
 }
-// Time: O(m*n), Space: O(n)
 ```
 
-**Why O(m*n) time?** Every cell is visited exactly once. m rows × n columns = m*n operations.
-**Why O(n) space after optimization?** We only need the current row and the previous row. We process cells left-to-right in each row. `dp[j]` before update holds `dp[i-1][j]` (above), and `dp[j-1]` after update holds `dp[i][j-1]` (left). One array suffices.
+### Complexity
+Time: O(m×n) — every cell visited once
+Space: O(n) — rolling 1D array replaces the 2D table (row only depends on row above)
 
----
+### Common Trap + Experience Tip
+Trap: for obstacles (LC 63), set `dp[0][j] = 0` as soon as you hit a blocked cell in the base case — all cells to the right of a top-row obstacle are unreachable.
+Tip: write the 2D table solution first, then collapse to 1D array row-by-row.
 
-### The Call Tree: Why Naive Recursion Fails
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 62 | Unique Paths | Medium | Classic 2D DP base pattern | https://leetcode.com/problems/unique-paths/ |
+| 64 | Minimum Path Sum | Medium | Same structure, add grid[i][j] cost | https://leetcode.com/problems/minimum-path-sum/ |
+| 63 | Unique Paths II | Medium | Blocked cells reset dp to 0 | https://leetcode.com/problems/unique-paths-ii/ |
 
-Before DP, consider naive recursion for `fib(5)`:
-
+### One-Minute Revision
 ```
-                    fib(5)
-                  /        \
-            fib(4)          fib(3)          <- fib(3) called twice
-           /      \        /      \
-        fib(3)  fib(2)  fib(2)  fib(1)     <- fib(2) called 3 times
-        /    \
-    fib(2)  fib(1)
-```
-
-`fib(3)` is called 2 times. `fib(2)` is called 3 times. For `fib(50)`, this is 2^50 calls.
-
-With memoization: once `fib(3)` is computed, every future call returns in O(1). Total calls: exactly 49 unique subproblems. O(n) time.
-
-**This visual is your justification for DP every time you use it in an interview.**
-
----
-
-## [45–55 min] Pattern Recognition
-
-### How to Recognize DP in a New Problem
-
-When you see a problem, look for these signals:
-
-| Signal in Problem | DP Likely Because |
-|---|---|
-| "Minimum cost" / "Maximum profit" | Optimization over substructure |
-| "Count the number of ways" | Overlapping subproblems in counting paths |
-| "Can you reach / is it possible?" | Decision problem with substructure |
-| "Longest / shortest subsequence" | Subsequence selection with optimal substructure |
-| Exponential brute force exists | Memoization can collapse repeated subtrees |
-| "Choices at each step affect future options" | State captures consequence of choices |
-
-### Distinguishing DP vs Greedy vs Recursion vs Backtracking
-
-This is a critical distinction. Getting it wrong wastes interview time.
-
-**Pure Recursion:**
-- Breaks into subproblems, no overlap, no memoization needed.
-- Example: Merge sort. Left half and right half never share sub-calls.
-- No "remembering" needed because you never revisit the same subproblem.
-
-**Backtracking:**
-- Explores all possibilities via recursion, but prunes branches early.
-- Used when you need to enumerate all valid solutions, not find the optimal one.
-- Example: Permutations, N-Queens, Sudoku solver.
-- Key sign: you are building a solution step by step and undoing choices ("backtracking") when a constraint is violated.
-- DP does NOT backtrack. DP commits to a state and builds forward.
-
-**Greedy:**
-- At each step, make the locally optimal choice and never reconsider it.
-- Works when local optimum guarantees global optimum (provable by exchange argument).
-- Example: Activity selection (always pick the job that finishes earliest), fractional knapsack.
-- Test: "If I always make the best local choice, am I guaranteed a globally optimal result?" If yes → greedy. If you need to look back → DP.
-
-**Dynamic Programming:**
-- Overlapping subproblems + optimal substructure.
-- You "try all choices" at each step but remember past results to avoid recomputation.
-- Example: 0/1 Knapsack (greedy fails — you can't just take the best value-to-weight ratio item because weights must fit exactly).
-
-```
-Brute Force Recursion
-    |
-    +---> No overlap between subproblems? --> Divide & Conquer (e.g., merge sort)
-    |
-    +---> Subproblems overlap?
-              |
-              +---> Need to enumerate ALL solutions? --> Backtracking + Pruning
-              |
-              +---> Need optimal/count solution?
-                        |
-                        +---> Local greedy choice provably optimal? --> Greedy
-                        |
-                        +---> Need to consider all choices, remember past? --> DP
-```
-
-### The Common DP Families
-
-Know which family a problem belongs to. This guides your state definition immediately.
-
-| Family | State Shape | Key Signal | Classic Examples |
-|---|---|---|---|
-| **1D Linear** | `dp[i]` | One sequence, left-to-right decisions | Climbing Stairs, House Robber, Decode Ways |
-| **2D Grid** | `dp[i][j]` | Grid movement, or two varying parameters | Unique Paths, Min Path Sum, Maximal Square |
-| **Two-Sequence** | `dp[i][j]` | Two strings/arrays being compared | LCS, Edit Distance, Wildcard Matching |
-| **Knapsack** | `dp[i][w]` | Items with weights, capacity constraint | 0/1 Knapsack, Subset Sum, Coin Change |
-| **Interval** | `dp[i][j]` | Splitting or merging a contiguous range | Matrix Chain, Burst Balloons, Palindrome Partition |
-| **State Machine** | Multiple 1D arrays | Distinct "modes" with transitions | Stock Buy/Sell series, Cooldown, Fee |
-| **Subsequence** | `dp[i]` or `dp[i][j]` | Longest/shortest non-contiguous selection | LIS, LCS, LPS |
-| **Tree** | Per-node value | Tree structure, bottom-up aggregation | House Robber III, Max Path Sum, Tree Diameter |
-| **Bitmask** | `dp[mask]` | Small n (≤20), track visited subset | TSP, Assignment, Partition into K subsets |
-
-### Complexity Intuition
-
-- **1D DP:** O(n) states × O(1) transition each = **O(n) time, O(n) space** (often O(1) space after optimization)
-- **2D DP:** O(m×n) states × O(1) transition each = **O(m×n) time, O(m×n) space** (often O(n) after optimization)
-- **Knapsack:** O(n × W) states = **O(n×W) time, O(W) space** (pseudo-polynomial — depends on VALUE of W)
-- **Interval DP:** O(n²) states × O(n) split points = **O(n³) time, O(n²) space**
-- **Bitmask DP:** O(2^n × n) states = **O(2^n × n) time** (only feasible for n ≤ 20–25)
-
----
-
-## [55–60 min] Final Mental Checklist
-
-Before writing any DP code in an interview, run through this checklist mentally:
-
-```
-Step 1: Is this DP?
-  [ ] Does the problem ask for min/max/count/feasibility?
-  [ ] Can I express the answer in terms of answers to smaller versions?
-  [ ] Do subproblems repeat (call tree has repeated branches)?
-  --> If yes to all three: DP.
-
-Step 2: Define the state
-  [ ] What is changing as I make decisions? (These are your state dimensions)
-  [ ] Can I say "dp[i] = ..." in one clean sentence?
-  [ ] Is the state space tractable? (n ≤ 1000 → O(n²) OK; n ≤ 20 → bitmask OK)
-
-Step 3: Derive the transition
-  [ ] What decision do I make at each state?
-  [ ] What choices exist?
-  [ ] After each choice, what is the remaining subproblem?
-  --> dp[state] = combine(choice1, choice2, ...)
-
-Step 4: Base cases
-  [ ] What is the smallest subproblem I know the answer to without recursion?
-  [ ] Have I handled edge cases (empty array, amount = 0, single element)?
-
-Step 5: Fill order
-  [ ] Which direction ensures all dependencies are filled first?
-  [ ] (Left-to-right for 1D; row-by-row for 2D; increasing length for interval DP)
-
-Step 6: Space optimization (mention as a follow-up)
-  [ ] Does dp[i] only depend on dp[i-1] and dp[i-2]? → O(1) space
-  [ ] Does dp[i][j] only depend on dp[i-1][...]? → rolling 1D array, O(n) space
-
-Step 7: Verify with a small example
-  [ ] Manually trace the DP table on a tiny input before coding
+PATTERN:    2D Grid DP
+dp[i][j] MEANS: paths/cost to reach cell (i,j)
+TRANSITION: dp[i][j] = dp[i-1][j] + dp[i][j-1]  (or + grid cost)
+BASE CASE:  top row = 1, left col = 1 (for paths); row 0 & col 0 from grid (for cost)
+TIME/SPACE: O(m×n) / O(n) with rolling array
+TRAP:       obstacle in base case row/col zeroes out everything beyond it
 ```
 
 ---
 
-## Active Recall Questions
+## Pattern 3: 0/1 Knapsack
 
-Answer these from memory before checking back:
+### What is it?
+Given a set of items, each used at most once, decide whether to include each item to hit a target (sum, weight, etc.). Key property: iterating the capacity dimension **right-to-left** ensures each item is used at most once.
 
-1. What two properties make a problem solvable by DP? Define each in your own words.
-2. Draw the recursive call tree for `fib(5)` and circle the repeated subproblems.
-3. What is the difference between memoization and tabulation? When would you prefer each?
-4. Walk through the 10-step derivation process for the Coin Change problem from scratch (no peeking).
-5. In a 2D knapsack `dp[i][w]`, what does `dp[i][w]` represent? What is the recurrence?
-6. Why does the 0/1 knapsack space optimization iterate from RIGHT to LEFT, while unbounded knapsack iterates LEFT to RIGHT?
-7. What is the difference between DP and backtracking? Give one problem that is DP, and one that is backtracking.
-8. How would you recognize that a problem belongs to the "interval DP" family? Give two examples.
-9. Explain in one sentence why the Burst Balloons problem requires thinking about the LAST balloon burst, not the first.
-10. For the LIS problem, what is the O(n²) approach and what is the O(n log n) approach? When would each matter?
-
----
-
-## Recommended Practice Direction
-
-Work through problems in this order (each builds on the last):
-
-**Week 1 — 1D DP foundations:**
-- Climbing Stairs (LC 70) — simplest possible DP
-- House Robber (LC 198) — decisions with constraints
-- House Robber II (LC 213) — circular variant (two-pass trick)
-- Coin Change (LC 322) — unbounded, minimize
-- Coin Change II (LC 518) — combinations vs permutations
-- Decode Ways (LC 91) — careful base case handling
-
-**Week 2 — 2D and two-sequence DP:**
-- Unique Paths (LC 62) — 2D grid, no obstacles
-- Unique Paths II (LC 63) — with obstacles
-- Minimum Path Sum (LC 64) — grid with costs
-- Longest Common Subsequence (LC 1143) — canonical two-sequence DP
-- Edit Distance (LC 72) — harder two-sequence DP
-- Maximal Square (LC 221) — 2D DP with non-obvious recurrence
-
-**Week 3 — Knapsack and subsequences:**
-- Partition Equal Subset Sum (LC 416) — subset sum as knapsack
-- Target Sum (LC 494) — transform to subset sum
-- Longest Increasing Subsequence (LC 300) — both O(n²) and O(n log n)
-- Russian Doll Envelopes (LC 354) — 2D LIS after clever sort
-
-**Week 4 — Advanced patterns:**
-- Buy and Sell Stock with Cooldown (LC 309) — state machine
-- Buy and Sell Stock with at most K transactions (LC 188) — general K
-- Burst Balloons (LC 312) — interval DP, think LAST operation
-- Palindrome Partitioning II (LC 132) — 1D DP + palindrome precompute
-- Regular Expression Matching (LC 10) — string DP with tricky transitions
-
----
-
-## 2-Minute Cheat Sheet
-
+### Visual
 ```
-DP = Overlapping Subproblems + Optimal Substructure
-
-THE DERIVATION PROCESS:
-  Decision → Choices → Smaller problem → State → Transition → Base → Order → Space
-
-1D:    dp[i] = f(dp[i-1], dp[i-2])     → O(n) time, O(1) space possible
-2D:    dp[i][j] = f(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])  → O(mn) time, O(n) space
-Knapsack: dp[i][w] = max(skip, take if fits)  → iterate w RIGHT-TO-LEFT for 0/1
-LCS:   match → dp[i-1][j-1]+1; else → max(dp[i-1][j], dp[i][j-1])
-LIS:   dp[i] = max(dp[j]+1 for j<i where arr[j]<arr[i])
-Edit:  match → dp[i-1][j-1]; else → 1 + min(replace, delete, insert)
-Stock: states = {hold, sold, rest}; transitions follow state diagram
-
-DP vs Greedy:  Greedy = local choice always globally optimal. DP = must try all choices.
-DP vs BT:     Backtracking = enumerate all; DP = remember best seen so far.
-DP vs D&C:    Divide & Conquer = no subproblem overlap; DP = subproblems overlap.
-
-COMPLEXITY:
-  1D      → O(n) time
-  2D grid → O(m*n) time
-  Knapsack → O(n*W) pseudo-polynomial
-  Interval → O(n^3) time (3 nested loops)
-  Bitmask  → O(2^n * n) time (n ≤ 20 only)
+Partition Equal Subset Sum — nums=[1,5,11,5], target=11
+      cap: 0  1  2  3  4  5  6  7  8  9 10 11
+after 1:  [T, T, F, F, F, F, F, F, F, F, F, F]
+after 5:  [T, T, F, F, F, T, T, F, F, F, F, F]
+after 11: [T, T, F, F, F, T, T, F, F, F, F, T] ✓
+after 5:  [T, T, F, F, F, T, T, F, F, F, T, T] ✓
 ```
 
+### Derivation
+```
+Decision: for each item, include it or skip it?
+Options:  SKIP item i | TAKE item i (only if nums[i] <= current capacity)
+dp[j] means: "can we form sum exactly j using items seen so far?"
+Transition: dp[j] = dp[j] || dp[j - nums[i]]   (iterate j from target down to nums[i])
+Base case:  dp[0] = true (sum 0 always achievable)
+```
+
+### When to use / When NOT to use
+- Use when each item can be chosen at most once and you need exact target / feasibility.
+- RIGHT-TO-LEFT capacity loop = 0/1 (each item once). LEFT-TO-RIGHT = unbounded.
+- NOT when items are reusable (use unbounded knapsack — Pattern 4).
+
+### How to recognize?
+- "Partition into two equal subsets", "can we form target sum from a subset?"
+- Finite set of items, each used 0 or 1 times.
+
+### Simple Example (Target Sum → subset difference)
+nums=[1,1,1,1,1], target=3 → count subsets with sum=4 (out of total sum 5)
+dp after processing all 1s — count grows like Pascal's triangle.
+
+### Code
+```java
+// Partition Equal Subset Sum
+public boolean canPartition(int[] nums) {
+    int sum = 0;
+    for (int n : nums) sum += n;
+    if (sum % 2 != 0) return false;
+    int target = sum / 2;
+    boolean[] dp = new boolean[target + 1];
+    dp[0] = true;
+    for (int num : nums) {
+        for (int j = target; j >= num; j--) { // RIGHT-TO-LEFT = 0/1
+            dp[j] = dp[j] || dp[j - num];
+        }
+    }
+    return dp[target];
+}
+```
+```javascript
+function canPartition(nums) {
+    const sum = nums.reduce((a, b) => a + b, 0);
+    if (sum % 2 !== 0) return false;
+    const target = sum / 2;
+    const dp = new Array(target + 1).fill(false);
+    dp[0] = true;
+    for (const num of nums) {
+        for (let j = target; j >= num; j--) { // RIGHT-TO-LEFT
+            dp[j] = dp[j] || dp[j - num];
+        }
+    }
+    return dp[target];
+}
+```
+
+### Complexity
+Time: O(n × target) — n items × target capacity iterations
+Space: O(target) — 1D rolling array (collapsed from O(n × target) 2D table)
+
+### Common Trap + Experience Tip
+Trap: iterating capacity left-to-right in 0/1 knapsack lets you pick the same item multiple times — always go right-to-left.
+Tip: if you forget direction, ask "can I use this item again?" No → right-to-left.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 416 | Partition Equal Subset Sum | Medium | Reduce to subset sum, target = sum/2 | https://leetcode.com/problems/partition-equal-subset-sum/ |
+| 494 | Target Sum | Medium | Count subsets; transform to (sum+target)/2 | https://leetcode.com/problems/target-sum/ |
+| 474 | Ones and Zeroes | Medium | 2D knapsack with two capacity dims | https://leetcode.com/problems/ones-and-zeroes/ |
+
+### One-Minute Revision
+```
+PATTERN:    0/1 Knapsack
+dp[j] MEANS: can we form sum j (or max value with capacity j)?
+TRANSITION: dp[j] = dp[j] || dp[j - nums[i]]
+BASE CASE:  dp[0] = true (or 0 for max-value variants)
+TIME/SPACE: O(n × target) / O(target)
+TRAP:       capacity loop must go RIGHT-TO-LEFT to prevent reusing items
+```
+
 ---
 
-## Advanced Awareness
+## Pattern 4: Unbounded Knapsack (Coin Change)
 
-These patterns appear rarely in FAANG interviews but demonstrate mastery. Know they exist; do not memorize the full implementations unless targeting competitive programming.
+### What is it?
+Like 0/1 knapsack, but items can be reused unlimited times. Iterating capacity **left-to-right** naturally allows reuse because updated values are immediately available for the same item.
 
-**Digit DP:** Count numbers in [1, N] with a digit property (digit sum = K, no repeated digits, etc.). Build the number digit by digit, tracking a `tight` flag (are we still equal to N's prefix?) and a property-specific state. Complexity: O(digits × states × 10).
+### Visual
+```
+Coin Change — coins=[1,3,4], amount=6
+dp: [0, 1, 2, 1, 1, 2, 2]
+     0  1  2  3  4  5  6
+dp[3]=1 (one 3-coin), dp[6]=2 (3+3 or 4+1+1 → min=2)
+```
 
-**Tree DP (Rerooting):** Compute an answer for every node as if it were the root. Compute for one root (O(n)), then "re-root" to each neighbor in O(1) by adjusting the DP values. Total: O(n). Used in problems like "minimum distance from each node to all others."
+### Derivation
+```
+Decision: what coin do I use last to make amount i?
+Options:  each coin c where c <= i
+dp[i] means: "minimum coins to make amount i"
+Transition: dp[i] = min over all c: (dp[i - c] + 1)
+Base case:  dp[0] = 0, dp[1..amount] = Infinity initially
+```
 
-**Bitmask DP:** State is a bitmask representing which subset of n items (n ≤ 20) has been selected/visited. Canonical example: TSP. `dp[mask][i]` = min cost to visit exactly the cities in `mask`, ending at city i. Transition: extend to each unvisited city. Complexity: O(2^n × n²).
+### When to use / When NOT to use
+- Use when items are reusable and you want min/max/count to reach a target.
+- LEFT-TO-RIGHT capacity loop = unbounded. Contrast with 0/1 (right-to-left).
+- NOT when each item can only be used once (use 0/1 knapsack).
 
-**DP Optimization Techniques** (for competitive programming):
-- **Monotonic Queue Optimization:** When dp[i] = min(dp[j]) for j in a sliding window. Reduces O(nK) → O(n).
-- **Convex Hull Trick (CHT):** When dp[i] = min(dp[j] + b[j] × a[i]). Each j defines a line; query is the minimum at x = a[i]. O(n) amortized with sorted slopes.
-- **Divide & Conquer DP:** When the optimal split point k[i][j] is monotonically non-decreasing. Reduces O(n²K) → O(nK log n).
-- **Knuth's Optimization:** Interval DP where optimal split point has monotone property. Reduces O(n³) → O(n²).
-- **Aliens Trick (WQS Binary Search):** "Use exactly K groups" constraint. Binary search on a per-group penalty λ to force exactly K groups. Reduces one dimension of state.
+### How to recognize?
+- "Unlimited coins/items", "fewest coins to make change", "number of combinations"
+- "Integer break", "decode" problems where you split a number repeatedly.
 
-These optimizations matter when naive DP is too slow (usually O(n³) or O(n²K)). In FAANG interviews, they appear very rarely but knowing they exist shows depth.
+### Simple Example (Coin Change II — count ways, coins=[1,2,5], amount=5)
+| amount | ways |
+|--------|------|
+| 0 | 1 |
+| 1 | 1 |
+| 2 | 2 |
+| 3 | 2 |
+| 4 | 3 |
+| 5 | 4 |
 
-**Game Theory DP:** Two-player zero-sum games with perfect information. `dp[i][j]` = maximum score difference the CURRENT player achieves on game state [i..j]. The sign flip (minus dp[next_state]) encodes the opponent playing optimally. Nim games: XOR solution, no DP needed.
+### Code
+```java
+// Coin Change — minimum coins
+public int coinChange(int[] coins, int amount) {
+    int[] dp = new int[amount + 1];
+    Arrays.fill(dp, amount + 1); // sentinel for "impossible"
+    dp[0] = 0;
+    for (int i = 1; i <= amount; i++) {
+        for (int coin : coins) {
+            if (coin <= i) {
+                dp[i] = Math.min(dp[i], dp[i - coin] + 1);
+            }
+        }
+    }
+    return dp[amount] > amount ? -1 : dp[amount];
+}
+```
+```javascript
+function coinChange(coins, amount) {
+    const dp = new Array(amount + 1).fill(amount + 1);
+    dp[0] = 0;
+    for (let i = 1; i <= amount; i++) {
+        for (const coin of coins) {
+            if (coin <= i) dp[i] = Math.min(dp[i], dp[i - coin] + 1);
+        }
+    }
+    return dp[amount] > amount ? -1 : dp[amount];
+}
+```
+
+### Complexity
+Time: O(amount × coins.length) — fill each amount slot by trying every coin
+Space: O(amount) — only the 1D dp array needed
+
+### Common Trap + Experience Tip
+Trap: initializing dp with 0 instead of Infinity means impossible states silently return 0 — always use a sentinel like `amount + 1`.
+Tip: Coin Change (min coins) vs Coin Change II (count ways) differ only in the transition (`min` vs `+=`). Know both.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 322 | Coin Change | Medium | Min coins; fill with sentinel infinity | https://leetcode.com/problems/coin-change/ |
+| 518 | Coin Change II | Medium | Count combinations; dp[i] += dp[i-coin] | https://leetcode.com/problems/coin-change-ii/ |
+| 343 | Integer Break | Medium | dp[i] = max split into 2+ parts | https://leetcode.com/problems/integer-break/ |
+
+### One-Minute Revision
+```
+PATTERN:    Unbounded Knapsack
+dp[i] MEANS: min coins (or ways) to form amount i
+TRANSITION: dp[i] = min(dp[i - coin] + 1)  for each coin
+BASE CASE:  dp[0] = 0, rest = Infinity (or 0 for count problems)
+TIME/SPACE: O(amount × coins) / O(amount)
+TRAP:       initialize dp with sentinel (amount+1), not 0 — else impossible→0
+```
 
 ---
 
-*Next: [10-TREES.md](10-TREES.md) — Hierarchical thinking, from traversals to LCA.*
+## DP Quick Reference
+
+| Pattern | State | Transition | Capacity Loop | Time | Space |
+|---------|-------|------------|---------------|------|-------|
+| **1D Linear** | `dp[i]` | `max(dp[i-1], dp[i-2] + val)` | left → right | O(n) | O(1) |
+| **2D Grid** | `dp[i][j]` | `dp[i-1][j] + dp[i][j-1]` | row by row | O(m×n) | O(n) |
+| **0/1 Knapsack** | `dp[j]` | `dp[j] \|\| dp[j-num]` | **right → left** | O(n×W) | O(W) |
+| **Unbounded Knapsack** | `dp[i]` | `min(dp[i-coin]+1)` | **left → right** | O(W×coins) | O(W) |
+
+**The one rule to remember:**
+- 0/1 (each item once) → iterate capacity **right-to-left**
+- Unbounded (items reusable) → iterate capacity **left-to-right**

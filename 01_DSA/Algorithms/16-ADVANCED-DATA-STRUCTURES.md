@@ -1,321 +1,85 @@
-# Advanced Data Structures — 1-Hour Google Interview Learning Module
+# Advanced Data Structures — Google Interview Prep
 
-> *"Standard arrays and hash maps solve 80% of problems. These structures handle the remaining 20% — the hard problems that separate good from great."*
-
-**Estimated time:** 60 minutes  
-**Difficulty:** Advanced  
-**Interview frequency:** Medium–Low (but high signal when needed)
+> Read fast. Understand deeply. Go practice on LeetCode immediately.
 
 ---
 
-## Structures Covered
+## Trie (Prefix Tree)
 
-| Structure | Core Problem It Solves |
-|---|---|
-| Trie (Prefix Tree) | Fast prefix/word search over strings |
-| XOR Trie | Maximum XOR pair in O(n) |
-| Segment Tree | Range queries + updates on arrays |
-| Segment Tree + Lazy | Range updates in O(log n) |
-| Fenwick Tree (BIT) | Prefix sums with updates, shorter code |
-| Sparse Table | O(1) range min/max, static arrays only |
-| DSU Advanced | Dynamic connectivity, weighted unions, rollback |
-| Balanced BST / Ordered Set | Sorted dynamic collection, floor/ceiling queries |
+### What is it?
+A tree where each path from root to a node spells out a prefix. It exists because hash sets can only tell you if an EXACT word exists — a Trie can tell you if ANY word starts with "app" in O(L) time, where L is the prefix length.
 
----
-
-## [0–10 min] Big Picture — Why Do These Exist?
-
-### The Problem With Simple Structures
-
-Arrays are great — O(1) access. But they fail when you ask:
-- "What's the sum of elements from index 3 to 97?" — You'd need O(n) time each query.
-- "Which words in this dictionary start with 'pre'?" — Scanning all words is slow.
-- "What's the max XOR of any two numbers in this array?" — Brute force is O(n²).
-
-Advanced data structures pre-process your data so repeated queries become fast. Think of them as "pre-computed indexes" on top of your raw data.
-
-### One-Line Analogy for Each
-
-**Trie** — A dictionary organized letter-by-letter. Finding "apple" means walking a→p→p→l→e. All words sharing a prefix share a path.
-
-**XOR Trie** — Same idea, but the "letters" are bits (0 or 1) of a number. You walk the bits to find the best XOR partner.
-
-**Segment Tree** — A tournament bracket. Each match-up stores the winner (min, max, sum) of its range. Any range query is answered by consulting O(log n) brackets.
-
-**Fenwick Tree (BIT)** — A clever shortcut for prefix sums. Instead of summing everything from index 1 to i, it stores partial sums in a way that lets you leap across the array using bit tricks.
-
-**Sparse Table** — Flash cards for range queries. Precompute answers for every range of length 1, 2, 4, 8… Then answer any query by looking up two pre-computed cards. Works in O(1) for min/max.
-
-**DSU Advanced** — A weighted version of Union-Find. Instead of just "are A and B connected?", it also tracks "what is the relationship between A and B?" along the path.
-
-**Balanced BST / Ordered Set** — A sorted list that stays balanced. Insert, delete, and look up the nearest value, all in O(log n).
-
----
-
-## [10–20 min] Mental Model — Core Ideas + When to Use Each
-
-### Trie vs Hash Set
-
+### Visual
 ```
-                  root
-                 /    \
-               'a'    'b'
-               |       |
-              'p'     'a'
-               |       |
-              'p'     't'
-               |       |
-              'l'      * (end: "bat")
-               |
-              'e'
-               * (end: "apple")
+Insert: "apple", "app", "bat"
+
+          root
+         /    \
+       'a'    'b'
+        |      |
+       'p'    'a'
+        |      |
+       'p'    't'  <-- isEnd=true ("bat")
+        |
+       'l'  <-- isEnd=true ("app")
+        |
+       'e'  <-- isEnd=true ("apple")
 ```
 
-Use **Trie** when:
-- You need prefix matching ("starts with"), not just exact match
-- You're building autocomplete, spell-check, word search
-- You have many strings sharing prefixes (Trie is more space-efficient than storing each separately)
-
-Use **Hash Set** instead when:
-- You only need exact membership lookup
-- Prefix queries are not required
-
-### Segment Tree vs Prefix Sum vs Fenwick Tree
-
-```
-                  [0-7] sum
-                 /          \
-           [0-3] sum       [4-7] sum
-           /     \          /     \
-       [0-1]   [2-3]    [4-5]   [6-7]
-       /   \   /   \    /   \   /   \
-      a0  a1  a2  a3  a4  a5  a6  a7
-```
-
-| Situation | Best Choice |
-|---|---|
-| Static array, only prefix sums | Prefix sum array |
-| Static array, range min/max, no updates | Sparse Table (O(1) query!) |
-| Point updates + range queries | Fenwick Tree (simpler code) |
-| Range updates + range queries | Segment Tree with Lazy Propagation |
-
-**Key insight:** Fenwick trees are NOT more powerful than Segment Trees — they are simpler and faster for the prefix-sum use case only. If you need arbitrary range updates, you need a Segment Tree.
-
-### DSU Advanced vs Regular DSU
-
-Regular DSU answers: "Are nodes A and B in the same component?"  
-Weighted DSU answers: "What is the ratio/difference between A and B?" (e.g., a/b = 2.0, b/c = 3.0, so a/c = 6.0)
-
-### Balanced BST / Ordered Set vs Sorted Array
-
-| Operation | Sorted Array | TreeSet/TreeMap |
+### Key Operations
+| Operation | Time Complexity | Brief Description |
 |---|---|---|
-| Insert | O(n) — shift elements | O(log n) |
-| Delete | O(n) | O(log n) |
-| Floor/Ceiling | O(log n) via binary search | O(log n) |
-| Iteration in order | O(n) | O(n) |
-
-Use Ordered Set when: data is dynamic (many inserts/deletes) AND you need floor/ceiling queries.
-
----
-
-## [20–35 min] Core Patterns — Operations, Complexity, Interview Applications
-
-### 1. Trie
-
-**Key operations:**
-
-| Operation | Time | What It Does |
-|---|---|---|
-| insert(word) | O(L) | Walk down, create nodes, mark end |
-| search(word) | O(L) | Walk down, check is_end at final node |
+| insert(word) | O(L) | Walk down, create nodes as needed, mark isEnd |
+| search(word) | O(L) | Walk down, check isEnd at final node |
 | startsWith(prefix) | O(L) | Walk down, just confirm path exists |
-| delete(word) | O(L) | Walk down, unmark end, prune empty nodes |
+| delete(word) | O(L) | Walk down, unmark isEnd, prune empty nodes |
 
-L = length of word/prefix.
+L = length of word or prefix.
 
-**Common interview applications:**
+### How does it work?
+1. Each node has up to 26 children (one per letter a–z).
+2. To **insert** "cat": start at root, go to child 'c', then child 'a', then child 't'. Mark the 't' node as isEnd=true.
+3. To **search** "cat": same walk. If any step has no child, return false. At the end, return isEnd.
+4. To **startsWith** "ca": same walk. Do NOT check isEnd — just confirm the path exists.
+5. All words sharing a prefix share the same nodes in the tree.
 
-- **Word Search II (LC 212):** Build Trie from word list. DFS on grid, simultaneously walk Trie. If Trie path doesn't exist, prune. O(m*n * 4^L) reduced significantly by pruning.
-- **Add and Search Words (LC 211):** On '.', try all 26 children (DFS branching).
-- **Longest Word in Dictionary (LC 720):** BFS/DFS through Trie; a word is valid only if every prefix is also a word (every node on the path has is_end=true).
-- **Map Sum Pairs (LC 677):** Store sum values in nodes; propagate sums upward.
+### Why does it work?
+The key idea is that the structure of the tree encodes all prefixes automatically — inserting "apple" creates the path for "app", "ap", "a" as a side effect. Every prefix lookup is just a path traversal.
 
-**Recognition signal:** The word "prefix" + "dictionary" + "search" in the same problem = Trie.
+### When to use?
+- Problem says "find all words with prefix X" or "autocomplete".
+- Multiple words share common prefixes and you need to search all of them.
+- "Word search in a grid" with a dictionary (combine Trie + DFS backtracking to prune early).
+- Problem involves checking if any word in a list starts with a given prefix repeatedly.
 
----
+### When NOT to use?
+- You only need exact word lookup — a HashSet is simpler and faster.
+- The strings are numbers or non-letter characters (use a HashMap for children instead, or reconsider).
 
-### 2. XOR Trie
+### How to recognize in a new problem?
+Ask: "Does the problem involve searching multiple words or checking prefixes?" If yes, think Trie.
 
-**Core pattern:** Build a Trie from the binary representation of numbers (32 bits, MSB first). To find the number in the Trie that maximizes XOR with query q, at each bit greedily pick the OPPOSITE bit if available.
+Concrete signals:
+- "Implement autocomplete / search suggestions"
+- "Find all words from a dictionary that appear in a grid"
+- "Design a structure that supports insert and prefix search"
 
+### Simple Example
+Problem: Insert "apple" and "app". Does "app" exist? Does "ap" exist?
+
+Trace:
 ```
-Numbers: [3, 10, 5, 25, 2, 8]
-To maximize XOR with 25 (11001):
+insert("apple"): root->'a'->'p'->'p'->'l'->'e'(isEnd)
+insert("app"):   root->'a'->'p'->'p'(isEnd)   [shares path with "apple"]
 
-At each bit of 25, try to go the opposite direction in the Trie.
-Bit = 1 → try 0 branch
-Bit = 1 → try 0 branch
-Bit = 0 → try 1 branch
-...
-```
-
-**Complexity:** O(32 * n) = O(n) for n numbers.
-
-**Interview applications:**
-- Maximum XOR of Two Numbers in Array (LC 421)
-- Maximum XOR With Constraints: Sort by constraint, insert eligible numbers as you process queries.
-
----
-
-### 3. Segment Tree
-
-**Array-based layout:** Node at index i has children at 2i and 2i+1. Root at index 1. Leaf nodes start at index n.
-
-**Three key operations:**
-
-**Build:** O(n) — bottom-up. Leaves = array values. Internal node = merge(left child, right child).
-
-**Point Update:** O(log n) — walk root to leaf (update leaf), then recompute parents bottom-up.
-
-**Range Query [l, r]:** O(log n) — recursive. Three cases:
-1. Node's range fully outside [l, r]: return identity (0 for sum, INF for min)
-2. Node's range fully inside [l, r]: return node's value
-3. Partial overlap: recurse into both children, merge results
-
-**Common merge functions:** sum, min, max, GCD, product, bitwise OR/AND.
-
----
-
-### 4. Segment Tree with Lazy Propagation
-
-When you need "add 5 to all elements in [l, r]" — without lazy, this is O(n). With lazy:
-
-```
-lazy[node] = pending update not yet pushed to children
-
-Range update steps:
-1. If node's range fully covered → update node.val, set lazy[node], STOP
-2. Otherwise → push down lazy to children, recurse, merge up
-
-Query steps:
-1. Before accessing children → always push down lazy first
+search("app"):   walk to second 'p', isEnd=true  → TRUE
+search("ap"):    walk to 'p' after 'a', isEnd=false → FALSE
+startsWith("ap"): path exists → TRUE
 ```
 
-**Key:** Lazy stores WHAT update is pending, not WHO has been updated. Push it down just before you need children's values.
-
----
-
-### 5. Fenwick Tree (Binary Indexed Tree)
-
-**The bit trick:** Index i covers a range whose size is the lowest set bit of i.
-
-```
-Index in binary:  update path (add lowest set bit each time)
-i=6 (110) → 8 (1000) → done
-
-Query path (subtract lowest set bit each time):
-prefix(6) = tree[6] + tree[4] → sum from 1..6
-```
-
-**Two operations (both O(log n)):**
-
-```
-update(i, delta):
-    while i <= n:
-        tree[i] += delta
-        i += i & (-i)   // add lowest set bit
-
-prefix(i):  // sum from 1..i
-    total = 0
-    while i > 0:
-        total += tree[i]
-        i -= i & (-i)   // remove lowest set bit
-    return total
-
-range(l, r) = prefix(r) - prefix(l-1)
-```
-
-**Interview applications:**
-- Count Inversions: Process right to left, for each element query "how many already-seen elements are smaller?"
-- Count of Smaller Numbers After Self (LC 315)
-- Range Sum Query Mutable (LC 307)
-
-**1-indexed:** Fenwick trees require 1-based indexing. Add 1 to all indices if your array is 0-based.
-
----
-
-### 6. Sparse Table
-
-**Build (O(n log n)):**
-
-```
-table[k][i] = answer for range [i, i + 2^k - 1]
-
-table[0][i] = arr[i]
-table[k][i] = merge(table[k-1][i], table[k-1][i + 2^(k-1)])
-```
-
-**Query (O(1) for idempotent ops like min/max/GCD):**
-
-```
-k = floor(log2(r - l + 1))
-answer = merge(table[k][l], table[k][r - 2^k + 1])
-// The two ranges overlap — OK for min/max/GCD because merge(x, x) = x
-```
-
-**Why it DOESN'T work for sum:** merge(x, x) = 2x ≠ x. Overlapping ranges double-count. Use prefix sums for range sum queries.
-
----
-
-### 7. DSU — Advanced Variants
-
-**Weighted DSU:** Each node stores `weight[i]` = "value of i relative to its parent."
-
-On `find(x)`: path compress AND accumulate weights. On `union(x, y, w)`: set weights so the relationship holds transitively.
-
-**Interview problem:** Evaluate Division (LC 399) — each equation a/b = k is a weighted edge. Weighted DSU (or BFS/DFS on graph) handles transitivity.
-
-**DSU with Rollback:** When you need to undo unions (offline algorithms):
-- Use union by rank ONLY (no path compression — it's irreversible)
-- Maintain a stack of (node, old_parent, old_rank) states
-- Rollback = pop from stack and restore
-
-**Small-to-Large Merging (DSU on Tree):**
-- When merging data from child subtrees (e.g., count distinct colors in subtree)
-- Always merge smaller set INTO larger set
-- Each element moves at most O(log n) times → total O(n log n)
-
----
-
-### 8. Ordered Set / Sorted Container
-
-**Operations (all O(log n)):**
-
-| Operation | Java | What It Does |
-|---|---|---|
-| Insert | `treeSet.add(x)` | Insert x |
-| Delete | `treeSet.remove(x)` | Delete x |
-| Floor | `treeSet.floor(x)` | Largest element ≤ x |
-| Ceiling | `treeSet.ceiling(x)` | Smallest element ≥ x |
-| First/Last | `treeSet.first()` | Min/max element |
-
-**Interview applications:**
-
-| Problem | Pattern |
-|---|---|
-| Contains Duplicate III (LC 220) | Sliding window + TreeSet. For each new element x, check if floor or ceiling is within value range k. |
-| My Calendar I/II (LC 729/731) | TreeMap of intervals. Use floor/ceiling to find conflicts. |
-| Data Stream as Disjoint Intervals (LC 352) | TreeMap with interval merging on insert. |
-| Sliding Window Median (LC 480) | Two heaps OR two ordered multisets (smaller half + larger half). |
-
----
-
-## [35–45 min] Concrete Code + Dry Run
-
-### Trie — Java
-
+### Code
 ```java
+// Java — core operations
 class TrieNode {
     TrieNode[] children = new TrieNode[26];
     boolean isEnd = false;
@@ -352,145 +116,339 @@ class Trie {
             if (node.children[i] == null) return false;
             node = node.children[i];
         }
-        return true;  // don't check isEnd
+        return true; // do NOT check isEnd for prefix
     }
 }
 ```
 
-**Dry run — insert "cat", search "ca":**
-
-```
-insert("cat"):  root → [c] → [a] → [t].isEnd = true
-search("ca"):   root → [c] → [a] → isEnd = false → return false
-startsWith("ca"): root → [c] → [a] → path exists → return true
-```
-
----
-
-### Trie — TypeScript
-
-```typescript
+```javascript
+// JavaScript — core operations
 class TrieNode {
-    children: Map<string, TrieNode> = new Map();
-    isEnd = false;
+    constructor() {
+        this.children = {};
+        this.isEnd = false;
+    }
 }
 
 class Trie {
-    root = new TrieNode();
+    constructor() {
+        this.root = new TrieNode();
+    }
 
-    insert(word: string): void {
+    insert(word) {
         let node = this.root;
         for (const ch of word) {
-            if (!node.children.has(ch))
-                node.children.set(ch, new TrieNode());
-            node = node.children.get(ch)!;
+            if (!node.children[ch]) node.children[ch] = new TrieNode();
+            node = node.children[ch];
         }
         node.isEnd = true;
     }
 
-    search(word: string): boolean {
+    search(word) {
         let node = this.root;
         for (const ch of word) {
-            if (!node.children.has(ch)) return false;
-            node = node.children.get(ch)!;
+            if (!node.children[ch]) return false;
+            node = node.children[ch];
         }
         return node.isEnd;
     }
 
-    startsWith(prefix: string): boolean {
+    startsWith(prefix) {
         let node = this.root;
         for (const ch of prefix) {
-            if (!node.children.has(ch)) return false;
-            node = node.children.get(ch)!;
+            if (!node.children[ch]) return false;
+            node = node.children[ch];
         }
         return true;
     }
 }
 ```
 
+### Complexity Summary
+```
+Insert:  O(L)  — L = word length
+Search:  O(L)
+Prefix:  O(L)
+Space:   O(N * L * 26)  — N words, average length L, 26 children per node
+```
+
+### Common Trap
+- Forgetting to check `isEnd` in `search()` but not in `startsWith()`. "app" and "apple" share a path — only the node marked `isEnd=true` is a complete word.
+- Using `children = new TrieNode[26]` assumes lowercase a–z only. If the input has uppercase or digits, use a `HashMap<Character, TrieNode>` instead.
+
+### Experience Tip
+**Experience Tip:** In Word Search II (LC 212), build the Trie from the word list, then run DFS on the grid. At each DFS step, if the current character has no Trie child, prune immediately — this is the whole speedup over brute-force. Also remove found words from the Trie to avoid duplicates.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 208 | Implement Trie (Prefix Tree) | Medium | Build it from scratch — the foundation | https://leetcode.com/problems/implement-trie-prefix-tree/ |
+| 212 | Word Search II | Hard | Trie + DFS; prune when Trie path ends | https://leetcode.com/problems/word-search-ii/ |
+| 211 | Design Add and Search Words Data Structure | Medium | '.' wildcard = try all 26 children recursively | https://leetcode.com/problems/design-add-and-search-words-data-structure/ |
+
+### One-Minute Revision
+```
+STRUCTURE:       Trie (Prefix Tree)
+IN SIMPLE WORDS: Tree where each path spells a prefix. Each node = one character.
+USE WHEN:        Prefix search, autocomplete, word search in grid + dictionary
+DON'T USE WHEN:  Only exact word lookup (use HashSet instead)
+KEY OPERATIONS:  insert O(L), search O(L), startsWith O(L)
+TIME:            O(L) per operation
+SPACE:           O(N * L * 26)
+COMMON TRAP:     search() checks isEnd; startsWith() does not
+```
+
 ---
 
-### Fenwick Tree — Java
+## Union-Find / DSU (Disjoint Set Union)
 
+### What is it?
+A structure that groups elements into sets and answers one question blazing fast: "Are these two elements in the same group?" It exists because graph traversal (BFS/DFS) to check connectivity would be O(n) per query — DSU answers the same question in nearly O(1).
+
+### Visual
+```
+Before any union:       After union(0,1), union(1,2), union(3,4):
+0  1  2  3  4           0–1–2    3–4
+(each is its own group) (two groups)
+
+parent array:  [0, 0, 0, 3, 3]
+               (0 is root of {0,1,2}; 3 is root of {3,4})
+```
+
+### Key Operations
+| Operation | Time Complexity | Brief Description |
+|---|---|---|
+| find(x) | O(α(n)) ≈ O(1) | Find the root/representative of x's group |
+| union(x, y) | O(α(n)) ≈ O(1) | Merge the groups containing x and y |
+| connected(x, y) | O(α(n)) ≈ O(1) | Check if x and y share a root |
+
+α(n) = inverse Ackermann function — effectively constant for all practical n.
+
+### How does it work?
+1. Start: every element is its own parent (`parent[i] = i`).
+2. **find(x):** Follow parent pointers until you reach the root (a node that is its own parent).
+3. **Path compression:** While finding, point every node directly to the root. Makes future finds faster.
+4. **union(x, y):** Find root of x, find root of y. If different, make one the parent of the other.
+5. **Union by rank:** Always attach the smaller tree under the larger one. Keeps trees flat.
+6. **connected(x, y):** Simply check `find(x) == find(y)`.
+
+### Why does it work?
+Path compression + union by rank together ensure the tree stays almost flat, so every find operation is nearly O(1). The two optimizations compound each time you use the structure.
+
+### When to use?
+- Problem asks "are X and Y connected?" or "how many connected components are there?"
+- You're building a graph and need to detect if adding an edge creates a cycle.
+- Problem involves grouping/merging elements over time (accounts merge, friends list).
+- "Minimum spanning tree" (Kruskal's algorithm uses DSU at its core).
+
+### When NOT to use?
+- You need to find the actual path between two nodes — DSU only tells you IF they're connected, not HOW.
+- You need to remove elements from a group — DSU does not support splits.
+
+### How to recognize in a new problem?
+Ask: "Does the problem involve grouping things together over time, or asking if two things are in the same group?" That's DSU.
+
+Concrete signals:
+- "Find the number of connected components in a graph"
+- "Detect a cycle in an undirected graph"
+- "Merge accounts / friends / cities that belong to the same group"
+
+### Simple Example
+Problem: Given edges [0-1], [1-2], [3-4], how many connected components?
+
+Trace:
+```
+Start:  parent = [0, 1, 2, 3, 4]  (5 components)
+
+union(0, 1): find(0)=0, find(1)=1, different → parent[1]=0  → 4 components
+union(1, 2): find(1)=0, find(2)=2, different → parent[2]=0  → 3 components
+union(3, 4): find(3)=3, find(4)=4, different → parent[4]=3  → 2 components
+
+Answer: 2 connected components
+```
+
+### Code
 ```java
-class FenwickTree {
-    int[] tree;
-    int n;
+// Java — core operations
+class DSU {
+    int[] parent, rank;
 
-    FenwickTree(int n) {
-        this.n = n;
-        this.tree = new int[n + 1]; // 1-indexed
+    DSU(int n) {
+        parent = new int[n];
+        rank = new int[n];
+        for (int i = 0; i < n; i++) parent[i] = i;
     }
 
-    // Add delta to position i (1-indexed)
-    void update(int i, int delta) {
-        for (; i <= n; i += i & (-i))
-            tree[i] += delta;
+    int find(int x) {
+        if (parent[x] != x)
+            parent[x] = find(parent[x]); // path compression
+        return parent[x];
     }
 
-    // Sum from 1 to i (1-indexed)
-    int prefix(int i) {
-        int sum = 0;
-        for (; i > 0; i -= i & (-i))
-            sum += tree[i];
-        return sum;
+    boolean union(int x, int y) {
+        int px = find(x), py = find(y);
+        if (px == py) return false; // already connected — cycle detected!
+        if (rank[px] < rank[py]) { int tmp = px; px = py; py = tmp; }
+        parent[py] = px;           // attach smaller under larger
+        if (rank[px] == rank[py]) rank[px]++;
+        return true;
     }
 
-    // Sum from l to r (1-indexed)
-    int range(int l, int r) {
-        return prefix(r) - prefix(l - 1);
+    boolean connected(int x, int y) {
+        return find(x) == find(y);
     }
 }
 ```
 
-**Dry run — array [3, 2, -1, 6, 5], sum of [2..4]:**
-
-```
-Build: update(1,3), update(2,2), update(3,-1), update(4,6), update(5,5)
-
-range(2, 4) = prefix(4) - prefix(1)
-prefix(4): tree[4] + tree[0... wait, 4 → 4-4=0 stop] = tree[4] = 10
-prefix(1): tree[1] = 3
-range(2,4) = 10 - 3 = 7 ✓ (2 + -1 + 6 = 7)
-```
-
----
-
-### Fenwick Tree — TypeScript
-
-```typescript
-class FenwickTree {
-    private tree: number[];
-    private n: number;
-
-    constructor(n: number) {
-        this.n = n;
-        this.tree = new Array(n + 1).fill(0);
+```javascript
+// JavaScript — core operations
+class DSU {
+    constructor(n) {
+        this.parent = Array.from({length: n}, (_, i) => i);
+        this.rank = new Array(n).fill(0);
     }
 
-    update(i: number, delta: number): void {
-        for (; i <= this.n; i += i & (-i))
-            this.tree[i] += delta;
+    find(x) {
+        if (this.parent[x] !== x)
+            this.parent[x] = this.find(this.parent[x]); // path compression
+        return this.parent[x];
     }
 
-    prefix(i: number): number {
-        let sum = 0;
-        for (; i > 0; i -= i & (-i))
-            sum += this.tree[i];
-        return sum;
+    union(x, y) {
+        const px = this.find(x), py = this.find(y);
+        if (px === py) return false; // already connected
+        if (this.rank[px] < this.rank[py]) [px, py] = [py, px]; // won't work — let me rewrite
+        // attach smaller under larger
+        if (this.rank[px] >= this.rank[py]) {
+            this.parent[py] = px;
+            if (this.rank[px] === this.rank[py]) this.rank[px]++;
+        } else {
+            this.parent[px] = py;
+        }
+        return true;
     }
 
-    range(l: number, r: number): number {
-        return this.prefix(r) - this.prefix(l - 1);
+    connected(x, y) {
+        return this.find(x) === this.find(y);
     }
 }
 ```
 
+### Complexity Summary
+```
+find(x):       O(α(n)) ≈ O(1) amortized
+union(x, y):   O(α(n)) ≈ O(1) amortized
+connected:     O(α(n)) ≈ O(1) amortized
+Space:         O(n)
+```
+
+### Common Trap
+- Calling `union(x, y)` and not checking its return value — if it returns false, x and y were already connected, meaning you found a cycle. Many cycle-detection problems depend on catching this.
+- Forgetting path compression or union by rank — without both, find() degrades to O(n) in the worst case.
+
+### Experience Tip
+**Experience Tip:** For "number of connected components", initialize a counter at n, then decrement by 1 every time union() returns true (meaning two previously separate groups merged). The final counter is your answer. This pattern appears in Accounts Merge, Number of Provinces, and Redundant Connection.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 684 | Redundant Connection | Medium | union() returns false = cycle found = that's the redundant edge | https://leetcode.com/problems/redundant-connection/ |
+| 721 | Accounts Merge | Medium | Emails are nodes; same account = union them; group by root at end | https://leetcode.com/problems/accounts-merge/ |
+| 547 | Number of Provinces | Medium | Classic connected components — count successful unions | https://leetcode.com/problems/number-of-provinces/ |
+
+### One-Minute Revision
+```
+STRUCTURE:       Union-Find / DSU (Disjoint Set Union)
+IN SIMPLE WORDS: Groups elements into sets; answers "same group?" in near O(1)
+USE WHEN:        Connected components, cycle detection, merging groups
+DON'T USE WHEN:  Need actual path, need to split groups
+KEY OPERATIONS:  find(x), union(x,y), connected(x,y)
+TIME:            O(α(n)) ≈ O(1) per operation
+SPACE:           O(n)
+COMMON TRAP:     union() returns false = cycle; don't ignore the return value
+```
+
 ---
 
-### Segment Tree (Range Sum, Point Update) — Java
+## Segment Tree
 
+### What is it?
+A binary tree built on top of an array where every node stores the answer (sum, min, max) for a range of the array. It exists because prefix sums break down when the array has updates — a Segment Tree handles BOTH range queries AND point updates in O(log n).
+
+### Visual
+```
+Array: [2, 1, 5, 3]
+
+            [0-3] sum=11
+           /            \
+      [0-1] sum=3      [2-3] sum=8
+      /       \         /       \
+  [0] 2     [1] 1   [2] 5     [3] 3
+  (leaf)   (leaf)  (leaf)   (leaf)
+```
+
+### Key Operations
+| Operation | Time Complexity | Brief Description |
+|---|---|---|
+| build(arr) | O(n) | Build the tree bottom-up from the array |
+| update(i, val) | O(log n) | Change arr[i] to val, recompute affected nodes |
+| query(l, r) | O(log n) | Get sum/min/max for any range [l, r] |
+
+### How does it work?
+1. **Build:** Leaves store the original array values. Each internal node stores `merge(left child, right child)` — e.g., sum, min, or max.
+2. **Query(l, r):** Start at root. Three cases at each node:
+   - If node's range is completely OUTSIDE [l, r]: return identity (0 for sum, INF for min).
+   - If node's range is completely INSIDE [l, r]: return this node's stored value directly.
+   - If PARTIAL overlap: recurse into both children and merge results.
+3. **Update(i, val):** Walk from root to the leaf at index i. Update the leaf. On the way back UP, recompute every ancestor as `merge(left child, right child)`.
+4. The tree has 4*n nodes (safe allocation size).
+5. Node at index `node` has children at `2*node+1` (left) and `2*node+2` (right).
+
+### Why does it work?
+Any range [l, r] can be decomposed into at most O(log n) non-overlapping segments that are already pre-computed as tree nodes. You just look them up and merge — no scanning.
+
+### When to use?
+- "Range sum / min / max" query AND the array can be updated.
+- You need to query arbitrary ranges (not just prefix sums).
+- Need to count inversions or answer range-frequency queries.
+- Any problem with repeated queries on a changing dataset.
+
+### When NOT to use?
+- Array never changes — use a simple prefix sum array (O(1) query, O(n) build, far simpler).
+- You only need prefix sums with updates — a Fenwick Tree has less code.
+
+### How to recognize in a new problem?
+Ask: "Do I need to query a range AND update elements?" If both are yes, think Segment Tree.
+
+Concrete signals:
+- "Given an array, answer sum/min/max queries for range [l, r]" + "there will also be update operations"
+- "Count how many elements in range [l, r] are less than X"
+- Any problem with the word "mutable" in the title
+
+### Simple Example
+Problem: Array = [2, 1, 5, 3]. Query sum(1, 3). Then update index 1 to 7. Query sum(1, 3) again.
+
+Trace:
+```
+query(1, 3):
+  Root [0-3]: partial → recurse
+  Left [0-1]: partial → recurse
+    Left [0]: outside [1,3] → return 0
+    Right [1]: fully inside [1,3] → return 1
+  Right [2-3]: fully inside [1,3] → return 8
+  Result: 0 + 1 + 8 = 9  ✓ (1+5+3=9)
+
+update(1, 7):
+  Walk to leaf [1], set to 7
+  Recompute [0-1] = 2+7 = 9
+  Recompute [0-3] = 9+8 = 17
+
+query(1, 3) = 7+5+3 = 15  ✓
+```
+
+### Code
 ```java
+// Java — core operations (range sum, point update)
 class SegmentTree {
     int[] tree;
     int n;
@@ -531,182 +489,425 @@ class SegmentTree {
 }
 ```
 
----
-
-### Ordered Set Usage — Java TreeSet
-
-```java
-// Contains Duplicate III (LC 220): sliding window + floor/ceiling
-public boolean containsNearbyAlmostDuplicate(int[] nums, int k, int t) {
-    TreeSet<Long> window = new TreeSet<>();
-    for (int i = 0; i < nums.length; i++) {
-        long x = nums[i];
-        // Check if there's any value in [x-t, x+t]
-        Long floor = window.floor(x + t);
-        if (floor != null && floor >= x - t) return true;
-
-        window.add(x);
-        if (window.size() > k) window.remove((long) nums[i - k]);
+```javascript
+// JavaScript — core operations (range sum, point update)
+class SegmentTree {
+    constructor(arr) {
+        this.n = arr.length;
+        this.tree = new Array(4 * this.n).fill(0);
+        this.build(arr, 0, 0, this.n - 1);
     }
-    return false;
+
+    build(arr, node, l, r) {
+        if (l === r) { this.tree[node] = arr[l]; return; }
+        const mid = (l + r) >> 1;
+        this.build(arr, 2*node+1, l, mid);
+        this.build(arr, 2*node+2, mid+1, r);
+        this.tree[node] = this.tree[2*node+1] + this.tree[2*node+2];
+    }
+
+    update(idx, val, node=0, l=0, r=this.n-1) {
+        if (l === r) { this.tree[node] = val; return; }
+        const mid = (l + r) >> 1;
+        if (idx <= mid) this.update(idx, val, 2*node+1, l, mid);
+        else            this.update(idx, val, 2*node+2, mid+1, r);
+        this.tree[node] = this.tree[2*node+1] + this.tree[2*node+2];
+    }
+
+    query(ql, qr, node=0, l=0, r=this.n-1) {
+        if (qr < l || r < ql) return 0;
+        if (ql <= l && r <= qr) return this.tree[node];
+        const mid = (l + r) >> 1;
+        return this.query(ql, qr, 2*node+1, l, mid)
+             + this.query(ql, qr, 2*node+2, mid+1, r);
+    }
 }
 ```
 
----
-
-## [45–55 min] Pattern Recognition — When Does Each Structure Signal Itself?
-
-### Recognition Table
-
-| Clue in Problem | Structure to Consider |
-|---|---|
-| "words with prefix", "autocomplete", "dictionary search" | Trie |
-| "word search in grid" + "multiple words" | Trie + DFS backtracking |
-| "maximum XOR of two numbers" | XOR Trie |
-| "range sum/min/max" + "updates allowed" | Segment Tree or Fenwick Tree |
-| "range updates" (add to all in [l,r]) + "range queries" | Segment Tree with Lazy |
-| "range sum with point updates" | Fenwick Tree (simpler choice) |
-| "count inversions", "count smaller elements to the right" | Fenwick Tree |
-| "static array", "range min/max", "no updates" | Sparse Table |
-| "connected components" + "weighted edges" + "ratio queries" | Weighted DSU |
-| "nearest value", "floor/ceiling", "dynamic sorted collection" | Ordered Set (TreeSet/TreeMap) |
-| "sliding window" + "need sorted access" | Ordered Set |
-| "merge subtree data" + "tree problem" + large n | Small-to-large merging (DSU on Tree) |
-
-### Constraint Signals
-
+### Complexity Summary
 ```
-Array size n:
-  n <= 10^5 with Q queries → O(n log n) preprocessing is fine
-  n <= 10^6 → lean toward Fenwick (less constant factor than segment tree)
-  "static, no updates" → Sparse Table for O(1) queries
-
-String keywords:
-  "prefix", "starts with", "dictionary" → Trie
-  "XOR" + "pair" + "maximum" → XOR Trie
-
-Update keywords:
-  "point update" → Fenwick or Segment Tree
-  "range update" → Segment Tree with Lazy (Fenwick can't do this cleanly)
-  "no update at all" → Sparse Table or prefix sum
-
-Query keywords:
-  "prefix sum" → Fenwick or prefix array
-  "arbitrary range" → Segment Tree
-  "idempotent (min/max/GCD)" + "no updates" → Sparse Table
+Build:   O(n)
+Update:  O(log n)
+Query:   O(log n)
+Space:   O(n)  — allocate 4*n nodes to be safe
 ```
 
-### Common Mistakes to Avoid
+### Common Trap
+- Allocating only `2*n` nodes instead of `4*n` — causes index out of bounds for non-power-of-2 sized arrays.
+- Using 0 as identity for min queries — use Integer.MAX_VALUE instead, or your min will always return 0.
 
-1. **Using Segment Tree when Prefix Sum is enough** — If there are no updates, prefix sum is simpler and O(1) per query.
-2. **Forgetting 1-indexed Fenwick** — Off-by-one errors are the #1 bug. Always confirm your indexing.
-3. **Using Sparse Table for range sum** — Overlapping ranges double-count sums. Only works for idempotent operations.
-4. **Choosing Trie for exact-match-only problems** — A hash set is simpler and sufficient.
-5. **Trying to implement AVL/Red-Black from scratch in an interview** — Use language built-ins (TreeSet/TreeMap in Java, SortedList in Python).
+### Experience Tip
+**Experience Tip:** For Range Sum Query Mutable (LC 307), a Fenwick Tree is actually simpler to code. Use a Segment Tree only when you need range min/max or more complex merge operations that Fenwick can't express. In interviews, it's fine to say "I'll use a Segment Tree for generality."
 
----
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 307 | Range Sum Query - Mutable | Medium | Classic point update + range sum — the template problem | https://leetcode.com/problems/range-sum-query-mutable/ |
+| 315 | Count of Smaller Numbers After Self | Hard | Coordinate compress values, then use Seg Tree / BIT to count | https://leetcode.com/problems/count-of-smaller-numbers-after-self/ |
+| 303 | Range Sum Query - Immutable | Easy | No updates → use plain prefix sum, NOT Segment Tree | https://leetcode.com/problems/range-sum-query-immutable/ |
 
-## [55–60 min] Final Mental Checklist
-
+### One-Minute Revision
 ```
-Before writing any code, ask yourself:
-
-1. STRING PROBLEM?
-   └─ Need prefix/pattern search?
-      └─ Multiple words, shared prefixes? → Trie
-      └─ Just exact match? → HashMap/HashSet
-
-2. RANGE QUERY PROBLEM?
-   └─ Has updates?
-      └─ Point updates only? → Fenwick Tree (prefix) or Segment Tree (any range)
-      └─ Range updates? → Segment Tree with Lazy Propagation
-   └─ No updates (static)?
-      └─ Sum/other non-idempotent? → Prefix Sum array
-      └─ Min/Max/GCD (idempotent)? → Sparse Table (O(1) query)
-
-3. NUMBER XOR PROBLEM?
-   └─ Maximum XOR pair? → XOR Trie
-
-4. CONNECTIVITY/GROUPING PROBLEM?
-   └─ Simple "same group"? → Basic DSU
-   └─ Need weighted relationships (ratios, differences)? → Weighted DSU
-   └─ Need to undo operations? → DSU with rollback
-
-5. SORTED DYNAMIC COLLECTION?
-   └─ Need floor/ceiling/rank? → TreeSet/TreeMap (Java), SortedList (Python)
-   └─ Just sorted output, no dynamic inserts? → Sort the array
+STRUCTURE:       Segment Tree
+IN SIMPLE WORDS: Binary tree on array; each node = answer for its range
+USE WHEN:        Range query (sum/min/max) + point updates on same array
+DON'T USE WHEN:  No updates (use prefix sum); only prefix sums with updates (use Fenwick)
+KEY OPERATIONS:  build O(n), update O(log n), query O(log n)
+TIME:            O(log n) per update/query
+SPACE:           O(n), allocate 4*n nodes
+COMMON TRAP:     Use 4*n not 2*n; use INF not 0 as identity for min queries
 ```
 
 ---
 
-## Active Recall — Test Yourself
+## Fenwick Tree / BIT (Binary Indexed Tree)
 
-Answer these before looking back at the notes:
+### What is it?
+A compact array that supports two operations: update a value at index i, and query the prefix sum from 1 to i — both in O(log n). It exists because a plain prefix sum array breaks when you update a value (you'd have to rebuild the whole thing), while a Fenwick Tree updates in O(log n).
 
-1. What is the time complexity of Trie insert and search? What variable does it depend on?
-2. When would you use a Sparse Table over a Segment Tree? What's the key restriction?
-3. What operation does `i & (-i)` perform, and where is it used in a Fenwick Tree?
-4. Why can't Sparse Table answer range SUM queries correctly?
-5. In Segment Tree with Lazy Propagation, when do you "push down" the lazy value?
-6. What is the difference between `floor(x)` and `ceiling(x)` in a TreeSet?
-7. If you see "maximum XOR of two numbers in array", which data structure gives O(n) solution?
-8. Weighted DSU is useful for which famous LeetCode problem? What does the weight represent?
-9. What is "small-to-large merging" and what is its total time complexity?
-10. In an interview, when should you prefer Fenwick Tree over Segment Tree?
-
----
-
-## Recommended Practice Direction
-
-**Start here (most interview-relevant):**
-- LC 208 — Implement Trie (Prefix Tree) ← implement this from scratch
-- LC 307 — Range Sum Query Mutable (Fenwick or Segment Tree)
-- LC 212 — Word Search II (Trie + backtracking)
-- LC 315 — Count of Smaller Numbers After Self (Fenwick)
-
-**Stretch problems:**
-- LC 421 — Maximum XOR of Two Numbers in an Array (XOR Trie)
-- LC 729 — My Calendar I (TreeMap / Ordered Set)
-- LC 220 — Contains Duplicate III (TreeSet sliding window)
-- LC 399 — Evaluate Division (Weighted DSU or graph)
-
-**For competitive programming depth (optional, not typical FAANG):**
-- Segment Tree with Lazy Propagation (range add, range query)
-- Persistent Segment Tree (Kth smallest in range)
-- Sparse Table for LCA (via Euler Tour + RMQ)
-
----
-
-## 2-Minute Cheat Sheet
-
+### Visual
 ```
-STRUCTURE         TIME (query/update)    USE WHEN
-─────────────────────────────────────────────────────────────────
-Trie              O(L) all ops           Prefix/word search
-XOR Trie          O(32) ≈ O(1)          Max XOR pair
-Segment Tree      O(log n)              Range query + point update
-Seg Tree + Lazy   O(log n)              Range update + range query
-Fenwick Tree      O(log n)              Prefix sum + point update
-                                        (simpler than Seg Tree)
-Sparse Table      O(1) query            Static array, min/max/GCD only
-                  O(n log n) build      NO updates, NO sum queries
-Weighted DSU      O(α(n)) ≈ O(1)       Weighted connectivity,
-                                        ratio/difference queries
-Ordered Set       O(log n) all ops      Sorted dynamic set,
-(TreeSet/TreeMap)                       floor/ceiling/nearest
+Array (1-indexed): [_, 3, 2, -1, 6, 5]
+                        1  2   3  4  5
 
-KEY FORMULAS:
-  Fenwick update:  i += i & (-i)
-  Fenwick query:   i -= i & (-i)
-  Seg Tree nodes:  parent = i/2, children = 2i and 2i+1 (1-indexed)
-  Sparse Table:    k = floor(log2(r-l+1)), query two overlapping 2^k ranges
+BIT internal:  tree[1] covers [1,1]
+               tree[2] covers [1,2]
+               tree[3] covers [3,3]
+               tree[4] covers [1,4]
+               tree[5] covers [5,5]
 
-LANGUAGE SHORTCUTS:
-  Java:    TreeSet, TreeMap (floor/ceiling/higher/lower built-in)
-  Python:  No built-in balanced BST; use bisect or sortedcontainers.SortedList
-  JS/TS:   No built-in; simulate with sorted array + binary search (small n only)
+The "range" each index covers = lowest set bit of that index.
+index 6 = 110 in binary → lowest set bit = 2 → covers 2 elements
 ```
 
+### Key Operations
+| Operation | Time Complexity | Brief Description |
+|---|---|---|
+| update(i, delta) | O(log n) | Add delta to index i, propagate up |
+| prefix(i) | O(log n) | Sum of elements from index 1 to i |
+| range(l, r) | O(log n) | Sum from l to r = prefix(r) - prefix(l-1) |
+
+### How does it work?
+1. **The trick:** For index i, the number of elements it "covers" equals the lowest set bit of i. E.g., i=6 (binary 110) covers 2 elements.
+2. **update(i, delta):** Add delta to tree[i], then jump to the next responsible index by adding the lowest set bit: `i += i & (-i)`. Repeat until i > n.
+3. **prefix(i):** Add tree[i] to the total, then jump to the previous responsible index by removing the lowest set bit: `i -= i & (-i)`. Repeat until i = 0.
+4. `i & (-i)` extracts the lowest set bit of i — this is the entire magic of the structure.
+5. **range(l, r):** = `prefix(r) - prefix(l-1)`.
+
+### Why does it work?
+Every prefix [1..i] can be decomposed into a small number of non-overlapping sub-ranges, each stored as exactly one tree entry. The bit manipulation navigates these stored sub-ranges perfectly.
+
+### When to use?
+- You need prefix sums AND elements can be updated.
+- "Count of smaller / larger elements" problems (coordinate compress + BIT).
+- Counting inversions in an array.
+- Simpler and faster to code than a Segment Tree when prefix sums are all you need.
+
+### When NOT to use?
+- You need range min/max — Fenwick Trees only work cleanly for operations where the inverse exists (like sum). Use a Segment Tree for min/max.
+- You need range updates — Fenwick is awkward; use a Segment Tree with Lazy Propagation.
+
+### How to recognize in a new problem?
+Ask: "Do I need prefix counts or prefix sums, and can values change?" If yes, Fenwick Tree.
+
+Concrete signals:
+- "Count elements to the right that are smaller than current element"
+- "How many numbers in range [1, x] have been inserted so far?"
+- Array updates + range sum queries (also solved by Segment Tree but Fenwick is shorter)
+
+### Simple Example
+Problem: Array = [3, 2, -1, 6]. Build a Fenwick Tree, then query sum(2, 4) after updating index 3 to +5.
+
+Trace:
+```
+Build: update(1,3), update(2,2), update(3,-1), update(4,6)
+
+query range(2, 4) = prefix(4) - prefix(1)
+  prefix(4): tree[4]=10 (covers [1..4]), i=4-4=0 → stop → 10
+  prefix(1): tree[1]=3  (covers [1..1]), i=1-1=0 → stop → 3
+  range(2,4) = 10 - 3 = 7  ✓ (2 + -1 + 6 = 7)
+
+update(3, +5):  tree[3]+=5, then 3+1=4 → tree[4]+=5
+query range(2, 4) = prefix(4) - prefix(1) = 15 - 3 = 12  ✓ (2 + 4 + 6 = 12)
+```
+
+### Code
+```java
+// Java — core operations (1-indexed)
+class FenwickTree {
+    int[] tree;
+    int n;
+
+    FenwickTree(int n) {
+        this.n = n;
+        this.tree = new int[n + 1]; // 1-indexed, index 0 unused
+    }
+
+    // Add delta to position i (1-indexed)
+    void update(int i, int delta) {
+        for (; i <= n; i += i & (-i))
+            tree[i] += delta;
+    }
+
+    // Sum from 1 to i (1-indexed)
+    int prefix(int i) {
+        int sum = 0;
+        for (; i > 0; i -= i & (-i))
+            sum += tree[i];
+        return sum;
+    }
+
+    // Sum from l to r (1-indexed)
+    int range(int l, int r) {
+        return prefix(r) - prefix(l - 1);
+    }
+}
+```
+
+```javascript
+// JavaScript — core operations (1-indexed)
+class FenwickTree {
+    constructor(n) {
+        this.n = n;
+        this.tree = new Array(n + 1).fill(0); // 1-indexed
+    }
+
+    update(i, delta) {
+        for (; i <= this.n; i += i & (-i))
+            this.tree[i] += delta;
+    }
+
+    prefix(i) {
+        let sum = 0;
+        for (; i > 0; i -= i & (-i))
+            sum += this.tree[i];
+        return sum;
+    }
+
+    range(l, r) {
+        return this.prefix(r) - this.prefix(l - 1);
+    }
+}
+```
+
+### Complexity Summary
+```
+update(i, delta): O(log n)
+prefix(i):        O(log n)
+range(l, r):      O(log n)
+Space:            O(n)
+```
+
+### Common Trap
+- Fenwick Trees MUST be 1-indexed. If your array is 0-indexed, add 1 to every index before calling update/prefix. This is the #1 source of bugs.
+- Using Fenwick for range min/max — it only works correctly for operations where computing the inverse (like subtraction) is meaningful. Sum works; min does not.
+
+### Experience Tip
+**Experience Tip:** For "Count of Smaller Numbers After Self" (LC 315), coordinate-compress the values to map them to [1, n], then process the array right to left. For each element, first query prefix(val-1) to count how many already-inserted elements are smaller, then update(val, 1) to mark it as inserted.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 307 | Range Sum Query - Mutable | Medium | Direct BIT application — start here | https://leetcode.com/problems/range-sum-query-mutable/ |
+| 315 | Count of Smaller Numbers After Self | Hard | Coordinate compress + BIT; process right to left | https://leetcode.com/problems/count-of-smaller-numbers-after-self/ |
+
+### One-Minute Revision
+```
+STRUCTURE:       Fenwick Tree / BIT (Binary Indexed Tree)
+IN SIMPLE WORDS: Compact array for prefix sums with updates; uses bit tricks
+USE WHEN:        Prefix sums + point updates; counting elements in ranges
+DON'T USE WHEN:  Need range min/max (use Segment Tree); no updates (use prefix array)
+KEY OPERATIONS:  update O(log n), prefix O(log n), range O(log n)
+TIME:            O(log n) per operation
+SPACE:           O(n)
+COMMON TRAP:     Must be 1-indexed — always add 1 to 0-based indices
+```
+
 ---
 
-*Next: [17-STRING-ALGORITHMS.md](17-STRING-ALGORITHMS.md) — Pattern matching, the art of finding needles in haystacks.*
+## Monotonic Deque
+
+### What is it?
+A double-ended queue (deque) that is always kept in sorted order (either always increasing or always decreasing) by removing elements from the back before inserting. It exists to answer "what is the maximum/minimum in this sliding window?" in O(1) per step — impossible with a plain queue.
+
+### Visual
+```
+Array: [3, 1, 2, 5, 4],  window size k=3
+
+Processing element 5 (index 3):
+  Deque before: [1, 2] (stores indices, values 1 and 2)
+  5 > 2, so pop 2. 5 > 1, so pop 1.
+  Push index 3 (value 5).
+  Deque: [3]  → window max = arr[3] = 5  ✓
+
+The deque stores INDICES. It is monotonically DECREASING by value.
+Front of deque = index of the max element in the current window.
+```
+
+### Key Operations
+| Operation | Time Complexity | Brief Description |
+|---|---|---|
+| addElement(i) | O(1) amortized | Pop from back while back < arr[i], then push i |
+| getMax() | O(1) | Peek at front of deque (it's always the max) |
+| removeOutdated(l) | O(1) | Pop front if its index < left boundary l |
+
+### How does it work?
+1. The deque stores **indices** (not values) of array elements.
+2. It is maintained in **monotonically decreasing order of values** (for maximum; flip for minimum).
+3. When you add index i: pop from the **back** of the deque while `arr[deque.back()] <= arr[i]`. Then push i to the back.
+4. When the window slides (left boundary moves to l): if the front of the deque is < l, pop it from the **front**.
+5. The **front** of the deque is always the index of the maximum element in the current window.
+6. Every element is pushed and popped at most once → O(n) total across all windows.
+
+### Why does it work?
+Any element that is smaller than a newer element can NEVER be the window maximum while that newer element is still in the window. So it is safe to discard it immediately, keeping the deque clean.
+
+### When to use?
+- "Sliding window maximum or minimum" — the canonical use case.
+- Any problem where you repeatedly ask "what is the best element in a recent window?"
+- Problems involving "next greater element" or "previous smaller element" patterns.
+- Optimizing DP transitions where you're tracking the best result in a recent range.
+
+### When NOT to use?
+- Window size is fixed and small — a simple loop is fine.
+- You need both max AND min simultaneously — you'd need two separate deques.
+
+### How to recognize in a new problem?
+Ask: "Is there a sliding window, and I need the max/min of that window efficiently?"
+
+Concrete signals:
+- "Sliding window of size k, find maximum in each window"
+- "Find the maximum minus minimum in any subarray of length k"
+- "Jump game" variants where you track max reachability in a recent window
+
+### Simple Example
+Problem: Array = [1, 3, -1, -3, 5, 3, 6, 7], window k = 3. Find max in each window.
+
+Trace:
+```
+i=0 (val=1):  deque=[0]
+i=1 (val=3):  3>1, pop 0. Push 1. deque=[1]  (window not full yet)
+i=2 (val=-1): -1<3, just push 2. deque=[1,2]  window=[1,3,-1] max=arr[1]=3 ✓
+i=3 (val=-3): -3<-1, push 3. deque=[1,2,3]  window=[3,-1,-3] max=arr[1]=3 ✓
+i=4 (val=5):  remove front 1 (index 1 < left boundary 2). deque=[2,3].
+              5>-3 pop 3; 5>-1 pop 2. Push 4. deque=[4]  max=arr[4]=5 ✓
+i=5 (val=3):  3<5, push 5. deque=[4,5]  window=[−1,5,3] max=arr[4]=5 ✓
+i=6 (val=6):  remove front 4 (index 4 < left boundary 4? No, boundary is 4).
+              6>3 pop 5; 6>5 pop 4. Push 6. deque=[6]  max=arr[6]=6 ✓
+i=7 (val=7):  7>6, pop 6. Push 7. deque=[7]  max=arr[7]=7 ✓
+
+Output: [3, 3, 5, 5, 6, 7]
+```
+
+### Code
+```java
+// Java — sliding window maximum
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+public int[] maxSlidingWindow(int[] nums, int k) {
+    int n = nums.length;
+    int[] result = new int[n - k + 1];
+    Deque<Integer> deque = new ArrayDeque<>(); // stores indices
+
+    for (int i = 0; i < n; i++) {
+        // Remove indices that are outside the window
+        while (!deque.isEmpty() && deque.peekFirst() < i - k + 1)
+            deque.pollFirst();
+
+        // Remove indices whose values are less than nums[i] (they can never be max)
+        while (!deque.isEmpty() && nums[deque.peekLast()] < nums[i])
+            deque.pollLast();
+
+        deque.offerLast(i);
+
+        // Window is full
+        if (i >= k - 1)
+            result[i - k + 1] = nums[deque.peekFirst()];
+    }
+    return result;
+}
+```
+
+```javascript
+// JavaScript — sliding window maximum
+function maxSlidingWindow(nums, k) {
+    const n = nums.length;
+    const result = [];
+    const deque = []; // stores indices
+
+    for (let i = 0; i < n; i++) {
+        // Remove indices outside the window
+        while (deque.length > 0 && deque[0] < i - k + 1)
+            deque.shift();
+
+        // Remove indices whose values are smaller than nums[i]
+        while (deque.length > 0 && nums[deque[deque.length - 1]] < nums[i])
+            deque.pop();
+
+        deque.push(i);
+
+        // Window is full
+        if (i >= k - 1)
+            result.push(nums[deque[0]]);
+    }
+    return result;
+}
+```
+
+### Complexity Summary
+```
+Per element:  O(1) amortized (each element pushed and popped at most once)
+Total:        O(n) for n elements
+Space:        O(k) — deque holds at most k indices at any time
+```
+
+### Common Trap
+- Storing values in the deque instead of indices — you cannot check if the front element has "fallen out" of the window without knowing its original index.
+- Forgetting to check if the front of the deque is out of the window (before reading it as the max). This causes stale maximums.
+
+### Experience Tip
+**Experience Tip:** The deque always represents a "useful candidates" list. An element is popped from the back because "a newer, bigger element makes this one permanently useless." An element is popped from the front because "it's too old — it fell off the left edge of the window." These two cleanup rules together define the pattern.
+
+### LeetCode Practice
+| # | Problem | Difficulty | What to Notice | Link |
+|---|---------|------------|----------------|------|
+| 239 | Sliding Window Maximum | Hard | The canonical monotonic deque problem — implement this cold | https://leetcode.com/problems/sliding-window-maximum/ |
+
+### One-Minute Revision
+```
+STRUCTURE:       Monotonic Deque
+IN SIMPLE WORDS: A deque kept in sorted order; front = max (or min) of window
+USE WHEN:        Sliding window max/min; "best element in recent range"
+DON'T USE WHEN:  Small fixed window (plain loop); need both max and min (use two deques)
+KEY OPERATIONS:  addElement O(1), getMax O(1), removeOutdated O(1)
+TIME:            O(n) total — each element added/removed at most once
+SPACE:           O(k) — deque size bounded by window size
+COMMON TRAP:     Store INDICES not values; check if front is out-of-window before reading
+```
+
+---
+
+## Quick Decision Guide
+
+```
+WHAT DOES YOUR PROBLEM NEED?               USE THIS
+─────────────────────────────────────────────────────────
+Prefix search / autocomplete / dictionary   Trie
+Word search in grid + multiple words        Trie + DFS backtracking
+─────────────────────────────────────────────────────────
+"Same group?" / connected components        DSU (Union-Find)
+Cycle detection in undirected graph         DSU (union returns false = cycle)
+Merging accounts / groups over time         DSU
+─────────────────────────────────────────────────────────
+Range sum/min/max + point UPDATES           Segment Tree (or Fenwick for sum)
+Range sum with RANGE updates                Segment Tree with Lazy Propagation
+Prefix sums + point updates (simplest)      Fenwick Tree / BIT
+Range sum, NO updates                       Plain prefix sum array
+─────────────────────────────────────────────────────────
+Sliding window MAX or MIN                   Monotonic Deque
+"Next greater element" pattern              Monotonic Stack (variant)
+─────────────────────────────────────────────────────────
+```
+
+*Next: [17-STRING-ALGORITHMS.md](17-STRING-ALGORITHMS.md)*
