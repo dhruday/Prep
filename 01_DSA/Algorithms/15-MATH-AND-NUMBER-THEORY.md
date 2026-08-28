@@ -15,6 +15,7 @@
 6. [Combinatorics (nCr)](#combinatorics-ncr)
 7. [Fisher-Yates Shuffle](#fisher-yates-shuffle)
 8. [Reservoir Sampling](#reservoir-sampling)
+9. [Catalan Numbers](#catalan-numbers)
 
 ---
 
@@ -1356,6 +1357,201 @@ TIME:         O(n) one pass
 SPACE:        O(k) reservoir only
 COMMON TRAP:  Off-by-one in range — must be [0,i] (size i+1), not [0,i)
 EXPERIENCE TIP: Know the inductive proof — 1/i * (i/(i+1)) * ... = 1/n
+```
+
+---
+
+---
+
+## Catalan Numbers
+
+### What is it?
+The Catalan numbers are a sequence of natural numbers — 1, 1, 2, 5, 14, 42, 132, ... — that count the number of valid structures across many combinatorial problems. Before the formula, understand what they count: C(n) is the number of distinct ways to fully parenthesize n+1 factors, the number of unique Binary Search Trees with n nodes, the number of valid sequences of n pairs of matching parentheses, the number of monotonic lattice paths that never cross the diagonal, and much more. These all sound different but secretly count the same thing.
+
+Real-world analogy: Imagine building a staircase from the bottom-left corner to the top-right corner of an n×n grid, moving only right or up, but never rising above the main diagonal (you can never be "ahead of yourself"). The number of valid paths is exactly the nth Catalan number.
+
+### Visual
+```
+Catalan values: C(0)=1, C(1)=1, C(2)=2, C(3)=5, C(4)=14
+
+C(3) = 5: All valid bracket sequences with 3 pairs:
+  ((()))   (()())   (())()   ()(())   ()()()
+
+C(3) = 5: All structurally distinct BSTs with nodes {1,2,3}:
+  1          1         2         3       3
+   \          \       / \       /       /
+    2          3     1   3     1       2
+     \        /               \      /
+      3      2                 2    1
+
+C(3) = 5: All full parenthesizations of a×b×c×d:
+  ((a×b)×c)×d    (a×(b×c))×d    (a×b)×(c×d)    a×((b×c)×d)    a×(b×(c×d))
+
+Recurrence visualized for C(3) — "choose which node is the root of a BST":
+  Root=1: left subtree 0 nodes, right subtree 2 nodes → C(0)×C(2) = 1×2 = 2
+  Root=2: left subtree 1 node,  right subtree 1 node  → C(1)×C(1) = 1×1 = 1
+  Root=3: left subtree 2 nodes, right subtree 0 nodes → C(2)×C(0) = 2×1 = 2
+  Total: 2 + 1 + 2 = 5 ✓
+```
+
+### How does it work?
+**Recurrence (bottom-up DP):**
+```
+C(0) = 1   (base case: one empty structure)
+C(n) = sum of C(i) * C(n-1-i)   for i = 0 to n-1
+```
+
+**Why this recurrence?** Think of a BST with n nodes. Pick one node as the root. If the root gets rank `i+1` (0-indexed), the left subtree has `i` nodes and the right subtree has `n-1-i` nodes. These two subtrees are completely independent of each other, so you multiply their counts. Summing over all n choices of root gives C(n). This "divide at the root" or "split at one pivot" pattern appears in EVERY Catalan problem.
+
+**Closed-form formula:**
+```
+C(n) = C(2n, n) / (n+1)   =   (2n)! / ((n+1)! × n!)
+```
+
+### Why does it work?
+Every Catalan problem has a "divide into two independent halves" structure. When you choose where to split (which node is the root, where the matching closing bracket is, where the mountain peak is), the left part is independent of the right part. You multiply their counts, and sum over all split positions. This sum-of-products over split points is exactly the Catalan recurrence — and it produces an optimal count because no two split points produce the same structure.
+
+### When to use?
+- "How many unique Binary Search Trees with n distinct values?"
+- "How many valid parenthesis strings of length 2n?"
+- "How many full binary trees with n+1 leaves?"
+- "How many ways to triangulate a convex polygon with n+2 sides?"
+- Any problem where you recursively split a sequence or structure at one chosen pivot and the two halves are completely independent.
+
+### When NOT to use?
+- When the problem has additional constraints that break the "independent halves" structure.
+- When n is large (greater than about 30): Catalan numbers grow exponentially and you will need big integers or modular arithmetic.
+
+### How to recognize in a new problem?
+**The "divide at the root" signal:** Can you split the problem at one chosen position, with the left and right halves completely independent? If yes, and you are counting all distinct ways, Catalan numbers apply.
+
+Decision chain:
+```
+Is the problem asking to COUNT distinct structures?
+  → Yes: Can each structure be split at exactly one "root" or "pivot"?
+    → Yes: Are the two halves after the split independent?
+      → Yes: → CATALAN NUMBERS
+```
+
+Concrete signals:
+- "Count all structurally distinct binary trees" → C(n)
+- "Count valid bracket sequences of length 2n" → C(n)
+- "Number of paths in a grid that never cross a boundary" → C(n)
+- "All ways to fully parenthesize an expression with n+1 operands" → C(n)
+
+### Simple Example
+**Input:** `n = 3` (count of unique BSTs with values 1, 2, 3)
+**Output:** `5`
+
+**Trace using the recurrence:**
+```
+C(0) = 1
+C(1) = C(0)×C(0) = 1×1 = 1
+C(2) = C(0)×C(1) + C(1)×C(0) = 1 + 1 = 2
+C(3) = C(0)×C(2) + C(1)×C(1) + C(2)×C(0)
+     =    1×2    +    1×1    +    2×1
+     =     2     +     1     +     2     = 5
+```
+
+### Code
+```java
+// Java — Catalan Numbers via DP (used in LeetCode 96: Unique BSTs)
+public int numTrees(int n) {
+    long[] C = new long[n + 1];
+    C[0] = 1;  // base case: one empty tree
+    for (int i = 1; i <= n; i++) {
+        for (int j = 0; j < i; j++) {
+            C[i] += C[j] * C[i - 1 - j];  // root at position j+1
+        }
+    }
+    return (int) C[n];
+}
+
+// Closed-form: C(n) = C(2n, n) / (n+1)
+// Note: computes exact integer result; only works for small n before overflow
+public long catalanClosedForm(int n) {
+    long result = 1;
+    for (int i = 0; i < n; i++) {
+        result = result * (2 * n - i) / (i + 1);
+    }
+    return result / (n + 1);
+}
+```
+```javascript
+// JavaScript — Catalan Numbers via DP
+function catalan(n) {
+    const C = new Array(n + 1).fill(0);
+    C[0] = 1;  // base case
+    for (let i = 1; i <= n; i++) {
+        for (let j = 0; j < i; j++) {
+            C[i] += C[j] * C[i - 1 - j];
+        }
+    }
+    return C[n];
+}
+
+// LeetCode 96: Unique Binary Search Trees
+function numTrees(n) {
+    return catalan(n);
+}
+```
+
+### Dry Run
+**Compute C(4) step by step:**
+
+| n | Recurrence calculation | Result |
+|---|------------------------|--------|
+| C(0) | base case | 1 |
+| C(1) | C(0)×C(0) | 1 |
+| C(2) | C(0)×C(1) + C(1)×C(0) = 1+1 | 2 |
+| C(3) | C(0)×C(2) + C(1)×C(1) + C(2)×C(0) = 2+1+2 | 5 |
+| C(4) | C(0)×C(3) + C(1)×C(2) + C(2)×C(1) + C(3)×C(0) = 5+2+2+5 | 14 |
+
+### Complexity
+```
+Time:  O(n^2) — two nested loops for the DP recurrence
+       O(n)   — for the closed-form formula (iterative product)
+Space: O(n)   — DP array storing C(0) through C(n)
+```
+
+### Common Trap
+**Confusing C(n) with C(2n, n).** The nth Catalan number equals `C(2n, n) / (n+1)`, NOT just `C(2n, n)`. Forgetting the `÷(n+1)` gives answers that are n+1 times too large. Also, the sequence is 0-indexed: C(0)=1, C(1)=1, C(2)=2, C(3)=5. Problems sometimes say "for n elements" meaning C(n) and sometimes meaning C(n-1) — read carefully.
+
+### Experience Tip
+**Experience Tip:** LeetCode 96 (Unique Binary Search Trees) is the most common Catalan number interview problem. The key insight to articulate out loud: "I choose node `i` as the root. The left subtree has `i-1` nodes and the right subtree has `n-i` nodes. Since they are completely independent, I multiply their counts and sum over all choices of root i from 1 to n." This "choose-root-and-split" reasoning shows you understand the WHY, not just the code.
+
+### Do Not Confuse With
+
+| | Catalan Numbers | Fibonacci Numbers | Binomial Coefficients C(n,k) |
+|--|--|--|--|
+| Recurrence | C(n) = Σ C(i)×C(n-1-i) | F(n) = F(n-1)+F(n-2) | C(n,k) = C(n-1,k-1)+C(n-1,k) |
+| What it counts | Binary trees, bracket sequences, polygon triangulations | Paths in 1D (or Fibonacci rabbits) | Subsets of size k from n items |
+| Pattern | Split into two independent halves, multiply | Choose one direction from two | Include or exclude one item |
+| Value at n=5 | 42 | 5 | depends on k |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 96 | Unique Binary Search Trees | Medium | Classic Catalan — C(n) unique BSTs with n nodes | https://leetcode.com/problems/unique-binary-search-trees/ |
+| 95 | Unique Binary Search Trees II | Medium | Generate all BSTs — recursive construction mirrors the Catalan recurrence | https://leetcode.com/problems/unique-binary-search-trees-ii/ |
+| 22 | Generate Parentheses | Medium | Count = C(n); generate all C(n) valid sequences | https://leetcode.com/problems/generate-parentheses/ |
+| 894 | All Possible Full Binary Trees | Medium | Number of full binary trees with 2n+1 nodes = C(n) | https://leetcode.com/problems/all-possible-full-binary-trees/ |
+| 241 | Different Ways to Add Parentheses | Medium | Generate all parenthesizations — count equals C(n-1) for n operators | https://leetcode.com/problems/different-ways-to-add-parentheses/ |
+| 1259 | Handshakes That Don't Cross | Hard | Catalan number in disguise — 2n people around a circle | https://leetcode.com/problems/handshakes-that-dont-cross/ |
+
+### One-Minute Revision
+```
+SEQUENCE:       C(0)=1, C(1)=1, C(2)=2, C(3)=5, C(4)=14, C(5)=42, ...
+RECURRENCE:     C(n) = sum of C(i) * C(n-1-i)  for i = 0..n-1
+CLOSED FORM:    C(n) = C(2n, n) / (n+1)
+COUNTS:         Unique BSTs, valid bracket sequences, full binary trees, polygon triangulations
+KEY PATTERN:    "Split at one pivot — left and right halves are independent — multiply and sum"
+USE WHEN:       Count distinct binary structures, bracket sequences, triangulations.
+TIME:           O(n^2) DP; O(n) closed-form
+SPACE:          O(n)
+COMMON TRAP:    Forgetting ÷(n+1) in closed form. Off-by-one: is the problem asking for C(n) or C(n-1)?
+EXPERIENCE TIP: "Choose root → left subtree i nodes, right n-1-i → multiply, sum over i" — say this.
 ```
 
 ---

@@ -13,6 +13,7 @@
 3. [Grouping by Key (Anagrams)](#grouping-by-key-anagrams)
 4. [Subarray Sum with HashMap (Prefix Sum + Hash)](#subarray-sum-with-hashmap-prefix-sum--hash)
 5. [HashSet for Existence / Deduplication](#hashset-for-existence--deduplication)
+6. [Rolling Hash](#rolling-hash)
 
 ---
 
@@ -814,6 +815,230 @@ SORTED array + find pair       →  Two Pointers (O(1) space, not HashMap)
 NON-NEGATIVE + sliding window  →  Sliding Window (O(1) space, not prefix sum)
 PAIRWISE connections           →  Union-Find (not HashMap grouping)
 TINY key range (a-z)           →  int[26] array (not HashMap)
+```
+
+---
+
+---
+
+## Rolling Hash
+
+### What is it?
+A hash is a number that represents a piece of data — like a fingerprint. A rolling hash is a hash that you can update in O(1) time as a window slides across a string: remove the leftmost character's contribution and add the new rightmost character's contribution. This makes it possible to check whether a small pattern appears anywhere inside a large text in nearly O(n+m) time, instead of O(n×m).
+
+Think of it like a price scanner at a supermarket: instead of re-reading every item in your cart from scratch, you just subtract the price of the item you put back and add the price of the new item — one subtraction, one addition, done.
+
+### Visual
+```
+Text:    a  b  r  a  c  a  d  a  b  r  a
+         0  1  2  3  4  5  6  7  8  9  10
+Pattern: a  b  r   (length m=3)
+
+Window slides left to right:
+Window [0..2]: "abr"  → compute hash H0
+Window [1..3]: "bra"  → H1 = (H0 - val('a')*BASE^2) * BASE + val('r')
+Window [2..4]: "rac"  → H2 = (H1 - val('b')*BASE^2) * BASE + val('c')
+...
+If Hk == hash("abr"), VERIFY character by character (could be a collision).
+
+Rolling update — O(1) per step:
+  Remove leftmost char:  hash -= val[leftChar] * BASE^(m-1)
+  Shift window:          hash *= BASE
+  Add new rightmost:     hash += val[newChar]
+  Keep small:            hash %= MOD
+```
+
+### How does it work?
+1. Choose a base (e.g. 31 for lowercase letters) and a large prime modulus (e.g. 10^9+7).
+2. Compute the hash of the pattern: `patternHash = sum(val[c]*BASE^i) % MOD`.
+3. Compute the hash of the first window of the text (same length m).
+4. Slide the window one character at a time:
+   - **Remove** the leftmost character: `windowHash -= val[leftChar] * BASE^(m-1) % MOD`.
+   - **Add mod-safe** to prevent negatives: `windowHash = (windowHash + MOD) % MOD`.
+   - **Shift and add**: `windowHash = (windowHash * BASE + val[newChar]) % MOD`.
+5. If `windowHash == patternHash`, **verify the match character by character** — hash collisions are rare but possible.
+6. Continue until the window reaches the end of the text.
+
+### Why does it work?
+The hash function is polynomial: `H("abc") = val['a']*BASE² + val['b']*BASE + val['c']`. When you remove 'a' from the left, you subtract `val['a']*BASE²`. When you add 'd' on the right, you multiply the rest by BASE and add `val['d']`. Everything stays small because you reduce modulo a large prime at every step. Collisions (two different strings producing the same hash) are possible but rare with a well-chosen prime.
+
+### When to use?
+- Search for a pattern string inside a much longer text (Rabin-Karp algorithm).
+- "Find all positions where a length-m substring appears."
+- Duplicate substring detection — longest duplicate substring.
+- Problems where you need to compare many fixed-length substrings for equality quickly.
+
+### When NOT to use?
+- When you need zero false positives — rolling hash has collision risk. Use KMP (guaranteed O(n)) instead.
+- When the pattern is very short (m ≤ 3) — direct character comparison is simpler and just as fast.
+- When you only need one exact substring search — `String.indexOf` (KMP internally) is cleaner.
+
+### How to recognize in a new problem?
+Ask: "Am I comparing many fixed-length substrings for equality?" Signals:
+- "Find if pattern exists in text" → Rabin-Karp / rolling hash.
+- "Longest repeating substring" → binary search on length + rolling hash to check for duplicates.
+- "Are two substrings equal?" at many positions → rolling hash for O(1) comparison after O(n) preprocessing.
+
+### Simple Example
+**Input:** `text = "abcabc"`, `pattern = "abc"`
+**Output:** positions `[0, 3]`
+
+**Trace (BASE=31, simplified):**
+```
+val: a=1, b=2, c=3
+BASE^2 = 961, BASE^1 = 31, BASE^0 = 1
+
+patternHash = 1*961 + 2*31 + 3 = 1026
+
+Window [0..2] = "abc": hash = 1026 → MATCH! Verify "abc"=="abc" ✓ → found at 0
+Window [1..3] = "bca": hash ≠ 1026 → skip
+Window [2..4] = "cab": hash ≠ 1026 → skip
+Window [3..5] = "abc": hash = 1026 → MATCH! Verify "abc"=="abc" ✓ → found at 3
+```
+
+### Code
+```java
+// Java — Rabin-Karp rolling hash
+public List<Integer> search(String text, String pattern) {
+    List<Integer> result = new ArrayList<>();
+    int n = text.length(), m = pattern.length();
+    if (m > n) return result;
+
+    final long MOD = 1_000_000_007L;
+    final long BASE = 31L;
+
+    // Precompute BASE^(m-1) % MOD
+    long power = 1;
+    for (int i = 0; i < m - 1; i++) power = power * BASE % MOD;
+
+    // Compute hash of pattern and first window
+    long patHash = 0, winHash = 0;
+    for (int i = 0; i < m; i++) {
+        patHash = (patHash * BASE + (pattern.charAt(i) - 'a' + 1)) % MOD;
+        winHash = (winHash * BASE + (text.charAt(i) - 'a' + 1)) % MOD;
+    }
+
+    // Slide the window
+    for (int i = 0; i <= n - m; i++) {
+        if (winHash == patHash) {
+            // Verify to handle rare hash collisions
+            if (text.substring(i, i + m).equals(pattern)) result.add(i);
+        }
+        if (i < n - m) {
+            // Remove leftmost char, add next char
+            winHash = (winHash - (text.charAt(i) - 'a' + 1) * power % MOD + MOD) % MOD;
+            winHash = (winHash * BASE + (text.charAt(i + m) - 'a' + 1)) % MOD;
+        }
+    }
+    return result;
+}
+```
+```javascript
+// JavaScript — Rolling Hash search
+function search(text, pattern) {
+    const result = [];
+    const n = text.length, m = pattern.length;
+    if (m > n) return result;
+
+    const MOD = 1_000_000_007n;
+    const BASE = 31n;
+
+    // Precompute BASE^(m-1)
+    let power = 1n;
+    for (let i = 0; i < m - 1; i++) power = power * BASE % MOD;
+
+    let patHash = 0n, winHash = 0n;
+    for (let i = 0; i < m; i++) {
+        const pv = BigInt(pattern.charCodeAt(i) - 96);
+        const tv = BigInt(text.charCodeAt(i) - 96);
+        patHash = (patHash * BASE + pv) % MOD;
+        winHash = (winHash * BASE + tv) % MOD;
+    }
+
+    for (let i = 0; i <= n - m; i++) {
+        if (winHash === patHash) {
+            if (text.slice(i, i + m) === pattern) result.push(i);
+        }
+        if (i < n - m) {
+            const leftV = BigInt(text.charCodeAt(i) - 96);
+            const rightV = BigInt(text.charCodeAt(i + m) - 96);
+            winHash = (winHash - leftV * power % MOD + MOD) % MOD;
+            winHash = (winHash * BASE + rightV) % MOD;
+        }
+    }
+    return result;
+}
+```
+
+### Dry Run
+Text: `"abcab"`, Pattern: `"ab"` (m=2)
+
+| Window i | Substring | winHash == patHash? | Action |
+|----------|-----------|---------------------|--------|
+| 0 | "ab" | YES | Verify "ab"=="ab" ✓ → add 0 |
+| 1 | "bc" | NO | Skip |
+| 2 | "ca" | NO | Skip |
+| 3 | "ab" | YES | Verify "ab"=="ab" ✓ → add 3 |
+
+Result: `[0, 3]`
+
+### Complexity
+```
+Time:  O(n + m) average — O(m) to hash pattern; O(n) to slide window (O(1) per step)
+       O(n × m) worst case — if every window hashes to the same value (e.g., all same chars),
+       each verification costs O(m). Use double hashing (two different MODs) to reduce this risk.
+Space: O(1) extra — only hash values and the precomputed power constant
+       O(k) for storing k match positions in the result list
+```
+
+### Common Trap
+**Negative hash values after subtraction.** When you subtract the leftmost character's contribution, the result can go negative (especially in Java and JavaScript). Always add MOD before taking the final `% MOD`:
+```
+winHash = (winHash - leftContrib + MOD) % MOD  // CORRECT
+winHash = (winHash - leftContrib) % MOD         // WRONG — can be negative
+```
+Forgetting `+MOD` produces silently wrong hashes that cause missed matches.
+
+### Experience Tip
+**Experience Tip:** Rolling Hash is easier to implement under pressure than KMP, but it has one fundamental weakness: hash collisions. Always verify on a hash match with a direct character comparison. In interviews say: "I'll use rolling hash for O(n) average time, and verify matches to handle the rare collision. If you need a zero-collision guarantee, I'll use KMP." This shows you know both tools and the trade-off between them.
+
+### Do Not Confuse With
+
+| Feature | Rolling Hash (Rabin-Karp) | KMP |
+|---------|--------------------------|-----|
+| Implementation complexity | Easier — just arithmetic | Harder — failure function needed |
+| Correctness | Hash collision risk; must verify | Guaranteed, zero false positives |
+| Time complexity (average) | O(n + m) | O(n + m) |
+| Time complexity (worst case) | O(n × m) if many collisions | O(n + m) strict |
+| Best for | Multiple patterns, substring comparison | Single pattern, strict O(n) guarantee |
+| Eliminate collisions | Use two different (MOD1, MOD2) hashes | Not needed |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 28 | Find the Index of the First Occurrence in a String | Easy | Classic substring search — rolling hash or KMP both work | https://leetcode.com/problems/find-the-index-of-the-first-occurrence-in-a-string/ |
+| 187 | Repeated DNA Sequences | Medium | Find all length-10 substrings appearing more than once — rolling hash + set | https://leetcode.com/problems/repeated-dna-sequences/ |
+| 1044 | Longest Duplicate Substring | Hard | Binary search on length + rolling hash to detect duplicates | https://leetcode.com/problems/longest-duplicate-substring/ |
+| 718 | Maximum Length of Repeated Subarray | Medium | Binary search on length + rolling hash or DP | https://leetcode.com/problems/maximum-length-of-repeated-subarray/ |
+| 1062 | Longest Repeating Substring | Medium | Binary search on length + rolling hash | https://leetcode.com/problems/longest-repeating-substring/ |
+| 1147 | Longest Chunked Palindrome Decomposition | Hard | Rolling hash from both ends simultaneously | https://leetcode.com/problems/longest-chunked-palindrome-decomposition/ |
+
+### One-Minute Revision
+```
+ALGORITHM:      Rolling Hash
+IN SIMPLE WORDS: Hash a window. Slide by removing leftmost char and adding rightmost.
+                 On hash match, verify character by character.
+USE WHEN:       Pattern search in text, duplicate substring detection, fixed-length substring comparison.
+DON'T USE WHEN: Need zero false positives → use KMP. Pattern very short → direct compare.
+CORE IDEA:      H(window) updated in O(1): subtract left char contribution, shift, add right char.
+ROLLING FORMULA: winHash = (winHash - leftVal*BASE^(m-1) + MOD) % MOD
+                 winHash = (winHash * BASE + rightVal) % MOD
+TIME:           O(n + m) average; O(n × m) worst
+SPACE:          O(1)
+COMMON TRAP:    Negative hash — always add MOD before % after subtraction.
+EXPERIENCE TIP: "Easier than KMP but has collision risk — always verify on match."
+VS KMP:         Rolling Hash = easier + collision risk. KMP = harder + strict O(n) guarantee.
 ```
 
 ---

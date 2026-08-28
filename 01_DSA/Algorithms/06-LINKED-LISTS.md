@@ -1,6 +1,6 @@
 # Linked Lists — Google Interview Patterns
 
-> **9 algorithms covered:** Fast/Slow Pointers (Cycle Detection) · Fast/Slow Pointers (Find Cycle Start) · Fast/Slow Pointers (Find Middle) · Remove Nth Node From End · In-Place Reversal (Full) · In-Place Reversal (Partial) · Dummy Node Trick · Merge Two Sorted Lists · LRU Cache
+> **10 algorithms covered:** Fast/Slow Pointers (Cycle Detection) · Fast/Slow Pointers (Find Cycle Start) · Fast/Slow Pointers (Find Middle) · Remove Nth Node From End · In-Place Reversal (Full) · In-Place Reversal (Partial) · Dummy Node Trick · Merge Two Sorted Lists · LRU Cache · Deep Clone / Copy List with Random Pointer
 
 > Read fast. Understand deeply. Go practice on LeetCode immediately.
 
@@ -16,6 +16,7 @@
 7. [Dummy Node Trick](#dummy-node-trick)
 8. [Merge Two Sorted Lists](#merge-two-sorted-lists)
 9. [LRU Cache — Doubly Linked List + HashMap](#lru-cache--doubly-linked-list--hashmap)
+10. [Deep Clone / Copy List with Random Pointer](#deep-clone--copy-list-with-random-pointer)
 
 ---
 
@@ -1417,6 +1418,260 @@ TIME: O(1) get and put
 SPACE: O(capacity)
 COMMON TRAP: Store key in node (needed for map.remove on eviction). Use doubly not singly linked. insertAtFront: set node.next/prev BEFORE touching headDummy.next.
 EXPERIENCE TIP: Write and test remove() and insertAtFront() in isolation first — they're the foundation of everything
+```
+
+---
+
+## Deep Clone / Copy List with Random Pointer
+
+### What is it?
+Each node in this special linked list has two pointers: a `next` pointer (to the next node in sequence) and a `random` pointer (which can point to ANY node in the list, or null). Your task is to create a completely new, independent list — every node must be a brand-new object with the same value, the same `next` structure, and the same `random` structure.
+
+The challenge: when you create a copy of node A and try to set `copyA.random`, the node that `random` points to might not have been copied yet. You cannot wire `random` in a single pass.
+
+Real-world analogy: Copying a company org chart where each person has a "direct manager" field that can point to anyone in the company, not just their immediate supervisor. You must create all employee records first, then fill in the "direct manager" references — because the manager's record might not exist yet when you reach the employee.
+
+### Visual
+
+```
+Original list:
+  [A:1] → [B:2] → [C:3] → null
+   |               ↑
+   random──────────┘         (A.random = C)
+         [B].random = [A]    (B.random = A)
+         [C].random = null
+
+WHY you cannot copy in one pass:
+  When creating copyA, you want to set copyA.random = copyC.
+  But copyC does not exist yet! You haven't reached C in the list.
+
+TWO-PASS HASHMAP APPROACH:
+  Pass 1: Create all copies, build a map.
+    map = { A→A'(1), B→B'(2), C→C'(3) }
+
+  Pass 2: Wire next and random using the map.
+    A'.next   = map[A.next]   = B'
+    A'.random = map[A.random] = C'   ← now C' exists in the map
+    B'.next   = map[B.next]   = C'
+    B'.random = map[B.random] = A'
+    C'.next   = map[null]     = null
+    C'.random = map[null]     = null
+
+  Result: A'→B'→C', with correct random pointers.
+
+THREE-PASS INTERLEAVE APPROACH (O(1) extra space):
+  Pass 1: Insert each copy immediately after its original.
+    [A] → [A'] → [B] → [B'] → [C] → [C'] → null
+
+  Pass 2: Wire random for each copy.
+    A'.random = A.random.next    (A.random=C, C.next=C' → A'.random=C' ✓)
+    B'.random = B.random.next    (B.random=A, A.next=A' → B'.random=A' ✓)
+    C'.random = null             (C.random=null → skip)
+
+  Pass 3: Separate the two lists.
+    Original: [A] → [B] → [C] → null
+    Copies:   [A'] → [B'] → [C'] → null
+```
+
+### How does it work?
+
+**HashMap approach (2 passes, O(n) space):**
+1. Pass 1: Walk the original list. For each node, create a copy and store `map[original] = copy`.
+2. Pass 2: Walk again. For each original node:
+   - `copy.next   = map[original.next]`   (null-safe: map.get(null) returns null)
+   - `copy.random = map[original.random]`
+3. Return `map[head]`.
+
+**Interleave approach (3 passes, O(1) extra space):**
+1. Pass 1: For every node, insert its copy immediately after: `[A] → [A'] → [B] → [B'] → ...`
+2. Pass 2: Wire random pointers: `original.next.random = original.random.next` (the copy of original.random is always original.random.next — they are interleaved).
+3. Pass 3: Separate: restore `original.next` and build the copy chain properly.
+
+### Why does it work?
+**HashMap:** Every copy is created in pass 1. In pass 2, `map[anything]` is guaranteed to exist (or return null for null keys), so no "copy not yet created" problem arises.
+
+**Interleave:** By placing each copy immediately after its original, `original.random.next` always equals the copy of `original.random`. This gives O(1) space by exploiting positional proximity instead of a HashMap.
+
+### When to use?
+- Linked list with a `random` (arbitrary) pointer that must be deep-copied.
+- Deep copy of any data structure where nodes reference each other non-linearly.
+
+### When NOT to use?
+- Simple linked list copy with only a `next` pointer — just iterate and copy, no special technique needed.
+
+### How to recognize in a new problem?
+"Clone" or "deep copy" a linked list + "random pointer" / "arbitrary pointer." Also appears as graph cloning (same concept, more connections per node).
+
+### Simple Example
+
+Original: A(1, random→C) → B(2, random→A) → C(3, random→null)
+
+After cloning:
+A'(1, random→C') → B'(2, random→A') → C'(3, random→null)
+
+A' and A are completely separate objects. Modifying A' does not affect A.
+
+### Code
+
+```java
+// Java — HashMap approach (cleaner, recommended for interviews)
+public Node copyRandomList(Node head) {
+    if (head == null) return null;
+    Map<Node, Node> map = new HashMap<>();
+
+    // Pass 1: create all copies
+    Node curr = head;
+    while (curr != null) {
+        map.put(curr, new Node(curr.val));
+        curr = curr.next;
+    }
+
+    // Pass 2: wire next and random
+    curr = head;
+    while (curr != null) {
+        map.get(curr).next   = map.get(curr.next);    // null-safe
+        map.get(curr).random = map.get(curr.random);  // null-safe
+        curr = curr.next;
+    }
+
+    return map.get(head);
+}
+```
+
+```java
+// Java — Interleave approach (O(1) extra space)
+public Node copyRandomListO1(Node head) {
+    if (head == null) return null;
+
+    // Pass 1: insert copy after each original
+    Node curr = head;
+    while (curr != null) {
+        Node copy = new Node(curr.val);
+        copy.next = curr.next;
+        curr.next = copy;
+        curr = copy.next;
+    }
+
+    // Pass 2: wire random pointers for copies
+    curr = head;
+    while (curr != null) {
+        if (curr.random != null) {
+            curr.next.random = curr.random.next;  // copy of curr.random is curr.random.next
+        }
+        curr = curr.next.next;
+    }
+
+    // Pass 3: separate the two lists
+    Node dummy = new Node(0);
+    Node copyTail = dummy;
+    curr = head;
+    while (curr != null) {
+        Node copy  = curr.next;
+        curr.next  = copy.next;          // restore original
+        copyTail.next = copy;
+        copyTail   = copy;
+        curr       = curr.next;
+    }
+    return dummy.next;
+}
+```
+
+```javascript
+// JavaScript — HashMap approach
+function copyRandomList(head) {
+    if (head === null) return null;
+    const map = new Map();
+
+    // Pass 1: create all copies
+    let curr = head;
+    while (curr !== null) {
+        map.set(curr, { val: curr.val, next: null, random: null });
+        curr = curr.next;
+    }
+
+    // Pass 2: wire next and random
+    curr = head;
+    while (curr !== null) {
+        map.get(curr).next   = map.get(curr.next)   ?? null;
+        map.get(curr).random = map.get(curr.random) ?? null;
+        curr = curr.next;
+    }
+
+    return map.get(head);
+}
+```
+
+### Dry Run
+
+Original: A(1,→C) → B(2,→A) → C(3,→null), HashMap approach.
+
+```
+Pass 1 (create copies):
+  map = { A → A'(1), B → B'(2), C → C'(3) }
+
+Pass 2 (wire pointers):
+  curr=A: A'.next = map[B] = B'.   A'.random = map[C] = C'.
+  curr=B: B'.next = map[C] = C'.   B'.random = map[A] = A'.
+  curr=C: C'.next = map[null] = null. C'.random = map[null] = null.
+
+Return map[A] = A'.
+Result: A'(1,→C') → B'(2,→A') → C'(3,→null)  ✓
+```
+
+### Complexity
+
+```
+HashMap approach:
+  Time:  O(n) — two passes, each O(n)
+  Space: O(n) — one HashMap entry per node
+
+Interleave approach:
+  Time:  O(n) — three passes, each O(n)
+  Space: O(1) — no extra data structures; threads reuse the list itself
+```
+
+### Common Trap
+
+The #1 beginner mistake: trying to copy `next` and `random` in a single pass. When setting `copy.random = copy of original.random`, the copy of `original.random` may not exist yet (it hasn't been created). Always create ALL copies first, THEN wire the pointers.
+
+### Experience Tip
+
+In an interview, present the HashMap approach first — it is clean, correct, and easy to explain. Then say: "If you need O(1) space, I can use the interleave trick: insert each copy right after its original, wire randoms using positional proximity, then separate the two lists." This shows depth without over-complicating your primary answer.
+
+### Do Not Confuse With
+
+| | Simple List Copy | Deep Clone with Random Pointer |
+|---|---|---|
+| Extra pointers | None — only `next` | `random` pointer to any node |
+| Single-pass possible? | Yes | No — random target may not be copied yet |
+| Space | O(1) | O(n) HashMap OR O(1) interleave trick |
+| Difficulty | Trivial | Medium |
+| Key trick | Just iterate | Create all copies first; wire in a second pass |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 138 | Copy List with Random Pointer | Medium | Classic — implement both HashMap and interleave; explain trade-offs | https://leetcode.com/problems/copy-list-with-random-pointer/ |
+| 133 | Clone Graph | Medium | Same concept on a graph — HashMap maps old→new nodes | https://leetcode.com/problems/clone-graph/ |
+| 1485 | Clone Binary Tree with Random Pointer | Medium | Same two-pass idea applied to a tree structure | https://leetcode.com/problems/clone-binary-tree-with-random-pointer/ |
+| 1490 | Clone N-ary Tree | Medium | Deep copy without random pointer — simpler; good warm-up | https://leetcode.com/problems/clone-n-ary-tree/ |
+
+### One-Minute Revision
+
+```
+ALGORITHM: Deep Clone / Copy List with Random Pointer
+IN SIMPLE WORDS: Can't copy random in one pass — target copy may not exist yet.
+                 HashMap: create all copies first, then wire next+random.
+                 Interleave: insert copies after originals; random = original.random.next.
+USE WHEN: Linked list with random/arbitrary pointer; deep copy with cross-references
+DON'T USE WHEN: Simple list copy (next only) — just iterate and copy next
+CORE IDEA: Two-step always: (1) create all copies, (2) wire all pointers
+TRACK: HashMap<original, copy> OR interleaved positions
+TIME: O(n)
+SPACE: O(n) HashMap OR O(1) interleave
+COMMON TRAP: Wiring random in a single pass — copy of target not yet created
+EXPERIENCE TIP: Present HashMap first; offer interleave as the space-optimization follow-up
 ```
 
 ---

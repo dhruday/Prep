@@ -6,6 +6,100 @@ This roadmap defines **exactly** what to study, in what order, and why. Each pha
 
 ---
 
+## Before You Begin — Absolute Beginner Checklist
+
+If you are brand new to DSA, make sure you can do these before starting Week 1. If you can't, spend a few days getting comfortable with them first.
+
+**Language basics (pick Java or JavaScript):**
+- [ ] Write a function that takes an array and returns the largest element
+- [ ] Write a for loop, a while loop, and a nested loop
+- [ ] Understand how arrays work in memory (index = position, 0-indexed)
+- [ ] Understand what a function call stack means (a function calling another function)
+- [ ] Understand what `O(n)` means in plain English: "if the input doubles, the work doubles"
+
+**Data structures you must know before Week 1:**
+- [ ] **Array** — a list of elements at numbered positions. `arr[0]` is the first.
+- [ ] **String** — an array of characters. Most string problems are array problems in disguise.
+- [ ] **HashMap / Dictionary** — a lookup table: given a key, find the value instantly (O(1)).
+- [ ] **HashSet** — a collection where every element is unique; checking membership is O(1).
+- [ ] **Stack** — a pile of plates: add to top (push), remove from top (pop). Last-In-First-Out.
+- [ ] **Queue** — a line of people: add to back (enqueue), remove from front (dequeue). First-In-First-Out.
+
+**Mental model you must build:**
+> Every DSA problem is asking: **"How do I find/compute X without checking every possible combination?"**
+> The answer is always: **"Use a smarter data structure or a smarter traversal order."**
+> Every algorithm in this knowledge base is one specific answer to that question.
+
+---
+
+## How to Read a New Problem and Identify the Pattern (5-Step Method)
+
+Use these 5 questions in order every time you see a new problem. After 100 problems, this process becomes instinctive.
+
+### Step 1: What is the input shape?
+| Input | Start here |
+|-------|-----------|
+| Array or string | [Step 2A](#step-2a-arraystring-problems) |
+| Linked list | [Linked Lists (06)](06-LINKED-LISTS.md) |
+| Tree | [Trees (10)](10-TREES.md) |
+| Graph or grid | [Graphs (11)](11-GRAPHS.md) |
+| Numbers / math | [Math (15)](15-MATH-AND-NUMBER-THEORY.md) |
+| Intervals / ranges | [Intervals (18)](18-INTERVAL-AND-SWEEP-LINE.md) |
+
+### Step 2A: Array/String Problems — What are you looking for?
+| Question | Pattern |
+|----------|---------|
+| Find a pair/triplet with a sum condition | Two Pointers (sorted) or HashMap (unsorted) |
+| Longest/shortest subarray with a property | Sliding Window |
+| Count subarrays with exact sum | Prefix Sum + HashMap |
+| Find element in sorted data | Binary Search |
+| "Minimize the maximum" or "maximize the minimum" | Binary Search on Answer |
+| Sort or count by value range | Counting/Radix/Bucket Sort |
+| Next greater/smaller element | Monotonic Stack |
+| Generate all valid configurations | Backtracking |
+| Count ways OR min/max over all possibilities | Dynamic Programming |
+
+### Step 3: Look for keywords in the problem statement
+| Keyword / Phrase | Pattern |
+|-----------------|---------|
+| "sorted array" | Binary Search |
+| "contiguous subarray" | Sliding Window or Prefix Sum |
+| "anagram" / "permutation of" | Frequency Count + Sliding Window |
+| "next greater" / "next smaller" | Monotonic Stack |
+| "shortest path" | BFS (unweighted) or Dijkstra (weighted) |
+| "all subsets" / "all permutations" | Backtracking |
+| "minimum cost" / "count ways" | Dynamic Programming |
+| "top K" / "Kth largest" | Heap or Quick Select |
+| "overlapping intervals" | Interval / Sweep Line |
+| "single number" / "missing number" | XOR / Bit Manipulation |
+| "prefix" / "autocomplete" | Trie |
+| "detect cycle" | Floyd's Fast/Slow or DFS |
+
+### Step 4: What does the problem ask you to RETURN?
+| Return Type | Likely Pattern |
+|------------|----------------|
+| A specific index or value | Binary Search, Two Pointers, HashMap |
+| A count (how many ways/pairs) | DP, Prefix Sum + HashMap |
+| A minimum or maximum value | DP, Greedy, Binary Search on Answer |
+| A list of ALL valid results | Backtracking |
+| True/False (exists or not) | BFS, DFS, HashSet, Binary Search |
+| A modified data structure | Design (HashMap + LinkedList, Trie) |
+
+### Step 5: Check the constraints — they reveal the complexity budget
+| Constraint | Max time complexity you can use |
+|------------|--------------------------------|
+| n ≤ 20 | O(2ⁿ) — backtracking, bitmask DP fine |
+| n ≤ 1,000 | O(n²) — nested loops fine |
+| n ≤ 100,000 | O(n log n) — sorting, heap, binary search |
+| n ≤ 10,000,000 | O(n) — two pointers, sliding window, linear scan |
+| n ≤ 10^18 | O(log n) — binary search, fast exponentiation |
+
+> **The constraint tells you what's allowed. The keyword tells you the direction. Together, they narrow it to 1-2 patterns.**
+
+---
+
+---
+
 ## Overview: Three Phases
 
 | Phase | Duration Target | Focus | Files |
@@ -371,34 +465,169 @@ For each category file in this knowledge base:
 
 ## Progress Tracking Checklist
 
-Use this checklist to track your progress:
+Use this checklist to track your progress. Check each item only when you can solve a problem using that pattern WITHOUT looking at notes.
 
 ### Phase 1: Foundations
-- [ ] Arrays & Strings: Two Pointers, Sliding Window, Prefix Sum mastered
-- [ ] Binary Search: Classic, on answer, rotated mastered
-- [ ] Sorting: Merge sort patterns, Quick Select, Cyclic Sort mastered
-- [ ] Hashing: Two-Sum family, Subaray Sum + HashMap mastered
-- [ ] Linked Lists: Fast/Slow, Reversal, LRU Cache mastered
-- [ ] Stacks: Monotonic Stack, Histogram, Rain Water mastered
 
-### Phase 2: Paradigms
-- [ ] Recursion: Can draw decision trees for any backtracking problem
-- [ ] DP Foundations: Can define state and recurrence for 1D/2D problems
-- [ ] DP Patterns: Knapsack, LIS/LCS, String DP mastered
-- [ ] DP Advanced: Interval, Bitmask, Tree DP understood
-- [ ] Trees: All traversals, BST, LCA, construction mastered
-- [ ] Graphs: BFS, DFS, Topo sort, Dijkstra, Union-Find mastered
-- [ ] Heaps: Top-K, Two-Heap, Merge-K mastered
-- [ ] Greedy: Can apply exchange argument, distinguish from DP
+**Arrays & Strings**
+- [ ] Two Pointers (opposite ends) — can solve 3Sum, Container With Most Water
+- [ ] Two Pointers (fast/slow) — can remove elements in-place
+- [ ] Sliding Window (fixed) — can find max sum subarray of size k
+- [ ] Sliding Window (variable) — can find longest substring without repeating chars
+- [ ] Prefix Sum — can answer range sum queries and find subarray sum = k
+- [ ] Kadane's Algorithm — can find maximum subarray sum
+- [ ] Dutch National Flag — can sort array of 0s, 1s, 2s in one pass
+- [ ] Boyer-Moore Voting — can find majority element in O(1) space
+
+**Searching**
+- [ ] Classic Binary Search — know the `low <= high` + `mid±1` template cold
+- [ ] Lower/Upper Bound — can find first/last occurrence
+- [ ] Binary Search on Rotated Array — can identify which half is sorted
+- [ ] Binary Search on Answer — can solve "minimize the maximum" problems
+- [ ] Ternary Search — know when to use vs binary search
+- [ ] Exponential Search — know why it's needed for unbounded arrays
+
+**Sorting**
+- [ ] Merge Sort patterns — can count inversions
+- [ ] Quick Select — can find Kth largest in O(n) average
+- [ ] Cyclic Sort — can find missing/duplicate numbers in [1..n] range
+- [ ] Counting Sort — know when value range is small
+- [ ] Radix Sort — can sort integers by digit passes
+- [ ] Bucket Sort — can sort uniformly distributed floats in O(n)
+- [ ] Custom Comparators — can sort by any custom criterion
+
+**Hashing**
+- [ ] Frequency Count — can group anagrams, find top-K frequent
+- [ ] Two-Sum HashMap — can find pairs/triplets with target sum
+- [ ] Prefix Sum + HashMap — can find subarrays with exact sum
+- [ ] Longest Consecutive Sequence — can solve in O(n) with HashSet
+- [ ] Rolling Hash — understand the rolling window update formula
+
+**Linked Lists**
+- [ ] Fast/Slow Pointers — can detect cycle and find cycle start
+- [ ] Find Middle — can find middle node in one pass
+- [ ] In-Place Reversal — can reverse full list and sublists
+- [ ] Merge Sorted Lists — can merge two and K sorted lists
+- [ ] Remove Nth From End — can use two-pointer gap technique
+- [ ] Deep Clone with Random Pointer — know both HashMap and interleave approaches
+- [ ] LRU Cache — can implement with HashMap + doubly linked list
+
+**Stacks & Queues**
+- [ ] Parentheses Family — can match/validate any bracket problem
+- [ ] Monotonic Stack — can find next greater/smaller element
+- [ ] Largest Rectangle in Histogram — can use monotonic stack
+- [ ] Min Stack — can support O(1) getMin with auxiliary stack
+- [ ] Monotonic Queue — can find sliding window maximum
+- [ ] Expression Evaluation — can evaluate postfix/infix expressions
+
+---
+
+### Phase 2: Algorithmic Paradigms
+
+**Recursion & Backtracking**
+- [ ] Subsets — include/exclude template
+- [ ] Combinations — subsets with size/sum constraint
+- [ ] Permutations — "used" array tracking
+- [ ] N-Queens — constraint tracking with sets
+- [ ] Sudoku Solver — `(row/3)*3 + col/3` box formula, constraint propagation
+- [ ] Word Search — grid DFS with visited marking + restore
+- [ ] Palindrome Partitioning — backtrack + palindrome check
+- [ ] Pruning Strategies — can identify when to prune a branch early
+
+**Dynamic Programming**
+- [ ] 1D Linear DP — Climbing Stairs, House Robber, Decode Ways
+- [ ] 2D Grid DP — Unique Paths, Edit Distance, LCS
+- [ ] 0/1 Knapsack — can define state dp[i][w] and fill table
+- [ ] Unbounded Knapsack — Coin Change, Ribbon Cut
+- [ ] LIS — both O(n²) DP and O(n log n) patience sorting
+- [ ] State Machine DP — can model stock buy/sell with states
+- [ ] Interval DP — Burst Balloons, Matrix Chain Multiplication
+- [ ] Bitmask DP — can represent visited set as bitmask for TSP/assignment
+- [ ] Digit DP — understand tight constraint and leading-zero flag
+- [ ] Tree DP — can compute dp values bottom-up on a tree
+- [ ] DP Optimizations — know when Monotone Queue DP or CHT applies
+
+**Trees**
+- [ ] All Traversals (inorder/preorder/postorder/level-order) — recursive + iterative
+- [ ] BST Validate/Search/Insert — uses min/max bounds
+- [ ] LCA — both BST version and general binary tree version
+- [ ] Diameter + Height — postorder, return value vs global max
+- [ ] Path Sum Family — root-to-leaf and any-to-any
+- [ ] Serialize/Deserialize — BFS or preorder approach
+- [ ] Tree Construction from Preorder+Inorder — root-split technique
+- [ ] Morris Traversal — O(1) space via threaded tree
+
+**Graphs**
+- [ ] BFS — shortest path, multi-source, level-by-level
+- [ ] DFS — components, cycle detection, timestamps
+- [ ] Topological Sort — Kahn's (BFS in-degree) and DFS finish-order
+- [ ] Dijkstra — min-heap, non-negative weights only
+- [ ] Bellman-Ford — V-1 rounds, detects negative cycles
+- [ ] Floyd-Warshall — all-pairs, O(V³), handles negative weights
+- [ ] Union-Find — union by rank + path compression
+- [ ] MST (Kruskal's + Prim's) — know both and when to use each
+- [ ] Bipartite Check — BFS 2-coloring
+- [ ] SCC (Tarjan's or Kosaraju's) — strongly connected components
+- [ ] Network Flow — residual graph, augmenting paths, max-flow min-cut
+
+**Heaps**
+- [ ] Top-K Elements — min-heap of size K
+- [ ] Merge K Sorted Lists — min-heap with (value, listIndex)
+- [ ] Two-Heap Median — max-heap lower half + min-heap upper half
+- [ ] Task Scheduler — count most-frequent, calculate idle slots
+
+**Greedy**
+- [ ] Exchange Argument — can prove greedy choices are optimal
+- [ ] Activity Selection / Non-Overlapping Intervals — sort by end time
+- [ ] Jump Game Family — track max reachable index
+- [ ] Gas Station — total gas ≥ total cost; start after last failure point
+- [ ] Huffman Coding — min-heap builds optimal prefix-free tree
+- [ ] Greedy vs DP Decision — can explain WHY greedy works or doesn't
+
+---
 
 ### Phase 3: Specialized
-- [ ] Bit Manipulation: XOR tricks, bitmask subsets mastered
-- [ ] Math: GCD, Sieve, modular arithmetic understood
-- [ ] Trie: Prefix matching, XOR trie mastered
-- [ ] Segment Tree / Fenwick Tree: Range query patterns understood
-- [ ] String Algorithms: KMP / Z-Algorithm understood
-- [ ] Intervals: Merge, Sweep Line mastered
-- [ ] Meta-patterns: Meet in the Middle, State Machine understood
+
+**Bit Manipulation**
+- [ ] XOR Cancellation — single number, missing number
+- [ ] Brian Kernighan — count set bits with `n &= (n-1)`
+- [ ] Power of Two — `n > 0 && (n & (n-1)) == 0`
+- [ ] Bitmask Subsets — enumerate all subsets with bit iteration
+
+**Math & Number Theory**
+- [ ] GCD (Euclidean) + LCM
+- [ ] Sieve of Eratosthenes — all primes up to n
+- [ ] Fast Exponentiation — O(log n) power
+- [ ] Modular Arithmetic — mod properties, (a*b)%m = ((a%m)*(b%m))%m
+- [ ] Catalan Numbers — recognize and apply C(n) = C(2n,n)/(n+1)
+- [ ] Reservoir Sampling — uniform random from stream
+
+**Advanced Data Structures**
+- [ ] Trie — can implement insert/search/startsWith
+- [ ] Union-Find with rank + compression
+- [ ] Segment Tree — point update + range query
+- [ ] Fenwick Tree (BIT) — prefix sum with updates in O(log n)
+- [ ] Sparse Table — O(1) static range minimum query
+
+**String Algorithms**
+- [ ] KMP — build failure function, match in O(n+m)
+- [ ] Rabin-Karp — rolling hash, handle collisions with double hashing
+- [ ] Z-Algorithm — Z[i] = longest prefix match starting at i
+- [ ] Manacher's — all palindromes in O(n) with mirror insight
+- [ ] Suffix Arrays — sorted suffix indices + LCP array
+
+**Intervals & Sweep Line**
+- [ ] Merge Intervals — sort by start, check end overlap
+- [ ] Insert Interval — find insertion point, merge left and right overlaps
+- [ ] Meeting Rooms II — min rooms = max concurrent overlaps
+- [ ] Sweep Line — event-based counting
+- [ ] Range Module — dynamic addRange/removeRange/queryRange
+
+**Meta-Patterns**
+- [ ] Meet in the Middle — split input, combine two halves
+- [ ] State Machine — represent problem as states + transitions
+- [ ] Minimax / Game Theory DP — optimal play from both sides
+- [ ] Simulation — follow instructions step by step
 
 ---
 

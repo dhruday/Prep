@@ -16,8 +16,10 @@
 4. [Gas Station — Running Surplus Reset](#gas-station--running-surplus-reset)
 5. [Task Scheduler — Frequency and Idle Slots](#task-scheduler--frequency-and-idle-slots)
 6. [Candy — Two-Pass Greedy](#candy--two-pass-greedy)
-7. [Quick Comparison Table](#quick-comparison-table)
-8. [When Greedy Fails — Use DP Instead](#when-greedy-fails--use-dp-instead)
+7. [Exchange Argument (Proof Technique)](#exchange-argument-proof-technique)
+8. [Huffman Coding](#huffman-coding)
+9. [Quick Comparison Table](#quick-comparison-table)
+10. [When Greedy Fails — Use DP Instead](#when-greedy-fails--use-dp-instead)
 
 ---
 
@@ -987,6 +989,393 @@ EXPERIENCE TIP: O(n) space is the price of two independent directional passes
 | Weighted Interval Scheduling | Taking the highest-value interval early can exclude a better set of intervals | DP |
 
 **The test before committing to greedy:** Try to construct a counterexample for your greedy strategy. If you can find one input where it fails, switch to DP. If you cannot find one after 30 seconds of trying, sketch the exchange argument: "If I swap my greedy choice into any optimal solution, the solution does not get worse."
+
+---
+
+---
+
+## Exchange Argument (Proof Technique)
+
+### What is it?
+The exchange argument is NOT an algorithm — it is a **proof technique** used to show that a greedy algorithm is correct. Here is the core idea: assume there is some optimal solution that makes a DIFFERENT choice from your greedy algorithm at some step. Show that if you "swap" its choice to match your greedy choice, the solution does not get worse (it stays equally good or improves). Therefore your greedy choice is at least as good as the optimal choice — and so the greedy algorithm produces an optimal solution.
+
+Think of it like sorting socks: you claim "always grab the matching pair that is easiest to finish first." The exchange argument says: "If the optimal method grabs a different pair first, I can swap the order and the total time cannot go up."
+
+### Visual
+```
+Problem: Schedule the maximum number of non-overlapping intervals.
+Greedy:  Always pick the interval with the EARLIEST END TIME.
+
+Suppose optimal solution OPT uses interval A (ends at time 8)
+instead of our greedy choice B (ends at time 5) at step k:
+
+Time:  1   2   3   4   5   6   7   8   9   10
+       [     B     ]                           ← greedy choice (ends at 5)
+       [             A             ]           ← OPT's choice (ends at 8)
+                           [  C  ]             ← next interval, starts at 9
+
+Exchange: in OPT, swap A → B.
+  B ends at 5 instead of 8.
+  Any interval that could follow A (starts ≥ 8) can still follow B (starts ≥ 5).
+  PLUS new intervals starting in [6,7] might now also fit — they couldn't after A.
+  → Swapped solution is AT LEAST AS GOOD as OPT. Never worse.
+
+Conclusion: The greedy choice (earliest end) is always at least as good as any other choice.
+Therefore the greedy algorithm is optimal. □
+```
+
+### How does it work?
+To write an exchange argument for any problem:
+1. **Name your greedy choice** clearly: "My algorithm always picks X."
+2. **Assume OPT differs**: "Suppose an optimal solution OPT makes a different choice Y at some step."
+3. **Construct the swap**: "Take OPT and swap Y → X at that step."
+4. **Show the swap does not hurt**: "After the swap, the objective value is the same or better."
+5. **Conclude**: "So there always exists an optimal solution that agrees with the greedy at every step, meaning our greedy is optimal."
+
+### Why does it work?
+If swapping ANY deviation from greedy toward greedy never makes things worse, you can repeatedly apply this swap until the optimal solution looks exactly like the greedy solution. Since you can transform any OPT into a greedy solution without losing quality, the greedy solution must be optimal.
+
+### When to use?
+- You need to PROVE that a greedy algorithm is correct.
+- An interviewer says "why does your greedy work?" or "prove your solution is optimal."
+- Any time you have a sorting-based greedy and need to justify the sort order.
+
+### When NOT to use?
+- When no simple swap can be shown to be harmless — greedy likely fails, switch to DP.
+- This is a proof technique only; it does not help you design the algorithm itself.
+
+### How to recognize in a new problem?
+When an interviewer asks **"Why is your greedy correct?"** or **"Prove your greedy is optimal"** — that is your cue to use the exchange argument. The structure is always: name the greedy choice, name the deviation, show the swap, conclude.
+
+### Simple Example
+**Problem:** Job Scheduling — prove that scheduling tasks in order of increasing deadline maximizes tasks completed.
+
+**Exchange argument:**
+- Suppose OPT schedules task A (deadline 5) before task B (deadline 3) and they conflict.
+- Swap: put B (deadline 3) before A (deadline 5).
+- B now runs earlier — it is more likely to meet its deadline (deadline 3 is tighter).
+- A runs later — since B finishes at the same time or earlier than A did, and A's deadline (5) is LARGER than B's (3), A still meets its deadline.
+- No deadline is newly violated. The swap is harmless.
+- By repeatedly swapping any out-of-order adjacent pair, we reach deadline-sorted order — proving it is optimal.
+
+### Code
+```java
+// There is no code for the exchange argument — it is a proof, not an algorithm.
+// The Activity Selection greedy below is proven correct BY exchange argument:
+
+// PROVEN by exchange argument:
+// "Picking the interval with the smallest end time is always at least
+//  as good as picking any other interval."
+public int maxNonOverlapping(int[][] intervals) {
+    Arrays.sort(intervals, (a, b) -> a[1] - b[1]); // sort by end time
+    int count = 1, lastEnd = intervals[0][1];
+    for (int i = 1; i < intervals.length; i++) {
+        if (intervals[i][0] >= lastEnd) {
+            count++;
+            lastEnd = intervals[i][1];
+        }
+    }
+    return count;
+}
+// The exchange argument JUSTIFIES why sorting by end time is correct.
+```
+```javascript
+// JavaScript — same algorithm, justified by exchange argument
+function maxNonOverlapping(intervals) {
+    intervals.sort((a, b) => a[1] - b[1]); // sort by end time (exchange argument justifies this)
+    let count = 1, lastEnd = intervals[0][1];
+    for (let i = 1; i < intervals.length; i++) {
+        if (intervals[i][0] >= lastEnd) {
+            count++;
+            lastEnd = intervals[i][1];
+        }
+    }
+    return count;
+}
+```
+
+### Dry Run
+**Proving the swap is harmless for Activity Selection:**
+
+| Step | OPT chooses | Our greedy | After swap to greedy | Worse? |
+|------|------------|------------|----------------------|--------|
+| 1 | A (ends at 8) | B (ends at 5) | Replace A with B in OPT | No — B ends earlier, never blocks more future intervals |
+| 2+ | Intervals fitting after A | Intervals fitting after B | Everything that fit after A also fits after B, plus more | Never worse |
+
+### Complexity
+```
+Time/Space: N/A — this is a proof technique, not an algorithm.
+The Activity Selection algorithm it justifies runs in O(n log n).
+```
+
+### Common Trap
+**Not doing the swap properly.** Beginners often say "obviously greedy works" without constructing the swap. Interviewers want to hear: (1) assume OPT differs, (2) define the swap, (3) show it does not hurt, (4) conclude. Skipping any step is not a complete proof and leaves the interviewer unconvinced.
+
+### Experience Tip
+**Experience Tip:** When an interviewer asks "why does your greedy work?", say: "I'll prove it by exchange argument." Then walk through the four steps. Even a brief, sketch-level exchange argument impresses interviewers — most candidates just say "it's intuitive." Saying "exchange argument" by name shows you know proof theory, not just gut feeling.
+
+### Do Not Confuse With
+
+| | Exchange Argument | Inductive Proof | Contradiction |
+|--|--|--|--|
+| What it is | Swap any OPT deviation toward greedy; show it's not worse | Prove base case + inductive step | Assume greedy is wrong, derive contradiction |
+| When to use | Greedy correctness proofs | DP optimality, inductive structures | General algorithm correctness |
+| Common in | Interval scheduling, job sequencing, Huffman coding | Shortest paths, DP tables | NP-hardness reductions |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 435 | Non-overlapping Intervals | Medium | Sort-by-end greedy proven by exchange argument | https://leetcode.com/problems/non-overlapping-intervals/ |
+| 452 | Minimum Number of Arrows to Burst Balloons | Medium | Same exchange argument justifies sort-by-end | https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/ |
+| 1029 | Two City Scheduling | Medium | Sort by cost difference; exchange argument justifies this ordering | https://leetcode.com/problems/two-city-scheduling/ |
+| 455 | Assign Cookies | Easy | Greedy: assign smallest sufficient cookie; exchange argument shows swapping never helps | https://leetcode.com/problems/assign-cookies/ |
+| 135 | Candy | Hard | Two-pass greedy; each pass independently justified by local exchange | https://leetcode.com/problems/candy/ |
+| 406 | Queue Reconstruction by Height | Medium | Greedy sort order proven by exchange argument | https://leetcode.com/problems/queue-reconstruction-by-height/ |
+
+### One-Minute Revision
+```
+TECHNIQUE:      Exchange Argument
+IN SIMPLE WORDS: To prove greedy is correct: assume OPT differs at some step,
+                 swap OPT's choice to match greedy, show the swap never makes things worse.
+USE WHEN:       Interviewer asks "why does your greedy work?" or "prove optimality."
+STEPS:          1. Name the greedy choice.
+                2. Assume OPT makes a different choice somewhere.
+                3. Swap OPT's choice to the greedy choice.
+                4. Show the swap does not increase cost or decrease value.
+                5. Conclude greedy is optimal.
+KEY EXAMPLES:   Activity Selection (sort by end), Job Sequencing by deadline, Huffman Coding.
+COMMON TRAP:    Just saying "it's obvious" — you MUST show the swap is harmless explicitly.
+EXPERIENCE TIP: Say "exchange argument" by name and walk all 4 steps. Most candidates skip this.
+```
+
+---
+
+## Huffman Coding
+
+### What is it?
+Huffman Coding is a lossless data compression algorithm. The core idea: assign shorter binary codes to characters that appear MORE frequently, and longer codes to characters that appear less frequently. This is **variable-length encoding** — unlike fixed-length encoding where every character gets the same number of bits, frequent characters get cheap (short) codes.
+
+Real-world analogy: Morse code does this intuitively — the letter 'E' (most common in English) is just one dot `.`, while 'Z' (rare) is `--..`. Huffman Coding makes this formally optimal using a min-heap and a binary tree.
+
+### Visual
+```
+Characters and their frequencies: a:5  b:3  c:1  d:1
+
+Step 1 — Load all into a min-heap (smallest frequency = highest priority):
+  Heap: [c:1, d:1, b:3, a:5]
+
+Step 2 — Pop two smallest (c:1 and d:1), merge into internal node cd:2, push back:
+  Heap: [cd:2, b:3, a:5]
+
+Step 3 — Pop two smallest (cd:2 and b:3), merge into node cdb:5, push back:
+  Heap: [a:5, cdb:5]
+
+Step 4 — Pop two smallest (a:5 and cdb:5), merge into root:10.
+  Heap: [root:10]  ← done (one node left)
+
+Final Huffman Tree:
+         [root:10]
+        /          \
+      a:5          [5]
+    (left=0)      /    \
+                b:3    [2]
+              (left=0) /    \
+                      c:1   d:1
+                    (left=0)(right=1)
+
+Codes (path from root: left edge = 0, right edge = 1):
+  a → 0      (1 bit  — most frequent, shortest code)
+  b → 10     (2 bits)
+  c → 110    (3 bits)
+  d → 111    (3 bits — least frequent, longest code)
+```
+
+### How does it work?
+1. Count the frequency of each character in the input.
+2. Insert all characters into a **min-heap** (priority queue, lowest frequency first).
+3. While the heap has more than one node:
+   - Pop the two nodes with the smallest frequencies (`left` and `right`).
+   - Create a new internal node: `freq = left.freq + right.freq`.
+   - Set `left` and `right` as its children.
+   - Push the new node back into the heap.
+4. The last remaining node is the **root** of the Huffman tree.
+5. Traverse the tree: going LEFT appends `0`, going RIGHT appends `1`. The path from root to each leaf is that character's code.
+
+### Why does it work?
+By always merging the two LEAST frequent nodes, less frequent characters end up deeper in the tree (longer path = longer code) while frequent characters stay near the root (shorter path = shorter code). This is provably optimal: Huffman coding produces the minimum possible average code length for a given frequency distribution. The exchange argument confirms this — swapping the two least-frequent nodes with any other pair only increases the average code length.
+
+### When to use?
+- Data compression: file compression (ZIP, gzip use variants of this idea).
+- When you need an optimal prefix-free code for a known frequency distribution.
+- Any problem that says "repeatedly merge the two smallest items and minimize total cost" — that is Huffman in disguise.
+
+### When NOT to use?
+- When character frequencies are not known in advance (use adaptive Huffman coding).
+- When you only need to compress once and decode speed matters most (Arithmetic coding may be better).
+
+### How to recognize in a new problem?
+Signals:
+- "Build an optimal encoding where more frequent characters have shorter codes."
+- "Minimum total cost to merge all items, where cost = sum of the two merged items."
+- "Connect ropes with minimum cost" — any problem where you iteratively merge the two cheapest things is essentially Huffman Coding.
+
+### Simple Example
+**Input:** `frequencies = {a:5, b:3, c:1, d:1}`
+**Output:** Codes `{a:"0", b:"10", c:"110", d:"111"}`
+
+**Bit cost comparison:**
+```
+Huffman:
+  a: 5 × 1 bit  =  5 bits
+  b: 3 × 2 bits =  6 bits
+  c: 1 × 3 bits =  3 bits
+  d: 1 × 3 bits =  3 bits
+  Total: 17 bits
+
+Fixed-length (need 2 bits per char since 4 chars need ⌈log2(4)⌉=2 bits):
+  Total = (5+3+1+1) × 2 = 20 bits
+
+Huffman saves 3 bits — bigger savings on realistic text.
+```
+
+### Code
+```java
+// Java — Build Huffman tree and extract codes
+import java.util.PriorityQueue;
+
+class HuffmanNode {
+    char ch; int freq;
+    HuffmanNode left, right;
+    HuffmanNode(char ch, int freq) { this.ch = ch; this.freq = freq; }
+    HuffmanNode(int freq, HuffmanNode l, HuffmanNode r) {
+        this.ch = '\0'; this.freq = freq; this.left = l; this.right = r;
+    }
+}
+
+public Map<Character, String> buildHuffman(Map<Character, Integer> freqMap) {
+    PriorityQueue<HuffmanNode> minHeap =
+        new PriorityQueue<>((a, b) -> a.freq - b.freq);
+
+    for (Map.Entry<Character, Integer> e : freqMap.entrySet()) {
+        minHeap.offer(new HuffmanNode(e.getKey(), e.getValue()));
+    }
+
+    while (minHeap.size() > 1) {
+        HuffmanNode left  = minHeap.poll();  // smallest frequency
+        HuffmanNode right = minHeap.poll();  // second smallest
+        minHeap.offer(new HuffmanNode(left.freq + right.freq, left, right));
+    }
+
+    Map<Character, String> codes = new HashMap<>();
+    traverse(minHeap.poll(), "", codes);
+    return codes;
+}
+
+private void traverse(HuffmanNode node, String code, Map<Character, String> codes) {
+    if (node == null) return;
+    if (node.left == null && node.right == null) {   // leaf node
+        codes.put(node.ch, code.isEmpty() ? "0" : code);  // handle single-char input
+        return;
+    }
+    traverse(node.left,  code + "0", codes);
+    traverse(node.right, code + "1", codes);
+}
+```
+```javascript
+// JavaScript — Huffman Coding (using sorted array as simple min-heap)
+function buildHuffman(freqMap) {
+    let heap = Object.entries(freqMap)
+        .map(([ch, freq]) => ({ ch, freq, left: null, right: null }))
+        .sort((a, b) => a.freq - b.freq);
+
+    while (heap.length > 1) {
+        const left  = heap.shift();  // smallest
+        const right = heap.shift();  // second smallest
+        const merged = { ch: null, freq: left.freq + right.freq, left, right };
+        // Insert merged back in sorted position
+        const idx = heap.findIndex(n => n.freq > merged.freq);
+        heap.splice(idx === -1 ? heap.length : idx, 0, merged);
+    }
+
+    const codes = {};
+    function traverse(node, code) {
+        if (!node.left && !node.right) { codes[node.ch] = code || "0"; return; }
+        traverse(node.left,  code + "0");
+        traverse(node.right, code + "1");
+    }
+    traverse(heap[0], "");
+    return codes;
+}
+```
+
+### Dry Run
+**Input:** `{a:5, b:3, c:1, d:1}`
+
+| Step | Heap contents (sorted by freq) | Action |
+|------|-------------------------------|--------|
+| Start | [c:1, d:1, b:3, a:5] | — |
+| 1 | Pop c:1 and d:1 → merge to cd:2 → push | [cd:2, b:3, a:5] |
+| 2 | Pop cd:2 and b:3 → merge to cdb:5 → push | [a:5, cdb:5] |
+| 3 | Pop a:5 and cdb:5 → merge to root:10 → push | [root:10] |
+| Done | One node remains — traverse for codes | |
+
+**Codes (left=0, right=1):**
+- root → left → a: `"0"`
+- root → right → left → b: `"10"`
+- root → right → right → left → c: `"110"`
+- root → right → right → right → d: `"111"`
+
+### Complexity
+```
+Time:  O(n log n) — n-1 merges, each heap push/pop costs O(log n)
+Space: O(n) — heap and tree nodes; O(n) for the codes map
+```
+
+### Common Trap
+**Forgetting the single-character case.** If the input has only one distinct character (e.g., `"aaaaa"`), the heap starts with one node and the `while` loop never runs. That character gets no tree path — you must assign it code `"0"` manually. The `code.isEmpty() ? "0" : code` guard in the leaf check handles this correctly.
+
+### Experience Tip
+**Experience Tip:** In interviews, Huffman Coding appears most often disguised as a "minimum cost to merge all elements" problem. "Connect ropes with minimum cost" (LeetCode 1167), "minimum cost to combine stones," "least cost to merge sorted files" — all of these reduce to: always merge the two cheapest items, total cost = sum of all merge costs. Recognize this shape: two smallest items + merge + push back = Huffman.
+
+### Do Not Confuse With
+
+| | Huffman Coding | Fixed-Length Encoding |
+|--|--|--|
+| Code length per char | Variable — frequent chars get shorter codes | Same for every character |
+| Optimality | Provably optimal for known frequency distribution | Simple but wasteful |
+| Example | 'e' might get 3 bits, 'z' might get 12 bits | ASCII: every char is always 8 bits |
+| Requires | Frequency table + prefix-free tree construction | Just the alphabet size |
+| Compression ratio | Better — exploits frequency skew | None, or minimal |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 1167 | Minimum Cost to Connect Sticks | Medium | Merge two smallest sticks repeatedly — Huffman in disguise | https://leetcode.com/problems/minimum-cost-to-connect-sticks/ |
+| 1046 | Last Stone Weight | Easy | Merge two largest stones — same heap mechanic, inverted | https://leetcode.com/problems/last-stone-weight/ |
+| 23 | Merge K Sorted Lists | Hard | Min-heap merge — same heap mechanics as Huffman tree building | https://leetcode.com/problems/merge-k-sorted-lists/ |
+| 621 | Task Scheduler | Medium | Frequency-driven greedy — same core intuition | https://leetcode.com/problems/task-scheduler/ |
+| 347 | Top K Frequent Elements | Medium | Build frequency map then heap — Huffman warm-up | https://leetcode.com/problems/top-k-frequent-elements/ |
+| 502 | IPO | Hard | Two-heap greedy — min-heap for cost, max-heap for profit | https://leetcode.com/problems/ipo/ |
+
+### One-Minute Revision
+```
+ALGORITHM:      Huffman Coding
+IN SIMPLE WORDS: Assign shorter codes to more frequent characters using a min-heap tree.
+                 Always merge the two LEAST frequent nodes.
+USE WHEN:       Optimal prefix-free encoding; "connect ropes/stones with minimum cost."
+DON'T USE WHEN: Frequencies unknown in advance; very large alphabets with decode speed focus.
+CORE IDEA:      Frequent chars → close to root → short path → short code.
+BUILD:          1. Add all chars to min-heap.
+                2. Pop 2 smallest, merge (sum frequencies), push back. Repeat until 1 node.
+                3. Traverse tree: left edge = 0, right edge = 1.
+TIME:           O(n log n)
+SPACE:          O(n)
+COMMON TRAP:    Single-character input — loop never runs; assign code "0" manually.
+EXPERIENCE TIP: "Connect ropes with min cost" = Huffman. Always merge the two cheapest.
+VS FIXED-LENGTH: Variable-length saves bits by exploiting frequency skew; fixed is simpler.
+```
 
 ---
 

@@ -1,6 +1,6 @@
 # Sorting & Order — Complete Interview Guide
 
-> **5 algorithms covered:** Merge Sort · Counting Sort · Cyclic Sort · Custom Comparator Sorting · Sorting as Preprocessing
+> **9 algorithms covered:** Merge Sort · Quick Sort · Quick Select · Counting Sort · Cyclic Sort · Custom Comparator Sorting · Sorting as Preprocessing · Radix Sort · Bucket Sort
 
 > Read fast. Understand deeply. Go practice on LeetCode immediately.
 
@@ -15,6 +15,8 @@
 - [Cyclic Sort](#cyclic-sort)
 - [Custom Comparator Sorting](#custom-comparator-sorting)
 - [Sorting as Preprocessing](#sorting-as-preprocessing)
+- [Radix Sort](#radix-sort)
+- [Bucket Sort](#bucket-sort)
 
 ---
 
@@ -1264,6 +1266,8 @@ EXPERIENCE TIP: "What if sorted?" is a powerful unstick technique — say it alo
 |---|---|---|---|
 | Values in [1,n], find missing/duplicate, O(1) space | Cyclic Sort | O(n) | O(1) |
 | Integer values in small range [0, K] | Counting Sort | O(n+K) | O(K) |
+| Large integers, small number of digits | Radix Sort | O(d*n) | O(n) |
+| Floats uniformly distributed, max gap | Bucket Sort | O(n) avg | O(n) |
 | Kth largest/smallest element | Quick Select | O(n) avg | O(1) iter |
 | Kth + streaming data OR sorted top-K | Heap | O(n log K) | O(K) |
 | Stable sort needed | Merge Sort | O(n log n) | O(n) |
@@ -1273,6 +1277,403 @@ EXPERIENCE TIP: "What if sorted?" is a powerful unstick technique — say it alo
 | Non-standard "comes before" rule | Custom Comparator + sort | O(n log n) | O(n) |
 | Intervals need ordered processing | Sort as Preprocessing | O(n log n) | O(log n) |
 | Pairs/triples summing to target | Sort + Two Pointers | O(n log n) | O(log n) |
+
+---
+
+## Radix Sort
+
+### What is it?
+Radix sort sorts numbers **digit by digit**, from the least significant digit (ones place) to the most significant (hundreds, thousands, ...). After processing every digit position, the array is fully sorted. Think of it as sorting a stack of index cards first by last name, then by first name — each pass builds on and preserves all previous passes' ordering.
+
+### Visual
+```
+Sort: [170, 45, 75, 90, 802, 24, 2, 66]
+Padded to 3 digits: [170, 045, 075, 090, 802, 024, 002, 066]
+
+PASS 1 — Sort by ONES digit (LSD — Least Significant Digit):
+ 170→0   045→5   075→5   090→0   802→2   024→4   002→2   066→6
+Bucket[0]: [170, 090]
+Bucket[2]: [802, 002]
+Bucket[4]: [024]
+Bucket[5]: [045, 075]
+Bucket[6]: [066]
+After Pass 1: [170, 090, 802, 002, 024, 045, 075, 066]
+
+PASS 2 — Sort by TENS digit:
+ 170→7   090→9   802→0   002→0   024→2   045→4   075→7   066→6
+Bucket[0]: [802, 002]
+Bucket[2]: [024]
+Bucket[4]: [045]
+Bucket[6]: [066]
+Bucket[7]: [170, 075]
+Bucket[9]: [090]
+After Pass 2: [802, 002, 024, 045, 066, 170, 075, 090]
+
+PASS 3 — Sort by HUNDREDS digit:
+ 802→8   002→0   024→0   045→0   066→0   170→1   075→0   090→0
+Bucket[0]: [002, 024, 045, 066, 075, 090]
+Bucket[1]: [170]
+Bucket[8]: [802]
+After Pass 3: [002, 024, 045, 066, 075, 090, 170, 802]
+
+FINAL RESULT: [2, 24, 45, 66, 75, 90, 170, 802] ✓
+
+WHY stability matters:
+  After Pass 1, 170 and 090 are together (both end in 0), 170 before 090.
+  Pass 2 sorts by tens digit — among those with tens=7, Pass 1's order is kept.
+  Without stability, Pass 2 would scramble Pass 1's hard-won ordering.
+```
+
+### How does it work?
+1. Find the maximum value to know how many digit passes are needed.
+2. For each digit position (ones → tens → hundreds → ...):
+   a. Extract each element's digit at this position: `digit = (num / exp) % 10`
+   b. Run **stable** counting sort using only that digit as the key.
+3. After all passes, the array is fully sorted.
+
+### Why does it work?
+The key is **stability**. After Pass 1 (sort by ones digit), numbers with the same ones digit appear in their original relative order. After Pass 2 (sort by tens digit), numbers with the same tens digit keep their Pass 1 order — meaning they remain sorted by ones digit within each tens group. Each pass respects and preserves all previous passes. After d passes (d = max number of digits), the array is sorted by all digit positions simultaneously.
+
+### When to use?
+- Sorting **non-negative integers** where the number of digits `d` is small.
+- `n` is large and `d * n` beats `n log n` (e.g., sorting 10^6 numbers each up to 6 digits).
+- You need a **stable, non-comparison** sort.
+- Problem hints "sort in linear time" with integer keys.
+
+### When NOT to use?
+- Floats, strings, or complex objects (radix sort requires a clear digit decomposition).
+- The number of digits `d` is large — `d * n` may exceed `n log n`.
+- Negative numbers (need extra handling).
+- Value range is small — use counting sort instead (simpler, same O(n)).
+
+### How to recognize in a new problem?
+Large n, integer values, bounded digit count, and "sort in linear time" in the problem. Also: "sort strings of the same length" — treat each character as a digit.
+
+### Simple Example
+**Input:** `[170, 45, 75, 90, 802, 24, 2, 66]`
+**Trace:** 3 passes (ones → tens → hundreds) as shown in the Visual above.
+**Output:** `[2, 24, 45, 66, 75, 90, 170, 802]`
+
+### Code
+```java
+// Java — LSD Radix Sort for non-negative integers
+void radixSort(int[] arr) {
+    int max = 0;
+    for (int num : arr) max = Math.max(max, num);
+
+    // Process each digit position: exp=1 (ones), 10 (tens), 100 (hundreds)...
+    for (int exp = 1; max / exp > 0; exp *= 10) {
+        countingSortByDigit(arr, exp);
+    }
+}
+
+void countingSortByDigit(int[] arr, int exp) {
+    int n = arr.length;
+    int[] output = new int[n];
+    int[] count  = new int[10]; // digits 0–9
+
+    // Count occurrences of each digit at this position
+    for (int num : arr) count[(num / exp) % 10]++;
+
+    // Prefix sum: count[i] now holds the position AFTER the last element with digit i
+    for (int i = 1; i < 10; i++) count[i] += count[i - 1];
+
+    // Build output RIGHT TO LEFT — this is what makes it stable
+    for (int i = n - 1; i >= 0; i--) {
+        int digit = (arr[i] / exp) % 10;
+        output[--count[digit]] = arr[i];
+    }
+
+    System.arraycopy(output, 0, arr, 0, n);
+}
+```
+```javascript
+// JavaScript — LSD Radix Sort for non-negative integers
+function radixSort(arr) {
+    const max = Math.max(...arr);
+    for (let exp = 1; Math.floor(max / exp) > 0; exp *= 10) {
+        countingSortByDigit(arr, exp);
+    }
+    return arr;
+}
+
+function countingSortByDigit(arr, exp) {
+    const n = arr.length;
+    const output = new Array(n).fill(0);
+    const count  = new Array(10).fill(0);
+
+    for (const num of arr) count[Math.floor(num / exp) % 10]++;
+    for (let i = 1; i < 10; i++) count[i] += count[i - 1];
+
+    // Traverse RIGHT TO LEFT for stability
+    for (let i = n - 1; i >= 0; i--) {
+        const digit = Math.floor(arr[i] / exp) % 10;
+        output[--count[digit]] = arr[i];
+    }
+
+    for (let i = 0; i < n; i++) arr[i] = output[i];
+}
+```
+
+### Dry Run
+`arr = [170, 45, 75, 90, 802, 24, 2, 66]` — **Pass 1** (exp=1, ones digit):
+
+| Number | Ones digit |
+|--------|-----------|
+| 170    | 0         |
+| 45     | 5         |
+| 75     | 5         |
+| 90     | 0         |
+| 802    | 2         |
+| 24     | 4         |
+| 2      | 2         |
+| 66     | 6         |
+
+Count array: `[2, 0, 2, 0, 1, 2, 1, 0, 0, 0]`
+Prefix sum:  `[2, 2, 4, 4, 5, 7, 8, 8, 8, 8]`
+Build right-to-left (stable): `[170, 90, 802, 2, 24, 45, 75, 66]`
+
+Pass 2 and Pass 3 continue analogously (see Visual).
+
+### Complexity
+```
+Time:  O(d × (n + k)) — d digit passes; each pass is O(n + k) counting sort
+       k = 10 for decimal, so O(d × n)
+       For 32-bit integers: d ≤ 10 → effectively O(n) for large n
+       vs O(n log n) comparison sorts: radix wins when d < log₂ n
+Space: O(n + k) — output array of size n, count array of size 10
+```
+
+### Common Trap
+**Forgetting stability in the counting sort step.** If the inner counting sort is NOT stable, it destroys the ordering established by previous passes. The fix is simple: always traverse the input array **right to left** when building the output array. This one detail is the most common implementation error in radix sort.
+
+### Experience Tip
+**Experience Tip:** LSD radix sort (Least Significant Digit first) is the standard form — more intuitive than MSD (Most Significant Digit). The mental model is "sort a deck of cards by last name first, then first name" — each pass respects the previous. In interviews, the key question to answer is: "how many passes?" — it equals the number of digits in the largest value. Always name that number explicitly.
+
+### Do Not Confuse With
+
+|                    | Radix Sort                                 | Counting Sort                         |
+|--------------------|--------------------------------------------|---------------------------------------|
+| Sorts by           | Digit positions, one at a time (d passes)  | Direct value (1 pass)                 |
+| Passes needed      | d (one per digit)                          | 1                                     |
+| Use case           | Large integers, many possible values       | Small bounded integer range           |
+| Space              | O(n + k) per pass                          | O(k) count array                      |
+| Comparison needed? | No                                         | No                                    |
+| Relationship       | Uses counting sort as a subroutine         | Independent algorithm                 |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 912 | Sort an Array | Medium | Implement radix sort from scratch — verify O(n) on large inputs | [Link](https://leetcode.com/problems/sort-an-array/) |
+| 164 | Maximum Gap | Hard | Bucket/radix insight: max gap must span a bucket boundary | [Link](https://leetcode.com/problems/maximum-gap/) |
+| 75 | Sort Colors | Medium | Counting sort warmup — same digit-bucket concept at scale 1 | [Link](https://leetcode.com/problems/sort-colors/) |
+| 1122 | Relative Sort Array | Easy | Counting sort as a building block (one-pass, small range) | [Link](https://leetcode.com/problems/relative-sort-array/) |
+| 274 | H-Index | Medium | Counting sort on citation values — frequency bucketing | [Link](https://leetcode.com/problems/h-index/) |
+| 315 | Count of Smaller Numbers After Self | Hard | Augmented sort — understand stable sort ordering deeply | [Link](https://leetcode.com/problems/count-of-smaller-numbers-after-self/) |
+
+### One-Minute Revision
+```
+ALGORITHM:  Radix Sort (LSD)
+USE WHEN:   Non-negative integers; n large; d (digits) small; linear time needed
+CORE IDEA:  Sort digit by digit (ones → tens → hundreds) using STABLE counting sort each pass
+            d passes total; each pass O(n + 10) = O(n)
+TIME/SPACE: O(d × n) / O(n + 10)
+TRAP:       Inner counting sort MUST be stable — traverse right-to-left when building output
+```
+
+---
+
+## Bucket Sort
+
+### What is it?
+Bucket sort divides values into a fixed number of "buckets" (equal-width ranges), sorts each small bucket individually (usually with insertion sort), then concatenates all buckets in order. Think of sorting students by grade: first separate them into A, B, C, D, F piles, sort each small pile, then combine. It runs in O(n) average time when values are **uniformly distributed** — the distribution assumption is what makes it fast.
+
+### Visual
+```
+Sort: [0.42, 0.72, 0.23, 0.08, 0.55, 0.61, 0.32, 0.89]
+Range: [0.0, 1.0), using 4 buckets of width 0.25
+
+DISTRIBUTE into buckets:
+Bucket 0 [0.00–0.25): [0.08, 0.23]
+Bucket 1 [0.25–0.50): [0.42, 0.32]
+Bucket 2 [0.50–0.75): [0.72, 0.55, 0.61]
+Bucket 3 [0.75–1.00): [0.89]
+
+SORT each bucket (insertion sort):
+Bucket 0: [0.08, 0.23]        ← already sorted
+Bucket 1: [0.32, 0.42]        ← sorted
+Bucket 2: [0.55, 0.61, 0.72]  ← sorted
+Bucket 3: [0.89]              ← trivial (1 element)
+
+CONCATENATE: [0.08, 0.23, 0.32, 0.42, 0.55, 0.61, 0.72, 0.89] ✓
+
+WHY it is O(n) — uniform distribution:
+  n=8 elements, k=4 buckets → ~2 elements per bucket on average
+  Each bucket: O(2²) = O(4) insertion sort
+  k buckets × O((n/k)²) = 4 × O(4) = O(16) = O(n) ✓
+
+WHY it degrades to O(n²) — skewed distribution:
+  Input: [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08]
+  Range: [0.0, 1.0) — ALL 8 elements land in Bucket 0
+  Bucket 0: 8 elements → O(8²) = O(n²) insertion sort ✗
+```
+
+### How does it work?
+1. Find the min and max values in the array.
+2. Create `k` empty buckets, each covering a sub-range of width `(max - min) / k`.
+3. Distribute each element into its bucket: `bucketIndex = floor((value - min) / width)`.
+4. Sort each non-empty bucket individually (insertion sort is ideal for small buckets).
+5. Concatenate all buckets in order from first to last.
+
+### Why does it work?
+With uniform distribution, each bucket gets approximately n/k elements. Insertion sort on a bucket of size m takes O(m²). Total: k × O((n/k)²) = O(n²/k). Set k = n → **O(n)**. The distribution assumption is the heart of the analysis — without it, you cannot guarantee small buckets, and one overloaded bucket collapses performance to O(n²).
+
+### When to use?
+- Values are **floats in [0, 1)** or integers in a known range.
+- Values are **uniformly distributed** (stated or implied in problem constraints).
+- You need O(n) average sort.
+- "Maximum gap" problems — the max gap must span a bucket boundary (pigeonhole principle).
+
+### When NOT to use?
+- Values are **skewed** (clustered in one area) — one bucket gets everything → O(n²).
+- Values are integers in a small range — use **counting sort** instead (simpler, always O(n + k)).
+- Distribution is unknown or adversarial.
+
+### How to recognize in a new problem?
+Key signals: "floats uniformly distributed in [0, 1]," "uniformly random values," "find maximum gap between sorted elements." The maximum gap problem (LeetCode 164) is the flagship bucket sort application — the pigeonhole principle guarantees the answer spans bucket boundaries.
+
+### Simple Example
+**Input:** `[0.42, 0.72, 0.23, 0.08, 0.55, 0.61, 0.32, 0.89]`
+**Trace:** 4 buckets of width 0.25. Distribute, sort each, concatenate. See Visual above.
+**Output:** `[0.08, 0.23, 0.32, 0.42, 0.55, 0.61, 0.72, 0.89]`
+
+### Code
+```java
+// Java — Bucket Sort for floats in [0, 1)
+void bucketSort(double[] arr) {
+    int n = arr.length;
+    List<List<Double>> buckets = new ArrayList<>();
+    for (int i = 0; i < n; i++) buckets.add(new ArrayList<>());
+
+    // Distribute: bucket index = (int)(val * n)
+    for (double val : arr) {
+        int idx = (int)(val * n);
+        if (idx == n) idx = n - 1; // edge case: val == 1.0
+        buckets.get(idx).add(val);
+    }
+
+    // Sort each bucket and concatenate
+    int pos = 0;
+    for (List<Double> bucket : buckets) {
+        Collections.sort(bucket);
+        for (double val : bucket) arr[pos++] = val;
+    }
+}
+
+// Integer bucket sort over range [min, max]
+void bucketSortIntegers(int[] arr) {
+    if (arr.length == 0) return;
+    int min = arr[0], max = arr[0];
+    for (int x : arr) { min = Math.min(min, x); max = Math.max(max, x); }
+    if (min == max) return; // all same value
+
+    int k = arr.length;
+    double width = (double)(max - min + 1) / k;
+    List<List<Integer>> buckets = new ArrayList<>();
+    for (int i = 0; i < k; i++) buckets.add(new ArrayList<>());
+
+    for (int x : arr) {
+        int idx = (int)((x - min) / width);
+        if (idx == k) idx = k - 1; // handle max value
+        buckets.get(idx).add(x);
+    }
+
+    int pos = 0;
+    for (List<Integer> bucket : buckets) {
+        Collections.sort(bucket);
+        for (int x : bucket) arr[pos++] = x;
+    }
+}
+```
+```javascript
+// JavaScript — Bucket Sort for floats in [0, 1)
+function bucketSort(arr) {
+    const n = arr.length;
+    const buckets = Array.from({ length: n }, () => []);
+
+    for (const val of arr) {
+        const idx = Math.min(Math.floor(val * n), n - 1);
+        buckets[idx].push(val);
+    }
+
+    return buckets.flatMap(bucket => bucket.sort((a, b) => a - b));
+}
+```
+
+### Dry Run
+`arr = [0.78, 0.17, 0.39, 0.26, 0.72, 0.94, 0.21, 0.12]`, n=8 buckets (width=0.125)
+
+| Value | Bucket index (⌊val × 8⌋) | Bucket |
+|-------|--------------------------|--------|
+| 0.78  | 6                        | B6     |
+| 0.17  | 1                        | B1     |
+| 0.39  | 3                        | B3     |
+| 0.26  | 2                        | B2     |
+| 0.72  | 5                        | B5     |
+| 0.94  | 7                        | B7     |
+| 0.21  | 1                        | B1     |
+| 0.12  | 0                        | B0     |
+
+After sorting each bucket:
+`B0:[0.12]  B1:[0.17,0.21]  B2:[0.26]  B3:[0.39]  B5:[0.72]  B6:[0.78]  B7:[0.94]`
+
+**Result:** `[0.12, 0.17, 0.21, 0.26, 0.39, 0.72, 0.78, 0.94]`
+
+### Complexity
+```
+Time:  O(n) average — uniform distribution → ~n/k items per bucket → k × O((n/k)²) = O(n)
+       O(n²) worst case — all items in one bucket (skewed distribution)
+Space: O(n + k) — n items distributed across k buckets
+```
+
+### Common Trap
+**Assuming O(n) without verifying uniform distribution.** Bucket sort is O(n) average ONLY when values are uniformly spread. If all values are clustered (e.g., `[0.01, 0.02, 0.03, 0.04]` in range [0, 1)), they all fall into the same bucket and you pay O(n²) insertion sort. Always confirm the distribution before choosing bucket sort.
+
+### Experience Tip
+**Experience Tip:** The most important bucket sort insight in LeetCode is the **Maximum Gap** problem (164): by the pigeonhole principle, if you have n numbers spread over a range R and you create n-1 buckets, the maximum gap between consecutive sorted numbers CANNOT be within a bucket (it must span at least one bucket boundary). So you only need to track the min and max of each bucket — no sorting inside buckets needed at all. When you see "maximum gap" or "minimum difference between consecutive sorted elements," think bucket sort + pigeonhole.
+
+### Do Not Confuse With
+
+|                    | Bucket Sort                                   | Counting Sort                          |
+|--------------------|-----------------------------------------------|----------------------------------------|
+| Values             | Any range; floats or large integers           | Integers in a small bounded range      |
+| Each bucket covers | A RANGE of values (bucket width > 1)          | Exactly ONE specific value             |
+| Time (best case)   | O(n) — when uniformly distributed             | O(n + k) — always, regardless of dist |
+| Worst case         | O(n²) — if all values land in one bucket      | Always O(n + k), no degradation        |
+| Use case           | Uniform floats; "maximum gap" problems        | Small integer range; character counts  |
+| Bucket count       | Usually n or sqrt(n)                          | Exactly k (range size)                 |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 164 | Maximum Gap | Hard | Pigeonhole: max gap spans bucket boundaries, not within | [Link](https://leetcode.com/problems/maximum-gap/) |
+| 347 | Top K Frequent Elements | Medium | Bucket by frequency — bucket index = frequency count | [Link](https://leetcode.com/problems/top-k-frequent-elements/) |
+| 451 | Sort Characters By Frequency | Medium | Bucket by frequency, then iterate high-to-low | [Link](https://leetcode.com/problems/sort-characters-by-frequency/) |
+| 220 | Contains Duplicate III | Medium | Sliding window + bucket index checks nearby values | [Link](https://leetcode.com/problems/contains-duplicate-iii/) |
+| 912 | Sort an Array | Medium | Compare all O(n) and O(n log n) approaches on one problem | [Link](https://leetcode.com/problems/sort-an-array/) |
+| 1057 | Campus Bikes | Medium | Bucket assignment by Manhattan distance | [Link](https://leetcode.com/problems/campus-bikes/) |
+
+### One-Minute Revision
+```
+ALGORITHM:  Bucket Sort
+USE WHEN:   Values uniformly distributed over known range; floats in [0,1]; "maximum gap"
+CORE IDEA:  Distribute into k range-buckets, sort each small bucket, concatenate
+            O(n) ONLY with uniform distribution — each bucket stays small
+TIME/SPACE: O(n) avg / O(n²) worst / O(n + k) space
+TRAP:       O(n) is NOT guaranteed — always verify uniform distribution first
+```
 
 ---
 

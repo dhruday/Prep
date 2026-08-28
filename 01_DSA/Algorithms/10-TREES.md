@@ -1,6 +1,6 @@
 # Trees — Google Interview Prep
 
-> **7 algorithms covered:** DFS Traversals (Inorder/Preorder/Postorder) · BFS Level-Order · Tree Height / Depth · Tree Diameter · Path Sum (Root-to-Leaf) · BST Validate / Search / Insert · Serialize and Deserialize
+> **9 algorithms covered:** DFS Traversals (Inorder/Preorder/Postorder) · BFS Level-Order · Tree Height / Depth · Tree Diameter · Path Sum (Root-to-Leaf) · Lowest Common Ancestor · BST Validate / Search / Insert · Serialize and Deserialize · Morris Traversal · Tree Construction from Preorder + Inorder
 
 > Goal: Read fast, understand deeply, go practice on LeetCode immediately.
 
@@ -16,6 +16,8 @@
 6. [Lowest Common Ancestor (LCA)](#lowest-common-ancestor-lca)
 7. [BST Validate / Search / Insert](#bst-validate--search--insert)
 8. [Serialize and Deserialize](#serialize-and-deserialize)
+9. [Morris Traversal](#morris-traversal)
+10. [Tree Construction from Preorder + Inorder](#tree-construction-from-preorder--inorder)
 
 ---
 
@@ -1528,6 +1530,441 @@ BST Search/Insert    O(h)    O(h)
 BST Validate         O(n)    O(h)    must check all nodes
 Serialize            O(n)    O(n)    string + call stack
 Deserialize          O(n)    O(n)
+Morris Traversal     O(n)    O(1)    threads tree temporarily; restores it
+Tree Construction    O(n)    O(n)    O(n) HashMap + O(h) stack
+```
+
+---
+
+## Morris Traversal
+
+### What is it?
+Morris Traversal performs inorder traversal of a binary tree without recursion and without a stack — achieving O(1) extra space. It works by temporarily creating "threads": extra pointers from a node's inorder predecessor back to that node. After visiting, the thread is removed, leaving the tree exactly as it was.
+
+Think of it like leaving a breadcrumb trail in a maze. You drop a thread when you enter a passage; when you find the thread on the way back, you know you have already explored this direction — you pick up the thread and move on.
+
+### Visual
+
+```
+Original tree (unchanged before and after):
+          4
+         / \
+        2   5
+       / \
+      1   3
+
+Step 1: current=4. Has left child. Find inorder predecessor of 4
+        (= rightmost node in left subtree starting at 2) → it is node 3.
+        3.right == null → CREATE THREAD: 3.right = 4. Move left. current=2.
+
+Tree with thread (temporary):
+          4
+         / \
+        2   5
+       / \
+      1   3
+           \
+            4  ← thread (3.right points back to 4)
+
+Step 2: current=2. Has left child. Predecessor = rightmost of left=1.
+        1.right == null → CREATE THREAD: 1.right = 2. Move left. current=1.
+
+Step 3: current=1. No left child. VISIT 1. Move right via thread. current=2.
+
+Step 4: current=2. Has left child. Predecessor = 1.
+        1.right == 2 → THREAD EXISTS. REMOVE THREAD: 1.right = null. VISIT 2. Move right. current=3.
+
+Step 5: current=3. No left child. VISIT 3. Move right via thread. current=4.
+
+Step 6: current=4. Has left child. Predecessor = 3.
+        3.right == 4 → THREAD EXISTS. REMOVE THREAD: 3.right = null. VISIT 4. Move right. current=5.
+
+Step 7: current=5. No left child. VISIT 5. Move right (null). Done.
+
+Result: [1, 2, 3, 4, 5]  — same as recursive inorder. Tree fully restored.
+```
+
+### How does it work?
+1. Set `current = root`.
+2. While `current` is not null:
+   - **If `current` has no left child:**
+     - Visit `current` (add to result).
+     - Move right: `current = current.right`.
+   - **Else (current has a left child):**
+     - Find the inorder predecessor: start at `current.left`, walk right until `predecessor.right == null` OR `predecessor.right == current`.
+     - **If `predecessor.right == null`** (thread not yet created):
+       - Create thread: `predecessor.right = current`.
+       - Move left: `current = current.left`.
+     - **If `predecessor.right == current`** (thread already exists — left subtree done):
+       - Remove thread: `predecessor.right = null`.
+       - Visit `current`.
+       - Move right: `current = current.right`.
+
+### Why does it work?
+In inorder traversal, after finishing the entire left subtree of a node, you must return to that node. The thread IS that return path. When you detect the thread pointing back to `current`, it signals: "the left subtree is complete." You visit `current`, remove the thread to restore the tree, and move right.
+
+### When to use?
+- Inorder traversal is required AND extra space must be O(1).
+- Embedded systems or extremely memory-constrained environments.
+- The interviewer explicitly asks for constant-space inorder.
+
+### When NOT to use?
+- In most interviews — recursive inorder (O(h) call stack) is far cleaner and preferred.
+- When the tree cannot be modified even temporarily.
+- When you need preorder or postorder — Morris variants exist but are significantly harder.
+
+### How to recognize in a new problem?
+Signal: "inorder traversal" combined with "O(1) space" or "constant extra space." If no space constraint is mentioned, use recursive inorder.
+
+### Simple Example
+
+**Tree:** 4 → [2 → [1, 3], 5]
+**Expected inorder:** [1, 2, 3, 4, 5]
+
+### Code
+
+```java
+// Java
+List<Integer> morrisInorder(TreeNode root) {
+    List<Integer> result = new ArrayList<>();
+    TreeNode current = root;
+
+    while (current != null) {
+        if (current.left == null) {
+            result.add(current.val);              // visit — no left subtree
+            current = current.right;
+        } else {
+            // find inorder predecessor
+            TreeNode pred = current.left;
+            while (pred.right != null && pred.right != current) {
+                pred = pred.right;
+            }
+
+            if (pred.right == null) {
+                pred.right = current;             // create thread
+                current = current.left;
+            } else {
+                pred.right = null;                // remove thread
+                result.add(current.val);          // visit
+                current = current.right;
+            }
+        }
+    }
+    return result;
+}
+```
+
+```javascript
+// JavaScript
+function morrisInorder(root) {
+    const result = [];
+    let current = root;
+
+    while (current !== null) {
+        if (current.left === null) {
+            result.push(current.val);             // visit
+            current = current.right;
+        } else {
+            let pred = current.left;
+            while (pred.right !== null && pred.right !== current) {
+                pred = pred.right;
+            }
+
+            if (pred.right === null) {
+                pred.right = current;             // create thread
+                current = current.left;
+            } else {
+                pred.right = null;                // remove thread
+                result.push(current.val);         // visit
+                current = current.right;
+            }
+        }
+    }
+    return result;
+}
+```
+
+### Dry Run
+
+Tree: 4 → [2 → [1, 3], 5]
+
+| current | Left? | Predecessor | Thread? | Action | Result |
+|---------|-------|-------------|---------|--------|--------|
+| 4 | yes (2) | node 3 (rightmost of left) | null → create 3.right=4 | move left | [] |
+| 2 | yes (1) | node 1 | null → create 1.right=2 | move left | [] |
+| 1 | no | — | — | visit 1, move right (thread→2) | [1] |
+| 2 | yes (1) | node 1 | 1.right=2 → remove thread | visit 2, move right (→3) | [1,2] |
+| 3 | no | — | — | visit 3, move right (thread→4) | [1,2,3] |
+| 4 | yes (2) | node 3 | 3.right=4 → remove thread | visit 4, move right (→5) | [1,2,3,4] |
+| 5 | no | — | — | visit 5, move right (null) | [1,2,3,4,5] |
+| null | — | — | — | exit | [1,2,3,4,5] |
+
+### Complexity
+
+```
+Time:  O(n) — each node is visited at most twice
+              (once to create its predecessor's thread, once to remove it and be visited)
+Space: O(1) — no stack, no recursion, no extra data structures
+              Threads reuse the tree's own right pointer slots; the tree is fully restored
+```
+
+### Common Trap
+
+The predecessor search loop must use `pred.right != null && pred.right != current`. If you write only `pred.right != null`, you will loop forever when the thread already points back to `current` — the right pointer is non-null and the walk never stops.
+
+### Experience Tip
+
+In an interview, say: "I'll use recursive inorder — O(h) space, O(n) time, which is fine here. If you need O(1) space, I can implement Morris Traversal, which threads the tree temporarily and restores it." This shows you know both solutions and lets the interviewer choose. Jumping straight to Morris without being asked is over-engineering.
+
+### Do Not Confuse With
+
+| | Recursive Inorder | Iterative (Stack) | Morris Traversal |
+|---|---|---|---|
+| Extra space | O(h) call stack | O(h) explicit stack | O(1) — no stack |
+| Modifies tree | No | No | Temporarily yes (fully restored) |
+| Time | O(n) | O(n) | O(n) |
+| Readability | Simple | Moderate | Complex |
+| When to use | Default | When recursion disallowed | O(1) space required |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 94 | Binary Tree Inorder Traversal | Easy | Start with recursive; try Morris as the O(1) follow-up | https://leetcode.com/problems/binary-tree-inorder-traversal/ |
+| 99 | Recover Binary Search Tree | Medium | Two nodes swapped — inorder reveals the anomaly; Morris gives O(1) space | https://leetcode.com/problems/recover-binary-search-tree/ |
+| 230 | Kth Smallest Element in a BST | Medium | Inorder gives sorted order; Morris eliminates stack space | https://leetcode.com/problems/kth-smallest-element-in-a-bst/ |
+| 501 | Find Mode in Binary Search Tree | Easy | Inorder on BST groups duplicates; Morris achieves O(1) space | https://leetcode.com/problems/find-mode-in-binary-search-tree/ |
+| 538 | Convert BST to Greater Tree | Medium | Reverse inorder (right→root→left); same Morris idea applied | https://leetcode.com/problems/convert-bst-to-greater-tree/ |
+| 897 | Increasing Order Search Tree | Easy | Inorder walk and relinking nodes — conceptually similar | https://leetcode.com/problems/increasing-order-search-tree/ |
+
+### One-Minute Revision
+
+```
+PATTERN:           Morris Traversal
+IN SIMPLE WORDS:   Thread the tree: if predecessor.right is null, create thread and go left.
+                   If thread found, remove it, visit current, go right.
+USE WHEN:          Inorder traversal with O(1) space requirement
+DON'T USE WHEN:    Tree cannot be modified; no space constraint; pre/postorder needed
+KEY QUESTION:      Does the inorder predecessor already have a thread back to current?
+TIME:              O(n) — each node touched at most twice
+SPACE:             O(1)
+COMMON TRAP:       Predecessor loop must check pred.right != current — missing this causes infinite loop
+EXPERIENCE TIP:    Offer recursive inorder first; offer Morris only when O(1) space is explicitly asked
+```
+
+---
+
+## Tree Construction from Preorder + Inorder
+
+### What is it?
+Given two arrays — a preorder traversal and an inorder traversal of the same binary tree — reconstruct the exact original tree. The key insight: preorder always visits the root first, so `preorder[0]` is the root. Finding that root value in the inorder array splits everything to its left (left subtree) from everything to its right (right subtree). Recurse on each half.
+
+Think of it like a mystery novel where the first sentence names the murderer (preorder: root first) and a seating chart reveals who sat left and right of the murderer at the dinner table (inorder: root in the middle). Together they uniquely reconstruct the scene.
+
+### Visual
+
+```
+Preorder:  [3,  9,  20, 15,  7]
+            ↑
+            Always the root
+
+Inorder:   [9,  3,  20, 15,  7]
+                ↑
+                Root = 3, found at index 1
+
+Split:
+  Left of root in inorder:  [9]          → LEFT subtree  (size = 1)
+  Right of root in inorder: [20, 15, 7]  → RIGHT subtree (size = 3)
+
+Slice preorder:
+  left preorder:  preorder[1 .. 1+1) = [9]        (1 element = left size)
+  right preorder: preorder[1+1 .. 4] = [20, 15, 7] (rest)
+
+Recurse on left:
+  build([9], [9]) → root=9, no children → leaf node 9
+
+Recurse on right:
+  build([20,15,7], [20,15,7])
+    root = 20 (preorder[0])
+    20 in inorder at index 0 → left=[], right=[15,7]
+    left preorder: []  right preorder: [15,7]
+    → 20 has no left child
+    build([15,7], [15,7])
+      root=15, left=[], right=[7] → 15 has right child 7
+
+Final tree:
+        3
+       / \
+      9  20
+           \
+           15
+             \
+              7
+```
+
+### How does it work?
+
+1. Pre-compute a HashMap: `inorderMap[value] = index` (so lookups are O(1)).
+2. Call `build(preL, preR, inL, inR)` with the full array bounds initially.
+3. **Base case:** if `preL > preR`, return null (empty subtree).
+4. `rootVal = preorder[preL]` (first element of current preorder slice).
+5. `rootIdx = inorderMap[rootVal]` (position of root in inorder).
+6. `leftSize = rootIdx - inL` (number of nodes in left subtree).
+7. Recurse left:
+   - Preorder slice: `[preL+1, preL+leftSize]`
+   - Inorder slice:  `[inL, rootIdx-1]`
+8. Recurse right:
+   - Preorder slice: `[preL+leftSize+1, preR]`
+   - Inorder slice:  `[rootIdx+1, inR]`
+9. Return the root node.
+
+### Why does it work?
+Preorder tells you the root (always first). Inorder tells you the boundary between left and right subtrees (everything left of the root in inorder belongs to the left subtree; everything right belongs to the right subtree). These two facts together uniquely identify the tree structure at every level of recursion.
+
+### When to use?
+- Given preorder + inorder arrays: reconstruct the tree.
+- Given postorder + inorder arrays: same idea, root is `postorder[last]`.
+- Any tree-reconstruction problem from two traversal arrays.
+
+### When NOT to use?
+- Only one traversal array given — not enough information (multiple trees can match).
+- Given preorder + postorder only — reconstruction is not unique unless the tree is a full binary tree (every node has 0 or 2 children).
+
+### How to recognize in a new problem?
+"Construct binary tree from [traversal A] and [traversal B]." Always ask: which traversal gives the root? (Preorder: first element. Postorder: last element.) Which traversal gives the left/right split? (Inorder always does.)
+
+### Simple Example
+
+**Preorder:** [1, 2, 3]
+**Inorder:**  [2, 1, 3]
+
+Root = preorder[0] = 1. Find 1 in inorder: index 1.
+Left inorder: [2] (size=1). Right inorder: [3].
+Left preorder: [2]. Right preorder: [3].
+
+```
+    1
+   / \
+  2   3
+```
+
+### Code
+
+```java
+// Java
+public TreeNode buildTree(int[] preorder, int[] inorder) {
+    Map<Integer, Integer> inMap = new HashMap<>();
+    for (int i = 0; i < inorder.length; i++) {
+        inMap.put(inorder[i], i);          // value → index, for O(1) lookup
+    }
+    return build(preorder, 0, preorder.length - 1,
+                 inorder,  0, inorder.length  - 1, inMap);
+}
+
+private TreeNode build(int[] pre, int preL, int preR,
+                       int[] in,  int inL,  int inR,
+                       Map<Integer, Integer> inMap) {
+    if (preL > preR) return null;
+
+    int rootVal  = pre[preL];
+    int rootIdx  = inMap.get(rootVal);
+    int leftSize = rootIdx - inL;
+
+    TreeNode root  = new TreeNode(rootVal);
+    root.left  = build(pre, preL + 1,            preL + leftSize,
+                       in,  inL,                  rootIdx - 1,    inMap);
+    root.right = build(pre, preL + leftSize + 1,  preR,
+                       in,  rootIdx + 1,           inR,            inMap);
+    return root;
+}
+```
+
+```javascript
+// JavaScript
+function buildTree(preorder, inorder) {
+    const inMap = new Map();
+    inorder.forEach((val, idx) => inMap.set(val, idx));
+
+    function build(preL, preR, inL, inR) {
+        if (preL > preR) return null;
+        const rootVal  = preorder[preL];
+        const rootIdx  = inMap.get(rootVal);
+        const leftSize = rootIdx - inL;
+        const root     = { val: rootVal, left: null, right: null };
+        root.left  = build(preL + 1,            preL + leftSize,
+                           inL,                  rootIdx - 1);
+        root.right = build(preL + leftSize + 1,  preR,
+                           rootIdx + 1,           inR);
+        return root;
+    }
+    return build(0, preorder.length - 1, 0, inorder.length - 1);
+}
+```
+
+### Dry Run
+
+**Preorder:** [3, 9, 20, 15, 7]
+**Inorder:**  [9, 3, 20, 15, 7]
+**inMap:** {9:0, 3:1, 20:2, 15:3, 7:4}
+
+| Call | preL-preR | inL-inR | rootVal | rootIdx | leftSize | Result |
+|------|-----------|---------|---------|---------|----------|--------|
+| build(0,4,0,4) | 0..4 | 0..4 | 3 | 1 | 1 | node 3 |
+| build(1,1,0,0) | 1..1 | 0..0 | 9 | 0 | 0 | node 9 (leaf) |
+| build(2,4,2,4) | 2..4 | 2..4 | 20 | 2 | 0 | node 20 |
+| build(3,4,3,4) | 3..4 | 3..4 | 15 | 3 | 0 | node 15 |
+| build(4,4,4,4) | 4..4 | 4..4 | 7 | 4 | 0 | node 7 (leaf) |
+
+### Complexity
+
+```
+Time:  O(n) — each node is created exactly once; HashMap lookup is O(1)
+Space: O(n) — HashMap stores one entry per node; O(h) call stack on top
+
+Without HashMap: indexOf in the loop = O(n) per call = O(n^2) total — always use the HashMap.
+```
+
+### Common Trap
+
+Using `Arrays.asList(inorder).indexOf(rootVal)` or scanning the inorder array inside each recursive call is O(n) per call, giving O(n²) total. Always precompute the HashMap before starting the recursion.
+
+### Experience Tip
+
+Before writing a single line of code, write out the first split on paper: `root = preorder[0]`, find it in inorder, count `leftSize`. Getting `leftSize` right is everything — it governs both preorder and inorder slices for the left and right subtrees. If your slicing is off by one, every subtree will be wrong. Draw it first.
+
+### Do Not Confuse With
+
+| Traversal pair | Where is the root? | Does inorder split left/right? | Unique? |
+|---|---|---|---|
+| Preorder + Inorder | `preorder[0]` (first) | Yes — inorder always splits | Always unique |
+| Postorder + Inorder | `postorder[last]` (last) | Yes — same split logic | Always unique |
+| Preorder + Postorder | `preorder[0]` (first); `preorder[1]` = left child root | No direct split — find left root in postorder | Only unique for full binary trees |
+| Single traversal only | N/A | No | Never unique |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 105 | Construct Binary Tree from Preorder and Inorder Traversal | Medium | Core pattern — preorder[0]=root, split inorder | https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/ |
+| 106 | Construct Binary Tree from Inorder and Postorder Traversal | Medium | postorder[last]=root; same split logic | https://leetcode.com/problems/construct-binary-tree-from-inorder-and-postorder-traversal/ |
+| 889 | Construct Binary Tree from Preorder and Postorder Traversal | Medium | preorder[1]=left root; find in postorder for left size | https://leetcode.com/problems/construct-binary-tree-from-preorder-and-postorder-traversal/ |
+| 1008 | Construct BST from Preorder Traversal | Medium | BST ordering replaces inorder — split by value comparison | https://leetcode.com/problems/construct-binary-search-tree-from-preorder-traversal/ |
+| 297 | Serialize and Deserialize Binary Tree | Hard | Different encoding (null markers) but same reconstruct idea | https://leetcode.com/problems/serialize-and-deserialize-binary-tree/ |
+| 114 | Flatten Binary Tree to Linked List | Medium | Preorder walk + relinking — related preorder reasoning | https://leetcode.com/problems/flatten-binary-tree-to-linked-list/ |
+
+### One-Minute Revision
+
+```
+PATTERN:           Tree Construction from Preorder + Inorder
+IN SIMPLE WORDS:   preorder[0] = root. Find root in inorder. Left = everything before. Right = everything after.
+USE WHEN:          Two traversal arrays given; reconstruct the original tree
+DON'T USE WHEN:    Only one array; preorder+postorder without full-binary-tree guarantee
+KEY QUESTION:      How large is the left subtree? (leftSize = rootIdx - inorderLeft)
+RETURN FROM EACH:  The reconstructed TreeNode for this sub-problem
+TIME:              O(n) with HashMap; O(n^2) without — always use the HashMap
+SPACE:             O(n) HashMap + O(h) call stack
+COMMON TRAP:       Using indexOf inside recursion = O(n^2). Precompute the HashMap.
+EXPERIENCE TIP:    Draw the first split manually before coding. leftSize drives all array slicing.
 ```
 
 ---

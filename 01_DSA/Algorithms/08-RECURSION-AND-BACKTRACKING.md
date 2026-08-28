@@ -1,6 +1,19 @@
 # Recursion & Backtracking
 
-> **7 algorithms covered:** Basic Recursion · Subsets / Power Set · Permutations · Combinations (Combination Sum) · Palindrome Partitioning · N-Queens (Constraint Satisfaction) · Grid DFS / Word Search
+> **8 algorithms covered:** Basic Recursion · Subsets / Power Set · Permutations · Combinations (Combination Sum) · Palindrome Partitioning · N-Queens (Constraint Satisfaction) · Grid DFS / Word Search · Sudoku Solver
+
+---
+
+## Table of Contents
+
+1. [Basic Recursion](#basic-recursion)
+2. [Subsets / Power Set](#subsets--power-set)
+3. [Permutations](#permutations)
+4. [Combinations (Combination Sum Style)](#combinations-combination-sum-style)
+5. [Palindrome Partitioning](#palindrome-partitioning)
+6. [N-Queens (Constraint Satisfaction)](#n-queens-constraint-satisfaction)
+7. [Grid DFS / Backtracking (Word Search)](#grid-dfs--backtracking-word-search)
+8. [Sudoku Solver](#sudoku-solver)
 
 ---
 
@@ -1108,6 +1121,241 @@ EXPERIENCE TIP: In-place marking avoids a separate visited array — cleaner and
 
 ---
 
+## Sudoku Solver
+
+### What is it?
+Fill a partially-completed 9×9 grid so that every row, every column, and every 3×3 box contains the digits 1–9 exactly once. This is a **constraint satisfaction** problem: at each empty cell, try each digit 1–9; if the digit violates any constraint, skip it; if you get stuck with no valid digit, undo the last placement and try the next option (backtrack).
+
+Think of it like filling in a crossword: you write a letter, keep going, and when a later word won't fit, you erase back to the choice that caused the conflict and try something else.
+
+### Visual
+
+```
+The 9 boxes, numbered 0 to 8 — beginners always need this map:
+
++-------+-------+-------+
+| 0 0 0 | 1 1 1 | 2 2 2 |
+| 0 0 0 | 1 1 1 | 2 2 2 |
+| 0 0 0 | 1 1 1 | 2 2 2 |
++-------+-------+-------+
+| 3 3 3 | 4 4 4 | 5 5 5 |
+| 3 3 3 | 4 4 4 | 5 5 5 |
+| 3 3 3 | 4 4 4 | 5 5 5 |
++-------+-------+-------+
+| 6 6 6 | 7 7 7 | 8 8 8 |
+| 6 6 6 | 7 7 7 | 8 8 8 |
+| 6 6 6 | 7 7 7 | 8 8 8 |
++-------+-------+-------+
+
+Box index formula:  box = (row / 3) * 3 + (col / 3)
+
+Derivation (say it out loud until it sticks):
+  row / 3  gives 0, 1, or 2  → which ROW of boxes (top / middle / bottom)
+  × 3      maps it to 0, 3, or 6  (starting box index of that row)
+  col / 3  gives 0, 1, or 2  → which COLUMN of boxes (left / center / right)
+  Add them → final box index
+
+Concrete examples:
+  cell (0, 0) → box = (0/3)*3 + (0/3) = 0*3 + 0 = 0  (top-left box)     ✓
+  cell (4, 7) → box = (4/3)*3 + (7/3) = 1*3 + 2 = 5  (middle-right box) ✓
+  cell (8, 8) → box = (8/3)*3 + (8/3) = 2*3 + 2 = 8  (bottom-right box) ✓
+
+The three constraint sets for cell (row, col):
+  1. Row   row           — no digit repeated in the same row
+  2. Col   col           — no digit repeated in the same column
+  3. Box   (row/3)*3 + (col/3) — no digit repeated in the same 3×3 box
+```
+
+### How does it work?
+
+1. Scan left-to-right, top-to-bottom to find the next empty cell (`.`).
+2. **Base case:** No empty cell found → the board is completely filled → return `true`.
+3. For digits `'1'` to `'9'`:
+   a. Check: does this digit already appear in the same row? Same column? Same 3×3 box?
+   b. If any conflict → skip this digit.
+   c. If valid → place the digit on the board (Choose).
+   d. Recurse. If recursion returns `true` → propagate `true` upward.
+   e. Recursion returned `false` → undo the placement (Undo): set cell back to `'.'`.
+4. If no digit 1–9 worked at this cell → return `false` (signal the caller to backtrack).
+
+### Why does it work?
+Sudoku is constraint satisfaction: three independent constraint sets (row, column, box) each demand the digits 1–9 with no repeats. Backtracking systematically places digits and prunes branches the moment a constraint is violated. Because each cell has at most 9 choices and violations are caught immediately, most branches are pruned very early. Every valid solution is eventually found; every invalid dead-end is abandoned as soon as it is detected.
+
+### When to use?
+- "Solve the Sudoku" or any grid-fill problem with mutual exclusion constraints.
+- Constraint satisfaction problems: fill values into positions where each position and each group must have unique values.
+
+### When NOT to use?
+- Only checking if a given board is valid (not solving it) — just scan rows, cols, boxes once.
+- Problems solvable purely by logical deduction rules (no guessing needed) — backtracking is the general fallback.
+
+### How to recognize in a new problem?
+"Fill in the missing values" + "each row / column / region must contain each value exactly once." Also: any puzzle where choices are constrained and a dead end requires undoing a previous decision.
+
+### Simple Example
+
+Consider a nearly-complete board with one empty cell at (0,0):
+```
+[.][5][3][...]    Row 0 already has: 5,3,...
+[6][...]          Col 0 already has: 6,...
+Box 0 already has: 5,3,6,...
+```
+Try '1': if '1' is not in row 0, not in col 0, not in box 0 → place it → recurse → board complete → done.
+If '1' conflicts → try '2', '3', ... until a valid digit is found.
+
+### Code
+
+```java
+// Java
+public void solveSudoku(char[][] board) {
+    solve(board);
+}
+
+private boolean solve(char[][] board) {
+    for (int row = 0; row < 9; row++) {
+        for (int col = 0; col < 9; col++) {
+            if (board[row][col] == '.') {          // found an empty cell
+                for (char c = '1'; c <= '9'; c++) {
+                    if (isValid(board, row, col, c)) {
+                        board[row][col] = c;        // place digit (choose)
+                        if (solve(board)) return true; // explore
+                        board[row][col] = '.';      // undo — CRITICAL
+                    }
+                }
+                return false; // no digit 1-9 worked → backtrack to caller
+            }
+        }
+    }
+    return true; // no empty cell found → board is solved
+}
+
+private boolean isValid(char[][] board, int row, int col, char c) {
+    for (int i = 0; i < 9; i++) {
+        if (board[row][i]   == c) return false; // same row
+        if (board[i][col]   == c) return false; // same column
+        // same 3×3 box — map loop index i to (boxRow, boxCol)
+        int boxRow = (row / 3) * 3 + i / 3;
+        int boxCol = (col / 3) * 3 + i % 3;
+        if (board[boxRow][boxCol] == c) return false;
+    }
+    return true;
+}
+```
+
+```javascript
+// JavaScript
+function solveSudoku(board) {
+    solve(board);
+}
+
+function solve(board) {
+    for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+            if (board[row][col] === '.') {
+                for (let d = 1; d <= 9; d++) {
+                    const c = String(d);
+                    if (isValid(board, row, col, c)) {
+                        board[row][col] = c;              // place (choose)
+                        if (solve(board)) return true;    // explore
+                        board[row][col] = '.';            // undo
+                    }
+                }
+                return false; // backtrack
+            }
+        }
+    }
+    return true; // solved
+}
+
+function isValid(board, row, col, c) {
+    for (let i = 0; i < 9; i++) {
+        if (board[row][i] === c) return false;            // row
+        if (board[i][col] === c) return false;            // col
+        const boxRow = Math.floor(row / 3) * 3 + Math.floor(i / 3);
+        const boxCol = Math.floor(col / 3) * 3 + (i % 3);
+        if (board[boxRow][boxCol] === c) return false;    // box
+    }
+    return true;
+}
+```
+
+### Dry Run
+
+Trace the first empty cell at position (0, 0):
+
+| Step | Cell | Digit | Row OK? | Col OK? | Box OK? | Action |
+|------|------|-------|---------|---------|---------|--------|
+| 1 | (0,0) | '1' | yes | yes | yes | Place '1', recurse |
+| 2 | (next empty) | ... | ... | ... | ... | Continue placing... |
+| N | (r,c) | '1'–'9' | — | — | — | All fail → return false |
+| N+1 | (0,0) | '1' undone | — | — | — | board[0][0]='.' again |
+| N+2 | (0,0) | '2' | check | check | check | Try next digit |
+
+The recursion unwinds back through each placement until it finds a digit that keeps all branches solvable.
+
+### Complexity
+
+```
+Time:  O(9^m)  where m = number of empty cells
+               Worst case (empty board): 9^81 ≈ enormous
+               In practice: a standard 9×9 puzzle has ~50 given clues → ~9^31 attempts
+               Constraints prune the vast majority of branches early — runs in milliseconds
+
+Space: O(m) — call stack depth = number of empty cells (each frame holds one placement)
+              The board is modified in-place, so no extra grid storage needed
+```
+
+### Common Trap
+
+Forgetting `board[row][col] = '.'` after a failed recursion call. Without the undo, the cell stays filled with the wrong digit. Future recursive calls see it as a given clue, not an empty cell — the board gets corrupted and no solution is found (or a wrong one is returned). The undo line is not optional.
+
+### Experience Tip
+
+The box index formula `(row/3)*3 + col/3` trips up almost every beginner under interview pressure. Derive it out loud once: "row/3 gives 0, 1, or 2 — which row of boxes. Multiply by 3 to get the starting index: 0, 3, or 6. col/3 gives 0, 1, or 2 — which column of boxes. Add them." If you can reconstruct the derivation verbally, you can write it correctly from scratch every time. Just memorizing the formula without understanding it fails the moment you second-guess yourself.
+
+### Do Not Confuse With
+
+| | N-Queens | Sudoku Solver |
+|---|---|---|
+| Grid size | n×n, variable | 9×9, fixed |
+| Constraints | row / col / diagonal | row / col / 3×3 box |
+| Choices per step | n column positions | 9 digits |
+| Box index needed | No | Yes: `(row/3)*3 + col/3` |
+| What is returned | All valid boards | One valid board (in-place) |
+| Skeleton | Identical backtrack loop | Identical backtrack loop |
+
+Both use the same choose → explore → undo skeleton. The only differences are what the constraints check and how the board is scanned.
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 37 | Sudoku Solver | Hard | Classic — implement isValid with row/col/box; undo is mandatory | https://leetcode.com/problems/sudoku-solver/ |
+| 36 | Valid Sudoku | Medium | Check-only version — learn the constraint check before trying to solve | https://leetcode.com/problems/valid-sudoku/ |
+| 51 | N-Queens | Hard | Same backtrack skeleton; different constraints (diagonal instead of box) | https://leetcode.com/problems/n-queens/ |
+| 22 | Generate Parentheses | Medium | Simpler constraint satisfaction — good warm-up | https://leetcode.com/problems/generate-parentheses/ |
+| 1307 | Verbal Arithmetic Puzzle | Hard | Digit-assignment backtracking — same idea with letter→digit mapping | https://leetcode.com/problems/verbal-arithmetic-puzzle/ |
+| 980 | Unique Paths III | Hard | Grid backtracking with constraint (visit every cell exactly once) | https://leetcode.com/problems/unique-paths-iii/ |
+
+### One-Minute Revision
+
+```
+PATTERN:           Sudoku Solver
+IN SIMPLE WORDS:   Find empty cell. Try digits 1-9. Check row + col + box. Place if valid.
+                   Recurse. If stuck, undo and try next digit.
+USE WHEN:          Constraint satisfaction: fill a grid with mutual exclusion rules
+DON'T USE WHEN:    Only checking validity (just scan); puzzle solvable by pure logic
+KEY QUESTION:      Is this digit valid in this row, this column, AND this 3×3 box?
+BOX FORMULA:       box = (row / 3) * 3 + (col / 3)
+RETURN:            true when no empty cell remains; false when no digit 1-9 works here
+TIME:              O(9^m), m = empty cells; constraints prune heavily in practice
+SPACE:             O(m) call stack
+COMMON TRAP:       Forgetting board[row][col]='.' after failed recursion — board gets corrupted
+EXPERIENCE TIP:    Derive box formula out loud: (row/3)=box-row, ×3 + (col/3)=box index
+```
+
+---
+
 ## Quick Reference: Choosing the Right Pattern
 
 | Signal in problem | Pattern | Key variable |
@@ -1118,6 +1366,7 @@ EXPERIENCE TIP: In-place marking avoids a separate visited array — cleaner and
 | "Partition string, each part satisfies X" | Palindrome Partitioning (try all prefixes) | start index |
 | "Place N items with mutual constraints" | N-Queens (constraint sets, row by row) | cols/diag1/diag2 sets |
 | "Find word/path in grid, no cell reuse" | Grid DFS (mark '#', explore 4 dirs, restore) | (r, c), index |
+| "Fill grid, row/col/region unique values" | Sudoku Solver (try 1-9, check 3 constraints, undo) | row/col/box index |
 
 ## Duplicate Handling Cheat Sheet
 

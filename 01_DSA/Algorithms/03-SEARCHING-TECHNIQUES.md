@@ -1,6 +1,6 @@
 # Searching Techniques
 
-> **6 algorithms covered:** Classic Binary Search · Find First/Last Position (Lower/Upper Bound) · Binary Search on Answer (Parametric) · Search in Rotated Sorted Array · Find Peak Element · Search in 2D Matrix
+> **8 algorithms covered:** Classic Binary Search · Find First/Last Position (Lower/Upper Bound) · Binary Search on Answer (Parametric) · Search in Rotated Sorted Array · Find Peak Element · Search in 2D Matrix · Ternary Search · Exponential Search
 
 > *"Binary search is not just an algorithm — it is a way of thinking. Any time you can discard half the possibilities in one step, binary search is hiding in the problem."*
 
@@ -14,7 +14,9 @@
 4. [Search in Rotated Sorted Array](#search-in-rotated-sorted-array)
 5. [Find Peak Element](#find-peak-element)
 6. [Search in 2D Matrix](#search-in-2d-matrix)
-7. [Quick Reference Cheat Sheet](#quick-reference-cheat-sheet)
+7. [Ternary Search](#ternary-search)
+8. [Exponential Search](#exponential-search)
+9. [Quick Reference Cheat Sheet](#quick-reference-cheat-sheet)
 
 ---
 
@@ -1073,6 +1075,374 @@ COMPLEXITY SUMMARY
   Find Peak Element:        O(log n)      O(1) space
   2D Matrix (LC 74):        O(log(m*n))   O(1) space
   2D Matrix (LC 240):       O(m+n)        O(1) space  [staircase, not binary search]
+```
+
+---
+
+## Ternary Search
+
+### What is it?
+Ternary search finds the **peak** (maximum or minimum) of a **unimodal function** — a function that rises to one peak then falls (or falls to one valley then rises). Unlike binary search which finds a specific value in a sorted array, ternary search finds WHERE the function is highest. Think of hiking a mountain: at any two test points, you always move toward the higher one, narrowing in on the summit step by step.
+
+### Visual
+```
+UNIMODAL array — rises to ONE peak, then falls (ternary search works):
+[1, 3, 6, 10, 15, 12, 8, 4, 2]
+ 0  1  2   3   4   5  6  7  8
+                PEAK at index 4
+
+NOT unimodal — has TWO peaks (ternary search WILL give wrong answer!):
+[1, 5, 3, 8, 2]
+    ^     ^
+  peak1  peak2
+
+How ternary search narrows down:
+
+Step 1: low=0, high=8
+  m1 = 0 + (8-0)/3 = 2  → arr[m1]=6
+  m2 = 8 - (8-0)/3 = 5  → arr[m2]=12
+
+  [1, 3,  6,  10, 15, 12,  8, 4, 2]
+            ^            ^
+           m1           m2
+  arr[m1]=6 < arr[m2]=12 → peak is to the RIGHT of m1
+  → discard left third: low = m1 + 1 = 3
+
+Step 2: low=3, high=8
+  m1 = 3 + (8-3)/3 = 4  → arr[m1]=15
+  m2 = 8 - (8-3)/3 = 6  → arr[m2]=8
+
+  arr[m1]=15 > arr[m2]=8 → peak is to the LEFT of m2
+  → discard right third: high = m2 - 1 = 5
+
+Step 3: low=3, high=5 (only 3 elements left → scan)
+  arr[3]=10, arr[4]=15, arr[5]=12 → PEAK at index 4
+```
+
+### How does it work?
+1. Set `low = 0`, `high = n - 1`.
+2. While `high - low > 2`, compute two midpoints that divide the range into thirds:
+   - `m1 = low + (high - low) / 3`
+   - `m2 = high - (high - low) / 3`
+3. Compare `arr[m1]` and `arr[m2]`:
+   - If `arr[m1] < arr[m2]`: the left third is going downhill — peak is RIGHT of m1. Set `low = m1 + 1`.
+   - If `arr[m1] > arr[m2]`: the right third is going downhill — peak is LEFT of m2. Set `high = m2 - 1`.
+4. When `high - low <= 2`, scan the remaining 2–3 elements for the maximum.
+
+### Why does it work?
+The array is unimodal (rises then falls). At any two test points m1 < m2:
+- If `arr[m1] < arr[m2]`: the array is still rising at m1. The peak cannot be at m1 or anywhere to its left — discard the entire left third.
+- If `arr[m1] > arr[m2]`: the array is already falling at m2. The peak cannot be at m2 or to its right — discard the entire right third.
+
+Each step discards one-third of the search space. After log₃(n) steps, only a handful of elements remain.
+
+### When to use?
+- The array is **unimodal**: values increase to a single peak, then decrease (or decrease to a single valley, then increase).
+- You need to find the **peak value or its index**, not a specific target value.
+- Competitive programming: maximizing/minimizing a unimodal continuous or discrete function.
+
+### When NOT to use?
+- Array has **multiple peaks** — ternary search picks one arbitrarily and may miss the global peak.
+- You want to find a **specific target value** — use binary search (simpler, also O(log n)).
+- Array is **fully sorted** — binary search is cleaner.
+
+### How to recognize in a new problem?
+Ask: "Does the function first rise then fall (or fall then rise) with exactly one peak?" If yes, ternary search applies.
+
+Decision chain:
+```
+Is there exactly ONE peak/valley? → Ternary Search
+Is the array sorted (monotone)?   → Binary Search
+Any local peak is acceptable?     → "Find Peak Element" binary approach (simpler!)
+```
+
+Key signals in problem statement: "mountain array," "unimodal function," "maximize f(x) over a range," "array increases then decreases."
+
+### Simple Example
+**Input:** `arr = [1, 3, 6, 10, 15, 12, 8, 4, 2]`
+**Trace:** Find the index of the maximum.
+
+### Code
+```java
+// Java — Find peak index in a unimodal array
+int ternarySearch(int[] arr) {
+    int low = 0, high = arr.length - 1;
+    while (high - low > 2) {
+        int m1 = low + (high - low) / 3;
+        int m2 = high - (high - low) / 3;
+        if (arr[m1] < arr[m2]) {
+            low = m1 + 1;   // peak is to the right of m1
+        } else {
+            high = m2 - 1;  // peak is to the left of m2
+        }
+    }
+    // Scan the remaining small window (at most 3 elements)
+    int peakIdx = low;
+    for (int i = low + 1; i <= high; i++) {
+        if (arr[i] > arr[peakIdx]) peakIdx = i;
+    }
+    return peakIdx;
+}
+```
+```javascript
+// JavaScript — Find peak index in a unimodal array
+function ternarySearch(arr) {
+    let low = 0, high = arr.length - 1;
+    while (high - low > 2) {
+        const m1 = low + Math.floor((high - low) / 3);
+        const m2 = high - Math.floor((high - low) / 3);
+        if (arr[m1] < arr[m2]) {
+            low = m1 + 1;
+        } else {
+            high = m2 - 1;
+        }
+    }
+    let peakIdx = low;
+    for (let i = low + 1; i <= high; i++) {
+        if (arr[i] > arr[peakIdx]) peakIdx = i;
+    }
+    return peakIdx;
+}
+```
+
+### Dry Run
+`arr = [1, 3, 6, 10, 15, 12, 8, 4, 2]`
+
+| Step | low | high | m1 | m2 | arr[m1] | arr[m2] | Action         |
+|------|-----|------|----|----|---------|---------|----------------|
+| 1    | 0   | 8    | 2  | 5  | 6       | 12      | 6<12 → low=3   |
+| 2    | 3   | 8    | 4  | 6  | 15      | 8       | 15>8 → high=5  |
+| 3    | 3   | 5    | —  | —  | high-low=2, scan [3..5]: arr[4]=15 is max |
+
+**Result:** index `4` (value `15`)
+
+### Complexity
+```
+Time:  O(log₃ n) ≈ O(log n) — each step discards one-third of the range
+       Slightly more steps than binary search (log₃ vs log₂), same Big-O class
+Space: O(1)     — only a few index variables
+```
+
+### Common Trap
+**Confusing ternary search with binary search.** Binary search finds a specific TARGET in a sorted array — it compares `arr[mid]` to a value you're looking for. Ternary search finds the PEAK of a unimodal array — it compares two internal points to each other. They look similar but solve completely different problems. If a problem says "find value X," use binary search. If it says "find the maximum," and there is exactly one peak, use ternary search.
+
+### Experience Tip
+**Experience Tip:** In LeetCode interviews, the "Follow the uphill" binary search approach (comparing `arr[mid]` to `arr[mid+1]`) solves "Find Peak Element" in O(log n) with a simpler template and works even when there are multiple local peaks. Ternary search shines in competitive programming where the function is provably unimodal and you want to maximize/minimize it over a large continuous range. Know both — default to the binary "uphill" approach for LeetCode, save ternary search for truly unimodal optimization problems.
+
+### Do Not Confuse With
+
+|                    | Ternary Search                            | Binary Search                            |
+|--------------------|-------------------------------------------|------------------------------------------|
+| Array structure    | Unimodal (rises to ONE peak, then falls)  | Sorted (strictly monotone)               |
+| What you find      | The PEAK (maximum or minimum)             | A specific TARGET value                  |
+| Midpoints used     | Two — m1 and m2 (divides into thirds)     | One — mid (divides in half)              |
+| Comparison         | arr[m1] vs arr[m2] (internal comparison)  | arr[mid] vs target (vs known value)      |
+| Discards per step  | One-third                                 | One-half                                 |
+| Key requirement    | Exactly one peak                          | Sorted array                             |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 852 | Peak Index in a Mountain Array | Easy | Classic unimodal — can use ternary or binary "uphill" approach | [Link](https://leetcode.com/problems/peak-index-in-a-mountain-array/) |
+| 162 | Find Peak Element | Medium | Any local peak valid — binary "uphill" is preferred here | [Link](https://leetcode.com/problems/find-peak-element/) |
+| 1095 | Find in Mountain Array | Hard | Find peak first (ternary), then binary search each sorted half | [Link](https://leetcode.com/problems/find-in-mountain-array/) |
+| 1802 | Maximum Value at a Given Index in a Bounded Array | Medium | Binary search on answer over a unimodal feasibility space | [Link](https://leetcode.com/problems/maximum-value-at-a-given-index-in-a-bounded-array/) |
+| 1539 | Kth Missing Positive Number | Easy | Binary search on a monotonic function — recognizing the search space | [Link](https://leetcode.com/problems/kth-missing-positive-number/) |
+| 410 | Split Array Largest Sum | Hard | Binary search on answer — monotonic feasibility boundary | [Link](https://leetcode.com/problems/split-array-largest-sum/) |
+
+### One-Minute Revision
+```
+ALGORITHM:  Ternary Search
+USE WHEN:   Array is unimodal (rises to ONE peak then falls); find the peak/maximum
+CORE IDEA:  Split range into thirds with m1, m2; arr[m1]<arr[m2] → peak is right of m1;
+            arr[m1]>arr[m2] → peak is left of m2; discard one-third each step
+TIME/SPACE: O(log n) / O(1)
+TRAP:       ONLY works on unimodal (single peak) data; do NOT confuse with binary search
+            (binary search finds a VALUE; ternary search finds the PEAK)
+```
+
+---
+
+## Exponential Search
+
+### What is it?
+Exponential search finds a target in a sorted array when the array size is **unknown** or **very large** — like searching an infinitely long sorted list. It works in two phases: first it doubles an index (1, 2, 4, 8, 16, ...) until it overshoots the target, then it runs binary search in that last doubled window. Think of it as first asking "how big is the haystack?" then "find the needle in the right-sized haystack."
+
+### Visual
+```
+Sorted array — imagine it could go on forever (size unknown):
+[2, 5, 8, 12, 16, 23, 38, 45, 67, 89, 102, ...]
+ 0  1  2   3   4   5   6   7   8   9   10
+
+Target = 23
+
+PHASE 1 — Doubling (locate the window):
+  i=1:  arr[1]=5   < 23 → double → i=2
+  i=2:  arr[2]=8   < 23 → double → i=4
+  i=4:  arr[4]=16  < 23 → double → i=8
+  i=8:  arr[8]=67  > 23 → STOP!
+
+  Window found: [i/2, i] = [4, 8]
+  (The target MUST be somewhere in this range)
+
+       [4           8]
+  [2, 5, 8, 12, 16, 23, 38, 45, 67, ...]
+                   ^-----------^
+                  low=4       high=8
+
+PHASE 2 — Binary Search within window [4, 8]:
+  low=4, high=8, mid=6 → arr[6]=38 > 23 → high=5
+  low=4, high=5, mid=4 → arr[4]=16 < 23 → low=5
+  low=5, high=5, mid=5 → arr[5]=23 == 23 → FOUND at index 5
+```
+
+### How does it work?
+1. Check index `0` — if it matches, return `0`.
+2. Start `i = 1`. While `i < n` AND `arr[i] < target`, double: `i = i * 2`.
+3. After the loop, target is in the window `[i/2, min(i, n-1)]`.
+4. Run classic binary search within that window.
+
+### Why does it work?
+Doubling covers exponentially more ground: after k doublings, you've probed index 2^k. So it takes only O(log p) doublings to reach or surpass the target's position p. The binary search window `[i/2, i]` has size at most `i/2 = p`, so binary search also takes O(log p) steps. Total: **O(log p)** — much faster than O(log n) when the target is near the start.
+
+### When to use?
+- Array size is **unknown** (e.g., infinite sorted list, hidden array API).
+- Array is very large and the target is likely **near the beginning**.
+- You need **O(log p)** instead of O(log n), where p is the target's index.
+
+### When NOT to use?
+- Array size is known and not huge — plain binary search is simpler.
+- Array is unsorted.
+- The target is always near the end — exponential search offers no advantage.
+
+### How to recognize in a new problem?
+Key signals: "sorted array of unknown size," "infinite sorted list," "you can only call `get(i)` but don't know the length," "find in a stream of sorted data." The giveaway is you cannot set `high = n - 1` because `n` is unknown.
+
+### Simple Example
+**Input:** `arr = [2, 5, 8, 12, 16, 23, 38, 45, 67, 89, 102]`, `target = 23`
+**Trace:**
+- Phase 1: i=1→5<23→i=2, i=2→8<23→i=4, i=4→16<23→i=8, i=8→67>23→STOP. Window=[4,8].
+- Phase 2: binary search [4,8] → finds 23 at index 5.
+
+### Code
+```java
+// Java — Exponential Search
+int exponentialSearch(int[] arr, int target) {
+    int n = arr.length;
+    if (arr[0] == target) return 0;
+
+    // Phase 1: double until we overshoot or hit the end
+    int i = 1;
+    while (i < n && arr[i] < target) {
+        i *= 2;
+    }
+
+    // Phase 2: binary search in window [i/2, min(i, n-1)]
+    int low = i / 2;
+    int high = Math.min(i, n - 1);  // IMPORTANT: cap at n-1
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        if (arr[mid] == target) return mid;
+        if (arr[mid] < target)  low = mid + 1;
+        else                    high = mid - 1;
+    }
+    return -1;
+}
+```
+```javascript
+// JavaScript — Exponential Search
+function exponentialSearch(arr, target) {
+    const n = arr.length;
+    if (arr[0] === target) return 0;
+
+    // Phase 1: double until we overshoot or hit the end
+    let i = 1;
+    while (i < n && arr[i] < target) {
+        i *= 2;
+    }
+
+    // Phase 2: binary search in window [i/2, min(i, n-1)]
+    let low = Math.floor(i / 2);
+    let high = Math.min(i, n - 1);  // IMPORTANT: cap at n-1
+    while (low <= high) {
+        const mid = low + Math.floor((high - low) / 2);
+        if (arr[mid] === target) return mid;
+        if (arr[mid] < target)   low = mid + 1;
+        else                     high = mid - 1;
+    }
+    return -1;
+}
+```
+
+### Dry Run
+`arr = [2, 5, 8, 12, 16, 23, 38, 45, 67, 89, 102]`, `target = 23`, n=11
+
+**Phase 1 — Doubling:**
+
+| i  | arr[i] | arr[i] < 23? | Action  |
+|----|--------|--------------|---------|
+| 1  | 5      | YES          | i=2     |
+| 2  | 8      | YES          | i=4     |
+| 4  | 16     | YES          | i=8     |
+| 8  | 67     | NO           | STOP    |
+
+Window: low=4, high=min(8,10)=8
+
+**Phase 2 — Binary Search [4, 8]:**
+
+| Step | low | high | mid | arr[mid] | Action           |
+|------|-----|------|-----|----------|------------------|
+| 1    | 4   | 8    | 6   | 38       | 38>23 → high=5   |
+| 2    | 4   | 5    | 4   | 16       | 16<23 → low=5    |
+| 3    | 5   | 5    | 5   | 23       | FOUND → return 5 |
+
+### Complexity
+```
+Time:  O(log p) — p is the index (position) of the target
+       Phase 1 (doubling):     O(log p) steps to reach index ≥ p
+       Phase 2 (binary search): window size ≤ p, so O(log p) more steps
+       When p << n: MUCH faster than binary search's O(log n)
+       When p ≈ n:  same as binary search
+Space: O(1) — only a handful of index variables
+```
+
+### Common Trap
+**Forgetting to cap the binary search `high` at `n - 1`.** After the doubling phase, `i` can overshoot the end of the array. If you pass `i` directly as `high`, you'll access `arr[i]` out of bounds on a finite array. Always write `high = Math.min(i, n - 1)`.
+
+### Experience Tip
+**Experience Tip:** In interviews, when an array is described as "infinite" or "size unknown," exponential search is the expected pattern. The two-phase structure is the entire insight: Phase 1 locates the right neighborhood in O(log p) by doubling; Phase 2 finds the exact element in O(log p) by binary search. When p (position of target) is much smaller than n (array size), this is strictly faster than binary search — a useful talking point in an interview.
+
+### Do Not Confuse With
+
+|                    | Exponential Search                         | Binary Search                       |
+|--------------------|--------------------------------------------|-------------------------------------|
+| When to use        | Unknown array size; target near the start  | Known array size                    |
+| Phase 1            | Doubling (1, 2, 4, 8, ...) to find window  | Not needed — search whole array     |
+| Phase 2            | Binary search in the found window          | Binary search on full array         |
+| Time complexity    | O(log p) — p = target's index              | O(log n) — n = array size           |
+| Best case          | Target near start → very fast              | Always O(log n), no early advantage |
+| Requires size?     | NO — works without knowing n               | YES — needs `high = n - 1`          |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 704 | Binary Search | Easy | Master Phase 2 first — binary search is the core subroutine | [Link](https://leetcode.com/problems/binary-search/) |
+| 702 | Search in a Sorted Array of Unknown Size | Medium | Classic exponential search — array size hidden behind an API | [Link](https://leetcode.com/problems/search-in-a-sorted-array-of-unknown-size/) |
+| 35 | Search Insert Position | Easy | Lower-bound binary search — the exact Phase 2 pattern | [Link](https://leetcode.com/problems/search-insert-position/) |
+| 374 | Guess Number Higher or Lower | Easy | Interactive doubling guess — conceptually similar to Phase 1 | [Link](https://leetcode.com/problems/guess-number-higher-or-lower/) |
+| 1060 | Missing Element in Sorted Array | Medium | Binary search on sorted array — exponential useful if very large | [Link](https://leetcode.com/problems/missing-element-in-sorted-array/) |
+| 744 | Find Smallest Letter Greater Than Target | Easy | Binary search variant — upper-bound pattern recognition | [Link](https://leetcode.com/problems/find-smallest-letter-greater-than-target/) |
+
+### One-Minute Revision
+```
+ALGORITHM:  Exponential Search
+USE WHEN:   Sorted array of UNKNOWN or very large size; target likely near the start
+CORE IDEA:  Phase 1 — double i (1→2→4→8...) until arr[i] >= target (O(log p))
+            Phase 2 — binary search in window [i/2, min(i, n-1)] (O(log p))
+TIME/SPACE: O(log p) where p = target's position / O(1)
+TRAP:       Always cap high = min(i, n-1) — i from doubling can exceed array bounds
 ```
 
 ---

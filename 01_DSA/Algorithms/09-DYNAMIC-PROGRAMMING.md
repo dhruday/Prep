@@ -1,6 +1,6 @@
 # Dynamic Programming — 4 Core Patterns
 
-> **8 DP patterns covered:** 1D Linear DP · 2D Grid DP · 0/1 Knapsack · Unbounded Knapsack · LCS/Edit Distance Family · LIS (Longest Increasing Subsequence) · State Machine DP · Interval DP
+> **12 DP patterns covered:** 1D Linear DP · 2D Grid DP · 0/1 Knapsack · Unbounded Knapsack · LCS/Edit Distance Family · LIS (Longest Increasing Subsequence) · State Machine DP · Interval DP · Bitmask DP · Digit DP · Tree DP · DP Optimizations
 
 ---
 
@@ -13,6 +13,10 @@
 6. [Pattern 6: LIS — Longest Increasing Subsequence](#pattern-6-lis--longest-increasing-subsequence)
 7. [Pattern 7: State Machine DP (Stock Problems)](#pattern-7-state-machine-dp-stock-problems)
 8. [Pattern 8: Interval DP (Palindromes, Matrix Chain)](#pattern-8-interval-dp-palindromes-matrix-chain)
+9. [Pattern 9: Bitmask DP](#pattern-9-bitmask-dp)
+10. [Pattern 10: Digit DP](#pattern-10-digit-dp)
+11. [Pattern 11: Tree DP](#pattern-11-tree-dp)
+12. [Pattern 12: DP Optimizations](#pattern-12-dp-optimizations)
 
 ---
 
@@ -1040,3 +1044,770 @@ BASE CASE:  dp[i][i] = 1 (single char); dp[i][i-1] = 0 (empty)
 TIME/SPACE: O(n²) palindrome | O(n³) with split point | O(n²) space
 TRAP:       fill by LENGTH not by index; guard len==2 before accessing dp[i+1][j-1]
 ```
+
+---
+
+## Pattern 9: Bitmask DP
+
+### What is it?
+A **bitmask** is an integer where each bit represents whether something is "in the set" or "not in the set". For example, with 3 cities labeled 0, 1, 2: the integer `5` in binary is `101`, meaning cities 0 and 2 are visited and city 1 is not. Bitmask DP uses these integers as DP state, letting you track all possible subsets of a small set (n ≤ 20) without storing a list — one integer encodes the entire subset.
+
+### Visual
+```
+3 cities: 0, 1, 2
+All possible masks (which cities have been visited):
+  000 = 0  → {}        010 = 2  → {1}       100 = 4  → {2}
+  001 = 1  → {0}       011 = 3  → {0,1}     101 = 5  → {0,2}
+                        110 = 6  → {1,2}     111 = 7  → {0,1,2} ← all visited
+
+State: dp[mask][last] = min cost to visit exactly the cities in mask, ending at city last
+
+Initial:
+  dp[001][0] = 0   (start at city 0, only city 0 visited, cost 0)
+  all other dp = ∞
+
+Expand dp[001][0]=0 using dist=[[0,10,15],[10,0,20],[15,20,0]]:
+  → go to city 1: dp[011][1] = 0 + dist[0][1] = 10
+  → go to city 2: dp[101][2] = 0 + dist[0][2] = 15
+
+Expand dp[011][1]=10:
+  → go to city 2: dp[111][2] = 10 + dist[1][2] = 30
+
+Expand dp[101][2]=15:
+  → go to city 1: dp[111][1] = 15 + dist[2][1] = 35
+
+Final: min(dp[111][1]+dist[1][0], dp[111][2]+dist[2][0]) = min(35+10, 30+15) = 45
+```
+
+### How does it work?
+1. **State definition:** `dp[mask][i]` = minimum cost to visit exactly the cities encoded in `mask`, with the last city visited being city `i`.
+2. **Initialize:** `dp[1 << start][start] = 0`. All other states = infinity.
+3. **Transition:** For each (mask, i) pair where city i is in mask, try every unvisited city j:
+   `dp[mask | (1 << j)][j] = min(dp[mask | (1 << j)][j],  dp[mask][i] + dist[i][j])`
+4. **Answer:** After processing all masks, return `min over all i` of `dp[(1<<n)-1][i] + dist[i][start]`.
+
+### Why does it work?
+The key insight: two paths that visited the same set of cities and ended at the same city are interchangeable for any future decision. No matter how a path arrived at city i having visited set S, the cheapest way to complete the tour from that point is identical. The bitmask captures exactly that "what matters" state — which subset was visited and where we are now.
+
+### When to use?
+- Traveling Salesman Problem (TSP): shortest route visiting all cities exactly once.
+- Assignment problems: assign n workers to n tasks at minimum total cost, where n ≤ 15.
+- "Cover all elements" problems where you need to track which elements from a small set have been handled.
+
+### When NOT to use?
+- When n > 20: the state space 2^n × n grows exponentially (2^20 = ~1M states is manageable; 2^25 is not).
+- When a simpler DP pattern applies — if items are independent and you just need a subset sum, use 0/1 Knapsack instead.
+
+### How to recognize in a new problem?
+The problem involves a small set (n ≤ 20) and asks for the min/max cost to process all elements, where the order or assignment matters.
+Key signals:
+- "Visit all cities/nodes exactly once"
+- "Assign each person to exactly one task" with small n
+- "Minimum cost to cover all elements"
+- "Number of ways to pair up all elements"
+
+### Simple Example
+**Problem:** TSP — find the shortest round trip visiting all 3 cities exactly once.
+**Input:** dist = [[0,10,15],[10,0,20],[15,20,0]], start = city 0
+**State definition:** dp[mask][i] = min cost visiting cities in mask, ending at city i
+**Recurrence:** `dp[mask | (1<<j)][j] = min(dp[mask | (1<<j)][j], dp[mask][i] + dist[i][j])`
+**Trace:** (see Visual above — answer is 45)
+
+### Code
+```java
+// Java — Bitmask DP (TSP)
+public int tsp(int[][] dist) {
+    int n = dist.length;
+    int full = (1 << n) - 1;            // bitmask with all cities visited
+    int[][] dp = new int[1 << n][n];
+    for (int[] row : dp) Arrays.fill(row, Integer.MAX_VALUE / 2);
+    dp[1][0] = 0;                        // start at city 0, cost 0
+
+    for (int mask = 1; mask <= full; mask++) {
+        for (int i = 0; i < n; i++) {
+            if ((mask & (1 << i)) == 0) continue;  // city i not in mask — skip
+            if (dp[mask][i] == Integer.MAX_VALUE / 2) continue;
+            for (int j = 0; j < n; j++) {
+                if ((mask & (1 << j)) != 0) continue;  // city j already visited
+                int next = mask | (1 << j);
+                dp[next][j] = Math.min(dp[next][j], dp[mask][i] + dist[i][j]);
+            }
+        }
+    }
+
+    int ans = Integer.MAX_VALUE;
+    for (int i = 1; i < n; i++) {
+        ans = Math.min(ans, dp[full][i] + dist[i][0]); // return to start city 0
+    }
+    return ans;
+}
+```
+```javascript
+// JavaScript — Bitmask DP (TSP)
+function tsp(dist) {
+    const n = dist.length;
+    const full = (1 << n) - 1;
+    const INF = Infinity;
+    const dp = Array.from({length: 1 << n}, () => new Array(n).fill(INF));
+    dp[1][0] = 0;  // start at city 0
+
+    for (let mask = 1; mask <= full; mask++) {
+        for (let i = 0; i < n; i++) {
+            if (!(mask & (1 << i))) continue;   // city i not in mask
+            if (dp[mask][i] === INF) continue;
+            for (let j = 0; j < n; j++) {
+                if (mask & (1 << j)) continue;  // city j already visited
+                const next = mask | (1 << j);
+                dp[next][j] = Math.min(dp[next][j], dp[mask][i] + dist[i][j]);
+            }
+        }
+    }
+
+    let ans = INF;
+    for (let i = 1; i < n; i++) {
+        if (dp[full][i] < INF) ans = Math.min(ans, dp[full][i] + dist[i][0]);
+    }
+    return ans;
+}
+```
+
+### Dry Run
+dist (3 cities): [[0,10,15],[10,0,20],[15,20,0]]
+```
+mask=001(1), i=0: dp[001][0]=0
+  → j=1: dp[011][1] = min(INF, 0+10) = 10
+  → j=2: dp[101][2] = min(INF, 0+15) = 15
+
+mask=011(3), i=1: dp[011][1]=10
+  → j=2: dp[111][2] = min(INF, 10+20) = 30
+
+mask=101(5), i=2: dp[101][2]=15
+  → j=1: dp[111][1] = min(INF, 15+20) = 35
+
+mask=111(7): all cities visited, no expansion
+
+Answer = min(dp[111][1]+dist[1][0], dp[111][2]+dist[2][0])
+       = min(35+10, 30+15) = 45
+```
+
+### Complexity
+```
+Time:  O(2^n × n²) — 2^n masks × n possible last cities × n candidate next cities
+Space: O(2^n × n) — the dp table
+```
+
+### Common Trap
+Beginners forget to check that city i is actually in the current mask before treating it as the "current city". Always guard with `if ((mask & (1 << i)) == 0) continue` — otherwise you compute transitions from cities you haven't visited yet, producing garbage values.
+
+### Experience Tip
+The two bitwise operations to internalize: `mask & (1 << i)` tests if city i is in the set; `mask | (1 << j)` produces a new set with city j added. Practice reading masks as binary strings out loud until these feel like second nature. Once you can draw one expansion step on paper, the full algorithm follows automatically.
+
+### Do Not Confuse With
+
+| | Bitmask DP | 0/1 Knapsack |
+|---|---|---|
+| State represents | Which subset of nodes/tasks was processed | Whether each item is included (budget constraint) |
+| Use when | n ≤ 20, order/assignment of the full set matters | Items have a capacity limit; order doesn't matter |
+| Example | TSP, minimum cost assignment | Partition equal subset sum |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
+| 847 | Shortest Path Visiting All Nodes | Hard | "Visit all nodes" on small graph (n ≤ 12) | https://leetcode.com/problems/shortest-path-visiting-all-nodes/ |
+| 526 | Beautiful Arrangement | Medium | Count permutations of small n (n ≤ 15) | https://leetcode.com/problems/beautiful-arrangement/ |
+| 698 | Partition to K Equal Sum Subsets | Medium | Assign each element to one of k buckets | https://leetcode.com/problems/partition-to-k-equal-sum-subsets/ |
+| 1434 | Number of Ways to Wear Different Hats | Hard | Assign hats to people; bitmask over people | https://leetcode.com/problems/number-of-ways-to-wear-different-hats-to-each-other/ |
+| 1986 | Minimum Work Sessions to Finish Tasks | Medium | Pack tasks into sessions; subset tracking | https://leetcode.com/problems/minimum-number-of-work-sessions-to-finish-the-tasks/ |
+| 1879 | Minimum XOR Sum of Two Arrays | Hard | Pair up all elements; bitmask over assignments | https://leetcode.com/problems/minimum-xor-sum-of-two-arrays/ |
+
+### One-Minute Revision
+```
+DP PATTERN:      Bitmask DP
+STATE MEANS:     dp[mask][i] = min cost visiting cities in mask, ending at city i
+USE WHEN:        n ≤ 20 and you must track which subset of elements was chosen
+RECURRENCE:      dp[mask|(1<<j)][j] = min(dp[mask|(1<<j)][j], dp[mask][i] + cost[i][j])
+TIME/SPACE:      O(2^n × n²) / O(2^n × n)
+TRAP:            Only treat city i as "current" if (mask & (1<<i)) != 0
+SIGNAL:          "visit all", "assign each to exactly one", "cover all elements"
+```
+
+---
+
+## Pattern 10: Digit DP
+
+### What is it?
+Digit DP counts how many integers in a range [0, N] satisfy some digit-by-digit constraint (digit sum ≤ k, no two consecutive digits the same, no digit 4, etc.). You build the answer digit by digit from the most significant position. The crucial idea is a boolean **tight** flag: if tight is `true`, the digit you place right now cannot exceed N's digit at that position (because your prefix already equals N's prefix exactly). If tight is `false`, you exceeded some earlier digit of N, so you are "free" and can place 0–9 anywhere.
+
+### Visual
+```
+Count numbers in [1, 23] where all digits are distinct:
+N = "23"
+
+Position 0 (tens digit), tight=true:
+  d=0: prefix "0" < N's "2" → next position is FREE (tight=false)
+  d=1: prefix "1" < N's "2" → next position is FREE (tight=false)
+  d=2: prefix "2" = N's "2" → next position is TIGHT (tight=true)
+  d=3..9: NOT allowed (tight=true and N's digit is 2, so limit is 2)
+
+Position 1 (units digit):
+  tight=false → digits 0..9 all available → 10 choices each (for prefixes "0_" and "1_")
+  tight=true  → digits 0..3 available (≤ N's units digit 3) → 4 choices (for prefix "2_")
+
+Total = 10 + 10 + 4 = 24 numbers (including 00=0, subtract if needed)
+```
+
+### How does it work?
+1. Convert N to its digit array: `digits = [2, 3]` for N=23.
+2. Write a memoized recursive function `solve(pos, tight, ...other_state...)`.
+3. At each position, iterate digit d from 0 to `limit` where `limit = digits[pos]` if tight, else 9.
+4. Recurse: `solve(pos+1, tight && (d == digits[pos]), updated_state)`.
+5. The "other state" tracks whatever constraint you need (digit sum so far, last digit placed, count of zeros, etc.).
+6. Memoize on `(pos, tight, other_state)` — the count is identical whenever these three match, regardless of how we reached this state.
+
+### Why does it work?
+Once tight becomes false, the remaining suffix is unconstrained and its count depends only on how many positions remain and the current tracked state — not on the specific prefix chosen. Memoization reuses these identical sub-problems. The tight flag precisely separates the one "constrained" path down N's digits from all the "free" paths below it.
+
+### When to use?
+- Count integers in [0, N] satisfying a property expressible digit-by-digit.
+- Count integers in [L, R] (compute f(R) − f(L−1)).
+- Problems phrased as "how many numbers from 1 to n have property X on their digits".
+
+### When NOT to use?
+- When N is small (n ≤ 10^4): just iterate and check each number directly.
+- When the constraint cannot be decomposed digit-by-digit (e.g., "is the number prime?" — primality testing cannot be tracked with a small state per digit).
+
+### How to recognize in a new problem?
+The problem asks to count or sum something over all integers in a range, and the condition decomposes cleanly one digit at a time.
+Key signals:
+- "Count integers from 1 to n with [digit property]"
+- "Digit sum equal to / at most k"
+- "No two consecutive digits are the same"
+- "Digits in non-decreasing order"
+
+### Simple Example
+**Problem:** Count numbers in [1, N] whose digit sum is at most S.
+**Input:** N = 20, S = 3
+**State definition:** `dp[pos][sum][tight]` = count of valid completions from position `pos` onward, given digit sum so far = `sum`, tight flag = `tight`
+**Recurrence:** `dp[pos][sum][tight] = sum over d in [0..limit] of dp[pos+1][sum+d][newTight]`
+**Trace:**
+```
+N = "20", S = 3
+Numbers ≤ 20 with digit sum ≤ 3:
+  1,2,3,10,11,12,20 → 7 numbers (plus 0, so count including 0 = 8)
+
+solve(pos=0, sum=0, tight=true):
+  d=0: solve(1, 0, false)  → free, digits 0..9, sum+d≤3 → d can be 0,1,2,3 → 4 numbers
+  d=1: solve(1, 1, false)  → free, sum+d≤2 → d can be 0,1,2 → 3 numbers
+  d=2: solve(1, 2, tight=true) → limit=0 (N's digit is 0), only d=0 → 1 number (20)
+  Total including 0 = 4+3+1 = 8 → subtract 1 for zero = 7
+```
+
+### Code
+```java
+// Java — Digit DP (count numbers in [1,n] with digit sum ≤ sumLimit)
+class DigitDP {
+    int[] digits;
+    int sumLimit;
+    int[][][] memo; // [pos][currentSum][tight]
+
+    public int count(int n, int sumLimit) {
+        this.sumLimit = sumLimit;
+        String s = Integer.toString(n);
+        digits = new int[s.length()];
+        for (int i = 0; i < s.length(); i++) digits[i] = s.charAt(i) - '0';
+        memo = new int[digits.length][sumLimit + 1][2];
+        for (int[][] a : memo) for (int[] b : a) Arrays.fill(b, -1);
+        return solve(0, 0, 1) - 1; // subtract 1 to exclude 0 itself
+    }
+
+    int solve(int pos, int sum, int tight) {
+        if (sum > sumLimit) return 0;        // digit sum exceeded limit
+        if (pos == digits.length) return 1;  // placed all digits, valid number
+        if (memo[pos][sum][tight] != -1) return memo[pos][sum][tight];
+
+        int limit = tight == 1 ? digits[pos] : 9;
+        int result = 0;
+        for (int d = 0; d <= limit; d++) {
+            int newTight = (tight == 1 && d == digits[pos]) ? 1 : 0;
+            result += solve(pos + 1, sum + d, newTight);
+        }
+        return memo[pos][sum][tight] = result;
+    }
+}
+```
+```javascript
+// JavaScript — Digit DP (count numbers in [1,n] with digit sum ≤ sumLimit)
+function countDigitDP(n, sumLimit) {
+    const digits = String(n).split('').map(Number);
+    const len = digits.length;
+    // memo[pos][sum][tight (0 or 1)]
+    const memo = Array.from({length: len}, () =>
+        Array.from({length: sumLimit + 1}, () => new Array(2).fill(-1)));
+
+    function solve(pos, sum, tight) {
+        if (sum > sumLimit) return 0;
+        if (pos === len) return 1;
+        if (memo[pos][sum][tight] !== -1) return memo[pos][sum][tight];
+
+        const limit = tight ? digits[pos] : 9;
+        let result = 0;
+        for (let d = 0; d <= limit; d++) {
+            const newTight = (tight && d === digits[pos]) ? 1 : 0;
+            result += solve(pos + 1, sum + d, newTight);
+        }
+        return memo[pos][sum][tight] = result;
+    }
+
+    return solve(0, 0, 1) - 1; // subtract 1 to exclude 0
+}
+```
+
+### Dry Run
+Count numbers ≤ 15 that contain no digit > 5:
+```
+digits = [1, 5]
+
+solve(pos=0, sum=0, tight=true):
+  d=0: tight→false; solve(1,0,false): d=0..5 → 6 numbers (00..05)
+  d=1: tight→true;  solve(1,0,true):  limit=5; d=0..5 → 6 numbers (10..15)
+  d=2..9: not allowed (tight=true, limit=digits[0]=1)
+
+Total including 0 = 6+6 = 12 → subtract 0 → 11 valid numbers: {1,2,3,4,5,10,11,12,13,14,15}
+```
+
+### Complexity
+```
+Time:  O(len × S × 2 × 10) — positions × state values × tight flag × 10 digit choices
+Space: O(len × S × 2) — the memoization table
+```
+
+### Common Trap
+Forgetting **leading zeros**. If the number "007" should be treated as "7" (a 1-digit number), a plain digit DP may count the zero digits toward your constraint. The fix: add a `started` boolean flag that turns true once the first non-zero digit is placed, and skip constraints while `started` is false.
+
+### Experience Tip
+Always build digit DP as top-down memoized recursion first — the recursive structure mirrors the decision tree naturally. Get the skeleton (pos, tight, base cases) working before adding your specific constraint state. Once you understand why tight works, every digit DP problem reduces to "what additional state do I need beyond pos and tight?"
+
+### Do Not Confuse With
+
+| | Digit DP | 1D Linear DP |
+|---|---|---|
+| State represents | Digits of a number being constructed | Elements of a given sequence |
+| Use when | Counting integers in a range with digit constraints | Optimize over a 1D array |
+| Example | Count numbers with digit sum ≤ k | House Robber, Climbing Stairs |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
+| 357 | Count Numbers with Unique Digits | Medium | Gentle intro — count valid digit choices at each position | https://leetcode.com/problems/count-numbers-with-unique-digits/ |
+| 2376 | Count Special Integers | Hard | No repeated digit in [1, n]; tight constraint on digits | https://leetcode.com/problems/count-special-integers/ |
+| 233 | Number of Digit One | Hard | Count occurrences of digit '1' across all numbers ≤ n | https://leetcode.com/problems/number-of-digit-one/ |
+| 600 | Non-negative Integers without Consecutive Ones | Hard | Binary representation; no two consecutive 1-bits | https://leetcode.com/problems/non-negative-integers-without-consecutive-ones/ |
+| 902 | Numbers At Most N Given Digit Set | Hard | Build number using only specified digits, value ≤ N | https://leetcode.com/problems/numbers-at-most-n-given-digit-set/ |
+| 1012 | Numbers With Repeated Digits | Hard | Complement trick: total − unique-digit count | https://leetcode.com/problems/numbers-with-repeated-digits/ |
+
+### One-Minute Revision
+```
+DP PATTERN:      Digit DP
+STATE MEANS:     dp[pos][...constraint state...][tight] = count of valid completions
+USE WHEN:        Count integers in [0, N] satisfying a per-digit property
+RECURRENCE:      for d in [0..limit]: result += solve(pos+1, newState, tight&&d==digits[pos])
+TIME/SPACE:      O(len × states × 10) / O(len × states × 2)
+TRAP:            Handle leading zeros with a "started" flag when constraint involves digit count
+SIGNAL:          "count numbers 1 to n", "digit sum", "no consecutive equal digits"
+```
+
+---
+
+## Pattern 11: Tree DP
+
+### What is it?
+Tree DP computes DP values on a tree by processing nodes **bottom-up**: solve leaf nodes first, then use their results to solve their parents, continuing up to the root. Because trees have no cycles, rooting the tree creates a natural parent-child dependency — each node only depends on its children, never the other way around. This makes a DFS post-order traversal the perfect computation order.
+
+### Visual
+```
+Tree rooted at node 1:
+         1
+        / \
+       2   3
+      / \
+     4   5
+
+Problem: Maximum Independent Set (select max nodes so no two are adjacent)
+State: dp[node][0] = max nodes in node's subtree if node is EXCLUDED
+       dp[node][1] = max nodes in node's subtree if node is INCLUDED
+
+Leaves first (bottom-up):
+  dp[4] = [0, 1]   (exclude: 0 nodes; include: 1 node)
+  dp[5] = [0, 1]
+  dp[3] = [0, 1]
+
+Node 2 (children: 4 and 5):
+  dp[2][1] = 1 + dp[4][0] + dp[5][0] = 1+0+0 = 1  (include 2 → must exclude children)
+  dp[2][0] = max(dp[4][0],dp[4][1]) + max(dp[5][0],dp[5][1]) = 1+1 = 2  (exclude 2 → children free)
+
+Node 1 (children: 2 and 3):
+  dp[1][1] = 1 + dp[2][0] + dp[3][0] = 1+2+0 = 3
+  dp[1][0] = max(dp[2]) + max(dp[3]) = 2+1 = 3
+
+Answer: max(dp[1][0], dp[1][1]) = 3  (select nodes {1,4,5} or {2,3})
+```
+
+### How does it work?
+1. Root the tree at any node (usually node 0 or 1).
+2. Run DFS post-order (process all children before the current node).
+3. **State definition:** `dp[node][state]` = best answer for the subtree rooted at `node`, where `state` encodes a decision about `node` itself (e.g., 0=excluded, 1=included).
+4. **Base case:** At leaf nodes, compute dp values directly — no children to combine.
+5. **Transition:** Combine the dp values of all children to compute the parent's dp value.
+6. The root's dp value is the final answer.
+
+### Why does it work?
+Trees have no cycles, so once a subtree is fully computed, nothing from outside can change it. Post-order DFS guarantees all children are solved before their parent. This is optimal substructure in action: the best answer for a node's subtree can always be expressed purely in terms of the best answers for its children's subtrees.
+
+### When to use?
+- Maximum independent set on a tree (can't pick two adjacent nodes).
+- Tree diameter (longest path between any two nodes).
+- Problems like "each employee reports to a manager; maximize attendance" (LC 337 style).
+- Any problem where you must choose or assign values to nodes respecting parent-child constraints.
+
+### When NOT to use?
+- When the graph has cycles — use BFS/DFS or standard graph DP instead.
+- When the problem is on a linear array or path, not an actual tree — use 1D or 2D DP.
+
+### How to recognize in a new problem?
+The input is a tree (given as a parent array, edge list, or `TreeNode` structure) and the answer involves making optimal choices over nodes or edges respecting their hierarchy.
+Key signals:
+- "Select nodes such that no two are adjacent (in a tree)"
+- "Longest path between any two nodes"
+- "Each employee has subordinates; maximize X without including a person and their direct manager"
+- "Compute something bottom-up on the tree"
+
+### Simple Example
+**Problem:** Maximum Independent Set — given a tree with 5 nodes, select the maximum number of nodes such that no two selected nodes share an edge.
+**Input:** 5 nodes, edges: 1-2, 1-3, 2-4, 2-5 (rooted at node 1)
+**State definition:** `dp[node][0]` = max nodes in subtree if node excluded; `dp[node][1]` = max nodes if included
+**Recurrence:**
+```
+dp[node][1] = 1 + sum of dp[child][0] for each child   (include node → all children excluded)
+dp[node][0] = sum of max(dp[child][0], dp[child][1])   (exclude node → each child is free)
+```
+**Trace:** (see Visual above — answer = 3)
+
+### Code
+```java
+// Java — Tree DP (Maximum Independent Set)
+class TreeDP {
+    List<List<Integer>> adj;
+    int[][] dp; // dp[node][0=exclude, 1=include]
+
+    public int maxIndependentSet(int n, int[][] edges) {
+        adj = new ArrayList<>();
+        for (int i = 0; i <= n; i++) adj.add(new ArrayList<>());
+        for (int[] e : edges) {
+            adj.get(e[0]).add(e[1]);
+            adj.get(e[1]).add(e[0]);
+        }
+        dp = new int[n + 1][2];
+        dfs(1, 0);  // root = 1, parent = 0 (sentinel, no real parent)
+        return Math.max(dp[1][0], dp[1][1]);
+    }
+
+    void dfs(int node, int parent) {
+        dp[node][1] = 1; // include this node (counts as 1)
+        dp[node][0] = 0; // exclude this node
+        for (int child : adj.get(node)) {
+            if (child == parent) continue;  // CRITICAL: don't recurse to parent
+            dfs(child, node);
+            // if we include node, children must be excluded
+            dp[node][1] += dp[child][0];
+            // if we exclude node, each child can be either included or excluded
+            dp[node][0] += Math.max(dp[child][0], dp[child][1]);
+        }
+    }
+}
+```
+```javascript
+// JavaScript — Tree DP (Maximum Independent Set)
+function maxIndependentSet(n, edges) {
+    const adj = Array.from({length: n + 1}, () => []);
+    for (const [u, v] of edges) { adj[u].push(v); adj[v].push(u); }
+    const dp = Array.from({length: n + 1}, () => [0, 0]);
+
+    function dfs(node, parent) {
+        dp[node][1] = 1;  // include node
+        dp[node][0] = 0;  // exclude node
+        for (const child of adj[node]) {
+            if (child === parent) continue;  // don't go back to parent
+            dfs(child, node);
+            dp[node][1] += dp[child][0];                           // include → child excluded
+            dp[node][0] += Math.max(dp[child][0], dp[child][1]);   // exclude → child free
+        }
+    }
+
+    dfs(1, 0);
+    return Math.max(dp[1][0], dp[1][1]);
+}
+```
+
+### Dry Run
+Edges: 1-2, 1-3, 2-4, 2-5 (rooted at 1):
+```
+dfs(4, parent=2): leaf → dp[4][1]=1, dp[4][0]=0
+dfs(5, parent=2): leaf → dp[5][1]=1, dp[5][0]=0
+dfs(2, parent=1):
+  child 4: dp[2][1] += dp[4][0]=0 → dp[2][1]=1
+           dp[2][0] += max(0,1)=1  → dp[2][0]=1
+  child 5: dp[2][1] += dp[5][0]=0 → dp[2][1]=1
+           dp[2][0] += max(0,1)=1  → dp[2][0]=2
+  final: dp[2]=[2,1]
+dfs(3, parent=1): leaf → dp[3]=[0,1]
+dfs(1, parent=0):
+  child 2: dp[1][1] += dp[2][0]=2 → dp[1][1]=3
+           dp[1][0] += max(2,1)=2  → dp[1][0]=2
+  child 3: dp[1][1] += dp[3][0]=0 → dp[1][1]=3
+           dp[1][0] += max(0,1)=1  → dp[1][0]=3
+Answer: max(dp[1][0]=3, dp[1][1]=3) = 3
+```
+
+### Complexity
+```
+Time:  O(n) — each node and each edge visited exactly once in DFS
+Space: O(n) — dp array of size n, plus O(n) recursion stack (O(log n) for balanced trees)
+```
+
+### Common Trap
+Always pass `parent` to the DFS function and skip the edge back to the parent with `if (child == parent) continue`. Without this guard, the DFS follows the undirected edge back to the parent, creating an infinite recursion (stack overflow) or corrupted DP values.
+
+### Experience Tip
+Many tree DP problems have a **rerooting** variant: after computing dp values from an arbitrary root in O(n), re-derive what dp[node] would be if every node were the root, again in O(n). This turns "find for every node the answer as if it were the root" from O(n²) to O(n). It's a common interview follow-up — learn the two-DFS rerooting pattern after mastering basic tree DP.
+
+### Do Not Confuse With
+
+| | Tree DP | Interval DP |
+|---|---|---|
+| State represents | Answer for the subtree rooted at a given node | Answer for a contiguous range [i, j] of a sequence |
+| Use when | Input is an actual tree structure | Input is a linear array or string |
+| Example | Max independent set on tree, tree diameter | Palindrome substrings, burst balloons |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
+| 337 | House Robber III | Medium | Binary tree; can't rob a node and its direct child | https://leetcode.com/problems/house-robber-iii/ |
+| 543 | Diameter of Binary Tree | Easy | dp[node] = longest one-sided path; diameter = best two children combined | https://leetcode.com/problems/diameter-of-binary-tree/ |
+| 1245 | Tree Diameter | Medium | Same diameter idea on a general (non-binary) tree | https://leetcode.com/problems/tree-diameter/ |
+| 968 | Binary Tree Cameras | Hard | Three states per node: covered by child, covering parent, uncovered | https://leetcode.com/problems/binary-tree-cameras/ |
+| 2246 | Longest Path With Different Adjacent Characters | Hard | Pick best + second-best child paths; combine at each node | https://leetcode.com/problems/longest-path-with-different-adjacent-characters/ |
+| 1373 | Maximum Sum BST in Binary Tree | Hard | Track (isBST, min, max, sum) per subtree bottom-up | https://leetcode.com/problems/maximum-sum-bst-in-binary-tree/ |
+
+### One-Minute Revision
+```
+DP PATTERN:      Tree DP
+STATE MEANS:     dp[node][state] = best answer for the subtree rooted at node
+USE WHEN:        Input is a tree; answer involves choosing/optimizing over nodes or edges
+RECURRENCE:      Post-order DFS: dp[node] = combine(dp[child1], dp[child2], ...) after all children done
+TIME/SPACE:      O(n) / O(n)
+TRAP:            Pass parent to DFS and skip child==parent to avoid infinite recursion
+SIGNAL:          "no two adjacent nodes selected", "longest path in tree", "subtree property"
+```
+
+---
+
+## Pattern 12: DP Optimizations
+
+### What is it?
+Some DP recurrences have a special mathematical structure that makes the naive O(n²) or O(n³) approach unnecessarily slow for large n. Three classical techniques exploit these structures: **Monotone Queue DP** turns a sliding-window max/min over DP values from O(nk) into O(n); **Convex Hull Trick (CHT)** turns a "minimum of linear functions" recurrence from O(n²) into O(n) or O(n log n); **Divide & Conquer Optimization** cuts an O(n³) layer-by-layer DP to O(n² log n) when the optimal split point is monotone.
+
+These techniques are advanced. They appear only on hard optimization problems with n ≥ 10^5. You will not need them for easy or most medium problems.
+
+### Visual
+```
+─────────────────────────────────────────────────────────
+MONOTONE QUEUE DP
+─────────────────────────────────────────────────────────
+dp[i] = nums[i] + max(dp[j])  for j in [i-k .. i-1]
+
+Naive: scan all j in window → O(nk)
+
+Deque approach (decreasing order of dp values):
+  i=0: dp[0]=1;  deque=[0]
+  i=1: dp[1]=nums[1]+dp[0];  drop back if dp[0]≤dp[1]; deque=[...]
+  i=3: pop FRONT if deque[front] < i-k  (expired index)
+       best j = deque[front];  dp[3]=nums[3]+dp[front]
+  → Each index enters and leaves deque at most once → O(n) total
+
+─────────────────────────────────────────────────────────
+CONVEX HULL TRICK
+─────────────────────────────────────────────────────────
+dp[i] = min over j<i of { dp[j] + b[j] * a[i] }
+Each j defines a LINE: y = b[j]*x + dp[j], query at x = a[i]
+
+    y │  line j=0 (steep slope)
+      │ ╲  line j=1
+      │  ╲╲
+      │   ╲╲  line j=2 (gentle slope)
+      │    ╲╲╲___
+      └─────────→ x = a[i]
+  At each x, take the MINIMUM y across all lines.
+  Lines on the lower convex hull answer all queries → O(n) amortized
+
+─────────────────────────────────────────────────────────
+DIVIDE & CONQUER OPTIMIZATION
+─────────────────────────────────────────────────────────
+dp[k][i] = min over j in [0..i-1] of { dp[k-1][j] + cost(j, i) }
+
+Key property: opt(i) ≤ opt(i+1)  (optimal split never moves left)
+  Solve dp[k][mid] first → find opt(mid) = j*
+  Left half [lo..mid-1] can only have opt in [optLo .. j*]
+  Right half [mid+1..hi] can only have opt in [j* .. optHi]
+  → Total work per layer: O(n log n) instead of O(n²)
+```
+
+### How does it work?
+
+**Monotone Queue DP — when to use it:**
+The recurrence is `dp[i] = cost(i) + max(dp[j])` where j ranges over a fixed-size window `[i-k, i-1]`. Maintain a deque of indices in decreasing order of dp values. Before computing dp[i]: (1) pop the front if it has expired (index < i-k); (2) the front now holds the best j; (3) after computing dp[i], pop the back while dp[back] ≤ dp[i], then push i. Each index enters and leaves once → O(n) total.
+
+**Convex Hull Trick — when to use it:**
+The recurrence is `dp[i] = min over j < i of { m[j] * x[i] + b[j] }`. Each previous state j defines a line y = m[j]*x + b[j]. You need the minimum y at query x = x[i]. If slopes m[j] are monotone decreasing and queries x[i] are monotone increasing, maintain a lower convex hull with a pointer — O(n) total. For non-monotone cases, use a Li Chao segment tree for O(n log n).
+
+**Divide & Conquer Optimization — when to use it:**
+The recurrence is `dp[k][i] = min over j of { dp[k-1][j] + cost(j, i) }` where cost satisfies the quadrangle inequality (making opt(i) monotone). Instead of scanning all j for every i, recurse: compute dp for the middle index of [lo, hi], find its optimal j*, then recurse left with opt search space [optLo, j*] and right with [j*, optHi]. Each level costs O(n) and there are O(log n) levels → O(n log n) per DP layer.
+
+### Why does it work?
+Each optimization exploits a monotonicity or linearity property that makes the naive "scan all j" approach do redundant work:
+- Monotone queue: the window's best j can only advance forward, never retreat — stale candidates are discarded permanently.
+- CHT: lines on a convex hull can be queried with a single forward scan when queries are monotone — no need to check every line.
+- D&C opt: optimal split points never cross between adjacent dp[k][i] and dp[k][i+1] — the total search space across all recursive subproblems is bounded.
+
+### When to use?
+- Monotone Queue DP: `dp[i] = cost[i] + max/min(dp[j])` over a fixed sliding window.
+- Convex Hull Trick: `dp[i] = min(m[j] * x[i] + b[j])` — a cost that factors as a product of a j-dependent slope and an i-dependent query.
+- D&C Optimization: `dp[k][i] = min(dp[k-1][j] + cost(j,i))` and cost satisfies the quadrangle inequality (opt monotonicity holds).
+
+### When NOT to use?
+- When n ≤ 5000: O(n²) is almost always fast enough; no optimization needed.
+- When the recurrence does not have the required structure — applying CHT to a non-linear recurrence or D&C opt without opt-monotonicity gives wrong answers.
+
+### How to recognize in a new problem?
+The naive DP is O(n²) or O(n³) and n ≥ 10^5. Look at the recurrence and ask: "Does the transition look like a linear function of j evaluated at i?" → CHT. "Is j restricted to a window?" → Monotone Queue. "Does the optimal j for dp[i] monotonically increase with i?" → D&C Opt.
+Key signals:
+- "Maximize over last k positions" → Monotone Queue
+- "Cost = slope × value" or "DP transition multiplies two different indices' values" → CHT
+- "Partition into exactly k groups minimizing total cost" with concave/convex cost → D&C Opt or CHT
+
+### Simple Example
+**Monotone Queue DP (Jump Game VI):** given nums[] and k, at each step jump 1..k positions forward. Maximize sum of visited elements.
+**State definition:** `dp[i]` = max sum to reach index i
+**Naive recurrence (O(nk)):** `dp[i] = nums[i] + max(dp[i-k], dp[i-k+1], ..., dp[i-1])`
+**With monotone deque:** maintain deque of indices with decreasing dp values. The front is always the best j in the window. O(n).
+
+### Code
+```java
+// Java — Monotone Queue DP (Jump Game VI, LC 1696)
+public int maxResult(int[] nums, int k) {
+    int n = nums.length;
+    int[] dp = new int[n];
+    dp[0] = nums[0];
+    Deque<Integer> deque = new ArrayDeque<>();
+    deque.addLast(0);
+
+    for (int i = 1; i < n; i++) {
+        // Remove indices that have fallen out of the window
+        while (!deque.isEmpty() && deque.peekFirst() < i - k) deque.pollFirst();
+
+        // Best dp in the window is at the front
+        dp[i] = nums[i] + dp[deque.peekFirst()];
+
+        // Maintain decreasing order: remove back elements smaller than dp[i]
+        while (!deque.isEmpty() && dp[deque.peekLast()] <= dp[i]) deque.pollLast();
+        deque.addLast(i);  // add AFTER computing dp[i]
+    }
+    return dp[n - 1];
+}
+```
+```javascript
+// JavaScript — Monotone Queue DP (Jump Game VI, LC 1696)
+function maxResult(nums, k) {
+    const n = nums.length;
+    const dp = new Array(n).fill(0);
+    dp[0] = nums[0];
+    const deque = [0];  // stores indices; front has highest dp value
+
+    for (let i = 1; i < n; i++) {
+        // Remove expired front (outside window of size k)
+        while (deque.length > 0 && deque[0] < i - k) deque.shift();
+
+        // Best in window
+        dp[i] = nums[i] + dp[deque[0]];
+
+        // Maintain decreasing order from back
+        while (deque.length > 0 && dp[deque[deque.length - 1]] <= dp[i]) deque.pop();
+        deque.push(i);  // add AFTER computing dp[i]
+    }
+    return dp[n - 1];
+}
+```
+
+### Dry Run
+nums = [1, -1, -2, 4, -7, 3], k = 2:
+```
+dp[0]=1,    deque=[0]
+i=1: front=0(valid); dp[1]=-1+1=0;  dp[0]=1>dp[1]=0→keep 0; deque=[0,1]
+i=2: front=0(valid, i-k=0); dp[2]=-2+dp[0]=-1; dp[1]=0>-1→keep; deque=[0,1,2]
+i=3: front=0, i-k=1 → 0<1 → pop front; deque=[1,2]
+     front=1; dp[3]=4+dp[1]=4+0=4
+     dp[2]=-1<4→pop; dp[1]=0<4→pop; deque=[3]
+i=4: front=3(valid, i-k=2); dp[4]=-7+dp[3]=-3; dp[3]=4>-3→keep; deque=[3,4]
+i=5: front=3(valid, i-k=3); dp[5]=3+dp[3]=7;
+     dp[4]=-3<7→pop; dp[3]=4<7→pop; deque=[5]
+Answer: dp[5] = 7
+```
+
+### Complexity
+```
+Monotone Queue DP:  Time O(n), Space O(k) — each element enters/leaves deque at most once
+Convex Hull Trick:  Time O(n) with monotone slopes+queries; O(n log n) with Li Chao tree
+D&C Optimization:  Time O(n log n) per DP layer (vs O(n²) naive); Space O(n) per layer
+```
+
+### Common Trap
+For Monotone Queue DP: always add the new index to the deque **after** computing `dp[i]`. If you push i before computing dp[i], you might pick dp[i] as the "best j" for dp[i] itself — using the current position as its own predecessor.
+
+### Experience Tip
+At interviews, never start by implementing CHT or D&C Opt. State the naive O(n²) solution first and make sure it's correct. Then say "this can be optimized — the recurrence has the form of a linear function in j evaluated at i, so Convex Hull Trick applies, reducing it to O(n)." This shows depth and structured thinking. Full CHT implementation is rarely required under time pressure; identifying the pattern is what matters.
+
+### Do Not Confuse With
+
+| | Monotone Queue DP | Sliding Window Maximum (LC 239) |
+|---|---|---|
+| State represents | DP values computed during the DP itself | Raw input array values |
+| Use when | dp[i] = f(i) + max(dp[j]) for j in a window | Find max of raw values in a fixed window |
+| Example | Jump Game VI (LC 1696) | Maximum in sliding window (LC 239) |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
+| 1696 | Jump Game VI | Hard | max(dp[j]) over last k steps → monotone deque | https://leetcode.com/problems/jump-game-vi/ |
+| 239 | Sliding Window Maximum | Hard | Pure deque warm-up before applying to DP values | https://leetcode.com/problems/sliding-window-maximum/ |
+| 1425 | Constrained Subsequence Sum | Hard | dp[i]=nums[i]+max(0, max dp[j] for j in [i-k,i-1]) | https://leetcode.com/problems/constrained-subsequence-sum/ |
+| 1687 | Delivering Boxes from Storage to Ports | Hard | Monotone deque DP with compound cost function | https://leetcode.com/problems/delivering-boxes-from-storage-to-ports/ |
+| 188 | Best Time to Buy and Sell Stock IV | Hard | k-transaction DP; CHT reduces per-layer cost | https://leetcode.com/problems/best-time-to-buy-and-sell-stock-iv/ |
+| 1235 | Maximum Profit in Job Scheduling | Hard | DP + binary search; bridge to CHT-style thinking | https://leetcode.com/problems/maximum-profit-in-job-scheduling/ |
+
+### One-Minute Revision
+```
+DP PATTERN:      DP Optimizations
+MONOTONE QUEUE:  dp[i] = cost + max(dp[j]) in window [i-k, i-1]; deque → O(n)
+CHT:             dp[i] = min(m[j]*x[i] + dp[j]); lower convex hull of lines → O(n)
+D&C OPT:         dp[k][i] = min(dp[k-1][j] + cost(j,i)); opt monotone → O(n log n) / layer
+USE WHEN:        Naive DP is O(n²) or O(n³) and n ≥ 10^5
+TRAP:            Add index to deque AFTER computing dp[i], not before
+SIGNAL:          "max over last k steps" → deque; "cost = slope × query" → CHT
+```
+
+---
+
+*Next: [10-TREES.md](10-TREES.md) — Binary Trees, BSTs, Tries, Segment Trees*

@@ -14,6 +14,7 @@
 4. [Meeting Rooms II (Minimum Rooms)](#meeting-rooms-ii-minimum-rooms)
 5. [Minimum Arrows to Burst Balloons](#minimum-arrows-to-burst-balloons)
 6. [Sweep Line for Counting Overlaps](#sweep-line-for-counting-overlaps)
+7. [Range Module (Dynamic Interval Coverage)](#range-module-dynamic-interval-coverage)
 
 ---
 
@@ -1138,6 +1139,7 @@ EXPERIENCE TIP:   Universal template: works for meetings, car pooling, skyline, 
 | "Maximum simultaneous active intervals" | Sweep Line | events by position |
 | "Minimum arrows / points to pierce all" | Minimum Arrows (greedy) | end |
 | "Intersection of two sorted interval lists" | Two Pointers | already sorted |
+| "Dynamic add/remove/query on covered intervals" | Range Module | TreeMap sorted by start |
 
 ## Overlap Condition Reference
 ```
@@ -1147,6 +1149,257 @@ OVERLAP:     a1 < b2  AND  b1 < a2
 NO OVERLAP:  a2 <= b1  OR  b2 <= a1
 A contains B:  a1 <= b1  AND  b2 <= a2
 Touching:    a2 == b1  (may or may not count as overlap — clarify with interviewer)
+```
+
+---
+
+---
+
+## Range Module (Dynamic Interval Coverage)
+
+### What is it?
+The Range Module problem asks you to dynamically maintain a set of covered intervals — you can add a range, remove a range, and query whether a range is fully covered — with updates and queries interleaved at any time. Unlike Merge Intervals (which takes a static list and produces a single merged output), Range Module must handle thousands of operations efficiently in any order.
+
+Think of it like a music playlist editor where you can add a song block (a time range), delete part of a block, and check whether a full time range plays uninterrupted — all at any time, in any order.
+
+### Visual
+```
+Start: nothing covered.
+
+addRange(10, 20):    covered: [10,20)
+                     |--------|
+
+addRange(6, 8):      covered: [6,8) [10,20)
+                     |--| |--------|
+
+queryRange(6, 8):    Is [6,8) fully covered? YES ✓
+queryRange(6, 10):   Is [6,10) fully covered? NO ✗ — gap at [8,10)
+
+addRange(8, 10):     [6,8)+[8,10)+[10,20) merge → [6,20)
+                     |----------------|
+
+removeRange(9, 12):  split [6,20) → [6,9) and [12,20)
+                     |---| |------|
+
+queryRange(6, 9):    Is [6,9) fully covered? YES ✓
+queryRange(6, 12):   Is [6,12) fully covered? NO ✗ — gap at [9,12)
+```
+
+### How does it work?
+Maintain a **sorted list of non-overlapping intervals** (sorted by start). Java's `TreeMap<Integer, Integer>` (start → end) is ideal.
+
+**addRange(left, right):**
+1. Find any existing interval that starts just before `left` (could overlap on the left side).
+2. If it overlaps, expand `left` to its start and `right` to `max(right, its end)`.
+3. Repeatedly consume any interval that starts inside `[left, right)`, expanding `right` if needed.
+4. Remove all consumed intervals and insert the single merged `[left, right)`.
+
+**removeRange(left, right):**
+1. Find any existing interval that starts before `left` and extends into `[left, right)` — save and trim its right portion to end at `left`.
+2. Find any existing interval that starts inside `[left, right)` and extends past `right` — save its `[right, end)` portion before removing it.
+3. Delete all intervals fully inside `[left, right)`.
+4. Re-insert any saved left/right remnants.
+
+**queryRange(left, right):**
+1. Use `floorKey(left)` to find the interval whose start ≤ left (the only candidate that could fully contain [left, right)).
+2. If it exists and its `end ≥ right`, the entire range is covered → return `true`.
+3. Otherwise → return `false`.
+
+### Why does it work?
+Maintaining the invariant that intervals are sorted and non-overlapping means any query is a single O(log n) lookup: a range [left, right) is fully covered if and only if there is exactly one interval in the set that starts at or before `left` and ends at or after `right`. The TreeMap's `floorKey` finds that candidate in O(log n). Each add/remove operation touches only the intervals that overlap the changed range, and since each interval is added at most once and removed at most once, the amortized cost per operation is O(log n).
+
+### When to use?
+- Dynamic interval coverage: queries and updates are interleaved.
+- "Track covered ranges with frequent add/remove/query" operations.
+- Calendar systems, network coverage tracking, resource allocation with dynamic reservations.
+- Any problem that provides a class interface with addRange, removeRange, queryRange methods.
+
+### When NOT to use?
+- Static interval problems with no updates — use Merge Intervals, Sweep Line, etc.
+- When you only need to answer queries on a fixed input — sorting and binary search is simpler.
+- When ranges are small integers with a known bound — a segment tree or BIT may be faster.
+
+### How to recognize in a new problem?
+Signals:
+- A `RangeModule`, `MyCalendar`, or dynamic coverage class design problem.
+- Operations named `addRange`, `removeRange`, `queryRange` (or `book`, `cancel`, `query`).
+- The word "dynamic" combined with "intervals" or "coverage."
+- Multiple update and query operations interleaved in any order.
+
+### Simple Example
+**Operations and expected results:**
+```
+addRange(10, 20)   → covered: [10,20)
+addRange(6,  8)    → covered: [6,8), [10,20)
+queryRange(6, 8)   → true  (fully covered)
+queryRange(6, 10)  → false (gap at [8,10))
+removeRange(14,16) → covered: [6,8), [10,14), [16,20)
+queryRange(10, 14) → true
+queryRange(10, 16) → false (gap at [14,16))
+```
+
+### Code
+```java
+// Java — TreeMap<start, end> with half-open intervals [left, right)
+class RangeModule {
+    private TreeMap<Integer, Integer> map = new TreeMap<>();
+
+    public void addRange(int left, int right) {
+        // Check if an existing interval starts just before 'left' and overlaps
+        Integer lo = map.floorKey(left);
+        if (lo != null && map.get(lo) >= left) {
+            left  = Math.min(left, lo);
+            right = Math.max(right, map.get(lo));
+            map.remove(lo);
+        }
+        // Absorb all intervals that start inside [left, right)
+        while (true) {
+            Integer next = map.ceilingKey(left);
+            if (next == null || next > right) break;
+            right = Math.max(right, map.get(next));
+            map.remove(next);
+        }
+        map.put(left, right);
+    }
+
+    public boolean queryRange(int left, int right) {
+        Integer lo = map.floorKey(left);
+        // One interval must start at or before 'left' and end at or after 'right'
+        return lo != null && map.get(lo) >= right;
+    }
+
+    public void removeRange(int left, int right) {
+        // Handle interval starting before 'left' that extends into [left, right)
+        Integer lo = map.floorKey(left);
+        if (lo != null && map.get(lo) > left) {
+            int savedEnd = map.get(lo);
+            map.put(lo, left);               // trim: keep [lo, left)
+            if (savedEnd > right) {
+                map.put(right, savedEnd);    // split: keep [right, savedEnd)
+            }
+        }
+        // Remove intervals fully inside [left, right); save any right overhang
+        while (true) {
+            Integer next = map.ceilingKey(left);
+            if (next == null || next >= right) break;
+            int end = map.get(next);
+            map.remove(next);
+            if (end > right) {
+                map.put(right, end);         // keep [right, end)
+                break;
+            }
+        }
+    }
+}
+```
+```javascript
+// JavaScript — sorted array of [start, end] pairs (half-open intervals)
+class RangeModule {
+    constructor() { this.ranges = []; }
+
+    addRange(left, right) {
+        const result = [];
+        let added = false;
+        for (const [s, e] of this.ranges) {
+            if (e < left) {
+                result.push([s, e]);           // completely before — keep as-is
+            } else if (s > right) {
+                if (!added) { result.push([left, right]); added = true; }
+                result.push([s, e]);           // completely after — keep as-is
+            } else {
+                left  = Math.min(left, s);     // overlaps — expand boundaries
+                right = Math.max(right, e);
+            }
+        }
+        if (!added) result.push([left, right]);
+        this.ranges = result;
+    }
+
+    queryRange(left, right) {
+        for (const [s, e] of this.ranges) {
+            if (s <= left && e >= right) return true;
+            if (s > left) break;
+        }
+        return false;
+    }
+
+    removeRange(left, right) {
+        const result = [];
+        for (const [s, e] of this.ranges) {
+            if (e <= left || s >= right) {
+                result.push([s, e]);           // no overlap — keep
+            } else {
+                if (s < left)  result.push([s, left]);   // left remnant
+                if (e > right) result.push([right, e]);  // right remnant
+            }
+        }
+        this.ranges = result;
+    }
+}
+```
+
+### Dry Run
+**Sequence:** `addRange(10,20)` → `addRange(6,8)` → `removeRange(14,16)` → `queryRange(10,14)` → `queryRange(10,16)`
+
+| Operation | TreeMap state (start→end) | Result |
+|-----------|---------------------------|--------|
+| addRange(10,20) | {10→20} | — |
+| addRange(6,8) | {6→8, 10→20} | — |
+| removeRange(14,16) | {6→8, 10→14, 16→20} | — |
+| queryRange(10,14) | floorKey(10)=10, map.get(10)=14 ≥ 14? YES | true |
+| queryRange(10,16) | floorKey(10)=10, map.get(10)=14 ≥ 16? NO | false |
+
+### Complexity
+```
+addRange:    O(k log n) where k = intervals merged; amortized O(log n) per call
+queryRange:  O(log n)   — single floorKey lookup
+removeRange: O(k log n) where k = intervals removed; amortized O(log n) per call
+Space:       O(n) — at most n non-overlapping intervals stored
+```
+
+### Common Trap
+**Half-open vs closed intervals.** LeetCode 715 (Range Module) uses half-open intervals `[left, right)` — the right endpoint is NOT included. This changes the overlap condition: `[a, b)` and `[b, c)` are NOT overlapping (they just touch at b). Using closed intervals `[left, right]` will produce wrong answers on edge cases. Always confirm whether the problem uses `[a,b]` (closed) or `[a,b)` (half-open) before writing any overlap condition.
+
+### Experience Tip
+**Experience Tip:** The `TreeMap.floorKey(left)` call is the anchor for all three operations — it finds "the interval that might contain `left`" in O(log n). Once you have that anchor, everything else is careful bookkeeping of left/right remnants. In interviews, draw the three removeRange cases on paper before coding: (1) interval extends left of `left`, (2) interval extends right of `right`, (3) interval fully inside [left, right). Sketching these prevents the most common mistakes.
+
+### Do Not Confuse With
+
+| | Range Module (dynamic) | Merge Intervals (static) | Insert Interval (static) |
+|--|--|--|--|
+| Input style | Interleaved add/remove/query calls | One-shot unsorted list | Sorted list + one new interval |
+| Updates supported | Yes — frequent add and remove | No | One insert only |
+| Core data structure | TreeMap / sorted live list | Sort then scan | Scan sorted list |
+| Time per operation | O(log n) amortized | O(n log n) total | O(n) total |
+| Use when | Dynamic coverage tracking | Batch merge | Insert one into sorted list |
+
+### LeetCode Practice
+
+| # | Problem | Difficulty | Pattern Signal | Link |
+|---|---------|------------|----------------|------|
+| 715 | Range Module | Hard | Dynamic add/remove/query — TreeMap with floorKey | https://leetcode.com/problems/range-module/ |
+| 729 | My Calendar I | Medium | Dynamic interval: add only, no remove, detect double-booking | https://leetcode.com/problems/my-calendar-i/ |
+| 731 | My Calendar II | Medium | Add intervals; allow at most double-booking | https://leetcode.com/problems/my-calendar-ii/ |
+| 732 | My Calendar III | Hard | Add intervals; find the maximum k-booking count — TreeMap sweep | https://leetcode.com/problems/my-calendar-iii/ |
+| 57 | Insert Interval | Medium | Simpler: one-time insert into a sorted static list | https://leetcode.com/problems/insert-interval/ |
+| 56 | Merge Intervals | Medium | Static batch merge — understand this before Range Module | https://leetcode.com/problems/merge-intervals/ |
+| 759 | Employee Free Time | Hard | Static batch: merge all intervals, find free gaps | https://leetcode.com/problems/employee-free-time/ |
+
+### One-Minute Revision
+```
+PATTERN:        Range Module (Dynamic Interval Coverage)
+IN SIMPLE WORDS: Maintain a live set of covered intervals. O(log n) add/remove/query.
+USE WHEN:       Interleaved add, remove, query on interval coverage (dynamic, not one-shot).
+DON'T USE WHEN: One-shot merge (Merge Intervals); one insert (Insert Interval).
+CORE STRUCTURE: TreeMap<start, end> — sorted, non-overlapping, half-open [start, end).
+addRange:       Merge all overlapping intervals into one entry.
+removeRange:    Trim or split intervals at the remove boundaries; save remnants.
+queryRange:     floorKey(left) — if that interval's end ≥ right, return true.
+TIME:           O(log n) per query; O(k log n) per add/remove (amortized O(log n))
+SPACE:          O(n)
+COMMON TRAP:    Half-open [left,right) — touching intervals do NOT overlap. Wrong overlap
+                condition is the #1 source of bugs.
+EXPERIENCE TIP: Sketch the 3 removeRange cases before coding. floorKey is the anchor for all ops.
 ```
 
 ---
