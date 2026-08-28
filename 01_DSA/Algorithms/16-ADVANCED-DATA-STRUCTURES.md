@@ -181,6 +181,18 @@ class Trie {
 }
 ```
 
+### Dry Run
+Insert "apple", "app", "apt". Then search("app"), startsWith("ap"), search("ap").
+
+| Operation | Characters processed | Node path | isEnd touched |
+|---|---|---|---|
+| insert("apple") | a→p→p→l→e | root→a→p→p→l→e | e.isEnd = true |
+| insert("app") | a→p→p | root→a→p→p | p(3rd).isEnd = true (shared path with "apple") |
+| insert("apt") | a→p→t | root→a→p→t | t.isEnd = true (new branch at 3rd level) |
+| search("app") | a→p→p | root→a→p→p | check isEnd at p(3rd) = **true** → TRUE |
+| startsWith("ap") | a→p | root→a→p | NOT checked (prefix only) → TRUE (path exists) |
+| search("ap") | a→p | root→a→p | check isEnd at p(2nd) = **false** → FALSE |
+
 ### Complexity Summary
 ```
 Insert:  O(L)  — L = word length
@@ -196,9 +208,16 @@ Space:   O(N * L * 26)  — N words, average length L, 26 children per node
 ### Experience Tip
 **Experience Tip:** In Word Search II (LC 212), build the Trie from the word list, then run DFS on the grid. At each DFS step, if the current character has no Trie child, prune immediately — this is the whole speedup over brute-force. Also remove found words from the Trie to avoid duplicates.
 
+### Do Not Confuse With
+| | Trie | HashMap |
+|---|---|---|
+| **Use when** | Need prefix operations (autocomplete, startsWith) | Only need exact-word lookup |
+| **Key difference** | Shares prefix nodes; O(L) per op where L=word length | O(1) average per op but no prefix support |
+| **Wrong choice** | HashMap when: "find all words with prefix X" | Trie when: only exact membership check needed |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
 | 208 | Implement Trie (Prefix Tree) | Medium | Build it from scratch — the foundation | https://leetcode.com/problems/implement-trie-prefix-tree/ |
 | 212 | Word Search II | Hard | Trie + DFS; prune when Trie path ends | https://leetcode.com/problems/word-search-ii/ |
 | 211 | Design Add and Search Words Data Structure | Medium | '.' wildcard = try all 26 children recursively | https://leetcode.com/problems/design-add-and-search-words-data-structure/ |
@@ -351,6 +370,23 @@ class DSU {
 }
 ```
 
+### Dry Run
+5 nodes (0–4). Operations: union(0,1), union(1,2), union(3,4), then connectivity checks.
+
+| Operation | parent[] after | Notes |
+|---|---|---|
+| Initial state | [0, 1, 2, 3, 4] | Each node is its own root |
+| union(0,1) | [0, 0, 2, 3, 4] | find(0)=0, find(1)=1; rank equal → parent[1]=0, rank[0]++ |
+| union(1,2) | [0, 0, 0, 3, 4] | find(1): 1→0 (path compress, parent[1]=0); parent[2]=0 |
+| union(3,4) | [0, 0, 0, 3, 3] | find(3)=3, find(4)=4 → parent[4]=3 |
+| find(0)==find(2)? | — | find(2)=0 (direct), find(0)=0 → **0==0 → TRUE** |
+| find(0)==find(3)? | — | find(0)=0, find(3)=3 → **0≠3 → FALSE** |
+
+**Path compression in action (find(2) in step 3):**
+Before compression: 2→1→0. Call find(2) → recurse find(1) → find(0)=0.
+On return: parent[1] = 0 (already is), parent[2] = 0 (compressed, skipping 1).
+Result: 2 now points directly to root 0 — future find(2) is O(1), one hop.
+
 ### Complexity Summary
 ```
 find(x):       O(α(n)) ≈ O(1) amortized
@@ -366,9 +402,16 @@ Space:         O(n)
 ### Experience Tip
 **Experience Tip:** For "number of connected components", initialize a counter at n, then decrement by 1 every time union() returns true (meaning two previously separate groups merged). The final counter is your answer. This pattern appears in Accounts Merge, Number of Provinces, and Redundant Connection.
 
+### Do Not Confuse With
+| | Union-Find | BFS/DFS |
+|---|---|---|
+| **Use when** | Dynamic connectivity — unions happen while querying | Static graph — edges all known upfront |
+| **Key difference** | O(α(n)) per query, processes edges one at a time | O(V+E) one-time traversal |
+| **Wrong choice** | BFS/DFS when edges arrive incrementally | Union-Find when you need path or level information |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
 | 684 | Redundant Connection | Medium | union() returns false = cycle found = that's the redundant edge | https://leetcode.com/problems/redundant-connection/ |
 | 721 | Accounts Merge | Medium | Emails are nodes; same account = union them; group by root at end | https://leetcode.com/problems/accounts-merge/ |
 | 547 | Number of Provinces | Medium | Classic connected components — count successful unions | https://leetcode.com/problems/number-of-provinces/ |
@@ -541,6 +584,25 @@ class SegmentTree {
 }
 ```
 
+### Dry Run
+Array [1, 3, 5, 7, 9, 11]. Build, then query(1,3), then update(1, 10).
+
+| Node (index) | Range | Value (before update) | Value (after update(1,10)) |
+|---|---|---|---|
+| 0 (root) | [0–5] | 36 | 43 |
+| 1 | [0–2] | 9 | 16 |
+| 2 | [3–5] | 27 | 27 |
+| 3 | [0–1] | 4 | 11 |
+| 4 | [2–2] | 5 | 5 |
+| 5 | [3–4] | 16 | 16 |
+| 6 | [5–5] | 11 | 11 |
+| 7 (leaf) | [0–0] | 1 | 1 |
+| 8 (leaf) | [1–1] | 3 | **10** |
+
+**query(1, 3):** Root [0–5] partial → left [0–2] partial → [0–1] partial → [0] outside → 0; [1] inside → 3. [2] inside → 5. Right [3–5] partial → [3–4] partial → [3] inside → 7; [4] outside. Result: 0+3+5+7 = **15** ✓
+
+**update(1, 10):** Walk root→[0–2]→[0–1]→leaf[1]. Set leaf[1]=10. Recompute up: [0–1]=1+10=11, [0–2]=11+5=16, root=16+27=43. ✓
+
 ### Complexity Summary
 ```
 Build:   O(n)
@@ -556,9 +618,16 @@ Space:   O(n)  — allocate 4*n nodes to be safe
 ### Experience Tip
 **Experience Tip:** For Range Sum Query Mutable (LC 307), a Fenwick Tree is actually simpler to code. Use a Segment Tree only when you need range min/max or more complex merge operations that Fenwick can't express. In interviews, it's fine to say "I'll use a Segment Tree for generality."
 
+### Do Not Confuse With
+| | Segment Tree | Fenwick Tree |
+|---|---|---|
+| **Use when** | Range queries with range updates, or non-commutative operations (min/max) | Prefix sum queries with point updates |
+| **Key difference** | More powerful, handles range update + lazy propagation | Simpler, smaller constant, only supports prefix operations |
+| **Wrong choice** | Fenwick for range min/max — it can't do those | Segment Tree when Fenwick's simplicity is enough |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
 | 307 | Range Sum Query - Mutable | Medium | Classic point update + range sum — the template problem | https://leetcode.com/problems/range-sum-query-mutable/ |
 | 315 | Count of Smaller Numbers After Self | Hard | Coordinate compress values, then use Seg Tree / BIT to count | https://leetcode.com/problems/count-of-smaller-numbers-after-self/ |
 | 303 | Range Sum Query - Immutable | Easy | No updates → use plain prefix sum, NOT Segment Tree | https://leetcode.com/problems/range-sum-query-immutable/ |
@@ -707,6 +776,27 @@ class FenwickTree {
 }
 ```
 
+### Dry Run
+Array [1,3,5,7,9] (0-indexed). BIT uses 1-indexed internally (add 1 to each 0-based index).
+
+**Build — BIT state after inserting all elements:**
+
+| i (1-indexed) | bit[i] covers (1-indexed) | bit[i] value |
+|---|---|---|
+| 1 | [1,1] → arr[0]=1 | 1 |
+| 2 | [1,2] → arr[0]+arr[1] | 4 |
+| 3 | [3,3] → arr[2]=5 | 5 |
+| 4 | [1,4] → arr[0..3] | 16 |
+| 5 | [5,5] → arr[4]=9 | 9 |
+
+**prefixSum(arr[0..3]) = 1+3+5+7 = 16:** Call prefix(4) internally.
+- i=4: sum += bit[4]=16. i -= 4&(-4)=4 → i=0. Stop. Return **16** ✓
+
+**update(2, +4) — 0-based index 2 → 1-indexed position 3, arr[2]: 5→9:**
+- i=3: bit[3] += 4 → bit[3]=9. i += 3&(-3)=1 → i=4
+- i=4: bit[4] += 4 → bit[4]=20. i += 4&(-4)=4 → i=8 > 5. Stop.
+- Nodes updated: **bit[3]** and **bit[4]** — the two nodes whose coverage range includes position 3.
+
 ### Complexity Summary
 ```
 update(i, delta): O(log n)
@@ -722,9 +812,16 @@ Space:            O(n)
 ### Experience Tip
 **Experience Tip:** For "Count of Smaller Numbers After Self" (LC 315), coordinate-compress the values to map them to [1, n], then process the array right to left. For each element, first query prefix(val-1) to count how many already-inserted elements are smaller, then update(val, 1) to mark it as inserted.
 
+### Do Not Confuse With
+| | Fenwick Tree (BIT) | Prefix Sum Array |
+|---|---|---|
+| **Use when** | Frequent point updates AND range queries | Array is static (no updates); range queries only |
+| **Key difference** | O(log n) update + O(log n) query | O(1) query but O(n) to rebuild after any update |
+| **Wrong choice** | Prefix Sum when array has updates | Fenwick when array never changes |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
 | 307 | Range Sum Query - Mutable | Medium | Direct BIT application — start here | https://leetcode.com/problems/range-sum-query-mutable/ |
 | 315 | Count of Smaller Numbers After Self | Hard | Coordinate compress + BIT; process right to left | https://leetcode.com/problems/count-of-smaller-numbers-after-self/ |
 
@@ -872,6 +969,22 @@ function maxSlidingWindow(nums, k) {
 }
 ```
 
+### Dry Run
+Array [1,3,-1,-3,5,3,6,7], k=3. Deque stores indices; values shown in parentheses.
+
+| i | arr[i] | Action | Deque (indices) | Window | Max |
+|---|---|---|---|---|---|
+| 0 | 1 | push 0 | [0] | — | — |
+| 1 | 3 | 3>1: pop 0, push 1 | [1] | — | — |
+| 2 | -1 | -1<3: push 2 | [1,2] | [1,3,-1] | arr[1]=**3** |
+| 3 | -3 | -3<-1: push 3 | [1,2,3] | [3,-1,-3] | arr[1]=**3** |
+| 4 | 5 | expire front 1 (1<2); 5>-3: pop 3; 5>-1: pop 2; push 4 | [4] | [-1,-3,5] | arr[4]=**5** |
+| 5 | 3 | 3<5: push 5 | [4,5] | [-3,5,3] | arr[4]=**5** |
+| 6 | 6 | expire front 4 (4<4? No); 6>3: pop 5; 6>5: pop 4; push 6 | [6] | [5,3,6] | arr[6]=**6** |
+| 7 | 7 | 7>6: pop 6; push 7 | [7] | [3,6,7] | arr[7]=**7** |
+
+Output: [3, 3, 5, 5, 6, 7] ✓
+
 ### Complexity Summary
 ```
 Per element:  O(1) amortized (each element pushed and popped at most once)
@@ -886,9 +999,16 @@ Space:        O(k) — deque holds at most k indices at any time
 ### Experience Tip
 **Experience Tip:** The deque always represents a "useful candidates" list. An element is popped from the back because "a newer, bigger element makes this one permanently useless." An element is popped from the front because "it's too old — it fell off the left edge of the window." These two cleanup rules together define the pattern.
 
+### Do Not Confuse With
+| | Monotonic Deque | Monotonic Stack |
+|---|---|---|
+| **Use when** | Sliding window max/min — elements expire from FRONT | Next greater/smaller — elements expire from BACK only |
+| **Key difference** | Supports removal from BOTH ends (expired + dominated) | Supports removal from BACK only |
+| **Wrong choice** | Stack for sliding window (can't remove expired front elements) | Deque for simple next-greater (deque is overkill) |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
 | 239 | Sliding Window Maximum | Hard | The canonical monotonic deque problem — implement this cold | https://leetcode.com/problems/sliding-window-maximum/ |
 
 ### One-Minute Revision

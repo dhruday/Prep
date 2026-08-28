@@ -194,11 +194,15 @@ Space: O(n) — temp array needed for merging; O(log n) recursion stack on top
 **Experience Tip:** The merge step is the heart of the algorithm — understanding *why* you add `mid - i + 1` inversions is more important than memorizing the code. Once you see that every remaining left element is greater than the current right element, the formula is obvious.
 
 ### Do Not Confuse With
-- **Quick Sort:** also O(n log n) average but NOT stable and in-place. Merge sort needs extra space but guarantees stability.
-- **Two Pointers on a sorted array:** the merge step looks like two pointers, but the array is not pre-sorted — merge sort *creates* the sorted order bottom-up.
+
+| | Merge Sort | Quick Sort |
+|---|---|---|
+| **Use when** | Stable sort required; sorting linked lists; external sort; counting inversions | In-memory array sort; average-case performance matters; building Quick Select |
+| **Key difference** | Stable, O(n log n) worst case, needs O(n) extra space | Unstable, O(n²) worst case (O(n log n) avg), O(log n) space (cache-friendly) |
+| **Wrong choice** | Merge Sort when O(n) extra space is unacceptable | Quick Sort when stability is required (e.g., sort by name then age — stable sort preserves name-order for same age) |
 
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
 |---|---------|------------|----------------|------|
 | 912 | Sort an Array | Medium | Implement merge sort from scratch | https://leetcode.com/problems/sort-an-array/ |
 | 148 | Sort List | Medium | Merge sort on linked list — use slow/fast pointer to find midpoint | https://leetcode.com/problems/sort-list/ |
@@ -374,11 +378,15 @@ Space: O(log n) — recursion stack depth on average
 **Experience Tip:** The partition function is the core building block. Once you can write it cleanly in 8 lines, Quick Sort and Quick Select both follow naturally. Practice partition alone until it's automatic.
 
 ### Do Not Confuse With
-- **Merge Sort:** Merge Sort splits first then merges. Quick Sort partitions first then recurses. Merge Sort is stable; Quick Sort is not. Merge Sort needs O(n) space; Quick Sort is in-place.
-- **Quick Select:** Same partition step, but Quick Select only recurses on ONE side.
+
+| | Quick Sort | Merge Sort |
+|---|---|---|
+| **Use when** | In-memory array sort; average-case O(n log n) acceptable; building Quick Select | Stable sort required; sorting linked lists; external sort; counting inversions |
+| **Key difference** | Unstable, O(n²) worst case (O(n log n) avg), O(log n) space (cache-friendly) | Stable, O(n log n) worst case, needs O(n) extra space |
+| **Wrong choice** | Quick Sort when stability is required (sort by name then by age — stable sort preserves name-order for same age) | Merge Sort when O(n) extra space is unacceptable |
 
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
 |---|---------|------------|----------------|------|
 | 75 | Sort Colors | Medium | Three-way partition — lt/i/gt pointers | https://leetcode.com/problems/sort-colors/ |
 | 912 | Sort an Array | Medium | Implement quick sort from scratch with random pivot | https://leetcode.com/problems/sort-an-array/ |
@@ -555,11 +563,15 @@ Space: O(n) worst case recursion stack, O(log n) average
 **Experience Tip:** Quick Select modifies the input array. If the problem requires you not to modify input, either copy it first or use a heap. Always clarify with the interviewer whether the array can be modified.
 
 ### Do Not Confuse With
-- **Heap (Top-K):** Heap gives all K elements in O(n log K) — use when you need sorted top-K, streaming data, or guaranteed worst case. Quick Select gives one element in O(n) average — use when you only need the value at position K and have all data.
-- **Quick Sort:** Quick Sort recurses on BOTH sides and sorts everything. Quick Select recurses on ONE side only.
+
+| | Quick Select | Heap (Top-K) |
+|---|---|---|
+| **Use when** | Single Kth query; all data available upfront; O(n) average acceptable | Streaming data; multiple queries; guaranteed worst case; sorted top-K needed |
+| **Key difference** | O(n) average, O(n²) worst case, modifies the input array | O(n log k) always reliable, does not modify array, naturally handles insertions |
+| **Wrong choice** | Quick Select when data arrives as a stream or you need sorted top-K output | Heap when you only need one Kth value and O(n) average is sufficient |
 
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
 |---|---------|------------|----------------|------|
 | 215 | Kth Largest Element in an Array | Medium | Classic Quick Select — map Kth largest to targetIndex = n-k | https://leetcode.com/problems/kth-largest-element-in-an-array/ |
 | 75 | Sort Colors | Medium | Three-way partition is related — practice partitioning around a value | https://leetcode.com/problems/sort-colors/ |
@@ -714,11 +726,15 @@ Space: O(K) for the count array
 **Experience Tip:** Counting sort is the intended O(n) solution whenever the problem gives you a small explicit value range. The moment you see "values are in [0, K]" with small K in the constraints, think counting sort before reaching for comparison sort.
 
 ### Do Not Confuse With
-- **Bucket Sort:** Bucket sort groups a range of values into one bucket; counting sort has one bucket per exact value. Counting sort is a special case of bucket sort with bucket width = 1.
-- **Radix Sort:** Radix sort uses counting sort as a subroutine, applying it digit by digit.
+
+| | Counting Sort | Radix Sort |
+|---|---|---|
+| **Use when** | Single-pass sort; value range is small (0..k); k fits in memory | Larger value ranges; integers with many possible values; multiple digit passes affordable |
+| **Key difference** | One pass, space = O(k), value range must be small | Digit-by-digit (d passes), space = O(n + b) where b = base, handles larger ranges |
+| **Wrong choice** | Counting Sort when k is huge (e.g., values up to 10⁹) — use Radix Sort instead | Radix Sort when range is already small — Counting Sort is simpler and equally fast |
 
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
 |---|---------|------------|----------------|------|
 | 75 | Sort Colors | Medium | Three distinct values — counting sort in one pass | https://leetcode.com/problems/sort-colors/ |
 | 1122 | Relative Sort Array | Easy | Count first array's elements, then reconstruct with reference order | https://leetcode.com/problems/relative-sort-array/ |
@@ -897,11 +913,15 @@ Space: O(1) — all work done in-place; only a few pointers
 **Experience Tip:** The swap-or-advance decision is the entire algorithm. If you can place the element, place it. If the destination already has the right value (either it's correct or it's a duplicate), move on. The second scan is trivial once the placement pass is done.
 
 ### Do Not Confuse With
-- **Hash Set approach for missing numbers:** Uses O(n) space but does not modify the array — use when you cannot modify input. Cyclic sort is the O(1) space alternative.
-- **Floyd's Cycle Detection (LeetCode 287 alternative):** Also finds duplicates in O(1) space without modifying the array, by treating values as pointers. More complex — cyclic sort is simpler when modification is allowed.
+
+| | Cyclic Sort | Counting Sort |
+|---|---|---|
+| **Use when** | Values in [1..n] exactly; find missing or duplicate; O(1) space required | Integer values in any small range [0..k]; just need sorted output |
+| **Key difference** | In-place O(n), no extra space, only works for [1..n] range, naturally exposes missing/duplicate | O(n + k) space, works for any range, produces sorted output only |
+| **Wrong choice** | Cyclic Sort when values are not in a contiguous [1..n] range | Counting Sort when you need to find missing/duplicate with O(1) space |
 
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
 |---|---------|------------|----------------|------|
 | 268 | Missing Number | Easy | Simplest cyclic sort application — range [0, n] | https://leetcode.com/problems/missing-number/ |
 | 448 | Find All Numbers Disappeared in an Array | Easy | Multiple missing values — scan after placement pass | https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/ |
@@ -1046,11 +1066,15 @@ Space: O(n) — for the string conversion array; sort is in-place or O(log n) st
 **Experience Tip:** For "Largest Number" type problems, always think "what two-element comparison rule gives the right answer?" Test it on `[3, 30]` — that's the trickiest pair. If your rule handles `[3, 30]` correctly, it almost certainly generalizes.
 
 ### Do Not Confuse With
-- **Topological Sort:** Topological sort determines order from dependencies (edges in a graph). Custom comparator sort determines order from pairwise element comparison. They solve completely different problems.
-- **Greedy ordering:** Sometimes greedy algorithms also produce a specific order (e.g., activity selection by end time). The difference: greedy reasoning determines the rule; custom comparator implements that rule.
+
+| | Custom Comparator | Natural Ordering |
+|---|---|---|
+| **Use when** | Default `<` does not express the right relationship; arrange to maximize/minimize; multi-field sort | Elements have a clear total order (numbers ascending, strings lexicographic) |
+| **Key difference** | You define the "comes before" rule; any transitive pairwise rule works | Language/library default; no extra code needed |
+| **Wrong choice** | Custom comparator when order depends on global context (use topological sort instead) | Natural ordering when the problem requires a non-standard arrangement |
 
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
 |---|---------|------------|----------------|------|
 | 179 | Largest Number | Medium | Comparator: (b+a).compareTo(a+b) — why does string concat comparison work? | https://leetcode.com/problems/largest-number/ |
 | 435 | Non-overlapping Intervals | Medium | Sort by end time — greedy on sorted intervals | https://leetcode.com/problems/non-overlapping-intervals/ |
@@ -1232,11 +1256,15 @@ Space: O(log n) — sort stack; O(n) if output array is counted
 **Experience Tip:** "What if sorted?" is one of the most powerful questions in an interview. When stuck, say it aloud — it signals good thinking AND often unlocks the solution. Many O(n²) brute-force solutions become O(n log n) after sorting plus a linear scan.
 
 ### Do Not Confuse With
-- **Sorting as the final answer:** Some problems literally just ask you to sort. Here we mean sorting as a *step* to enable a better algorithm.
-- **Greedy without sorting:** Some greedy algorithms do not need an explicit sort step if input is already structured. Check first before adding O(n log n) overhead.
+
+| | Sort First | HashMap / HashSet |
+|---|---|---|
+| **Use when** | Need two-pointer or binary search afterward; intervals must be processed in order; original order irrelevant | Need O(n) lookup; original order matters; just checking existence or frequency |
+| **Key difference** | O(n log n), enables two-pointer and binary search, uses O(1) extra space after sort | O(n) time, O(n) space, cannot exploit sorted structure afterward |
+| **Wrong choice** | Sorting when original order matters (subarray/sliding window problems) | HashMap when you need to find pairs with a target sum and two-pointer is cleaner |
 
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
 |---|---------|------------|----------------|------|
 | 56 | Merge Intervals | Medium | Sort by start; linear scan to merge overlapping pairs | https://leetcode.com/problems/merge-intervals/ |
 | 435 | Non-overlapping Intervals | Medium | Sort by end time; greedy count of intervals to remove | https://leetcode.com/problems/non-overlapping-intervals/ |

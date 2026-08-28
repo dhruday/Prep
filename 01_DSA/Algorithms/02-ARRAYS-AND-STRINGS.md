@@ -46,9 +46,11 @@ Two indices start at both ends of a sorted array and move toward each other. Eac
 ### Why does it work?
 On a sorted array, every step provably eliminates one index from the search space. You never need to revisit it because sorting guarantees the direction of change.
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: sorted array + find pair/triplet with target sum
 - Use: palindrome check, container/water problems
+
+### When NOT to use?
 - NOT: unsorted + original indices matter (use HashMap)
 - NOT: contiguous range problems (use sliding window)
 
@@ -99,13 +101,23 @@ function twoSum(nums, target) {
 Time: O(n) — each pointer moves at most n steps total
 Space: O(1) — two index variables only
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** In 3Sum, forgetting to skip duplicates after a match causes repeated triplets. After match, advance both pointers past all equal values.
+
+### Experience Tip
 **Tip:** Container With Most Water — always move the pointer at the *shorter* line; moving the taller one can only shrink or maintain height, never improve.
 
+### Do Not Confuse With
+
+| | Two Pointers — Opposite Ends | Sliding Window |
+|---|---|---|
+| **Use when** | Sorted array, finding a pair/triplet with a sum condition | Finding longest/shortest subarray satisfying a monotonic constraint |
+| **Key difference** | Pointers start at opposite ends and converge inward; relies on sorted order to eliminate candidates | Both pointers move left-to-right; window expands right and shrinks left only on violation |
+| **Wrong choice symptom** | Using sliding window on a sorted pair problem — you expand/shrink but never converge, missing the sorted-order shortcut | Using opposite-ends on a subarray length problem — convergence doesn't map to window validity |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 167 | Two Sum II | Easy | Classic template | https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/ |
 | 15 | 3Sum | Medium | Skip duplicates at each pointer | https://leetcode.com/problems/3sum/ |
 | 11 | Container With Most Water | Medium | Move shorter line | https://leetcode.com/problems/container-with-most-water/ |
@@ -150,9 +162,11 @@ Result: [2, 2, 1], return S=3
 ### Why does it work?
 `slow` is the write head — it only moves when a valid element is written. The gap `[slow..fast-1]` is the discarded region. No element is visited more than once.
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: remove elements in-place, move zeroes, deduplicate sorted array
 - Use: "O(1) extra space", "modify array in-place"
+
+### When NOT to use?
 - NOT: looking for a pair (use opposite-direction)
 - NOT: need a contiguous window of elements (use sliding window)
 
@@ -199,13 +213,23 @@ Input: `[3, 2, 2, 3]`, val = 3
 Time: O(n) — fast visits every element exactly once
 Space: O(1) — in-place, no extra storage
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** Swapping element with the tail (like a partition) changes order — only safe if order doesn't matter. For "move zeroes" where relative order must be preserved, use slow/fast write, don't swap with end.
+
+### Experience Tip
 **Tip:** "Allow at most K duplicates" generalization: keep if `slow < k || nums[slow - k] != nums[fast]`.
 
+### Do Not Confuse With
+
+| | Two Pointers — Fast/Slow | Two Pointers — Opposite Ends |
+|---|---|---|
+| **Use when** | In-place filtering: write non-discarded elements compactly to the front | Sorted array: find a pair/triplet with a sum or difference condition |
+| **Key difference** | Both pointers move left-to-right; slow is the write head, fast is the read head | Pointers move toward each other from both ends; array must be sorted |
+| **Wrong choice symptom** | Using opposite-ends on a remove/filter problem — you'd corrupt elements or ignore relative ordering | Using fast/slow on a pair-sum problem — you never leverage sorted order and end up O(n²) |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 27 | Remove Element | Easy | Basic slow/fast template | https://leetcode.com/problems/remove-element/ |
 | 26 | Remove Duplicates from Sorted Array | Easy | Keep first of each value | https://leetcode.com/problems/remove-duplicates-from-sorted-array/ |
 | 283 | Move Zeroes | Easy | Write non-zeros, fill rest | https://leetcode.com/problems/move-zeroes/ |
@@ -246,9 +270,11 @@ Maintain a window of exactly K elements. Instead of recomputing the aggregate fr
 ### Why does it work?
 Each element enters the window once and leaves once — 2n operations total regardless of K. The "remove-one-add-one" update replaces recomputing K elements each step.
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: "subarray of exactly size K", "average of every K elements"
 - Use: fixed-size anagram/permutation check
+
+### When NOT to use?
 - NOT: window size can vary (use variable sliding window)
 - NOT: need min/max inside each window (use monotonic deque)
 
@@ -300,13 +326,23 @@ Input: `[2, 1, 5, 1, 3, 2]`, K=3
 Time: O(n) — each element added and removed exactly once
 Space: O(1) for sum; O(K) if storing a frequency map
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** For anagram problems, comparing full frequency maps each step is O(26·n). Instead, maintain a `matchCount` integer — increment when a char's count hits the required value, decrement when it drops below.
+
+### Experience Tip
 **Tip:** Initialize the first window before the loop; start the loop at index K, not 0.
 
+### Do Not Confuse With
+
+| | Sliding Window — Fixed Size | Sliding Window — Variable Size |
+|---|---|---|
+| **Use when** | Window size K is explicitly given and never changes | Looking for the longest/shortest window satisfying a condition; size unknown upfront |
+| **Key difference** | Subtract element leaving index `i-K`, add element entering index `i`; no shrink logic needed | Right pointer always expands; left pointer shrinks only when the window constraint is violated |
+| **Wrong choice symptom** | Using variable window when K is fixed — unnecessary shrink logic complicates code and can overshoot | Using fixed window when size is unknown — you'd need to iterate all possible K values, turning O(n) into O(n²) |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 643 | Maximum Average Subarray I | Easy | Basic template | https://leetcode.com/problems/maximum-average-subarray-i/ |
 | 438 | Find All Anagrams in a String | Medium | Track matchCount not full map | https://leetcode.com/problems/find-all-anagrams-in-a-string/ |
 
@@ -347,9 +383,11 @@ L     R         add 'c' → {a,b,c}  len=3 ✓
 ### Why does it work?
 `left` only ever moves right. Over the entire algorithm, `left` advances at most n times. Combined with n right-pointer steps: O(2n) = O(n).
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: "longest/shortest subarray satisfying condition" where condition is monotonic
 - Use: "at most K distinct characters", "no repeating characters"
+
+### When NOT to use?
 - NOT: exact sum with negative numbers (shrinking doesn't reliably reduce sum → use prefix sum + HashMap)
 - NOT: subsequences (non-contiguous)
 
@@ -405,13 +443,23 @@ Input: `"abca"`, find longest no-repeat
 Time: O(n) — left and right each advance at most n times
 Space: O(min(n, alphabet)) — window set size bounded by unique chars
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** Using sliding window for "subarray sum equals K" when array has negatives. Shrinking from left doesn't reliably decrease the sum. Use prefix sum + HashMap instead.
+
+### Experience Tip
 **Tip:** "Exactly K" problems often reduce to `atMost(K) - atMost(K-1)`. Write one helper function, call it twice.
 
+### Do Not Confuse With
+
+| | Sliding Window — Variable Size | Sliding Window — Fixed Size |
+|---|---|---|
+| **Use when** | Window size is not predetermined; optimize for longest/shortest satisfying a constraint | Window size K is given explicitly and remains constant throughout |
+| **Key difference** | Left pointer shrinks dynamically when constraint is violated; window size changes each step | Window size is always exactly K; update is always add-one/remove-one with no conditional shrink |
+| **Wrong choice symptom** | Using variable window for a fixed-K problem — shrink logic fires unnecessarily and can reduce window below K | Using fixed window for a longest/shortest problem — window never adapts, so you miss optimal bounds |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 3 | Longest Substring Without Repeating Characters | Medium | Classic template | https://leetcode.com/problems/longest-substring-without-repeating-characters/ |
 | 209 | Minimum Size Subarray Sum | Medium | Shrink while valid (not while invalid) | https://leetcode.com/problems/minimum-size-subarray-sum/ |
 | 424 | Longest Repeating Character Replacement | Medium | Window valid if len - maxFreq ≤ k | https://leetcode.com/problems/longest-repeating-character-replacement/ |
@@ -451,9 +499,11 @@ sum(1..3) = prefix[4] - prefix[1] = 9 - 3 = 6  ✓ (1+4+1=6)
 ### Why does it work?
 `prefix[i]` is the total distance traveled to checkpoint `i`. Any range is the difference between two checkpoints — no re-traversal needed.
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: multiple range sum queries on a static array
 - Use: "count subarrays with sum = K" (works with negatives!)
+
+### When NOT to use?
 - NOT: array is modified between queries (use Fenwick Tree)
 - NOT: only a single range query needed (just loop)
 
@@ -508,13 +558,23 @@ Input: `[1, 1, 1]`, K=2
 Time: O(n) — single pass through array
 Space: O(n) — prefix sum map stores up to n distinct values
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** Off-by-one. `prefix` has `n+1` elements. Range `[l, r]` inclusive = `prefix[r+1] - prefix[l]`, not `prefix[r] - prefix[l-1]`.
+
+### Experience Tip
 **Tip:** Always seed the map with `{0: 1}` before the loop. Without it, subarrays starting at index 0 (where prefixSum itself equals K) are missed.
 
+### Do Not Confuse With
+
+| | Prefix Sum | Sliding Window |
+|---|---|---|
+| **Use when** | Range sum queries on static arrays; count subarrays with sum = K even with negative numbers | Longest/shortest subarray with a monotonic constraint; all values non-negative (sum grows as window grows) |
+| **Key difference** | Handles negatives via HashMap lookup (`prefix[j] - prefix[i] = K`); O(n) with arbitrary values | Shrinking the window reliably reduces the aggregate only when values are non-negative |
+| **Wrong choice symptom** | Using sliding window for "subarray sum = K" with negatives — shrinking doesn't reliably reduce sum, leading to wrong answers | Using prefix sum + HashMap when a simpler two-pointer shrink suffices — correct but adds O(n) space unnecessarily |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 303 | Range Sum Query - Immutable | Easy | Basic prefix build + query | https://leetcode.com/problems/range-sum-query-immutable/ |
 | 560 | Subarray Sum Equals K | Medium | Prefix + HashMap, seed {0:1} | https://leetcode.com/problems/subarray-sum-equals-k/ |
 | 238 | Product of Array Except Self | Medium | Prefix product + suffix product | https://leetcode.com/problems/product-of-array-except-self/ |
@@ -555,9 +615,11 @@ max -2  1   1  4   4  5  6   6  6  ← answer = 6
 ### Why does it work?
 This is DP: `dp[i]` = max sum subarray ending at `i` = `max(arr[i], dp[i-1] + arr[i])`. Since `dp[i]` only needs `dp[i-1]`, the array collapses to one variable.
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: "maximum sum contiguous subarray"
 - Use: "best time to buy/sell stock" (convert to max subarray of daily differences)
+
+### When NOT to use?
 - NOT: non-contiguous (subsequence) → different DP
 - NOT: circular array → need `total - minSubarray` variant
 
@@ -610,13 +672,23 @@ Input: `[-2, 1, -3, 4, -1, 2, 1]`
 Time: O(n) — single pass, one decision per element
 Space: O(1) — two variables only
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** Maximum *product* subarray — can't just track current max. A large negative times another negative becomes positive. Track both `currentMax` and `currentMin` at every step.
+
+### Experience Tip
 **Tip:** Start `currentSum` and `globalMax` at `nums[0]`, not `0`. Initializing at `0` breaks for all-negative arrays (answer would be wrongly `0`).
 
+### Do Not Confuse With
+
+| | Kadane's Algorithm | Prefix Sum + HashMap |
+|---|---|---|
+| **Use when** | Find the maximum (or minimum) sum of any contiguous subarray | Count or locate subarrays whose sum equals an exact target K |
+| **Key difference** | Optimizes a running sum by restarting when it goes negative; one variable tracks "best ending here" | Stores all prefix sums seen so far; answers "how many subarrays sum to K" via map lookup |
+| **Wrong choice symptom** | Using prefix sum to find the max subarray — you get all sums but need an extra O(n) pass to find the maximum | Using Kadane's to count subarrays equaling K — Kadane's discards prefix history needed for counting |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 53 | Maximum Subarray | Easy | Classic Kadane's template | https://leetcode.com/problems/maximum-subarray/ |
 | 152 | Maximum Product Subarray | Medium | Track both max and min | https://leetcode.com/problems/maximum-product-subarray/ |
 | 121 | Best Time to Buy and Sell Stock | Easy | Max subarray of daily diffs | https://leetcode.com/problems/best-time-to-buy-and-sell-stock/ |
@@ -689,9 +761,11 @@ Result: [0, 0, 1, 1, 2, 2]
 ### Why does it work?
 Each pointer partitions a known region. When `mid` advances, the element is classified. When `high` retreats, an unprocessed element arrives at `mid` — hence `mid` must not advance. The three invariant regions are maintained at every step. Total work = O(n).
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: partition array into exactly three categories in one pass
 - Use: find all unique triplets summing to a target (after sorting)
+
+### When NOT to use?
 - NOT: more than three categories in one pass (use counting sort)
 - NOT: unsorted + three-sum without sorting (use nested HashMap for O(n²))
 
@@ -799,13 +873,23 @@ Input (3Sum): `[-4, -1, -1, 0, 1, 2]` (already sorted)
 Time: O(n²) for 3Sum (outer loop × two-pointer inner); O(n) for Sort Colors / partition
 Space: O(1) auxiliary (O(n) for 3Sum result list)
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** In 3Sum, when a match is found, forgetting to skip all duplicate `left` and `right` values before advancing both pointers — produces repeated triplets in the output.
+
+### Experience Tip
 **Tip:** For Sort Colors, do NOT increment `mid` after swapping with `high`. The element that just arrived at `mid` from the right has not been categorized yet.
 
+### Do Not Confuse With
+
+| | Three Pointers | Two Pointers |
+|---|---|---|
+| **Use when** | Partitioning into exactly three categories (low/mid/high) or finding triplets with a sum condition | Partitioning into two categories, or finding pairs with a sum/difference condition |
+| **Key difference** | Three invariant regions maintained simultaneously; `mid` processes the unresolved middle zone | Two invariant regions; one pointer eliminates one candidate per step based on sorted order |
+| **Wrong choice symptom** | Using two pointers to sort 0s/1s/2s — you'd need two passes (sort 0s first, then 1s) instead of one | Using three pointers for a simple pair-sum — unnecessary complexity; the extra pointer adds no value |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 15 | 3Sum | Medium | Sort first; skip duplicates at all three pointer positions | https://leetcode.com/problems/3sum/ |
 | 16 | 3Sum Closest | Medium | Track minimum absolute difference; two-pointer inner loop per i | https://leetcode.com/problems/3sum-closest/ |
 | 75 | Sort Colors | Medium | mid does not advance after swap with high | https://leetcode.com/problems/sort-colors/ |
@@ -848,9 +932,11 @@ XOR(0..4) = prefix[5] XOR prefix[0] = 2 XOR 0 = 2   ✓
 ### Why does it work?
 XOR is associative, commutative, and self-inverse (`a XOR a = 0`). `prefix[r+1] XOR prefix[l]` cancels out the first `l` elements, leaving exactly the XOR of elements from index `l` to `r`.
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: multiple range XOR queries on a static array
 - Use: "count subarrays/pairs/triplets with XOR = K"
+
+### When NOT to use?
 - NOT: range sum or product queries (use prefix sum or prefix product)
 - NOT: array is modified between queries (use a segment tree)
 
@@ -905,13 +991,23 @@ prefix = [0, 1, 2, 0, 3, 2]. Query [0,2]: prefix[3]^prefix[0] = 0^0 = 0 ✓
 Time: O(n) to build prefix array; O(1) per query
 Space: O(n) for the prefix XOR array
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** Off-by-one on indices — identical to prefix sum. Range `[l, r]` inclusive = `prefix[r+1] XOR prefix[l]`, not `prefix[r] XOR prefix[l-1]`.
+
+### Experience Tip
 **Tip:** For "count triplets where XOR(i..k) = 0": if `prefix[i] == prefix[k+1]`, any split point `j` where `i <= j < k` is valid. That contributes `k - i` triplets without inner-loop enumeration.
 
+### Do Not Confuse With
+
+| | Prefix XOR | Prefix Sum |
+|---|---|---|
+| **Use when** | Range XOR queries; count subarrays/triplets where XOR equals a target | Range sum queries; count subarrays where sum equals a target (including negatives) |
+| **Key difference** | Uses XOR's self-inverse property (`a ^ a = 0`); range query is `prefix[r+1] ^ prefix[l]` | Uses subtraction; range query is `prefix[r+1] - prefix[l]`; works with a HashMap for count queries |
+| **Wrong choice symptom** | Using prefix sum for XOR problems — sum doesn't cancel repeated elements, producing wrong range values | Using prefix XOR for sum problems — XOR does not equal addition; results will be meaningless |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 1310 | XOR Queries of a Subarray | Medium | Direct prefix XOR range query — identical structure to prefix sum | https://leetcode.com/problems/xor-queries-of-a-subarray/ |
 | 2425 | Bitwise XOR of All Pairings | Medium | Count parity of occurrences in each array using XOR properties | https://leetcode.com/problems/bitwise-xor-of-all-pairings/ |
 | 1442 | Count Triplets That Can Form Two Arrays of Equal XOR | Medium | If prefix[i]==prefix[k+1], any split j in range contributes k−i triplets | https://leetcode.com/problems/count-triplets-that-can-form-two-arrays-of-equal-xor/ |
@@ -958,9 +1054,11 @@ Verify: 2 appears 4 times > 7/2 = 3.5 ✓
 ### Why does it work?
 A majority element has more than n/2 votes. Every cancellation removes one majority vote and one non-majority vote. Because majority votes outnumber all non-majority votes combined, the majority element always has net positive votes remaining after all cancellations.
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: find element appearing > n/2 times in O(1) space
 - Use: find all elements appearing > n/3 times (two-candidate extension)
+
+### When NOT to use?
 - NOT: find the most frequent element when no majority guaranteed (use HashMap)
 - NOT: k > 3 threshold (Boyer-Moore extends, but HashMap is simpler)
 
@@ -1017,13 +1115,23 @@ Final candidate = 2. Count in array: 4 > 7/2 = 3.5 ✓
 Time: O(n) — one pass to find candidate; one optional pass to verify
 Space: O(1) — only two variables (candidate and count)
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** The algorithm always returns *some* candidate, even if no majority element exists. If the problem does not guarantee a majority (e.g., Majority Element II), always do a verification pass after the vote phase.
+
+### Experience Tip
 **Tip:** For elements appearing > n/3 times, maintain two candidates with two counts. At most 2 such elements can exist. Run the vote phase with both candidates, then verify each with a count pass.
 
+### Do Not Confuse With
+
+| | Boyer-Moore Majority Vote | HashMap Frequency Count |
+|---|---|---|
+| **Use when** | Find the single element appearing strictly more than n/2 times in O(1) space | Find the most frequent element, or any element exceeding a threshold, with no O(1) space constraint |
+| **Key difference** | O(1) space by cancelling non-matching votes; only correct when a majority is guaranteed (or verified afterward) | O(n) space; always correct regardless of distribution; handles any frequency threshold |
+| **Wrong choice symptom** | Using Boyer-Moore when no majority is guaranteed and skipping verification — the returned candidate may not actually be a majority | Using a HashMap when the problem guarantees majority and requires O(1) space — correct but fails the space requirement |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 169 | Majority Element | Easy | Majority guaranteed — single vote pass is sufficient | https://leetcode.com/problems/majority-element/ |
 | 229 | Majority Element II | Medium | At most 2 candidates for >n/3; must verify both after voting | https://leetcode.com/problems/majority-element-ii/ |
 | 1150 | Check If a Number Is Majority Element in a Sorted Array | Easy | Binary search for first/last occurrence; count by subtraction | https://leetcode.com/problems/check-if-a-number-is-majority-element-in-a-sorted-array/ |
@@ -1078,9 +1186,11 @@ Result:  [0, 0, 1, 1, 2, 2]
 ### Why does it work?
 Every step either advances `mid` (element classified) or shrinks the unprocessed region `[mid..high]` from the right. Each element is processed at most once by `mid`. When swapped from `high`, the new element at `mid` is from the unprocessed region and must be examined — hence no `mid++`.
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: sort an array of exactly 3 distinct values in O(n) one pass
 - Use: 3-way pivot partition in QuickSort for arrays with many repeated elements
+
+### When NOT to use?
 - NOT: more than 3 distinct groups to partition (use counting sort)
 - NOT: general arbitrary-integer sort (standard sort or two-pointer partition)
 
@@ -1163,13 +1273,23 @@ Input: `[2, 0, 2, 1, 1, 0]`
 Time: O(n) — each element processed by `mid` at most once
 Space: O(1) — in-place, three pointer variables only
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** Incrementing `mid` after swapping with `high` — the newly arrived element at `mid` has not been processed, so advancing `mid` skips it and leaves the partition invariant broken.
+
+### Experience Tip
 **Tip:** The invariant "everything before `low` is < pivot, everything before `mid` is == pivot" is the key. Print low/mid/high boundaries after each step when debugging.
 
+### Do Not Confuse With
+
+| | Dutch National Flag (3-way partition) | Counting Sort |
+|---|---|---|
+| **Use when** | Array has exactly 3 distinct values; O(1) extra space required; single in-place pass | Array has a known bounded range of integer values (not just 3); O(n) extra space is acceptable |
+| **Key difference** | In-place pointer manipulation; no counting array; works only for exactly 3 categories | Counts occurrences of each value then reconstructs; generalizes to any bounded integer range |
+| **Wrong choice symptom** | Using DNF for more than 3 categories — the low/mid/high invariant breaks down without a third boundary | Using counting sort when O(1) space is required — the count array violates the space constraint |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 75 | Sort Colors | Medium | Classic DNF — do not increment mid after swap with high | https://leetcode.com/problems/sort-colors/ |
 | 905 | Sort Array By Parity | Easy | Two-group version; notice how DNF reduces to a two-pointer when there are only 2 categories | https://leetcode.com/problems/sort-array-by-parity/ |
 | 922 | Sort Array By Parity II | Easy | Even-indexed positions need even values — track two independent write pointers | https://leetcode.com/problems/sort-array-by-parity-ii/ |
@@ -1220,9 +1340,11 @@ i=6, val=-3 → arr[2] already < 0 → 3 is a DUPLICATE!
 ### Why does it work?
 When values are in `[1, n]` and indices are in `[0, n-1]`, each value `v` maps to index `v-1`. Using the sign of that slot as a single extra bit per element encodes visit information without extra space. Original values are preserved as absolute values.
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: detect duplicates or find missing numbers when values are in `[1, n]`
 - Use: "O(1) space" + "in-place" + bounded positive integer values
+
+### When NOT to use?
 - NOT: values outside `[1, n]` range (negative marking and cyclic sort break down)
 - NOT: when the original array must be preserved after the call (signs get mutated)
 
@@ -1309,13 +1431,23 @@ Input: `[3, 1, 3, 4, 2]` — find duplicates via negative marking
 Time: O(n) — each element visited at most twice; cyclic sort total swaps ≤ n
 Space: O(1) — no extra arrays; information encoded in existing array signs
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** The cyclic sort inner `while` loop will spin infinitely if a duplicate occupies the target slot — always guard with `nums[nums[i]-1] != nums[i]` before swapping.
+
+### Experience Tip
 **Tip:** After negative marking, if you need to return the original array, multiply every negative back to positive. For result collection, use `Math.abs(nums[i])` when reading values mid-loop.
 
+### Do Not Confuse With
+
+| | In-Place Manipulation | Two Pointers — Fast/Slow |
+|---|---|---|
+| **Use when** | Values are in range `[1, n]`; detect duplicates or find missing numbers using sign/index encoding | Filter or compact an array in-place by writing only qualifying elements; order must be preserved |
+| **Key difference** | Encodes visit information in the array's own sign bits or via cyclic index mapping; reads at arbitrary positions | Linear write-head (slow) + read-head (fast); compacts qualifying elements to the front sequentially |
+| **Wrong choice symptom** | Using fast/slow to find duplicates — you'd need an auxiliary set, breaking the O(1) space guarantee | Using negative-marking for general filtering — sign encoding only works when values are bounded in `[1, n]` |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 448 | Find All Numbers Disappeared in an Array | Easy | Negative-mark visited positions; unvisited indices hold missing numbers | https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/ |
 | 442 | Find All Duplicates in an Array | Medium | Mark negative on first visit; already-negative index reveals duplicate value | https://leetcode.com/problems/find-all-duplicates-in-an-array/ |
 | 73 | Set Matrix Zeroes | Medium | Use first row and first col as zero-flags; handle row-0 and col-0 edge cases separately | https://leetcode.com/problems/set-matrix-zeroes/ |
@@ -1374,9 +1506,11 @@ Spiral traversal boundaries (shrink inward after each pass):
 ### Why does it work?
 The delta array encapsulates all four direction offsets so a single loop replaces four separate if-statements. Spiral boundary contraction guarantees each cell is visited exactly once per layer traversal. Both patterns are O(m×n) because every cell is processed exactly once.
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: island/region counting, flood fill, shortest path in a grid (BFS)
 - Use: spiral output, 90° rotation, layer-by-layer processing
+
+### When NOT to use?
 - NOT: tree or graph problems without a grid structure (no delta array needed)
 - NOT: 1D array problems (linear pointers, not 2D deltas)
 
@@ -1479,13 +1613,23 @@ Spiral on `[[1,2,3],[4,5,6],[7,8,9]]`:
 Time: O(m×n) — every cell visited exactly once
 Space: O(m×n) for BFS queue / O(min(m,n)) recursion depth for DFS; O(1) extra for spiral
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** In spiral traversal, omitting the `if (top <= bottom)` and `if (left <= right)` guards before the bottom-row and left-col passes causes double-counting the center row or column in non-square matrices.
+
+### Experience Tip
 **Tip:** For "Rotate Image" (90° clockwise in-place): (1) transpose the matrix (swap `[r][c]` with `[c][r]`), then (2) reverse each row. No extra O(m×n) array needed.
 
+### Do Not Confuse With
+
+| | Matrix Traversal | Graph BFS/DFS |
+|---|---|---|
+| **Use when** | Input is an explicit 2D grid; neighbors are defined by fixed delta offsets (up/down/left/right) | Input is an adjacency list or edge list; neighbor relationships are arbitrary |
+| **Key difference** | Neighbor generation uses a fixed 4-directional delta array with bounds checking; grid itself serves as the visited structure | Neighbors are looked up from an adjacency list; requires a separate visited set or array |
+| **Wrong choice symptom** | Using general graph BFS/DFS on a grid problem — correct but verbose; you re-implement the delta array implicitly | Using grid-delta traversal on a non-grid graph — delta offsets have no meaning without a 2D coordinate structure |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 54 | Spiral Matrix | Medium | Guard the bottom and left passes with boundary checks to avoid duplicate cells | https://leetcode.com/problems/spiral-matrix/ |
 | 48 | Rotate Image | Medium | Transpose then reverse each row — two O(n²) in-place passes, no extra matrix | https://leetcode.com/problems/rotate-image/ |
 | 73 | Set Matrix Zeroes | Medium | Use first row and first column as in-place flags for O(1) extra space | https://leetcode.com/problems/set-matrix-zeroes/ |
@@ -1531,9 +1675,11 @@ Helper: in-place reverse `arr[left..right]` by swapping and moving both pointers
 ### Why does it work?
 Rotating right by `k` means the last `k` elements become the first `k`. Reversing the full array places them at the front but in reverse order. The two partial reverses restore correct forward order within each segment. Three reversals of total length 2n → O(n).
 
-### When to use? / When NOT to use?
+### When to use?
 - Use: rotate array in-place with O(1) extra space
 - Use: "reverse words in a string" (same three-reversal idea applied to characters)
+
+### When NOT to use?
 - NOT: k == 0 or k % n == 0 — no-op; handle with guard
 - NOT: when a new array is acceptable — simply index with `result[i] = arr[(i + n - k) % n]`
 
@@ -1598,13 +1744,23 @@ Result: `[4, 5, 1, 2, 3]` ✓ (last 2 elements moved to front)
 Time: O(n) — three passes, each reversing at most n/2 pairs
 Space: O(1) — all swaps in-place, no extra array
 
-### Common Trap + Experience Tip
+### Common Trap
 **Trap:** Forgetting `k %= n` — if k equals n the array is unchanged but ranges become incorrect; if k > n the reversal indices go out of bounds or produce wrong results.
+
+### Experience Tip
 **Tip:** The three-reversal technique unifies "Rotate Array", "Reverse Words in a String", and rotation-based string problems. Recognizing this pattern saves derivation time under interview pressure.
 
+### Do Not Confuse With
+
+| | Rotate Array (3-reversal trick) | Simple Reverse |
+|---|---|---|
+| **Use when** | Cyclically shift all elements right by k positions in O(1) space | Reverse elements between two indices (a sub-step used inside rotation) |
+| **Key difference** | Three sequential reversal calls: reverse all, reverse first k, reverse last n-k; the composition achieves cyclic shift | A single reversal swaps elements inward from both ends; it is one of the three building blocks of rotation |
+| **Wrong choice symptom** | Using a single reverse to rotate — you reverse order but do not achieve cyclic placement; elements end up in mirror position, not shifted position | Thinking rotation and reversal are interchangeable — rotation uses reversal as a tool, but they produce different results on their own |
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|--------------------------------|------|
 | 189 | Rotate Array | Medium | Apply k %= n first; three-reversal avoids O(n) extra space | https://leetcode.com/problems/rotate-array/ |
 | 48 | Rotate Image | Medium | Transpose then reverse rows achieves 90° in-place rotation — same reversal intuition | https://leetcode.com/problems/rotate-image/ |
 | 151 | Reverse Words in a String | Medium | Reverse all characters, then reverse each word — identical three-reversal pattern | https://leetcode.com/problems/reverse-words-in-a-string/ |

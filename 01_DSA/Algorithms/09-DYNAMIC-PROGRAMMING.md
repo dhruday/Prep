@@ -56,6 +56,9 @@ Base case:  dp[0] = nums[0], dp[1] = max(nums[0], nums[1])
 - "Can't pick adjacent elements", "jump up to K steps", "count ways to reach N"
 - Single sequence, answer grows left-to-right.
 
+### Why does it work?
+The subproblem property — each position's answer can be computed from previously computed positions. No position needs to look ahead, only backward. This is what "optimal substructure" means in practice.
+
 ### Simple Example (Climbing Stairs, n=5)
 | i | ways |
 |---|------|
@@ -93,6 +96,20 @@ function rob(nums) {
 }
 ```
 
+### Dry Run
+Climbing Stairs with n=5. dp[i] = number of ways to reach step i.
+
+| Step | i | dp[i] | dp[i-1] | dp[i-2] | Reasoning |
+|------|---|-------|---------|---------|-----------|
+| Base | 0 | 1     | —       | —       | 1 way to stand at step 0 (do nothing) |
+| Base | 1 | 1     | 1       | —       | only 1 way: one single step |
+| i=2  | 2 | 2     | 1       | 1       | from step 1 (1-step) or step 0 (2-step): 1+1=2 |
+| i=3  | 3 | 3     | 2       | 1       | from step 2 or step 1: 2+1=3 |
+| i=4  | 4 | 5     | 3       | 2       | from step 3 or step 2: 3+2=5 |
+| i=5  | 5 | 8     | 5       | 3       | from step 4 or step 3: 5+3=8 |
+
+Answer: dp[5] = 8
+
 ### Complexity
 Time: O(n) — one pass, O(1) work per index
 Space: O(1) — only two variables needed (dp[i] uses dp[i-1] and dp[i-2])
@@ -101,9 +118,18 @@ Space: O(1) — only two variables needed (dp[i] uses dp[i-1] and dp[i-2])
 Trap: forgetting `dp[1] = max(nums[0], nums[1])`, not just `nums[1]`.
 Tip: if you can't space-optimize immediately, write the full array first, then shrink.
 
+### Do Not Confuse With
+| | 1D Linear DP | 2D DP |
+|---|---|---|
+| State | One variable defines the state (position, index, amount) | Two variables: two positions, or index + remaining capacity |
+| Use when | You can describe the entire state with ONE number | You need two independent dimensions to describe the state |
+| Example | House Robber, Climbing Stairs | Unique Paths, Longest Common Subsequence |
+
+**Key distinction:** 1D DP: one variable defines the state (position, index, amount). 2D DP: two variables (two positions, index + remaining capacity). If you can describe the state with ONE number, it's 1D.
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
 | 70 | Climbing Stairs | Easy | Fibonacci in disguise | https://leetcode.com/problems/climbing-stairs/ |
 | 198 | House Robber | Medium | skip/take with gap constraint | https://leetcode.com/problems/house-robber/ |
 | 746 | Min Cost Climbing Stairs | Easy | dp[i] = cost[i] + min(dp[i-1], dp[i-2]) | https://leetcode.com/problems/min-cost-climbing-stairs/ |
@@ -153,6 +179,9 @@ Base case:  dp[0][j] = 1, dp[i][0] = 1  (top row and left col = 1 path each)
 - Grid + "how many paths" or "minimum cost path" from top-left to bottom-right.
 - Movement restricted to right/down (no backtracking).
 
+### Why does it work?
+Every cell's value depends only on the cell above and the cell to the left (for grid problems) or on two independent indices (for two-string problems). This creates a DAG of dependencies that can be filled in one pass.
+
 ### Simple Example (Min Path Sum 3×3)
 ```
 grid:        dp:
@@ -185,6 +214,24 @@ function uniquePaths(m, n) {
 }
 ```
 
+### Dry Run
+Unique Paths on a 3×3 grid. dp[i][j] = number of paths to reach cell (i,j) from (0,0).
+
+|     | j=0 | j=1 | j=2 |
+|-----|-----|-----|-----|
+| i=0 | 1   | 1   | 1   |
+| i=1 | 1   | 2   | 3   |
+| i=2 | 1   | 3   | 6   |
+
+Fill order: left to right, top to bottom.
+- First row and first column are all 1 (only one direction to reach them).
+- dp[1][1] = dp[0][1] + dp[1][0] = 1 + 1 = **2**
+- dp[1][2] = dp[0][2] + dp[1][1] = 1 + 2 = **3**
+- dp[2][1] = dp[1][1] + dp[2][0] = 2 + 1 = **3**
+- dp[2][2] = dp[1][2] + dp[2][1] = 3 + 3 = **6**
+
+Answer: dp[2][2] = 6
+
 ### Complexity
 Time: O(m×n) — every cell visited once
 Space: O(n) — rolling 1D array replaces the 2D table (row only depends on row above)
@@ -193,9 +240,18 @@ Space: O(n) — rolling 1D array replaces the 2D table (row only depends on row 
 Trap: for obstacles (LC 63), set `dp[0][j] = 0` as soon as you hit a blocked cell in the base case — all cells to the right of a top-row obstacle are unreachable.
 Tip: write the 2D table solution first, then collapse to 1D array row-by-row.
 
+### Do Not Confuse With
+| | 2D Grid DP | 1D DP (space-optimized) |
+|---|---|---|
+| Structure | Full 2D table dp[i][j], or collapsed to a rolling 1D array | A 1D array dp[j] that looks identical after optimization |
+| Recurrence | dp[i][j] depends on dp[i-1][j] and dp[i][j-1] | Same recurrence — the 1D version is the memory-optimized form |
+| Use when | Two independent dimensions govern the state | Single dimension, or you've already collapsed the 2D table |
+
+**Key distinction:** After space-optimizing 2D grid DP, it LOOKS like 1D. They are the same recurrence — the 1D version is just the memory-optimized form.
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
 | 62 | Unique Paths | Medium | Classic 2D DP base pattern | https://leetcode.com/problems/unique-paths/ |
 | 64 | Minimum Path Sum | Medium | Same structure, add grid[i][j] cost | https://leetcode.com/problems/minimum-path-sum/ |
 | 63 | Unique Paths II | Medium | Blocked cells reset dp to 0 | https://leetcode.com/problems/unique-paths-ii/ |
@@ -245,6 +301,9 @@ Base case:  dp[0] = true (sum 0 always achievable)
 - "Partition into two equal subsets", "can we form target sum from a subset?"
 - Finite set of items, each used 0 or 1 times.
 
+### Why does it work?
+Each item is a binary choice: take it or leave it. The dp[i][w] state captures "the best value using items 0..i with capacity w remaining." Once we've decided on item i, the optimal sub-answer for all remaining items only depends on the remaining capacity — not which specific items we chose.
+
 ### Simple Example (Target Sum → subset difference)
 nums=[1,1,1,1,1], target=3 → count subsets with sum=4 (out of total sum 5)
 dp after processing all 1s — count grows like Pascal's triangle.
@@ -283,6 +342,22 @@ function canPartition(nums) {
 }
 ```
 
+### Dry Run
+3 items: weights=[2,3,4], values=[3,4,5], capacity=5. dp[i][w] = max value using items 0..i with capacity w.
+
+|                    | w=0 | w=1 | w=2 | w=3 | w=4 | w=5 |
+|--------------------|-----|-----|-----|-----|-----|-----|
+| base (no items)    | 0   | 0   | 0   | 0   | 0   | 0   |
+| item 0 (w=2, v=3)  | 0   | 0   | 3   | 3   | 3   | 3   |
+| item 1 (w=3, v=4)  | 0   | 0   | 3   | 4   | 4   | 7   |
+| item 2 (w=4, v=5)  | 0   | 0   | 3   | 4   | 5   | 7   |
+
+Key take/skip comparisons:
+- dp[1][5]: skip item 1 → dp[0][5]=3; take item 1 → dp[0][5-3]+4=3+4=**7** → max=7
+- dp[2][5]: skip item 2 → dp[1][5]=7; take item 2 → dp[1][5-4]+5=0+5=5 → max=**7**
+
+Answer: dp[2][5] = 7 (take item 0 value=3 + item 1 value=4)
+
 ### Complexity
 Time: O(n × target) — n items × target capacity iterations
 Space: O(target) — 1D rolling array (collapsed from O(n × target) 2D table)
@@ -291,9 +366,19 @@ Space: O(target) — 1D rolling array (collapsed from O(n × target) 2D table)
 Trap: iterating capacity left-to-right in 0/1 knapsack lets you pick the same item multiple times — always go right-to-left.
 Tip: if you forget direction, ask "can I use this item again?" No → right-to-left.
 
+### Do Not Confuse With
+| | 0/1 Knapsack | Unbounded Knapsack |
+|---|---|---|
+| Item usage | Each item used AT MOST ONCE | Items can be reused unlimited times |
+| Capacity loop direction | Right to left (j = target down to weight) | Left to right (j = 0 up to target) |
+| "Take" recurrence | dp[i-1][w-weight] — previous row, item not re-usable | dp[i][w-weight] — same row, item re-usable |
+| Example | Partition Equal Subset Sum | Coin Change |
+
+**Key distinction:** 0/1: each item used AT MOST ONCE → iterate items outer, capacity inner, go right to left. Unbounded: items can repeat → same structure but the recurrence for "take" looks at dp[i][w-weight] not dp[i-1][w-weight].
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
 | 416 | Partition Equal Subset Sum | Medium | Reduce to subset sum, target = sum/2 | https://leetcode.com/problems/partition-equal-subset-sum/ |
 | 494 | Target Sum | Medium | Count subsets; transform to (sum+target)/2 | https://leetcode.com/problems/target-sum/ |
 | 474 | Ones and Zeroes | Medium | 2D knapsack with two capacity dims | https://leetcode.com/problems/ones-and-zeroes/ |
@@ -341,6 +426,9 @@ Base case:  dp[0] = 0, dp[1..amount] = Infinity initially
 - "Unlimited coins/items", "fewest coins to make change", "number of combinations"
 - "Integer break", "decode" problems where you split a number repeatedly.
 
+### Why does it work?
+Since items can be used multiple times, "using item i and still considering item i" is valid. The state dp[w] means "best value achievable with exactly capacity w." Each new capacity can build on any earlier capacity — including itself after a previous update in the same pass.
+
 ### Simple Example (Coin Change II — count ways, coins=[1,2,5], amount=5)
 | amount | ways |
 |--------|------|
@@ -381,6 +469,24 @@ function coinChange(coins, amount) {
 }
 ```
 
+### Dry Run
+Coin Change — coins=[1,2,5], amount=6. dp[w] = minimum coins to make amount w.
+
+| w      | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|--------|---|---|---|---|---|---|---|
+| Init   | 0 | ∞ | ∞ | ∞ | ∞ | ∞ | ∞ |
+| Result | 0 | 1 | 1 | 2 | 2 | 1 | 2 |
+
+Fill trace (all coins tried at each amount):
+- dp[1]: coin=1 → dp[0]+1=1. **dp[1]=1**
+- dp[2]: coin=1 → dp[1]+1=2; coin=2 → dp[0]+1=1. **dp[2]=1**
+- dp[3]: coin=1 → dp[2]+1=2; coin=2 → dp[1]+1=2. **dp[3]=2**
+- dp[4]: coin=1 → dp[3]+1=3; coin=2 → dp[2]+1=2. **dp[4]=2**
+- dp[5]: coin=1 → dp[4]+1=3; coin=2 → dp[3]+1=3; coin=5 → dp[0]+1=1. **dp[5]=1**
+- dp[6]: coin=1 → dp[5]+1=2; coin=2 → dp[4]+1=3; coin=5 → dp[1]+1=2. **dp[6]=2**
+
+Answer: dp[6] = 2 (coins: 1+5)
+
 ### Complexity
 Time: O(amount × coins.length) — fill each amount slot by trying every coin
 Space: O(amount) — only the 1D dp array needed
@@ -389,9 +495,19 @@ Space: O(amount) — only the 1D dp array needed
 Trap: initializing dp with 0 instead of Infinity means impossible states silently return 0 — always use a sentinel like `amount + 1`.
 Tip: Coin Change (min coins) vs Coin Change II (count ways) differ only in the transition (`min` vs `+=`). Know both.
 
+### Do Not Confuse With
+| | Unbounded Knapsack | 0/1 Knapsack |
+|---|---|---|
+| Item usage | Items can be reused unlimited times | Each item used AT MOST ONCE |
+| Capacity loop direction | Left to right (j = 0 up to target) | Right to left (j = target down to weight) |
+| "Take" recurrence | dp[i][w-weight] — same row, item re-usable | dp[i-1][w-weight] — previous row, item not re-usable |
+| Example | Coin Change, Integer Break | Partition Equal Subset Sum |
+
+**Key distinction:** Unbounded: items can repeat → left to right, "take" reads dp[i][w-weight]. 0/1: each item once → right to left, "take" reads dp[i-1][w-weight].
+
 ### LeetCode Practice
-| # | Problem | Difficulty | What to Notice | Link |
-|---|---------|------------|----------------|------|
+| # | Problem | Difficulty | Pattern Signal (What to Notice) | Link |
+|---|---------|------------|----------------------------------|------|
 | 322 | Coin Change | Medium | Min coins; fill with sentinel infinity | https://leetcode.com/problems/coin-change/ |
 | 518 | Coin Change II | Medium | Count combinations; dp[i] += dp[i-coin] | https://leetcode.com/problems/coin-change-ii/ |
 | 343 | Integer Break | Medium | dp[i] = max split into 2+ parts | https://leetcode.com/problems/integer-break/ |
