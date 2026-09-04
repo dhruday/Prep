@@ -39,6 +39,7 @@ This knowledge base is organized as a **hierarchical pattern system**. Every alg
 | 17 | [String Algorithms](17-STRING-ALGORITHMS.md) | KMP, Rabin-Karp, Z-Algorithm, Manacher's, Suffix Arrays | Medium → Hard |
 | 18 | [Interval & Sweep Line](18-INTERVAL-AND-SWEEP-LINE.md) | Merge/Insert Intervals, Meeting Rooms, Sweep Line, Range Module | Medium → Hard |
 | 19 | [Design Patterns & Meta](19-DESIGN-PATTERNS-AND-META.md) | Iterator, State Machine, Simulation, Minimax, Meet in the Middle, Randomized, Amortized | Medium → Hard |
+| 20 | [Algorithm-Wise Practice Roadmap](20-ALGORITHM-PRACTICE-ROADMAP.md) | **Pattern-first daily practice tracker** — ~90 patterns, ~420 problems, recognition triggers, priority labels, checkboxes | All levels |
 
 ---
 

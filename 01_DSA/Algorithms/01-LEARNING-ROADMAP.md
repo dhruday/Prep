@@ -107,6 +107,7 @@ Use these 5 questions in order every time you see a new problem. After 100 probl
 | **Phase 1: Foundations** | Weeks 1-4 | Core data structures, basic patterns, searching, sorting | 02, 03, 04, 05, 06, 07 |
 | **Phase 2: Paradigms** | Weeks 5-10 | Recursion, backtracking, DP, greedy, trees, graphs, heaps | 08, 09, 10, 11, 12, 13 |
 | **Phase 3: Advanced & Specialized** | Weeks 11-14 | Bit manipulation, math, advanced DS, string algos, intervals, meta-patterns | 14, 15, 16, 17, 18, 19 |
+| **Daily Practice** | Ongoing | Use as your main checklist — pattern → problems → checkboxes | [20 — Practice Roadmap](20-ALGORITHM-PRACTICE-ROADMAP.md) |
 
 ---
 
