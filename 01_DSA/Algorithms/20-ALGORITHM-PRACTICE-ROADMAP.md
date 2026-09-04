@@ -8,6 +8,12 @@
 
 ---
 
+## 🧭 Quick Section Jump
+
+[Arrays](#1--arrays--subarray-patterns) · [Searching](#2--searching) · [Sorting](#3--sorting) · [Hashing](#4--hashing) · [Linked Lists](#5--linked-lists) · [Stacks & Queues](#6--stacks--queues) · [Trees](#7--trees) · [Graphs](#8--graphs) · [DP](#9--dynamic-programming) · [Greedy](#10--greedy-algorithms) · [Backtracking](#11--backtracking) · [Strings](#12--strings) · [Heaps](#13--heaps--priority-queues) · [Bit Manip](#14--bit-manipulation) · [Intervals](#15--intervals--sweep-line) · [Math](#16--math--number-theory) · [Advanced DS](#17--advanced-data-structures) · [Meta](#18--special--meta-patterns) · [Audit](#-coverage--completeness-audit)
+
+---
+
 ## 🎯 How to Use This Roadmap
 
 1. Pick a pattern from the **Master Index** below
@@ -66,98 +72,100 @@
 
 ## 📊 Master Algorithm Index
 
+> Click any pattern name to jump directly to it. Use **[↑ Index]** links inside each section to return here.
+
 | # | Algorithm / Pattern | Category | Priority | Status |
 |---|---|---|---|---|
-| 1 | Prefix Sum | Arrays | 🔥 HIGH | ⬜ |
-| 2 | Prefix Sum + HashMap | Arrays | 🔥 HIGH | ⬜ |
-| 3 | Prefix XOR + HashMap | Arrays | ⭐⭐⭐⭐ | ⬜ |
-| 4 | Difference Array | Arrays | ⭐⭐⭐ | ⬜ |
-| 5 | 2D Prefix Sum | Arrays | ⭐⭐⭐ | ⬜ |
-| 6 | Kadane's Algorithm | Arrays | 🔥 HIGH | ⬜ |
-| 7 | Two Pointers (Opposite Ends) | Arrays | 🔥 HIGH | ⬜ |
-| 8 | Two Pointers (Same Direction / Fast-Slow) | Arrays | ⭐⭐⭐⭐ | ⬜ |
-| 9 | Three Pointers / 3Sum | Arrays | 🔥 HIGH | ⬜ |
-| 10 | Sliding Window (Fixed Size) | Arrays | ⭐⭐⭐⭐ | ⬜ |
-| 11 | Sliding Window (Variable Size) | Arrays | 🔥 HIGH | ⬜ |
-| 12 | Dutch National Flag | Arrays | ⭐⭐⭐⭐ | ⬜ |
-| 13 | Cyclic Sort | Arrays | ⭐⭐⭐ | ⬜ |
-| 14 | Boyer-Moore Majority Vote | Arrays | ⭐⭐⭐⭐ | ⬜ |
-| 15 | In-Place / Matrix Manipulation | Arrays | ⭐⭐⭐⭐ | ⬜ |
-| 16 | Binary Search (Classic) | Searching | 🔥 HIGH | ⬜ |
-| 17 | Binary Search on Answer | Searching | 🔥 HIGH | ⬜ |
-| 18 | Lower/Upper Bound | Searching | ⭐⭐⭐⭐ | ⬜ |
-| 19 | Search in Rotated Sorted Array | Searching | 🔥 HIGH | ⬜ |
-| 20 | Peak Finding | Searching | ⭐⭐⭐⭐ | ⬜ |
-| 21 | Merge Sort | Sorting | 🔥 HIGH | ⬜ |
-| 22 | Quick Sort / Quick Select | Sorting | 🔥 HIGH | ⬜ |
-| 23 | Counting / Radix / Bucket Sort | Sorting | ⭐⭐⭐ | ⬜ |
-| 24 | Cyclic Sort (Finding Missing) | Sorting | ⭐⭐⭐ | ⬜ |
-| 25 | Custom Comparator / Sort as Preprocessing | Sorting | ⭐⭐⭐⭐ | ⬜ |
-| 26 | Frequency Count (HashMap) | Hashing | 🔥 HIGH | ⬜ |
-| 27 | Complement Lookup (Two Sum) | Hashing | 🔥 HIGH | ⬜ |
-| 28 | Grouping by Key (Anagrams) | Hashing | ⭐⭐⭐⭐ | ⬜ |
-| 29 | Rolling Hash / Rabin-Karp | Hashing | ⭐⭐⭐ | ⬜ |
-| 30 | Fast/Slow Pointers (Cycle) | Linked Lists | 🔥 HIGH | ⬜ |
-| 31 | In-Place Reversal | Linked Lists | 🔥 HIGH | ⬜ |
-| 32 | Merge K Sorted Lists | Linked Lists | 🔥 HIGH | ⬜ |
-| 33 | Dummy Node Trick | Linked Lists | ⭐⭐⭐⭐ | ⬜ |
-| 34 | LRU / LFU Cache | Linked Lists | 🔥 HIGH | ⬜ |
-| 35 | Monotonic Stack (Next Greater) | Stacks | 🔥 HIGH | ⬜ |
-| 36 | Monotonic Stack (Histogram) | Stacks | ⭐⭐⭐⭐ | ⬜ |
-| 37 | Monotonic Deque (Sliding Max) | Stacks | ⭐⭐⭐⭐ | ⬜ |
-| 38 | Min Stack / Expression Eval | Stacks | ⭐⭐⭐⭐ | ⬜ |
-| 39 | DFS (Tree Traversals) | Trees | 🔥 HIGH | ⬜ |
-| 40 | BFS / Level-Order | Trees | 🔥 HIGH | ⬜ |
-| 41 | Lowest Common Ancestor | Trees | 🔥 HIGH | ⬜ |
-| 42 | BST Operations | Trees | 🔥 HIGH | ⬜ |
-| 43 | Tree DP (Diameter / Path Sum) | Trees | ⭐⭐⭐⭐ | ⬜ |
-| 44 | Serialize / Deserialize Tree | Trees | ⭐⭐⭐⭐ | ⬜ |
-| 45 | BFS (Graph) | Graphs | 🔥 HIGH | ⬜ |
-| 46 | DFS (Graph / Islands) | Graphs | 🔥 HIGH | ⬜ |
-| 47 | Multi-Source BFS | Graphs | 🔥 HIGH | ⬜ |
-| 48 | Topological Sort (Kahn's) | Graphs | 🔥 HIGH | ⬜ |
-| 49 | Union-Find / DSU | Graphs | 🔥 HIGH | ⬜ |
-| 50 | Dijkstra | Graphs | 🔥 HIGH | ⬜ |
-| 51 | Bellman-Ford | Graphs | ⭐⭐⭐⭐ | ⬜ |
-| 52 | Floyd-Warshall | Graphs | ⭐⭐⭐ | ⬜ |
-| 53 | Kruskal / Prim (MST) | Graphs | ⭐⭐⭐⭐ | ⬜ |
-| 54 | Bridges & Articulation Points | Graphs | ⭐⭐⭐ | ⬜ |
-| 55 | Bipartite Check | Graphs | ⭐⭐⭐⭐ | ⬜ |
-| 56 | 1D Linear DP | DP | 🔥 HIGH | ⬜ |
-| 57 | 2D Grid DP | DP | 🔥 HIGH | ⬜ |
-| 58 | 0/1 Knapsack | DP | 🔥 HIGH | ⬜ |
-| 59 | Unbounded Knapsack | DP | ⭐⭐⭐⭐ | ⬜ |
-| 60 | Subset Sum / Partition DP | DP | 🔥 HIGH | ⬜ |
-| 61 | LCS / Edit Distance | DP | 🔥 HIGH | ⬜ |
-| 62 | LIS (Longest Increasing Subsequence) | DP | 🔥 HIGH | ⬜ |
-| 63 | State Machine DP | DP | ⭐⭐⭐⭐ | ⬜ |
-| 64 | Interval DP | DP | ⭐⭐⭐⭐ | ⬜ |
-| 65 | Bitmask DP | DP | ⭐⭐⭐ | ⬜ |
-| 66 | Tree DP | DP | ⭐⭐⭐⭐ | ⬜ |
-| 67 | Digit DP | DP | ⭐⭐⭐ | ⬜ |
-| 68 | Interval Scheduling / Activity Selection | Greedy | 🔥 HIGH | ⬜ |
-| 69 | Jump Game | Greedy | 🔥 HIGH | ⬜ |
-| 70 | Gas Station / Task Scheduling | Greedy | ⭐⭐⭐⭐ | ⬜ |
-| 71 | Subsets / Permutations / Combinations | Backtracking | 🔥 HIGH | ⬜ |
-| 72 | N-Queens / Sudoku | Backtracking | ⭐⭐⭐⭐ | ⬜ |
-| 73 | Word Search / Grid DFS | Backtracking | 🔥 HIGH | ⬜ |
-| 74 | String Sliding Window | Strings | 🔥 HIGH | ⬜ |
-| 75 | KMP / Z-Algorithm | Strings | ⭐⭐⭐⭐ | ⬜ |
-| 76 | Manacher's Algorithm | Strings | ⭐⭐⭐ | ⬜ |
-| 77 | Trie (Prefix Tree) | Strings | 🔥 HIGH | ⬜ |
-| 78 | Top-K / Kth Element | Heaps | 🔥 HIGH | ⬜ |
-| 79 | Two Heaps (Median) | Heaps | 🔥 HIGH | ⬜ |
-| 80 | XOR Tricks | Bit Manip | 🔥 HIGH | ⬜ |
-| 81 | Bitmask / Bit Counting | Bit Manip | ⭐⭐⭐⭐ | ⬜ |
-| 82 | Merge / Insert Intervals | Intervals | 🔥 HIGH | ⬜ |
-| 83 | Meeting Rooms / Sweep Line | Intervals | 🔥 HIGH | ⬜ |
-| 84 | Difference Array | Intervals | ⭐⭐⭐ | ⬜ |
-| 85 | GCD / Sieve / Fast Power | Math | ⭐⭐⭐⭐ | ⬜ |
-| 86 | Modular Arithmetic / Combinatorics | Math | ⭐⭐⭐⭐ | ⬜ |
-| 87 | Segment Tree | Advanced DS | ⭐⭐⭐⭐ | ⬜ |
-| 88 | Fenwick Tree / BIT | Advanced DS | ⭐⭐⭐⭐ | ⬜ |
-| 89 | Sparse Table (RMQ) | Advanced DS | ⭐⭐⭐ | ⬜ |
-| 90 | Meet in the Middle | Meta | ⭐⭐⭐ | ⬜ |
+| 1 | [Prefix Sum](#11-prefix-sum-) | Arrays | 🔥 HIGH | ⬜ |
+| 2 | [Prefix Sum + HashMap](#12-prefix-sum--hashmap-) | Arrays | 🔥 HIGH | ⬜ |
+| 3 | [Prefix XOR + HashMap](#13-prefix-xor--hashmap-️) | Arrays | ⭐⭐⭐⭐ | ⬜ |
+| 4 | [Difference Array](#14-difference-array-️) | Arrays | ⭐⭐⭐ | ⬜ |
+| 5 | [2D Prefix Sum](#15-kadanes-algorithm-) *(see §1.5 note)* | Arrays | ⭐⭐⭐ | ⬜ |
+| 6 | [Kadane's Algorithm](#15-kadanes-algorithm-) | Arrays | 🔥 HIGH | ⬜ |
+| 7 | [Two Pointers (Opposite Ends)](#16-two-pointers-opposite-ends-) | Arrays | 🔥 HIGH | ⬜ |
+| 8 | [Two Pointers (Same Direction)](#17-sliding-window--fixed-size-️) *(see §1.7 note)* | Arrays | ⭐⭐⭐⭐ | ⬜ |
+| 9 | [Three Pointers / 3Sum](#16-two-pointers-opposite-ends-) *(see §1.6)* | Arrays | 🔥 HIGH | ⬜ |
+| 10 | [Sliding Window (Fixed Size)](#17-sliding-window--fixed-size-️) | Arrays | ⭐⭐⭐⭐ | ⬜ |
+| 11 | [Sliding Window (Variable Size)](#18-sliding-window--variable-size-) | Arrays | 🔥 HIGH | ⬜ |
+| 12 | [Dutch National Flag](#19-dutch-national-flag--3-way-partition-️) | Arrays | ⭐⭐⭐⭐ | ⬜ |
+| 13 | [Cyclic Sort](#110-cyclic-sort-️) | Arrays | ⭐⭐⭐ | ⬜ |
+| 14 | [Boyer-Moore Majority Vote](#111-boyer-moore-majority-vote-️) | Arrays | ⭐⭐⭐⭐ | ⬜ |
+| 15 | [In-Place / Matrix Manipulation](#112-in-place-matrix-manipulation-️) | Arrays | ⭐⭐⭐⭐ | ⬜ |
+| 16 | [Binary Search (Classic)](#21-binary-search-classic-) | Searching | 🔥 HIGH | ⬜ |
+| 17 | [Binary Search on Answer](#22-binary-search-on-answer-) | Searching | 🔥 HIGH | ⬜ |
+| 18 | [Lower/Upper Bound](#21-binary-search-classic-) *(see §2.1)* | Searching | ⭐⭐⭐⭐ | ⬜ |
+| 19 | [Search in Rotated Sorted Array](#23-search-in-rotated-sorted-array-) | Searching | 🔥 HIGH | ⬜ |
+| 20 | [Peak Finding](#24-peak-finding-️) | Searching | ⭐⭐⭐⭐ | ⬜ |
+| 21 | [Merge Sort](#31-merge-sort-) | Sorting | 🔥 HIGH | ⬜ |
+| 22 | [Quick Sort / Quick Select](#32-quick-sort--quick-select-) | Sorting | 🔥 HIGH | ⬜ |
+| 23 | [Counting / Radix / Bucket Sort](#31-merge-sort-) *(see §3 note)* | Sorting | ⭐⭐⭐ | ⬜ |
+| 24 | [Cyclic Sort (Finding Missing)](#110-cyclic-sort-️) *(see §1.10)* | Sorting | ⭐⭐⭐ | ⬜ |
+| 25 | [Custom Comparator / Sort as Preprocessing](#33-custom-comparator--sort-as-preprocessing-️) | Sorting | ⭐⭐⭐⭐ | ⬜ |
+| 26 | [Frequency Count (HashMap)](#41-frequency-count-) | Hashing | 🔥 HIGH | ⬜ |
+| 27 | [Complement Lookup (Two Sum)](#42-complement-lookup-two-sum-pattern-) | Hashing | 🔥 HIGH | ⬜ |
+| 28 | [Grouping by Key (Anagrams)](#43-grouping-by-key-️) | Hashing | ⭐⭐⭐⭐ | ⬜ |
+| 29 | [Rolling Hash / Rabin-Karp](#122-kmp--z-algorithm-️) *(see §12.2)* | Hashing | ⭐⭐⭐ | ⬜ |
+| 30 | [Fast/Slow Pointers (Cycle)](#51-fastslow-pointers-) | Linked Lists | 🔥 HIGH | ⬜ |
+| 31 | [In-Place Reversal](#52-in-place-reversal-) | Linked Lists | 🔥 HIGH | ⬜ |
+| 32 | [Merge K Sorted Lists](#53-merge-k-sorted-lists-) | Linked Lists | 🔥 HIGH | ⬜ |
+| 33 | [Dummy Node Trick](#52-in-place-reversal-) *(see §5.2)* | Linked Lists | ⭐⭐⭐⭐ | ⬜ |
+| 34 | [LRU / LFU Cache](#54-lru--lfu-cache-) | Linked Lists | 🔥 HIGH | ⬜ |
+| 35 | [Monotonic Stack (Next Greater)](#61-monotonic-stack-next-greater-element-) | Stacks | 🔥 HIGH | ⬜ |
+| 36 | [Monotonic Stack (Histogram)](#61-monotonic-stack-next-greater-element-) *(see §6.1 Hard)* | Stacks | ⭐⭐⭐⭐ | ⬜ |
+| 37 | [Monotonic Deque (Sliding Max)](#62-monotonic-deque-sliding-window-max-️) | Stacks | ⭐⭐⭐⭐ | ⬜ |
+| 38 | [Min Stack / Expression Eval](#63-expression-evaluation--min-stack-️) | Stacks | ⭐⭐⭐⭐ | ⬜ |
+| 39 | [DFS (Tree Traversals)](#71-dfs-tree-traversals-) | Trees | 🔥 HIGH | ⬜ |
+| 40 | [BFS / Level-Order](#72-bfs--level-order-traversal-) | Trees | 🔥 HIGH | ⬜ |
+| 41 | [Lowest Common Ancestor](#73-lowest-common-ancestor-) | Trees | 🔥 HIGH | ⬜ |
+| 42 | [BST Operations](#74-bst-operations-) | Trees | 🔥 HIGH | ⬜ |
+| 43 | [Tree DP (Diameter / Path Sum)](#75-tree-dp-diameter-path-sum-️) | Trees | ⭐⭐⭐⭐ | ⬜ |
+| 44 | [Serialize / Deserialize Tree](#76-serialize--deserialize-tree-️) | Trees | ⭐⭐⭐⭐ | ⬜ |
+| 45 | [BFS (Graph)](#81-bfs-graph-) | Graphs | 🔥 HIGH | ⬜ |
+| 46 | [DFS (Graph / Islands)](#82-dfs-graph--islands-) | Graphs | 🔥 HIGH | ⬜ |
+| 47 | [Multi-Source BFS](#83-multi-source-bfs-) | Graphs | 🔥 HIGH | ⬜ |
+| 48 | [Topological Sort (Kahn's)](#84-topological-sort-kahns-algorithm-) | Graphs | 🔥 HIGH | ⬜ |
+| 49 | [Union-Find / DSU](#85-union-find--dsu-) | Graphs | 🔥 HIGH | ⬜ |
+| 50 | [Dijkstra](#86-dijkstras-algorithm-) | Graphs | 🔥 HIGH | ⬜ |
+| 51 | [Bellman-Ford](#87-bellman-ford-️) | Graphs | ⭐⭐⭐⭐ | ⬜ |
+| 52 | [Floyd-Warshall](#88-floyd-warshall-️) | Graphs | ⭐⭐⭐ | ⬜ |
+| 53 | [Kruskal / Prim (MST)](#89-minimum-spanning-tree-kruskal--prim-️) | Graphs | ⭐⭐⭐⭐ | ⬜ |
+| 54 | [Bridges & Articulation Points](#89-minimum-spanning-tree-kruskal--prim-️) *(see §8.9)* | Graphs | ⭐⭐⭐ | ⬜ |
+| 55 | [Bipartite Check](#810-bipartite-check-️) | Graphs | ⭐⭐⭐⭐ | ⬜ |
+| 56 | [1D Linear DP](#91-1d-linear-dp-) | DP | 🔥 HIGH | ⬜ |
+| 57 | [2D Grid DP](#92-2d-grid-dp-) | DP | 🔥 HIGH | ⬜ |
+| 58 | [0/1 Knapsack](#93-01-knapsack-) | DP | 🔥 HIGH | ⬜ |
+| 59 | [Unbounded Knapsack](#94-unbounded-knapsack-️) | DP | ⭐⭐⭐⭐ | ⬜ |
+| 60 | [Subset Sum / Partition DP](#95-subset-sum--partition-dp-) | DP | 🔥 HIGH | ⬜ |
+| 61 | [LCS / Edit Distance](#96-lcs--edit-distance-) | DP | 🔥 HIGH | ⬜ |
+| 62 | [LIS (Longest Increasing Subsequence)](#97-lis--longest-increasing-subsequence-) | DP | 🔥 HIGH | ⬜ |
+| 63 | [State Machine DP](#98-state-machine-dp-️) | DP | ⭐⭐⭐⭐ | ⬜ |
+| 64 | [Interval DP](#99-interval-dp-️) | DP | ⭐⭐⭐⭐ | ⬜ |
+| 65 | [Bitmask DP](#910-bitmask-dp-️) | DP | ⭐⭐⭐ | ⬜ |
+| 66 | [Tree DP](#911-tree-dp-️) | DP | ⭐⭐⭐⭐ | ⬜ |
+| 67 | [Digit DP](#912-digit-dp-️) | DP | ⭐⭐⭐ | ⬜ |
+| 68 | [Interval Scheduling / Activity Selection](#101-interval-scheduling--activity-selection-) | Greedy | 🔥 HIGH | ⬜ |
+| 69 | [Jump Game](#102-jump-game-) | Greedy | 🔥 HIGH | ⬜ |
+| 70 | [Gas Station / Task Scheduling](#103-gas-station--task-scheduling-️) | Greedy | ⭐⭐⭐⭐ | ⬜ |
+| 71 | [Subsets / Permutations / Combinations](#111-subsets--permutations--combinations-) | Backtracking | 🔥 HIGH | ⬜ |
+| 72 | [N-Queens / Sudoku](#112-n-queens--sudoku-️) | Backtracking | ⭐⭐⭐⭐ | ⬜ |
+| 73 | [Word Search / Grid DFS](#113-word-search--grid-dfs-) | Backtracking | 🔥 HIGH | ⬜ |
+| 74 | [String Sliding Window](#121-string-sliding-window-) | Strings | 🔥 HIGH | ⬜ |
+| 75 | [KMP / Z-Algorithm](#122-kmp--z-algorithm-️) | Strings | ⭐⭐⭐⭐ | ⬜ |
+| 76 | [Manacher's Algorithm](#123-manachers-algorithm-️) | Strings | ⭐⭐⭐ | ⬜ |
+| 77 | [Trie (Prefix Tree)](#124-trie-prefix-tree-) | Strings | 🔥 HIGH | ⬜ |
+| 78 | [Top-K / Kth Element](#131-top-k-elements-) | Heaps | 🔥 HIGH | ⬜ |
+| 79 | [Two Heaps (Median)](#132-two-heaps-running-median-) | Heaps | 🔥 HIGH | ⬜ |
+| 80 | [XOR Tricks](#141-xor-tricks-) | Bit Manip | 🔥 HIGH | ⬜ |
+| 81 | [Bitmask / Bit Counting](#142-bit-counting--brian-kernighan-️) | Bit Manip | ⭐⭐⭐⭐ | ⬜ |
+| 82 | [Merge / Insert Intervals](#151-merge-intervals-) | Intervals | 🔥 HIGH | ⬜ |
+| 83 | [Meeting Rooms / Sweep Line](#152-meeting-rooms--count-overlaps-) | Intervals | 🔥 HIGH | ⬜ |
+| 84 | [Difference Array](#153-sweep-line-️) *(see §15.3)* | Intervals | ⭐⭐⭐ | ⬜ |
+| 85 | [GCD / Sieve / Fast Power](#161-gcd--lcm--euclidean-️) | Math | ⭐⭐⭐⭐ | ⬜ |
+| 86 | [Modular Arithmetic / Combinatorics](#164-modular-arithmetic--combinatorics-️) | Math | ⭐⭐⭐⭐ | ⬜ |
+| 87 | [Segment Tree](#171-segment-tree-️) | Advanced DS | ⭐⭐⭐⭐ | ⬜ |
+| 88 | [Fenwick Tree / BIT](#172-fenwick-tree--bit-️) | Advanced DS | ⭐⭐⭐⭐ | ⬜ |
+| 89 | [Sparse Table (RMQ)](#173-sparse-table-rmq-️) | Advanced DS | ⭐⭐⭐ | ⬜ |
+| 90 | [Meet in the Middle](#181-meet-in-the-middle-️) | Meta | ⭐⭐⭐ | ⬜ |
 
 ---
 
@@ -206,6 +214,8 @@ THINK: PRECOMPUTE prefix[] ARRAY
 - [ ] Count Number of Nice Subarrays — LC #1248 — https://leetcode.com/problems/count-number-of-nice-subarrays/
 - [ ] Number of Submatrices That Sum to Target — LC #1074 — https://leetcode.com/problems/number-of-submatrices-that-sum-to-target/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 1.2 Prefix Sum + HashMap 🔥
@@ -248,6 +258,8 @@ THINK: PREFIX SUM + HASHMAP
 - [ ] Subarray Sums Divisible by K — LC #974 — https://leetcode.com/problems/subarray-sums-divisible-by-k/
 - [ ] Make Sum Divisible by P — LC #1590 — https://leetcode.com/problems/make-sum-divisible-by-p/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 1.3 Prefix XOR + HashMap ⭐⭐⭐⭐
@@ -284,6 +296,8 @@ THINK: PREFIX XOR + HASHMAP
 🔴 Advanced
 - [ ] Minimum Operations to Make Array XOR Equal to K — LC #2997 — https://leetcode.com/problems/minimum-operations-to-make-array-xor-equal-to-k/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 1.4 Difference Array ⭐⭐⭐
@@ -319,6 +333,8 @@ THINK: DIFFERENCE ARRAY
 
 🔴 Advanced
 - [ ] Number of Flowers in Full Bloom — LC #2251 — https://leetcode.com/problems/number-of-flowers-in-full-bloom/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -357,6 +373,8 @@ THINK: KADANE'S ALGORITHM
 🔴 Advanced
 - [ ] Maximum Subarray Sum with One Deletion — LC #1186 — https://leetcode.com/problems/maximum-subarray-sum-with-one-deletion/
 - [ ] K-Concatenation Maximum Sum — LC #1191 — https://leetcode.com/problems/k-concatenation-maximum-sum/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -398,6 +416,8 @@ THINK: TWO POINTERS (opposite ends)
 🔴 Advanced
 - [ ] Trapping Rain Water — LC #42 — https://leetcode.com/problems/trapping-rain-water/ 🔥 *(also Monotonic Stack)*
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 1.7 Sliding Window — Fixed Size ⭐⭐⭐⭐
@@ -431,6 +451,8 @@ THINK: SLIDING WINDOW (fixed)
 - [ ] Find All Anagrams in a String — LC #438 — https://leetcode.com/problems/find-all-anagrams-in-a-string/ 🔥
 - [ ] Permutation in String — LC #567 — https://leetcode.com/problems/permutation-in-string/ 🔥
 - [ ] Sliding Window Maximum — LC #239 — https://leetcode.com/problems/sliding-window-maximum/ *(use Deque)*
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -472,6 +494,8 @@ THINK: SLIDING WINDOW (variable)
 - [ ] Substring with Concatenation of All Words — LC #30 — https://leetcode.com/problems/substring-with-concatenation-of-all-words/
 - [ ] Sliding Window Median — LC #480 — https://leetcode.com/problems/sliding-window-median/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 1.9 Dutch National Flag / 3-Way Partition ⭐⭐⭐⭐
@@ -502,6 +526,8 @@ THINK: DUTCH NATIONAL FLAG
 🟡 Intermediate
 - [ ] Wiggle Sort II — LC #324 — https://leetcode.com/problems/wiggle-sort-ii/
 - [ ] Partition Array into Three Parts with Equal Sum — LC #1013 — https://leetcode.com/problems/partition-array-into-three-parts-with-equal-sum/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -534,6 +560,8 @@ THINK: CYCLIC SORT
 - [ ] Find the Duplicate Number — LC #287 — https://leetcode.com/problems/find-the-duplicate-number/ 🔥
 - [ ] First Missing Positive — LC #41 — https://leetcode.com/problems/first-missing-positive/ 🔥
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 1.11 Boyer-Moore Majority Vote ⭐⭐⭐⭐
@@ -554,6 +582,8 @@ THINK: CYCLIC SORT
 🟡 Intermediate
 - [ ] Majority Element II — LC #229 — https://leetcode.com/problems/majority-element-ii/ *(n/3 variant)*
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 1.12 In-Place Matrix Manipulation ⭐⭐⭐⭐
@@ -570,6 +600,8 @@ THINK: CYCLIC SORT
 
 🔴 Advanced
 - [ ] Game of Life — LC #289 — https://leetcode.com/problems/game-of-life/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -614,6 +646,8 @@ THINK: BINARY SEARCH
 
 🔴 Advanced
 - [ ] Median of Two Sorted Arrays — LC #4 — https://leetcode.com/problems/median-of-two-sorted-arrays/ 🔥
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -662,6 +696,8 @@ THINK: BINARY SEARCH ON ANSWER + FEASIBILITY CHECK
 - [ ] Minimize Max Distance to Gas Station — LC #774 — https://leetcode.com/problems/minimize-max-distance-to-gas-station/
 - [ ] Paint House III — LC #1473 — https://leetcode.com/problems/paint-house-iii/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 2.3 Search in Rotated Sorted Array 🔥
@@ -679,6 +715,8 @@ THINK: BINARY SEARCH ON ANSWER + FEASIBILITY CHECK
 🟡 Intermediate
 - [ ] Search in Rotated Sorted Array II (duplicates) — LC #81 — https://leetcode.com/problems/search-in-rotated-sorted-array-ii/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 2.4 Peak Finding ⭐⭐⭐⭐
@@ -695,6 +733,8 @@ THINK: BINARY SEARCH ON ANSWER + FEASIBILITY CHECK
 🟡 Intermediate
 - [ ] Peak Index in a Mountain Array — LC #852 — https://leetcode.com/problems/peak-index-in-a-mountain-array/
 - [ ] Find in Mountain Array — LC #1095 — https://leetcode.com/problems/find-in-mountain-array/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -729,6 +769,8 @@ THINK: MERGE SORT
 🔴 Advanced
 - [ ] Reverse Pairs — LC #493 — https://leetcode.com/problems/reverse-pairs/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 3.2 Quick Sort / Quick Select 🔥
@@ -750,6 +792,8 @@ THINK: QUICK SELECT (partition-based)
 - [ ] Kth Largest Element in an Array — LC #215 — https://leetcode.com/problems/kth-largest-element-in-an-array/ 🔥
 - [ ] Top K Frequent Elements — LC #347 — https://leetcode.com/problems/top-k-frequent-elements/ 🔥 *(also Heap)*
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 3.3 Custom Comparator / Sort as Preprocessing ⭐⭐⭐⭐
@@ -765,6 +809,8 @@ THINK: QUICK SELECT (partition-based)
 - [ ] Largest Number — LC #179 — https://leetcode.com/problems/largest-number/ 🔥
 - [ ] Sort Characters By Frequency — LC #451 — https://leetcode.com/problems/sort-characters-by-frequency/
 - [ ] Minimum Number of Arrows to Burst Balloons — LC #452 — https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -788,6 +834,8 @@ THINK: QUICK SELECT (partition-based)
 - [ ] Group Anagrams — LC #49 — https://leetcode.com/problems/group-anagrams/ 🔥
 - [ ] Longest Consecutive Sequence — LC #128 — https://leetcode.com/problems/longest-consecutive-sequence/ 🔥
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 4.2 Complement Lookup (Two Sum Pattern) 🔥
@@ -803,6 +851,8 @@ THINK: QUICK SELECT (partition-based)
 - [ ] 4Sum II — LC #454 — https://leetcode.com/problems/4sum-ii/
 - [ ] Pairs of Songs With Total Durations Divisible by 60 — LC #1010 — https://leetcode.com/problems/pairs-of-songs-with-total-durations-divisible-by-60/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 4.3 Grouping by Key ⭐⭐⭐⭐
@@ -814,6 +864,8 @@ THINK: QUICK SELECT (partition-based)
 🟡 Intermediate
 - [ ] Group Anagrams — LC #49 — https://leetcode.com/problems/group-anagrams/ 🔥
 - [ ] Find Duplicate File in System — LC #609 — https://leetcode.com/problems/find-duplicate-file-in-system/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -845,6 +897,8 @@ THINK: FAST/SLOW POINTERS
 - [ ] Remove Nth Node From End of List — LC #19 — https://leetcode.com/problems/remove-nth-node-from-end-of-list/ 🔥
 - [ ] Happy Number — LC #202 — https://leetcode.com/problems/happy-number/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 5.2 In-Place Reversal 🔥
@@ -862,6 +916,8 @@ THINK: FAST/SLOW POINTERS
 🔴 Advanced
 - [ ] Reverse Nodes in k-Group — LC #25 — https://leetcode.com/problems/reverse-nodes-in-k-group/ 🔥
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 5.3 Merge K Sorted Lists 🔥
@@ -874,6 +930,8 @@ THINK: FAST/SLOW POINTERS
 🔴 Advanced
 - [ ] Merge K Sorted Lists — LC #23 — https://leetcode.com/problems/merge-k-sorted-lists/ 🔥 *(Heap or Divide & Conquer)*
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 5.4 LRU / LFU Cache 🔥
@@ -883,6 +941,8 @@ THINK: FAST/SLOW POINTERS
 🔴 Advanced
 - [ ] LRU Cache — LC #146 — https://leetcode.com/problems/lru-cache/ 🔥 *(HashMap + Doubly Linked List)*
 - [ ] LFU Cache — LC #460 — https://leetcode.com/problems/lfu-cache/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -926,6 +986,8 @@ THINK: MONOTONIC STACK
 - [ ] Largest Rectangle in Histogram — LC #84 — https://leetcode.com/problems/largest-rectangle-in-histogram/ 🔥
 - [ ] Maximal Rectangle — LC #85 — https://leetcode.com/problems/maximal-rectangle/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 6.2 Monotonic Deque (Sliding Window Max) ⭐⭐⭐⭐
@@ -943,6 +1005,8 @@ THINK: MONOTONIC STACK
 - [ ] Shortest Subarray with Sum at Least K — LC #862 — https://leetcode.com/problems/shortest-subarray-with-sum-at-least-k/
 - [ ] Constrained Subsequence Sum — LC #1425 — https://leetcode.com/problems/constrained-subsequence-sum/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 6.3 Expression Evaluation / Min Stack ⭐⭐⭐⭐
@@ -957,6 +1021,8 @@ THINK: MONOTONIC STACK
 🔴 Advanced
 - [ ] Basic Calculator II — LC #227 — https://leetcode.com/problems/basic-calculator-ii/
 - [ ] Basic Calculator — LC #224 — https://leetcode.com/problems/basic-calculator/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -990,6 +1056,8 @@ THINK: DFS (recursive or iterative)
 - [ ] Flatten Binary Tree to Linked List — LC #114 — https://leetcode.com/problems/flatten-binary-tree-to-linked-list/
 - [ ] Binary Tree Right Side View — LC #199 — https://leetcode.com/problems/binary-tree-right-side-view/ 🔥
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 7.2 BFS / Level-Order Traversal 🔥
@@ -1009,6 +1077,8 @@ THINK: DFS (recursive or iterative)
 - [ ] Minimum Depth of Binary Tree — LC #111 — https://leetcode.com/problems/minimum-depth-of-binary-tree/
 - [ ] Populating Next Right Pointers in Each Node — LC #116 — https://leetcode.com/problems/populating-next-right-pointers-in-each-node/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 7.3 Lowest Common Ancestor 🔥
@@ -1021,6 +1091,8 @@ THINK: DFS (recursive or iterative)
 
 🔴 Advanced
 - [ ] Kth Ancestor of a Tree Node — LC #1483 — https://leetcode.com/problems/kth-ancestor-of-a-tree-node/ *(Binary Lifting)*
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1037,6 +1109,8 @@ THINK: DFS (recursive or iterative)
 - [ ] Convert Sorted Array to Binary Search Tree — LC #108 — https://leetcode.com/problems/convert-sorted-array-to-binary-search-tree/
 - [ ] Delete Node in a BST — LC #450 — https://leetcode.com/problems/delete-node-in-a-bst/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 7.5 Tree DP (Diameter, Path Sum) ⭐⭐⭐⭐
@@ -1049,6 +1123,8 @@ THINK: DFS (recursive or iterative)
 - [ ] Diameter of Binary Tree — LC #543 — https://leetcode.com/problems/diameter-of-binary-tree/ 🔥
 - [ ] Binary Tree Maximum Path Sum — LC #124 — https://leetcode.com/problems/binary-tree-maximum-path-sum/ 🔥
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 7.6 Serialize / Deserialize Tree ⭐⭐⭐⭐
@@ -1058,6 +1134,8 @@ THINK: DFS (recursive or iterative)
 🔴 Advanced
 - [ ] Serialize and Deserialize Binary Tree — LC #297 — https://leetcode.com/problems/serialize-and-deserialize-binary-tree/ 🔥
 - [ ] Construct Binary Tree from Preorder and Inorder Traversal — LC #105 — https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/ 🔥
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1098,6 +1176,8 @@ THINK: BFS
 🔴 Advanced
 - [ ] Minimum Moves to Move a Box to Their Target Location — LC #1263 — https://leetcode.com/problems/minimum-moves-to-move-a-box-to-their-target-location/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 8.2 DFS (Graph / Islands) 🔥
@@ -1112,6 +1192,8 @@ THINK: BFS
 - [ ] Pacific Atlantic Water Flow — LC #417 — https://leetcode.com/problems/pacific-atlantic-water-flow/ 🔥
 - [ ] Number of Connected Components in Undirected Graph — LC #323 — https://leetcode.com/problems/number-of-connected-components-in-an-undirected-graph/
 - [ ] Course Schedule — LC #207 — https://leetcode.com/problems/course-schedule/ 🔥 *(DFS cycle detection)*
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1130,6 +1212,8 @@ THINK: BFS
 
 🔴 Advanced
 - [ ] Minimum Number of Days to Disconnect Island — LC #1568 — https://leetcode.com/problems/minimum-number-of-days-to-disconnect-island/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1159,6 +1243,8 @@ THINK: TOPOLOGICAL SORT (Kahn's BFS or DFS)
 🔴 Advanced
 - [ ] Parallel Courses III — LC #2050 — https://leetcode.com/problems/parallel-courses-iii/
 - [ ] Minimum Height Trees — LC #310 — https://leetcode.com/problems/minimum-height-trees/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1192,6 +1278,8 @@ THINK: UNION-FIND (DSU)
 - [ ] Smallest String With Swaps — LC #1202 — https://leetcode.com/problems/smallest-string-with-swaps/
 - [ ] Number of Islands II — LC #305 — https://leetcode.com/problems/number-of-islands-ii/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 8.6 Dijkstra's Algorithm 🔥
@@ -1221,6 +1309,8 @@ THINK: DIJKSTRA (min-heap + relaxation)
 - [ ] Find the City With the Smallest Number of Neighbors — LC #1334 — https://leetcode.com/problems/find-the-city-with-the-smallest-number-of-neighbors-at-a-threshold-distance/
 - [ ] Minimum Cost to Reach Destination in Time — LC #1928 — https://leetcode.com/problems/minimum-cost-to-reach-destination-in-time/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 8.7 Bellman-Ford ⭐⭐⭐⭐
@@ -1236,6 +1326,8 @@ THINK: DIJKSTRA (min-heap + relaxation)
 - [ ] Cheapest Flights Within K Stops — LC #787 — https://leetcode.com/problems/cheapest-flights-within-k-stops/ 🔥 *(BF with K relaxations)*
 - [ ] Bellman-Ford Algorithm — *(GFG / DSA 450 standard)*
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 8.8 Floyd-Warshall ⭐⭐⭐
@@ -1249,6 +1341,8 @@ THINK: DIJKSTRA (min-heap + relaxation)
 🟡 Intermediate
 - [ ] Find the City With the Smallest Number of Neighbors — LC #1334 — https://leetcode.com/problems/find-the-city-with-the-smallest-number-of-neighbors-at-a-threshold-distance/
 - [ ] All Pairs Shortest Path — *(GFG / CP classic)*
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1267,6 +1361,8 @@ THINK: DIJKSTRA (min-heap + relaxation)
 - [ ] Minimum Spanning Tree — *(GFG / Kruskal's + Prim's standard)*
 - [ ] Critical Connections in a Network — LC #1192 — https://leetcode.com/problems/critical-connections-in-a-network/ *(Bridges — Tarjan)*
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 8.10 Bipartite Check ⭐⭐⭐⭐
@@ -1280,6 +1376,8 @@ THINK: DIJKSTRA (min-heap + relaxation)
 🟡 Intermediate
 - [ ] Is Graph Bipartite? — LC #785 — https://leetcode.com/problems/is-graph-bipartite/ 🔥
 - [ ] Possible Bipartition — LC #886 — https://leetcode.com/problems/possible-bipartition/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1317,6 +1415,8 @@ THINK: 1D DP — dp[i] = f(dp[i-1], dp[i-2], ...)
 - [ ] Palindromic Substrings — LC #647 — https://leetcode.com/problems/palindromic-substrings/
 - [ ] Longest Palindromic Substring — LC #5 — https://leetcode.com/problems/longest-palindromic-substring/ 🔥
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 9.2 2D Grid DP 🔥
@@ -1344,6 +1444,8 @@ THINK: 2D DP — dp[i][j] = f(dp[i-1][j], dp[i][j-1])
 🔴 Advanced
 - [ ] Dungeon Game — LC #174 — https://leetcode.com/problems/dungeon-game/
 - [ ] Cherry Pickup — LC #741 — https://leetcode.com/problems/cherry-pickup/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1376,6 +1478,8 @@ THINK: 0/1 KNAPSACK DP
 - [ ] Ones and Zeroes — LC #474 — https://leetcode.com/problems/ones-and-zeroes/
 - [ ] Profitable Schemes — LC #879 — https://leetcode.com/problems/profitable-schemes/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 9.4 Unbounded Knapsack ⭐⭐⭐⭐
@@ -1394,6 +1498,8 @@ THINK: 0/1 KNAPSACK DP
 - [ ] Integer Break — LC #343 — https://leetcode.com/problems/integer-break/
 - [ ] Word Break — LC #139 — https://leetcode.com/problems/word-break/ 🔥
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 9.5 Subset Sum / Partition DP 🔥
@@ -1407,6 +1513,8 @@ THINK: 0/1 KNAPSACK DP
 
 🔴 Advanced
 - [ ] Partition to K Equal Sum Subsets — LC #698 — https://leetcode.com/problems/partition-to-k-equal-sum-subsets/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1439,6 +1547,8 @@ THINK: LCS / EDIT DISTANCE DP — dp[i][j]
 - [ ] Minimum ASCII Delete Sum for Two Strings — LC #712 — https://leetcode.com/problems/minimum-ascii-delete-sum-for-two-strings/
 - [ ] Interleaving String — LC #97 — https://leetcode.com/problems/interleaving-string/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 9.7 LIS — Longest Increasing Subsequence 🔥
@@ -1464,6 +1574,8 @@ THINK: LIS DP or Binary Search (patience sorting)
 🔴 Advanced
 - [ ] Maximum Height by Stacking Cuboids — LC #1691 — https://leetcode.com/problems/maximum-height-by-stacking-cuboids/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 9.8 State Machine DP ⭐⭐⭐⭐
@@ -1479,6 +1591,8 @@ THINK: LIS DP or Binary Search (patience sorting)
 - [ ] Best Time to Buy and Sell Stock with Transaction Fee — LC #714 — https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-transaction-fee/
 - [ ] Best Time to Buy and Sell Stock III (at most 2) — LC #123 — https://leetcode.com/problems/best-time-to-buy-and-sell-stock-iii/ 🔥
 - [ ] Best Time to Buy and Sell Stock IV (at most k) — LC #188 — https://leetcode.com/problems/best-time-to-buy-and-sell-stock-iv/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1509,6 +1623,8 @@ THINK: INTERVAL DP — dp[l][r] = f(dp[l][k], dp[k+1][r])
 - [ ] Zuma Game — LC #488 — https://leetcode.com/problems/zuma-game/
 - [ ] Remove Boxes — LC #546 — https://leetcode.com/problems/remove-boxes/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 9.10 Bitmask DP ⭐⭐⭐
@@ -1524,6 +1640,8 @@ THINK: INTERVAL DP — dp[l][r] = f(dp[l][k], dp[k+1][r])
 - [ ] Minimum XOR Sum of Two Arrays — LC #1879 — https://leetcode.com/problems/minimum-xor-sum-of-two-arrays/
 - [ ] Stickers to Spell Word — LC #691 — https://leetcode.com/problems/stickers-to-spell-word/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 9.11 Tree DP ⭐⭐⭐⭐
@@ -1536,6 +1654,8 @@ THINK: INTERVAL DP — dp[l][r] = f(dp[l][k], dp[k+1][r])
 
 🔴 Advanced
 - [ ] Maximum Product of Splitted Binary Tree — LC #1339 — https://leetcode.com/problems/maximum-product-of-splitted-binary-tree/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1551,6 +1671,8 @@ THINK: INTERVAL DP — dp[l][r] = f(dp[l][k], dp[k+1][r])
 - [ ] Count Digit One — LC #233 — https://leetcode.com/problems/number-of-digit-one/
 - [ ] Non-negative Integers without Consecutive Ones — LC #600 — https://leetcode.com/problems/non-negative-integers-without-consecutive-ones/
 - [ ] Count Numbers with Unique Digits — LC #357 — https://leetcode.com/problems/count-numbers-with-unique-digits/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1583,6 +1705,8 @@ THINK: SORT BY END TIME → GREEDY SWEEP
 - [ ] Merge Intervals — LC #56 — https://leetcode.com/problems/merge-intervals/ 🔥
 - [ ] Minimum Number of Arrows to Burst Balloons — LC #452 — https://leetcode.com/problems/minimum-number-of-arrows-to-burst-balloons/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 10.2 Jump Game 🔥
@@ -1597,6 +1721,8 @@ THINK: SORT BY END TIME → GREEDY SWEEP
 - [ ] Jump Game III — LC #1306 — https://leetcode.com/problems/jump-game-iii/
 - [ ] Jump Game VII — LC #1871 — https://leetcode.com/problems/jump-game-vii/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 10.3 Gas Station / Task Scheduling ⭐⭐⭐⭐
@@ -1610,6 +1736,8 @@ THINK: SORT BY END TIME → GREEDY SWEEP
 
 🔴 Advanced
 - [ ] IPO — LC #502 — https://leetcode.com/problems/ipo/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1658,6 +1786,8 @@ THINK: BACKTRACKING
 - [ ] Palindrome Partitioning — LC #131 — https://leetcode.com/problems/palindrome-partitioning/ 🔥
 - [ ] Generate Parentheses — LC #22 — https://leetcode.com/problems/generate-parentheses/ 🔥
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 11.2 N-Queens / Sudoku ⭐⭐⭐⭐
@@ -1667,6 +1797,8 @@ THINK: BACKTRACKING
 🔴 Advanced
 - [ ] N-Queens — LC #51 — https://leetcode.com/problems/n-queens/ 🔥
 - [ ] Sudoku Solver — LC #37 — https://leetcode.com/problems/sudoku-solver/ 🔥
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1680,6 +1812,8 @@ THINK: BACKTRACKING
 🔴 Advanced
 - [ ] Word Search II — LC #212 — https://leetcode.com/problems/word-search-ii/ *(Trie + Backtracking)*
 - [ ] Robot Room Cleaner — LC #489 — https://leetcode.com/problems/robot-room-cleaner/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1699,6 +1833,8 @@ THINK: BACKTRACKING
 - [ ] Minimum Window Substring — LC #76 — https://leetcode.com/problems/minimum-window-substring/ 🔥
 - [ ] Longest Substring with At Most Two Distinct Characters — LC #159 — https://leetcode.com/problems/longest-substring-with-at-most-two-distinct-characters/
 - [ ] Longest Repeating Character Replacement — LC #424 — https://leetcode.com/problems/longest-repeating-character-replacement/ 🔥
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1724,6 +1860,8 @@ THINK: KMP (failure function) or Z-Algorithm
 - [ ] Repeated Substring Pattern — LC #459 — https://leetcode.com/problems/repeated-substring-pattern/
 - [ ] Shortest Palindrome — LC #214 — https://leetcode.com/problems/shortest-palindrome/ *(KMP)*
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 12.3 Manacher's Algorithm ⭐⭐⭐
@@ -1736,6 +1874,8 @@ THINK: KMP (failure function) or Z-Algorithm
 🟡 Intermediate
 - [ ] Longest Palindromic Substring — LC #5 — https://leetcode.com/problems/longest-palindromic-substring/ 🔥 *(expand-around-center or Manacher)*
 - [ ] Palindromic Substrings — LC #647 — https://leetcode.com/problems/palindromic-substrings/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1769,6 +1909,8 @@ THINK: TRIE
 - [ ] Maximum XOR of Two Numbers in an Array — LC #421 — https://leetcode.com/problems/maximum-xor-of-two-numbers-in-an-array/ *(XOR Trie)*
 - [ ] Palindrome Pairs — LC #336 — https://leetcode.com/problems/palindrome-pairs/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ## 13. 🏔 Heaps & Priority Queues
@@ -1799,6 +1941,8 @@ THINK: MIN-HEAP of size K
 - [ ] Top K Frequent Words — LC #692 — https://leetcode.com/problems/top-k-frequent-words/
 - [ ] Kth Smallest Element in a Sorted Matrix — LC #378 — https://leetcode.com/problems/kth-smallest-element-in-a-sorted-matrix/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 13.2 Two Heaps (Running Median) 🔥
@@ -1824,6 +1968,8 @@ THINK: TWO HEAPS (max-heap + min-heap)
 - [ ] Find Median from Data Stream — LC #295 — https://leetcode.com/problems/find-median-from-data-stream/ 🔥
 - [ ] Sliding Window Median — LC #480 — https://leetcode.com/problems/sliding-window-median/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 13.3 Merge K Sorted / Scheduling 🔥
@@ -1837,6 +1983,8 @@ THINK: TWO HEAPS (max-heap + min-heap)
 🔴 Advanced
 - [ ] IPO — LC #502 — https://leetcode.com/problems/ipo/
 - [ ] Meeting Rooms III — LC #2402 — https://leetcode.com/problems/meeting-rooms-iii/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1873,6 +2021,8 @@ THINK: XOR — pairs cancel out
 - [ ] Single Number III — LC #260 — https://leetcode.com/problems/single-number-iii/
 - [ ] Number of Bit Changes to Make Two Integers Equal — LC #2997 — https://leetcode.com/problems/minimum-operations-to-make-array-xor-equal-to-k/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 14.2 Bit Counting / Brian Kernighan ⭐⭐⭐⭐
@@ -1893,6 +2043,8 @@ THINK: XOR — pairs cancel out
 - [ ] Reverse Bits — LC #190 — https://leetcode.com/problems/reverse-bits/
 - [ ] Sum of Two Integers (no +) — LC #371 — https://leetcode.com/problems/sum-of-two-integers/ 🔥
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 14.3 Bitmask (Subsets via Bits) ⭐⭐⭐⭐
@@ -1907,6 +2059,8 @@ THINK: XOR — pairs cancel out
 
 🔴 Advanced
 - [ ] Shortest Path Visiting All Nodes — LC #847 — https://leetcode.com/problems/shortest-path-visiting-all-nodes/ *(bitmask BFS)*
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1937,6 +2091,8 @@ SORT by start → merge if overlap: end = max(end, cur.end)
 - [ ] Non-overlapping Intervals — LC #435 — https://leetcode.com/problems/non-overlapping-intervals/ 🔥
 - [ ] Interval List Intersections — LC #986 — https://leetcode.com/problems/interval-list-intersections/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 15.2 Meeting Rooms / Count Overlaps 🔥
@@ -1962,6 +2118,8 @@ THINK: SORT + MIN-HEAP end times OR SWEEP LINE
 🔴 Advanced
 - [ ] My Calendar III — LC #732 — https://leetcode.com/problems/my-calendar-iii/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 15.3 Sweep Line ⭐⭐⭐
@@ -1974,6 +2132,8 @@ THINK: SORT + MIN-HEAP end times OR SWEEP LINE
 - [ ] Employee Free Time — LC #759 — https://leetcode.com/problems/employee-free-time/
 - [ ] Number of Flowers in Full Bloom — LC #2251 — https://leetcode.com/problems/number-of-flowers-in-full-bloom/
 - [ ] The Skyline Problem — LC #218 — https://leetcode.com/problems/the-skyline-problem/ 🔥
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -1995,6 +2155,8 @@ THINK: SORT + MIN-HEAP end times OR SWEEP LINE
 - [ ] Fraction Addition and Subtraction — LC #592 — https://leetcode.com/problems/fraction-addition-and-subtraction/
 - [ ] Ugly Number II — LC #264 — https://leetcode.com/problems/ugly-number-ii/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 16.2 Sieve of Eratosthenes ⭐⭐⭐⭐
@@ -2011,6 +2173,8 @@ THINK: SORT + MIN-HEAP end times OR SWEEP LINE
 🟡 Intermediate
 - [ ] Ugly Number — LC #263 — https://leetcode.com/problems/ugly-number/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 16.3 Fast Power / Binary Exponentiation ⭐⭐⭐⭐
@@ -2020,6 +2184,8 @@ THINK: SORT + MIN-HEAP end times OR SWEEP LINE
 🟡 Intermediate
 - [ ] Pow(x, n) — LC #50 — https://leetcode.com/problems/powx-n/ 🔥
 - [ ] Super Pow — LC #372 — https://leetcode.com/problems/super-pow/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -2033,6 +2199,8 @@ THINK: SORT + MIN-HEAP end times OR SWEEP LINE
 
 🔴 Advanced
 - [ ] K-th Smallest in Lexicographical Order — LC #440 — https://leetcode.com/problems/k-th-smallest-in-lexicographical-order/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -2067,6 +2235,8 @@ THINK: SEGMENT TREE
 - [ ] Queue Reconstruction by Height — LC #406 — https://leetcode.com/problems/queue-reconstruction-by-height/
 - [ ] My Calendar II — LC #731 — https://leetcode.com/problems/my-calendar-ii/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 17.2 Fenwick Tree / BIT ⭐⭐⭐⭐
@@ -2084,6 +2254,8 @@ THINK: SEGMENT TREE
 - [ ] Count of Smaller Numbers After Self — LC #315 — https://leetcode.com/problems/count-of-smaller-numbers-after-self/ *(BIT approach)*
 - [ ] Reverse Pairs — LC #493 — https://leetcode.com/problems/reverse-pairs/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 17.3 Sparse Table (RMQ) ⭐⭐⭐
@@ -2099,6 +2271,8 @@ THINK: SEGMENT TREE
 
 🔴 Advanced
 - [ ] Sliding Window Maximum — LC #239 — *(sparse table solution approach)*
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
@@ -2120,6 +2294,8 @@ THINK: SEGMENT TREE
 - [ ] Partition Array Into Two Arrays to Minimize Sum Difference — LC #2035 — https://leetcode.com/problems/partition-array-into-two-arrays-to-minimize-sum-difference/
 - [ ] Maximum Fruit Into Baskets (MITM variant) — *(CP classic)*
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 18.2 Two-Pass / Reverse Thinking ⭐⭐⭐⭐
@@ -2135,6 +2311,8 @@ THINK: SEGMENT TREE
 - [ ] Product of Array Except Self — LC #238 — https://leetcode.com/problems/product-of-array-except-self/ 🔥
 - [ ] Candy — LC #135 — https://leetcode.com/problems/candy/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 18.3 Reservoir Sampling / Randomized ⭐⭐⭐
@@ -2149,6 +2327,8 @@ THINK: SEGMENT TREE
 - [ ] Linked List Random Node — LC #382 — https://leetcode.com/problems/linked-list-random-node/
 - [ ] Random Pick with Weight — LC #528 — https://leetcode.com/problems/random-pick-with-weight/
 
+[↑ Back to Index](#-master-algorithm-index)
+
 ---
 
 ### 18.4 Amortized / Lazy Propagation ⭐⭐⭐
@@ -2158,6 +2338,8 @@ THINK: SEGMENT TREE
 🔴 Advanced
 - [ ] Range Add, Range Sum — *(Segment Tree with Lazy Propagation — GFG / CP)*
 - [ ] Count of Range Sum — LC #327 — https://leetcode.com/problems/count-of-range-sum/
+
+[↑ Back to Index](#-master-algorithm-index)
 
 ---
 
