@@ -2,6 +2,8 @@
 
 A structured collection of resources for senior-level software engineering interviews covering DSA, system design, interview experiences, and full-stack preparation.
 
+AI Artifact https://claude.ai/artifact/MbH7QhHjgNqjBTF82RPviN
+
 ## Live
 
 **Frontend Interview Experiences Dashboard**
