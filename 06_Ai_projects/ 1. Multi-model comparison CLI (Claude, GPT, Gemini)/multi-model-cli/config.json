@@ -1,0 +1,12 @@
+{
+  "models": {
+    "claude": "claude-sonnet-5-5",
+    "openai": "gpt-4o-mini",
+    "gemini": "gemini-2.5-flash"
+  },
+  "defaults": {
+    "maxTokens": 1024,
+    "timeoutMs": 60000,
+    "retries": 2
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "updated": "FILL-IN-DATE",
+  "note": "USD per 1M tokens. Copy current numbers from each provider's pricing page. Leave null and cost shows as n/a.",
+  "models": {
+    "claude-sonnet-5-5": { "inputPerMTok": null, "outputPerMTok": null },
+    "gpt-4o-mini": { "inputPerMTok": null, "outputPerMTok": null },
+    "gemini-2.5-flash": { "inputPerMTok": null, "outputPerMTok": null }
+  }
+}
